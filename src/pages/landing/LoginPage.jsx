@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { GraduationCap, Mail, Lock, Flame } from 'lucide-react'
+import { GraduationCap, Mail, Lock, Flame, ChevronLeft } from 'lucide-react'
 import { toast } from "react-toastify"
 // Public Login page
 function LoginPage() {
@@ -36,6 +36,12 @@ function LoginPage() {
       {/* Left Panel - Blue Background */}
       <div className="hidden lg:flex lg:w-2/5 text-white flex-col justify-between p-12 bg-primary">
         <div>
+          <div
+            className="flex items-center justify-center mb-5 w-10 h-10 cursor-pointer rounded-full bg-white/90 hover:bg-white/80 transition duration-300"
+            onClick={() => navigate("/")}
+          >
+            <ChevronLeft className="text-gray-600"/>
+          </div>
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
             <GraduationCap className="w-8 h-8" />
@@ -69,87 +75,95 @@ function LoginPage() {
       </div>
 
       {/* Right Panel - White Background */}
-      <div className="w-full lg:w-3/5 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
-          <p className="text-gray-600 mb-8">Please enter your details to sign in.</p>
+      <div className="w-full lg:w-3/5 p-8 bg-white">
+        <div
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-black/80 hover:bg-black/90 transition duration-300 lg:hidden cursor-pointer"
+          onClick={() => navigate("/")}
+        >
+          <ChevronLeft className="text-white"/>
+        </div>
+        <div className="w-full flex items-center justify-center mt-9">
+          <div className="w-full max-w-md">
+            <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
+            <p className="text-gray-600 mb-8">Please enter your details to sign in.</p>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            {/* Email Input */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  className="pl-10 bg-gray-50 border-gray-200"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={loading}
-                />
+            <form onSubmit={handleLogin} className="space-y-6">
+              {/* Email Input */}
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    className="pl-10 bg-gray-50 border-gray-200"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Password Input */}
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••"
-                  className="pl-10 bg-gray-50 border-gray-200"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                />
+              {/* Password Input */}
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••"
+                    className="pl-10 bg-gray-50 border-gray-200"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Login Button */}
-            <Button 
-              type="submit" 
-              className="w-full bg-primary hover:bg-primary-dark text-white h-11 text-base font-medium"
-              disabled={loading}
-            >
-              {loading ? 'Logging in...' : 'Log In'}
-            </Button>
-          </form>
+              {/* Login Button */}
+              <Button 
+                type="submit" 
+                className="w-full bg-primary hover:bg-primary-dark text-white h-11 text-base font-medium"
+                disabled={loading}
+              >
+                {loading ? 'Logging in...' : 'Log In'}
+              </Button>
+            </form>
 
-          {/* Links */}
-          <div className="mt-6 space-y-4 text-center">
-            <Link to="/forgot-password" className="block text-sm text-gray-600 hover:text-primary">
-              Forgot Password?
-            </Link>
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-primary hover:underline font-medium">
-                Sign Up
+            {/* Links */}
+            <div className="mt-6 space-y-4 text-center">
+              <Link to="/forgot-password" className="block text-sm text-gray-600 hover:text-primary">
+                Forgot Password?
               </Link>
+              <p className="text-sm text-gray-600">
+                Don't have an account?{' '}
+                <Link to="/signup" className="text-primary hover:underline font-medium">
+                  Sign Up
+                </Link>
+              </p>
+            </div>
+
+            {/* Legal Text */}
+            <p className="mt-8 text-xs text-gray-500 text-center">
+              By logging in, you agree to our{' '}
+              <Link to="/terms" className="text-primary underline hover:no-underline">
+                Terms of Service
+              </Link>
+              {' '}and{' '}
+              <Link to="/privacy" className="text-primary underline hover:no-underline">
+                Privacy Policy
+              </Link>
+              .
             </p>
           </div>
-
-          {/* Legal Text */}
-          <p className="mt-8 text-xs text-gray-500 text-center">
-            By logging in, you agree to our{' '}
-            <Link to="/terms" className="text-primary underline hover:no-underline">
-              Terms of Service
-            </Link>
-            {' '}and{' '}
-            <Link to="/privacy" className="text-primary underline hover:no-underline">
-              Privacy Policy
-            </Link>
-            .
-          </p>
         </div>
       </div>
     </div>

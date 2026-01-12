@@ -16,13 +16,16 @@ const LandingNavbar = () => {
           <Link to="/resources">Resources</Link>
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="outline">
-            <Link to="/login" >Login</Link>
-          </Button>
-          <Button variant="default">
-        <Link to="/signup" >Sing Up</Link>
-
-          </Button>
+          <Link to="/login">
+            <Button variant="outline" className="cursor-pointer">
+              Login
+            </Button>
+          </Link>
+          <Link to="/signup" >
+            <Button variant="default" className="cursor-pointer">
+              Sing Up
+            </Button>
+          </Link>
         </div>
       </div>
     </div>
