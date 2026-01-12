@@ -39,7 +39,7 @@ function LoginPage() {
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
             <GraduationCap className="w-8 h-8" />
-            <span className="text-2xl font-semibold">IELTS Prep</span>
+            <span className="text-2xl font-semibold">IELTS Sim</span>
           </div>
 
           {/* Headline */}

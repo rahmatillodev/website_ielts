@@ -54,7 +54,7 @@ const DashboardSidebar = () => {
             <GraduationCap className="text-[#4A90E2] size-7" />
           </div>
           <span className="text-xl font-black text-[#1E293B] tracking-tight">
-            IELTS Prep
+            IELTS Sim
           </span>
         </div>
       </div>
