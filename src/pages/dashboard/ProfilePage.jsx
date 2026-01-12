@@ -15,11 +15,11 @@ const ProfilePage = () => {
   const fullName = userProfile?.full_name || '';
   const email = authUser?.email || '';
   const phone = userProfile?.phone || '';
+  const tg_username = userProfile?.telegram_username || '';
   
   // Split full_name into first and last name for display
   const nameParts = fullName ? fullName.split(' ') : [];
   const firstName = nameParts[0] || '';
-  const lastName = nameParts.slice(1).join(' ') || '';
 
   // Get initials for avatar
   const getInitials = () => {
@@ -38,7 +38,7 @@ const ProfilePage = () => {
   // Ma'lumotlar bo'lmagan holat uchun default qiymatlar
   const displayData = {
     firstName: firstName || "Not provided",
-    lastName: lastName || "Not provided",
+    tg_username: tg_username || "Not provided",
     email: email || "No email linked",
     phone: "No phone number", // Phone not in database schema
     supportTelegram: "@UmarovRahmatillo", // Static support info
@@ -95,18 +95,18 @@ const ProfilePage = () => {
                 <Input
                   defaultValue={firstName}
                   placeholder="Enter first name"
-                  className="bg-gray-50/50 border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
+                  className="bg-gray-50/50 border-gray-100 cursor-default rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-black text-gray-400 uppercase tracking-tighter">
-                  Last Name
+                  telegram username
                 </Label>
                 <Input
-                  defaultValue={lastName}
-                  placeholder="Enter last name"
-                  className="bg-gray-50/50 border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
+                  defaultValue={tg_username}
+                  placeholder="Enter telegram username"
+                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
               </div>
@@ -118,7 +118,7 @@ const ProfilePage = () => {
                   defaultValue={email}
                   type="email"
                   placeholder="Enter email"
-                  className="bg-gray-50/50 border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
+                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
               </div>
@@ -129,7 +129,8 @@ const ProfilePage = () => {
                 <Input
                   defaultValue={phone}
                   placeholder="Enter phone number"
-                  className="bg-gray-50/50 border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
+                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
+                  readOnly
                 />
               </div>
             </div>
