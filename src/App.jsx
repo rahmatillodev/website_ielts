@@ -15,10 +15,12 @@ import ReadingResultPage from "./pages/dashboard/reading/ReadingResultPage";
 import { useAuthStore } from "./store/authStore";
 import { ToastContainer } from "react-toastify";
 import {useSettingsStore} from "./store/systemStore";
+import { useTestStore } from "./store/testStore";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
   const {fetchSettings} = useSettingsStore()
+  const {fetchTests} = useTestStore();
 
   useEffect(() => {
     // Initialize session on app load
@@ -28,6 +30,10 @@ function App() {
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
+
+  useEffect(() => {
+    fetchTests();
+  }, [fetchTests])
 
 
   return (
