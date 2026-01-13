@@ -16,14 +16,21 @@ import AdminPage from "./pages/dashboard/AdminPage";
 import AdminRoute from "./components/AdminRoute";
 import { useAuthStore } from "./store/authStore";
 import { ToastContainer } from "react-toastify";
+import {useSettingsStore} from "./store/systemStore";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
+  const {fetchSettings} = useSettingsStore()
 
   useEffect(() => {
     // Initialize session on app load
     initializeSession();
   }, [initializeSession]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
 
   return (
     <>
