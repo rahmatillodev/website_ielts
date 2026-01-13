@@ -10,15 +10,13 @@ export const useAuthStore = create(
       // --- State ---
       authUser: null,
       userProfile: null,
-      loading: false, // Boshlang'ich holatda false
+      loading: false,
       error: null,
-      isInitialized: false, // Session bir marta tekshirilganini bilish uchun
+      isInitialized: false, 
 
-      // --- Actions ---
 
-      // Sessionni tekshirish (App yuklanganda bir marta chaqiriladi)
       initializeSession: async () => {
-        if (get().isInitialized) return; // Takroriy chaqiruvni oldini olish
+        if (get().isInitialized) return; 
 
         try {
           set({ loading: true, error: null })

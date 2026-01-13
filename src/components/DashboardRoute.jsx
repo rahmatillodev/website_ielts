@@ -2,9 +2,9 @@ import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
 // Admin Route component that checks authentication and admin role
-export default function AdminRoute({ children }) {
-  const authUser = useAuthStore((state) => state.authUser)
+export default function DashboardRoute({ children }) {
   const userProfile = useAuthStore((state) => state.userProfile)
+  
   const loading = useAuthStore((state) => state.loading)
 
   // Show loading state while checking authentication
@@ -19,13 +19,8 @@ export default function AdminRoute({ children }) {
     )
   }
 
-  // Redirect to login if not authenticated
-  if (!authUser) {
-    return <Navigate to="/login" replace />
-  }
-
   // Redirect to dashboard if not admin
-  if (userProfile?.role !== 'admin') {
+  if (userProfile !== null) {
     return <Navigate to="/dashboard" replace />
   }
 

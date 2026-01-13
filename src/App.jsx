@@ -12,8 +12,6 @@ import ReadingPage from "./pages/dashboard/reading/ReadingPage";
 import ReadingPracticePage from "./pages/dashboard/reading/ReadingPracticePage";
 import ProfilePage from "./pages/dashboard/ProfilePage";
 import ReadingResultPage from "./pages/dashboard/reading/ReadingResultPage";
-import AdminPage from "./pages/dashboard/AdminPage";
-import AdminRoute from "./components/AdminRoute";
 import { useAuthStore } from "./store/authStore";
 import { ToastContainer } from "react-toastify";
 import {useSettingsStore} from "./store/systemStore";
@@ -25,7 +23,7 @@ function App() {
   useEffect(() => {
     // Initialize session on app load
     initializeSession();
-  }, [initializeSession]);
+  }, []);
 
   useEffect(() => {
     fetchSettings();
@@ -38,11 +36,10 @@ function App() {
         {/* Public routes */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
-          {/* <Route path="/about" element={<About />} /> */}
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/login" element={<LoginPage />} />
         </Route>
-        <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/login" element={<LoginPage />} />
 
         {/* Protected routes */}
         <Route element={<DashboardLayout />}>
@@ -54,14 +51,7 @@ function App() {
             element={<ReadingPracticePage />}
           />
           <Route path="/reading-result/:id" element={<ReadingResultPage />} />
-          <Route
-            path="/admin"
-            element={
-              <AdminRoute>
-                <AdminPage />
-              </AdminRoute>
-            }
-          />
+          
         </Route>
       </Routes>
       <ToastContainer />
