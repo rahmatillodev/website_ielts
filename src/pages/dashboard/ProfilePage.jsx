@@ -6,10 +6,13 @@ import { HiOutlinePencil } from "react-icons/hi2";
 import { LuUserRound } from "react-icons/lu";
 import { LiaExternalLinkAltSolid } from "react-icons/lia";
 import { useAuthStore } from "@/store/authStore";
+import {useSettingsStore} from "@/store/systemStore";
+import { Link } from "react-router-dom";
 
 const ProfilePage = () => {
   const authUser = useAuthStore((state) => state.authUser);
   const userProfile = useAuthStore((state) => state.userProfile);
+  const settings = useSettingsStore((state) => state.settings);
 
   // Get user data from store
   const fullName = userProfile?.full_name || '';
@@ -152,9 +155,11 @@ const ProfilePage = () => {
             <div className="space-y-1">
               <p className="text-sm font-black text-gray-900">Telegram</p>
               <div className="flex items-center gap-1">
-                <p className="text-sm font-bold text-gray-400 leading-none">
-                  {displayData.supportTelegram}
-                </p>
+                <Link to={settings?.telegram_admin_username} target="_blank">
+                  <p className="text-sm font-bold text-gray-400 leading-none">
+                    {displayData.supportTelegram}
+                  </p>
+                </Link>
                 <LiaExternalLinkAltSolid
                   size={18}
                   className="text-gray-400 mb-0.5"
@@ -167,9 +172,11 @@ const ProfilePage = () => {
             <div className="space-y-1">
               <p className="text-sm font-black text-gray-900">Email</p>
               <div className="flex items-center gap-1">
-              <p className="text-sm font-bold text-gray-400">
-                {displayData.supportEmail}{" "}
-              </p>
+                <Link to={settings?.support_link} target="_blank">
+                  <p className="text-sm font-bold text-gray-400">
+                    {displayData.supportEmail}{" "}
+                  </p>
+                </Link>
                 <LiaExternalLinkAltSolid
                   size={18}
                   className="text-gray-400 mb-0.5"
