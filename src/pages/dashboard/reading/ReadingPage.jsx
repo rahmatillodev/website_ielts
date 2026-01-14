@@ -7,6 +7,7 @@ import PremiumBanner from "@/components/premium_badges/PremiumBanner";
 import { useTestStore } from "@/store/testStore";
 import ReadingCardLocked from "./cards/ReadingCardLocked";
 import { useAuthStore } from "@/store/authStore";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const ReadingPage = () => {
   const [isGridView, setIsGridView] = useState(true);
@@ -20,27 +21,33 @@ const ReadingPage = () => {
 
   // 1. Qidiruv va Filtr mantiqi
   const filteredData = useMemo(() => {
-  return allTests.filter((test) => {
-    const matchesSearch = test.title
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
+    return allTests.filter((test) => {
+      const matchesSearch = test.title
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
-    const matchesTab =
-      activeTab === "All Tests" ||
-      (activeTab === "premium" && test.is_premium === true) ||
-      (activeTab === "free" && test.is_premium === false);
+      const matchesTab =
+        activeTab === "All Tests" ||
+        (activeTab === "premium" && test.is_premium === true) ||
+        (activeTab === "free" && test.is_premium === false);
 
-    return matchesSearch && matchesTab;
-  });
-}, [allTests, searchQuery, activeTab]);
+      return matchesSearch && matchesTab;
+    });
+  }, [allTests, searchQuery, activeTab]);
+
+  const handleViewChange = (value) => {
+    if (value === "grid") {
+      setIsGridView(true);
+    } else if (value === "list") {
+      setIsGridView(false);
+    }
+  };
 
 
   // 2. Pagination mantiqi
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentItems = filteredData.slice(startIndex, startIndex + itemsPerPage);
-  console.log(currentItems);
-  
 
   // Filtr yoki qidiruv o'zgarganda birinchi sahifaga qaytish
   const handleFilterChange = (tab) => {
@@ -68,13 +75,12 @@ const ReadingPage = () => {
               <button
                 key={tab}
                 onClick={() => handleFilterChange(tab)}
-                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === tab
-                    ? "bg-black text-white shadow-lg"
-                    : "text-gray-500 hover:bg-white hover:text-gray-900"
-                }`}
+                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === tab
+                  ? "bg-black text-white shadow-lg"
+                  : "text-gray-500 hover:bg-white hover:text-gray-900"
+                  }`}
               >
-                {tab}
+                {tab === "All Tests" ? tab : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -91,12 +97,28 @@ const ReadingPage = () => {
               />
             </div>
             {/* View Toggle */}
-            <button
-              onClick={() => setIsGridView(!isGridView)}
-              className="p-3.5 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 shadow-sm transition-all text-gray-700"
+            <ToggleGroup
+              type="single"
+              value={isGridView ? "grid" : "list"}
+              onValueChange={handleViewChange}
+              className="inline-flex items-center justify-center rounded-2xl bg-gray-50 p-2 gap-2 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2"
             >
-              {isGridView ? <IoListOutline size={22} /> : <IoGridOutline size={22} />}
-            </button>
+              <ToggleGroupItem
+                value="list"
+                className="relative px-7 py-5 text-base font-semibold transition-all duration-200 rounded-xl border-2 border-transparent data-[state=on]:bg-white data-[state=on]:text-blue-600 data-[state=on]:shadow-lg data-[state=on]:shadow-blue-100 data-[state=on]:border-blue-200 data-[state=off]:text-gray-500 hover:data-[state=off]:bg-white hover:data-[state=off]:shadow-sm focus:outline-none focus:ring-0"
+              >
+                <IoListOutline size={28} />
+              </ToggleGroupItem>
+
+              <div className="h-10 w-px bg-gray-300" />
+
+              <ToggleGroupItem
+                value="grid"
+                className="relative px-7 py-5 text-base font-semibold transition-all duration-200 rounded-xl border-2 border-transparent data-[state=on]:bg-white data-[state=on]:text-blue-600 data-[state=on]:shadow-lg data-[state=on]:shadow-blue-100 data-[state=on]:border-blue-200 data-[state=off]:text-gray-500 hover:data-[state=off]:bg-white hover:data-[state=off]:shadow-sm focus:outline-none focus:ring-0"
+              >
+                <IoGridOutline size={28} />
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
       </div>
@@ -124,8 +146,7 @@ const ReadingPage = () => {
             ) : (
               <ReadingCardLocked
                 key={test.id}
-                title={test.title}
-                is_premium={test.is_premium}
+                {...test}
                 isGridView={isGridView}
               />
             );
@@ -146,17 +167,16 @@ const ReadingPage = () => {
           >
             <IoChevronBack size={20} />
           </button>
-          
+
           <div className="flex gap-2">
             {[...Array(totalPages)].map((_, i) => (
               <button
                 key={i + 1}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`w-11 h-11 rounded-xl font-bold transition-all ${
-                  currentPage === i + 1
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-200"
-                    : "bg-white border text-gray-600 hover:bg-gray-50"
-                }`}
+                className={`w-11 h-11 rounded-xl font-bold transition-all ${currentPage === i + 1
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                  : "bg-white border text-gray-600 hover:bg-gray-50"
+                  }`}
               >
                 {i + 1}
               </button>
