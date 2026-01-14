@@ -2,8 +2,11 @@ import React, { useState, useMemo } from "react";
 import { FaSearch } from "react-icons/fa";
 import { IoGridOutline, IoListOutline, IoChevronBack, IoChevronForward } from "react-icons/io5";
 import { Input } from "@/components/ui/input";
-import ReadingCard from "./ReadingCard";
+import ReadingCardOpen from "./cards/ReadingCardOpen";
 import PremiumBanner from "@/components/premium_badges/PremiumBanner";
+import { useTestStore } from "@/store/testStore";
+import ReadingCardLocked from "./cards/ReadingCardLocked";
+import { useAuthStore } from "@/store/authStore";
 
 const ReadingPage = () => {
   const [isGridView, setIsGridView] = useState(true);
@@ -12,42 +15,32 @@ const ReadingPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
 
-  const allTests = [
-    { id: 1, title: "Academic Reading Test 1", status: "FREE", difficulty: "Moderate", accent: "British", time: "30m", qs: "40 Qs" },
-    { id: 2, title: "General Reading Test 2", status: "FREE", difficulty: "Easy", accent: "American", time: "30m", qs: "40 Qs" },
-    { id: 3, title: "IELTS Reading Test 3", status: "PREMIUM", difficulty: "Hard", accent: "Australian", time: "30m", qs: "40 Qs" },
-    { id: 4, title: "Reading Practice 4", status: "PREMIUM", difficulty: "Very Hard", accent: "Speed 1.25x", time: "30m", qs: "40 Qs" },
-    { id: 5, title: "Reading Exam 5", status: "COMPLETED", date: "Oct 20", score: "8.0", time: "28m", qs: "38/40" },
-    { id: 6, title: "Quick Reading 6", status: "FREE", difficulty: "Easy", accent: "American", time: "30m", qs: "40 Qs" },
-    // Paginationni tekshirish uchun yana bir necha testlar...
-    // ...Array.from({ length: 15 }).map((_, i) => ({
-    //   id: i + 7,
-    //   title: `Additional Test ${i + 7}`,
-    //   status: i % 2 === 0 ? "FREE" : "PREMIUM",
-    //   difficulty: "Moderate",
-    //   accent: "Global",
-    //   time: "30m",
-    //   qs: "40 Qs"
-    // }))
-  ];
+  const allTests = useTestStore((state) => state.test_reading);
+  const userProfile = useAuthStore((state) => state.userProfile);
 
   // 1. Qidiruv va Filtr mantiqi
   const filteredData = useMemo(() => {
-    return allTests.filter((test) => {
-      const matchesSearch = test.title.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesTab = 
-        activeTab === "All Tests" || 
-        (activeTab === "Free" && test.status === "FREE") || 
-        (activeTab === "Premium" && test.status === "PREMIUM");
-      
-      return matchesSearch && matchesTab;
-    });
-  }, [searchQuery, activeTab]);
+  return allTests.filter((test) => {
+    const matchesSearch = test.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+
+    const matchesTab =
+      activeTab === "All Tests" ||
+      (activeTab === "premium" && test.is_premium === true) ||
+      (activeTab === "free" && test.is_premium === false);
+
+    return matchesSearch && matchesTab;
+  });
+}, [allTests, searchQuery, activeTab]);
+
 
   // 2. Pagination mantiqi
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentItems = filteredData.slice(startIndex, startIndex + itemsPerPage);
+  console.log(currentItems);
+  
 
   // Filtr yoki qidiruv o'zgarganda birinchi sahifaga qaytish
   const handleFilterChange = (tab) => {
@@ -71,7 +64,7 @@ const ReadingPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-8 gap-4">
           {/* Tabs */}
           <div className="flex gap-2 bg-gray-100/80 p-1.5 rounded-2xl border border-gray-200">
-            {["All Tests", "Free", "Premium"].map((tab) => (
+            {["All Tests", "free", "premium"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleFilterChange(tab)}
@@ -110,11 +103,35 @@ const ReadingPage = () => {
 
       {/* Grid yoki List Layout */}
       {currentItems.length > 0 ? (
-        <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" : "flex flex-col gap-1"}>
-          {currentItems.map((test) => (
-            <ReadingCard key={test.id} {...test} isGridView={isGridView} />
-          ))}
+        <div
+          className={
+            isGridView
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              : "flex flex-col gap-1"
+          }
+        >
+          {currentItems.map((test) => {
+            const subscriptionStatus = userProfile?.subscription_status ?? "free";
+            const canAccess =
+              subscriptionStatus === "premium" || !test.is_premium;
+
+            return canAccess ? (
+              <ReadingCardOpen
+                key={test.id}
+                {...test}
+                isGridView={isGridView}
+              />
+            ) : (
+              <ReadingCardLocked
+                key={test.id}
+                title={test.title}
+                is_premium={test.is_premium}
+                isGridView={isGridView}
+              />
+            );
+          })}
         </div>
+
       ) : (
         <div className="py-20 text-center text-gray-400 font-bold">Hech narsa topilmadi...</div>
       )}
