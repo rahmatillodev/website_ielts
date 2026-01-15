@@ -9,7 +9,7 @@ import {
 } from "react-icons/lu";
 import { FaChartSimple } from "react-icons/fa6";
 import { Button } from "../ui/button";
-import { GraduationCap } from "lucide-react"; 
+import { GraduationCap, Mic, PenSquare } from "lucide-react"; 
 import { useAuthStore } from "@/store/authStore";
 import LogoutModal from "../modal/LogoutModal";
 import { toast } from "react-toastify";
@@ -48,7 +48,7 @@ const DashboardSidebar = () => {
 
   return (
     <aside className="flex flex-col w-[280px] h-screen bg-white border-r border-gray-100 font-sans">
-      <div className="h-24 flex items-center px-6 mb-2">
+      <div className="h-24 flex items-center px-6 mb-2 shrink-0">
         <div className="flex items-center gap-3">
           <div className="size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
             <GraduationCap className="text-[#4A90E2] size-7" />
@@ -59,45 +59,60 @@ const DashboardSidebar = () => {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1">
-        <SidebarItem
-          icon={LuLayoutDashboard}
-          label="Dashboard"
-          link="/dashboard"
-          isActive={checkActive("/dashboard")}
-        />
-        {/* ... boshqa SidebarItemlar ... */}
-        <SidebarItem
-          icon={LuBookOpen}
-          label="Reading Practice"
-          link="/reading"
-          isActive={pathname.startsWith("/reading")}
-        />
-        <SidebarItem
-          icon={LuHeadphones}
-          label="Listening Practice"
-          link="/listening"
-          isActive={checkActive("/listening")}
-        />
-        <SidebarItem
-          icon={FaChartSimple}
-          label="Analytics"
-          link="/analytics"
-          isActive={checkActive("/analytics")}
-        />
+      {/* Навигация с автоматическим скроллом */}
+      <nav className="flex-1 overflow-y-auto py-2 scrollbar-thin scrollbar-thumb-[#4A90E2]- scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+        <div className="space-y-1">
+          <SidebarItem
+            icon={LuLayoutDashboard}
+            label="Dashboard"
+            link="/dashboard"
+            isActive={checkActive("/dashboard")}
+          />
+          <SidebarItem
+            icon={LuBookOpen}
+            label="Reading Practice"
+            link="/reading"
+            isActive={pathname.startsWith("/reading")}
+          />
+          <SidebarItem
+            icon={LuHeadphones}
+            label="Listening Practice"
+            link="/listening"
+            isActive={checkActive("/listening")}
+          />
+          <SidebarItem
+            icon={FaChartSimple}
+            label="Analytics"
+            link="/analytics"
+            isActive={checkActive("/analytics")}
+          />
+          <SidebarItem
+            icon={Mic}
+            label="Speaking"
+            link="/speaking"
+            isActive={checkActive("/speaking")}
+          />
+          <SidebarItem
+            icon={PenSquare}
+            label="Writing"
+            link="/writing"
+            isActive={checkActive("/writing")}
+          />
 
-        <div className="mt-8 px-7 text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-3">
-          Account
         </div>
-        <SidebarItem
-          icon={LuSettings}
-          label="Profile Settings"
-          link="/profile"
-          isActive={checkActive("/profile")}
-        />
       </nav>
+          <div className="mt-8 px-7 text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-3 shrink-0">
+            Account
+          </div>
+          <SidebarItem
+            icon={LuSettings}
+            label="Profile Settings"
+            link="/profile"
+            isActive={checkActive("/profile")}
+          />
 
-      <div className="p-3 space-y-3">
+      {/* Нижняя часть сайдбара (без скролла) */}
+      <div className="shrink-0 p-3 space-y-3">
         {/* Upgrade Banner */}
         <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100">
           <div className="flex justify-between items-start mb-4">
