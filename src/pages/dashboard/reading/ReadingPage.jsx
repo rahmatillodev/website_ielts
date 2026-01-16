@@ -2,12 +2,12 @@ import React, { useState, useMemo } from "react";
 import { FaSearch } from "react-icons/fa";
 import { IoGridOutline, IoListOutline, IoChevronBack, IoChevronForward } from "react-icons/io5";
 import { Input } from "@/components/ui/input";
-import ReadingCardOpen from "./cards/ReadingCardOpen";
 import PremiumBanner from "@/components/premium_badges/PremiumBanner";
 import { useTestStore } from "@/store/testStore";
-import ReadingCardLocked from "./cards/ReadingCardLocked";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import CardLocked from "../../../components/cards/CardLocked";
+import CardOpen from "../../../components/cards/CardOpen";
 
 const ReadingPage = () => {
   const [isGridView, setIsGridView] = useState(true);
@@ -138,13 +138,13 @@ const ReadingPage = () => {
               subscriptionStatus === "premium" || !test.is_premium;
 
             return canAccess ? (
-              <ReadingCardOpen
+              <CardOpen
                 key={test.id}
                 {...test}
                 isGridView={isGridView}
               />
             ) : (
-              <ReadingCardLocked
+              <CardLocked
                 key={test.id}
                 {...test}
                 isGridView={isGridView}
@@ -159,7 +159,7 @@ const ReadingPage = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center mt-12 gap-2">
+        <div className="flex justify-end items-center mt-12 gap-2 mr-8">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}

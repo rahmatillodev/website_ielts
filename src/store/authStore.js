@@ -96,6 +96,52 @@ export const useAuthStore = create(
         }
       },
 
+      // Avatar yuklash
+      uploadAvatar: async (file) => {
+        const userId = get().authUser?.id;
+        if (!userId) return { success: false, error: 'User not authenticated' };
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId}-${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('avatar-image')
+          .upload(fileName, file, { upsert: true });
+
+        if (uploadError) {
+          return { success: false, error: uploadError.message };
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatar-image')
+          .getPublicUrl(fileName);
+
+        return { success: true, url: publicUrl };
+      },
+
+      // Profilni yangilash
+      updateUserProfile: async (profileData) => {
+        const userId = get().authUser?.id;
+        if (!userId) return { success: false, error: 'User not authenticated' };
+
+        set({ loading: true, error: null });
+        
+        const { data, error } = await supabase
+          .from('users')
+          .update(profileData)
+          .eq('id', userId)
+          .select()
+          .single();
+
+        if (error) {
+          set({ error: error.message, loading: false });
+          return { success: false, error: error.message };
+        }
+
+        set({ userProfile: data, loading: false });
+        return { success: true };
+      },
+
       // Chiqish (Sign Out)
       signOut: async () => {
         set({ loading: true })

@@ -1,7 +1,7 @@
 import React from "react";
 import { MdLock, MdQuiz, MdStar, MdTimer } from "react-icons/md";
 
-const ReadingCardLocked = ({ 
+const CardLocked = ({ 
   title, 
   is_premium,
   isGridView,
@@ -9,7 +9,7 @@ const ReadingCardLocked = ({
   question_quantity,
   isCompleted,
   date,
-  difficulty
+  difficulty,
 }) => {
   const containerClass = isGridView
     ? "bg-white border border-gray-100 rounded-[32px] p-7 shadow-sm hover:shadow-xl transition-all flex flex-col relative h-full"
@@ -19,11 +19,12 @@ const ReadingCardLocked = ({
   
   return (
     <div className={containerClass}>
-      {isGridView && (
-        <div className="absolute top-5 right-5 px-2.5 py-1 bg-amber-50 text-amber-600 text-[10px] font-black rounded-lg flex items-center gap-1 border border-amber-100">
-          <MdStar /> {cardStatus}
-        </div>
-      )}
+      <div className={isGridView 
+        ? "absolute top-5 right-5 px-2.5 py-1 bg-amber-50 text-amber-600 text-[10px] font-black rounded-lg flex items-center gap-1 border border-amber-100"
+        : "px-2.5 py-1 bg-amber-50 text-amber-600 text-[10px] font-black rounded-lg flex items-center gap-1 border border-amber-100 flex-shrink-0"
+      }>
+        <MdStar /> {cardStatus}
+      </div>
 
       {isGridView ? (
         // Вертикальный режим (GridView)
@@ -65,7 +66,7 @@ const ReadingCardLocked = ({
         // Горизонтальный режим
         <>
           <div className="flex items-center gap-5 flex-1 min-w-0">
-            <div className="size-14 rounded-2xl bg-amber-50 text-amber-400 flex items-center justify-center flex-shrink-0">
+            <div className="size-14 rounded-2xl bg-amber-50 text-amber-400 flex items-center justify-center shrink-0">
               <MdLock className="text-3xl" />
             </div>
 
@@ -101,4 +102,4 @@ const ReadingCardLocked = ({
   );
 };
 
-export default React.memo(ReadingCardLocked);
+export default React.memo(CardLocked);
