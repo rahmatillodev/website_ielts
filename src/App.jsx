@@ -16,6 +16,8 @@ import { useAuthStore } from "./store/authStore";
 import { ToastContainer } from "react-toastify";
 import {useSettingsStore} from "./store/systemStore";
 import { useTestStore } from "./store/testStore";
+import ListeningPage from "./pages/dashboard/listening/ListeningPage";
+import ListeningPracticePage from "./pages/dashboard/listening/ListeningPracticePage";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -45,18 +47,25 @@ function App() {
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<LandingPage />} />
         </Route>
 
         {/* Protected routes */}
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/reading" element={<ReadingPage />} />
+          <Route path="/listening" element={<ListeningPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route
             path="/reading-practice/:id"
             element={<ReadingPracticePage />}
           />
+          <Route
+            path="/listening-practice/:id"
+            element={<ListeningPracticePage />}
+          />
           <Route path="/reading-result/:id" element={<ReadingResultPage />} />
+          <Route path="*" element={<DashboardPage />} />
           
         </Route>
       </Routes>
