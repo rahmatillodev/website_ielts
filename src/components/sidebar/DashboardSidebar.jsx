@@ -136,7 +136,7 @@ const DashboardSidebar = () => {
 
         {/* Logout Modal Integratsiyasi */}
         <LogoutModal onConfirm={handleLogout}>
-          <button className="flex items-center justify-center gap-2 w-full py-3.5 hover:bg-red-50 hover:text-red-600 text-[#1E293B] font-medium rounded-xl transition-all active:scale-[0.95]">
+          <button className="flex  items-center gap-3 px-6 py-3 w-full bg-red-50 hover:bg-red-200 hover:text-red-600 text-[#1E293B] font-medium rounded-xl transition-all active:scale-[0.95]">
             <LuLogOut className="w-5 h-5" /> Log out
           </button>
         </LogoutModal>

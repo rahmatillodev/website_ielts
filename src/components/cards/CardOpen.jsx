@@ -1,5 +1,5 @@
 import React from "react";
-import { MdHeadset, MdTimer, MdQuiz, MdCheckCircle } from "react-icons/md";
+import { MdHeadset, MdTimer, MdQuiz, MdCheckCircle, MdStar } from "react-icons/md";
 import { HiOutlinePlay } from "react-icons/hi2";
 import { Link } from "react-router-dom";
 
@@ -12,20 +12,28 @@ const ReadingCardOpen = ({
   isCompleted,
   date,
   isGridView,
+  link,
+  is_premium,
 }) => {
   const containerClass = isGridView
     ? "bg-white border border-gray-100 rounded-[32px] p-7 shadow-sm hover:shadow-xl transition-all flex flex-col relative h-full"
     : "bg-white border border-gray-100 rounded-[24px] p-4 shadow-sm hover:shadow-md flex items-center gap-4 mb-4";
 
+    const cardStatus = is_premium ? "Premium" : "Free";
   return (
     <div className={containerClass}>
-      {isGridView && (
-        <div className="absolute top-5 right-5 z-10">
-          <span className="px-2.5 py-1 bg-green-50 text-green-600 text-[10px] font-black uppercase rounded-lg tracking-widest border border-green-100">
-            Free
-          </span>
-        </div>
-      )}
+      <div className={isGridView 
+        ? "absolute top-5 right-5 z-10"
+        : "flex-shrink-0 order-last"
+      }>
+        <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg tracking-widest border flex items-center gap-1 ${
+          is_premium 
+            ? "bg-amber-50 text-amber-600 border-amber-100" 
+            : "bg-green-50 text-green-600 border-green-100"
+        }`}>
+          {is_premium && <MdStar />} {cardStatus}
+        </span>
+      </div>
 
       <div className={`flex ${isGridView ? "flex-col flex-1" : "items-center flex-1 gap-5"}`}>
         <div className={`${isGridView ? "size-16 mb-6" : "size-14"} rounded-2xl bg-blue-50 text-blue-400 flex items-center justify-center flex-shrink-0`}>
@@ -55,7 +63,7 @@ const ReadingCardOpen = ({
       </div>
 
       <Link
-        to={`/reading-practice/${id}`}
+        to={link || `/reading-practice/${id}`}
         className="mt-6 py-3 bg-blue-500 hover:bg-blue-600 text-white text-sm font-black rounded-xl flex items-center justify-center gap-2 w-full md:w-36 self-start"
       >
         Start Test <HiOutlinePlay />
