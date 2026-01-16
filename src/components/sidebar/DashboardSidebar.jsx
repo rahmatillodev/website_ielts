@@ -13,6 +13,7 @@ import { GraduationCap, Mic, PenSquare } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import LogoutModal from "../modal/LogoutModal";
 import { toast } from "react-toastify";
+import { checkPremiumExpireDate } from "@/utils/checkPremiumExpireDate";
 
 const SidebarItem = ({ icon: Icon, label, link, isActive }) => (
   <Link
@@ -33,6 +34,9 @@ const DashboardSidebar = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const signOut = useAuthStore((state) => state.signOut); 
+  const {userProfile} = useAuthStore();
+  const isPremium = checkPremiumExpireDate(userProfile.premium_until);
+  
 
   const handleLogout = async () => {
     const result = await signOut();
@@ -70,21 +74,21 @@ const DashboardSidebar = () => {
           />
           <SidebarItem
             icon={LuBookOpen}
-            label="Reading Practice"
+            label="Reading"
             link="/reading"
             isActive={pathname.startsWith("/reading")}
           />
           <SidebarItem
             icon={LuHeadphones}
-            label="Listening Practice"
+            label="Listening"
             link="/listening"
             isActive={checkActive("/listening")}
           />
           <SidebarItem
-            icon={FaChartSimple}
-            label="Analytics"
-            link="/analytics"
-            isActive={checkActive("/analytics")}
+              icon={PenSquare}
+              label="Writing"
+              link="/writing"
+              isActive={checkActive("/writing")}
           />
           <SidebarItem
             icon={Mic}
@@ -93,12 +97,11 @@ const DashboardSidebar = () => {
             isActive={checkActive("/speaking")}
           />
           <SidebarItem
-            icon={PenSquare}
-            label="Writing"
-            link="/writing"
-            isActive={checkActive("/writing")}
+            icon={FaChartSimple}
+            label="Analytics"
+            link="/analytics"
+            isActive={checkActive("/analytics")}
           />
-
         </div>
       </nav>
           <div className="mt-8 px-7 text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-3 shrink-0">
@@ -114,25 +117,27 @@ const DashboardSidebar = () => {
       {/* Нижняя часть сайдбара (без скролла) */}
       <div className="shrink-0 p-3 space-y-3">
         {/* Upgrade Banner */}
-        <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100">
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-2 bg-white/20 rounded-xl text-white">
-              <LuStar size={20} fill="currentColor" />
+        {!isPremium && (
+          <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2 bg-white/20 rounded-xl text-white">
+                <LuStar size={20} fill="currentColor" />
+              </div>
+              <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black text-white uppercase tracking-wider">
+                Free Plan
+              </span>
             </div>
-            <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black text-white uppercase tracking-wider">
-              Free Plan
-            </span>
+            <div className="text-[17px] font-black text-white mb-1">Upgrade to Pro</div>
+            <p className="text-[12px] text-white/80 font-medium leading-tight mb-5">
+              Unlock unlimited tests and AI scoring.
+            </p>
+            <Link to="/pricing">
+              <Button className="w-full bg-white hover:bg-blue-50 text-[#4B8EE3] font-bold py-5 rounded-xl border-none shadow-sm active:scale-[0.98] transition-all text-[13px]">
+                View Plans
+              </Button>
+            </Link>
           </div>
-          <div className="text-[17px] font-black text-white mb-1">Upgrade to Pro</div>
-          <p className="text-[12px] text-white/80 font-medium leading-tight mb-5">
-            Unlock unlimited tests and AI scoring.
-          </p>
-          <Link to="/pricing">
-            <Button className="w-full bg-white hover:bg-blue-50 text-[#4B8EE3] font-bold py-5 rounded-xl border-none shadow-sm active:scale-[0.98] transition-all text-[13px]">
-              View Plans
-            </Button>
-          </Link>
-        </div>
+        )}
 
         {/* Logout Modal Integratsiyasi */}
         <LogoutModal onConfirm={handleLogout}>
