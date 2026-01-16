@@ -20,6 +20,7 @@ import NetworkModal from "./components/modal/NetworkModal";
 import useNetworkStatus from "./hooks/use_network_status";
 import Writing from "./pages/dashboard/Writing";
 import Speaking from "./pages/dashboard/Speaking";
+import Analytics from "./pages/dashboard/analytics";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -58,6 +59,7 @@ function App() {
           <Route path="/speaking" element={<Speaking />} />
           <Route path="/writing" element={<Writing />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route
             path="/reading-practice/:id"
             element={<ReadingPracticePage />}
