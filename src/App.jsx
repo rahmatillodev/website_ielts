@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import PublicLayout from "./layouts/LandingLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
 // import Settings from './pages/Settings'
@@ -39,7 +41,7 @@ function App() {
 
 
   return (
-    <>
+    <DndProvider backend={HTML5Backend}>
       <Routes>
         {/* Public routes */}
         <Route element={<PublicLayout />}>
@@ -70,7 +72,7 @@ function App() {
         </Route>
       </Routes>
       <ToastContainer />
-    </>
+    </DndProvider>
   );
 }
 

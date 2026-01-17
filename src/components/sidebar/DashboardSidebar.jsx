@@ -25,7 +25,7 @@ const SidebarItem = ({ icon: Icon, label, link, isActive }) => (
       }`}
   >
     <Icon className={`w-6 h-6 ${isActive ? "text-[#4A90E2]" : "text-[#64748B]"}`} />
-    {label}
+    <span className="truncate">{label}</span>
   </Link>
 );
 
@@ -47,8 +47,11 @@ const DashboardSidebar = () => {
   const checkActive = (link) => pathname === link;
 
   return (
-    <aside className="flex flex-col w-[280px] h-screen bg-white border-r border-gray-100 font-sans">
-      <div className="h-24 flex items-center px-6 mb-2">
+    // Balandlikni ekranga moslash va scrollni boshqarish
+    <aside className="flex flex-col w-[320px] h-screen sticky top-0 bg-white border-r border-gray-100 font-sans overflow-hidden">
+      
+      {/* Logo qismi (Fiksirlangan balandlik) */}
+      <div className="h-24 flex-shrink-0 flex items-center px-6">
         <div className="flex items-center gap-3">
           <div className="size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
             <GraduationCap className="text-[#4A90E2] size-7" />
@@ -59,14 +62,14 @@ const DashboardSidebar = () => {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1">
+      {/* Navigatsiya qismi (Scroll bo'ladigan qism) */}
+      <nav className="flex-1 overflow-y-auto py-2 scrollbar-hide space-y-1">
         <SidebarItem
           icon={LuLayoutDashboard}
           label="Dashboard"
           link="/dashboard"
           isActive={checkActive("/dashboard")}
         />
-        {/* ... boshqa SidebarItemlar ... */}
         <SidebarItem
           icon={LuBookOpen}
           label="Reading Practice"
@@ -97,9 +100,10 @@ const DashboardSidebar = () => {
         />
       </nav>
 
-      <div className="p-3 space-y-3">
-        {/* Upgrade Banner */}
-        <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100">
+      {/* Pastki qism (Banner va Logout - doim ko'rinib turadi) */}
+      <div className="p-4 border-t border-gray-50 bg-white shrink-0 space-y-3">
+        {/* Upgrade Banner - Agar ekran juda kichik bo'lsa qisilib ketmasligi uchun min-height */}
+        <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100 hidden sm:block">
           <div className="flex justify-between items-start mb-4">
             <div className="p-2 bg-white/20 rounded-xl text-white">
               <LuStar size={20} fill="currentColor" />
@@ -121,7 +125,7 @@ const DashboardSidebar = () => {
 
         {/* Logout Modal Integratsiyasi */}
         <LogoutModal onConfirm={handleLogout}>
-          <button className="flex  items-center gap-3 px-6 py-3 w-full bg-red-50 hover:bg-red-200 hover:text-red-600 text-[#1E293B] font-medium rounded-xl transition-all active:scale-[0.95]">
+          <button className="flex items-center gap-3 px-6 py-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-xl transition-all active:scale-[0.95] text-sm">
             <LuLogOut className="w-5 h-5" /> Log out
           </button>
         </LogoutModal>

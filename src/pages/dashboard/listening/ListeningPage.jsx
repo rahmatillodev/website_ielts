@@ -172,6 +172,7 @@ const ListeningPage = () => {
                   {...test}
                   isGridView={isGridView}
                   link={`/listening-practice/${test.id}`}
+                  testType="listening"
                 />
               ) : (
                 <ReadingCardLocked
