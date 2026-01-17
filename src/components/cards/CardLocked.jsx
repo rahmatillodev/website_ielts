@@ -3,7 +3,7 @@ import { MdLock, MdQuiz, MdStar, MdTimer } from "react-icons/md";
 
 const CardLocked = ({ 
   title, 
-  is_premium, 
+  is_premium,
   isGridView,
   duration,
   question_quantity,
