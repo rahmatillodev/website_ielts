@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import PublicLayout from "./layouts/LandingLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
 // import Settings from './pages/Settings'
@@ -16,14 +18,8 @@ import { useAuthStore } from "./store/authStore";
 import { ToastContainer } from "react-toastify";
 import {useSettingsStore} from "./store/systemStore";
 import { useTestStore } from "./store/testStore";
-
 import ListeningPage from "./pages/dashboard/listening/ListeningPage";
 import ListeningPracticePage from "./pages/dashboard/listening/ListeningPracticePage";
-import NetworkModal from "./components/modal/NetworkModal";
-import useNetworkStatus from "./hooks/use_network_status";
-import Writing from "./pages/dashboard/Writing";
-import Speaking from "./pages/dashboard/Speaking";
-import Analytics from "./pages/dashboard/analytics";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -45,7 +41,7 @@ function App() {
 
 
   return (
-    <>
+    <DndProvider backend={HTML5Backend}>
       <Routes>
         {/* Public routes */}
         <Route element={<PublicLayout />}>
@@ -60,14 +56,8 @@ function App() {
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/reading" element={<ReadingPage />} />
-
           <Route path="/listening" element={<ListeningPage />} />
-
-          <Route path="/speaking" element={<Speaking />} />
-          <Route path="/writing" element={<Writing />} />
-
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/analytics" element={<Analytics />} />
           <Route
             path="/reading-practice/:id"
             element={<ReadingPracticePage />}
@@ -82,8 +72,7 @@ function App() {
         </Route>
       </Routes>
       <ToastContainer />
-      <NetworkModal isOpen={!useNetworkStatus()} />
-    </>
+    </DndProvider>
   );
 }
 
