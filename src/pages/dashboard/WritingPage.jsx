@@ -1,7 +1,7 @@
 import ComingSoonPage from '@/components/ComingSoonPage'
 import React from 'react'
 
-const Writing = () => {
+const WritingPage = () => {
   return (
     <>
         <ComingSoonPage />
@@ -9,4 +9,4 @@ const Writing = () => {
   )
 }
 
-export default Writing
+export default WritingPage

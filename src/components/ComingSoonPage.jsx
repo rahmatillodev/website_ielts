@@ -52,7 +52,7 @@ const ComingSoonPage = () => {
 
           <h1 className='text-center text-8xl md:text-9xl font-black leading-[0.9]'>
           <span
-          className="bg-gradient-to-b 
+          className="bg-linear-gradient-to-b 
           from-gray-900
           to-gray-900/50 
           dark:from-white 
@@ -64,7 +64,8 @@ const ComingSoonPage = () => {
             Coming
           </span>
           <br />
-          <span className=" bg-gradient-to-b 
+          <span className=" bg-linear-to-b 
+          bg-linear-gradient-to-b 
           from-gray-900/90 
           to-gray-900/50
           dark:from-white/90 

@@ -1,7 +1,7 @@
 import ComingSoonPage from '@/components/ComingSoonPage'
 import React from 'react'
 
-const Analytics = () => {
+const SpeakingPage = () => {
   return (
     <>
         <ComingSoonPage />
@@ -9,4 +9,4 @@ const Analytics = () => {
   )
 }
 
-export default Analytics
+export default SpeakingPage

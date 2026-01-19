@@ -3,6 +3,7 @@ import { MdHeadset, MdTimer, MdQuiz, MdCheckCircle, MdStar } from "react-icons/m
 import { HiOutlinePlay } from "react-icons/hi2";
 import { useNavigate } from "react-router-dom";
 import { clearReadingPracticeData } from "@/store/readingStorage";
+import { clearListeningPracticeData } from "@/store/listeningStorage";
 import { checkTestCompleted } from "@/lib/testAttempts";
 import { IoBookOutline } from "react-icons/io5";
 import { useTestStore } from "@/store/testStore";
@@ -73,7 +74,11 @@ const ReadingCardOpen = ({
   const handleStartTest = (e) => {
     // Clear localStorage when starting a new test
     if (id) {
-      clearReadingPracticeData(id);
+      if (testType === 'listening') {
+        clearListeningPracticeData(id);
+      } else {
+        clearReadingPracticeData(id);
+      }
     }
     // Navigate using navigate to ensure localStorage is cleared first
     const practiceLink = testType === 'listening' 
@@ -84,7 +89,11 @@ const ReadingCardOpen = ({
   
   const handleRetake = () => {
     if (id) {
-      clearReadingPracticeData(id);
+      if (testType === 'listening') {
+        clearListeningPracticeData(id);
+      } else {
+        clearReadingPracticeData(id);
+      }
     }
     const practiceLink = testType === 'listening' 
       ? `/listening-practice/${id}?mode=retake`
@@ -148,7 +157,11 @@ const ReadingCardOpen = ({
             {hasCompleted ? (
               <MdCheckCircle className="text-3xl" />
             ) : (
-              <IoBookOutline className="text-3xl" />
+              testType === 'listening' ? (
+                <MdHeadset className="text-3xl" />
+              ) : (
+                <IoBookOutline className="text-3xl" />
+              )
             )}
           </div>
 
@@ -222,7 +235,11 @@ const ReadingCardOpen = ({
           {hasCompleted ? (
             <MdCheckCircle className="text-3xl" />
           ) : (
-            <IoBookOutline className="text-3xl" />
+            testType === 'listening' ? (
+              <MdHeadset className="text-3xl" />
+            ) : (
+              <IoBookOutline className="text-3xl" />
+            )
           )}
         </div>
 

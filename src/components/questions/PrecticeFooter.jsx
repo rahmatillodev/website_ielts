@@ -2,7 +2,7 @@ import React from 'react'
 import { FaCheck, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import FinishModal from '../modal/FinishModal';
 
-const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id , activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake }) => {
+const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id , activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink }) => {
   const currentPartData = currentTest?.parts?.find(p => p.part_number === currentPart) || currentTest?.parts?.[0];
   
   // Utility function to sort parts by part_number
@@ -195,7 +195,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
       {/* Modal - only show in taking mode */}
       {status === 'taking' && (
         <FinishModal
-          link={"/reading-result/"+id}
+          link={resultLink || "/reading-result/"+id}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           testId={id}

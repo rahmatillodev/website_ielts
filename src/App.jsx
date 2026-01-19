@@ -20,6 +20,7 @@ import {useSettingsStore} from "./store/systemStore";
 import { useTestStore } from "./store/testStore";
 import ListeningPage from "./pages/dashboard/listening/ListeningPage";
 import ListeningPracticePage from "./pages/dashboard/listening/ListeningPracticePage";
+import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -67,6 +68,7 @@ function App() {
             element={<ListeningPracticePage />}
           />
           <Route path="/reading-result/:id" element={<ReadingResultPage />} />
+          <Route path="/listening-result/:id" element={<ListeningResultPage />} />
           <Route path="*" element={<DashboardPage />} />
           
         </Route>
