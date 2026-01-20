@@ -16,7 +16,7 @@ function LandingLayout() {
         <Outlet />
       </main>
       
-      <LandingFooter/>
+      {!isHide && <LandingFooter/>}
     </div>
     </DashboardRoute>
   )

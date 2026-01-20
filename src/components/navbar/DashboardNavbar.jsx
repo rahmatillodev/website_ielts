@@ -58,17 +58,17 @@ const DashboardNavbar = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-1.5 pr-3 rounded-2xl transition-all group">
+              {/* <LuChevronDown className="text-gray-400 group-hover:text-gray-900" size={16} /> */}
+              <div className="hidden md:flex flex-col items-end leading-tight">
+                <p className="text-[14px] font-black text-gray-900">{displayName}</p>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{subscriptionStatus}</p>
+              </div>
               <Avatar className="size-10 border-2 border-transparent group-hover:border-blue-100">
                 <AvatarImage src={null} className="object-cover" />
                 <AvatarFallback className="bg-blue-50 text-blue-600 font-bold">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
-              <div className="hidden md:flex flex-col items-start leading-tight">
-                <p className="text-[14px] font-black text-gray-900">{displayName}</p>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{subscriptionStatus}</p>
-              </div>
-              <LuChevronDown className="text-gray-400 group-hover:text-gray-900" size={16} />
             </div>
           </DropdownMenuTrigger>
 
@@ -83,7 +83,7 @@ const DashboardNavbar = () => {
             </DropdownMenuItem>
 
             <DropdownMenuItem className="rounded-xl py-2.5 cursor-pointer focus:bg-blue-50 group">
-              <Link to="/billing" className="flex items-center w-full gap-3">
+              <Link to="/pricing" className="flex items-center w-full gap-3">
                 <LuSettings size={18} className="text-gray-400 group-focus:text-blue-600" />
                 <span className="font-bold">Billing</span>
               </Link>

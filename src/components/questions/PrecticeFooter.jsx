@@ -1,8 +1,7 @@
 import React from 'react'
 import { FaCheck, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import FinishModal from '../modal/FinishModal';
 
-const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id , activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink }) => {
+const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id , activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions }) => {
   const currentPartData = currentTest?.parts?.find(p => p.part_number === currentPart) || currentTest?.parts?.[0];
   
   // Utility function to sort parts by part_number
@@ -14,196 +13,224 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
     });
   };
 
-  // Utility function to get current part index
-  const getCurrentPartIndex = () => {
-    const sortedParts = getSortedParts();
-    return sortedParts.findIndex(p => (p.part_number ?? p.id) === currentPart);
-  };
+  // Get all questions once
+  const allQuestions = getAllQuestions ? getAllQuestions() : [];
+  
+  // Find current question index
+  const currentQuestionIndex = activeQuestion 
+    ? allQuestions.findIndex(q => q.questionNumber === activeQuestion)
+    : -1;
+  
+  // Check if we're at the first or last question
+  const isFirstQuestion = currentQuestionIndex <= 0;
+  const isLastQuestion = currentQuestionIndex >= allQuestions.length - 1;
 
-  // Compute sorted parts and indices once
-  const sortedParts = getSortedParts();
-  const currentIndex = getCurrentPartIndex();
-  const isFirstPart = currentIndex === 0;
-  const isLastPart = currentIndex === sortedParts.length - 1;
-
-  // Handle previous/next part navigation
-  const handlePreviousPart = () => {
-    if (!isFirstPart) {
-      const prevPart = sortedParts[currentIndex - 1];
-      handlePartChange(prevPart.part_number ?? prevPart.id);
+  // Handle previous/next question navigation
+  const handlePreviousQuestion = () => {
+    if (!getAllQuestions || !activeQuestion || allQuestions.length === 0) return;
+    
+    // Find current question index
+    const currentIdx = allQuestions.findIndex(q => q.questionNumber === activeQuestion);
+    
+    if (currentIdx > 0) {
+      const prevQuestion = allQuestions[currentIdx - 1];
+      
+      // Switch to the part containing the previous question if needed
+      if (prevQuestion.partNumber !== currentPart) {
+        handlePartChange(prevQuestion.partNumber);
+        // Use setTimeout to ensure part change completes before scrolling
+        setTimeout(() => {
+          scrollToQuestion(prevQuestion.questionNumber);
+        }, 100);
+      } else {
+        scrollToQuestion(prevQuestion.questionNumber);
+      }
     }
   };
 
-  const handleNextPart = () => {
-    if (!isLastPart) {
-      const nextPart = sortedParts[currentIndex + 1];
-      handlePartChange(nextPart.part_number ?? nextPart.id);
+  const handleNextQuestion = () => {
+    if (!getAllQuestions || !activeQuestion || allQuestions.length === 0) return;
+    
+    // Find current question index
+    const currentIdx = allQuestions.findIndex(q => q.questionNumber === activeQuestion);
+    
+    if (currentIdx < allQuestions.length - 1 && currentIdx >= 0) {
+      const nextQuestion = allQuestions[currentIdx + 1];
+      
+      // Switch to the part containing the next question if needed
+      if (nextQuestion.partNumber !== currentPart) {
+        handlePartChange(nextQuestion.partNumber);
+        // Use setTimeout to ensure part change completes before scrolling
+        setTimeout(() => {
+          scrollToQuestion(nextQuestion.questionNumber);
+        }, 100);
+      } else {
+        scrollToQuestion(nextQuestion.questionNumber);
+      }
     }
+  };
+
+  // Check if a part is fully completed
+  const isPartCompleted = (partQuestions) => {
+    if (!partQuestions || partQuestions.length === 0) return false;
+    const answeredCount = getPartAnsweredCount(partQuestions);
+    return answeredCount === partQuestions.length;
   };
 
   return (
-    <footer className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between gap-4">
-    {/* Left: Part Navigation with Completion Status */}
-    <div className="flex items-center gap-3 shrink-0">
-      {currentTest?.parts && currentTest.parts.length > 0 ? (
-        sortedParts.map((part) => {
-            const partNumber = part.part_number ?? part.id;
-            const partQuestions = part.questions || [];
-            const answeredCount = getPartAnsweredCount(partQuestions);
-            const totalQuestions = partQuestions.length;
-            const isActive = currentPart === partNumber;
-            
-            return (
-              <button
-                key={part.id}
-                onClick={() => handlePartChange(partNumber)}
-                className={`
-                  px-4 py-2 rounded-md text-sm font-medium transition-all
-                  ${isActive 
-                    ? "bg-blue-600 text-white shadow-sm" 
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }
-                `}
-              >
-                <span>Part {partNumber}</span>
-                {totalQuestions > 0 && (
-                  <span className={isActive ? "text-blue-100" : "text-gray-500"}>
-                    {" "}{answeredCount}/{totalQuestions}
-                  </span>
-                )}
-              </button>
-            );
-          })
-      ) : null}
-    </div>
+    <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 h-20 z-50">
+      <div className="flex items-center justify-between  h-full ">
+        {/* Left: Navigation Arrows */}
+        
+        {/* Center: All Parts with Progress */}
+        <div className="flex-1 flex items-center justify-between gap-x-4">
+          {currentTest?.parts && currentTest.parts.length > 0 ? (
+            getSortedParts().map((part) => {
+              const partNumber = part.part_number ?? part.id;
+              const partQuestions = part.questions || [];
+              const answeredCount = getPartAnsweredCount(partQuestions);
+              const totalQuestions = partQuestions.length;
+              const isActive = currentPart === partNumber;
+              
+              return (
+                <div key={part.id} className="flex flex-col items-center gap-1 w-full h-full ">
+                  {isActive ? (
+                    // Active part: Show Part label and question numbers
+                    <div>
+                      <div className="font-bold text-md text-gray-900 dark:text-gray-100 text-center ">
+                        Part {partNumber}
+                      </div>
+                      {partQuestions.length > 0 && (
+                        <div className="flex flex-col items-start gap-0.5 w-full">
+                          {/* Progress bars above question buttons */}
+                          <div className="flex items-center gap-x-1 overflow-x-auto max-w-full">
+                            {[...partQuestions]
+                              .sort((a, b) => {
+                                const aNum = a.question_number ?? 0;
+                                const bNum = b.question_number ?? 0;
+                                return aNum - bNum;
+                              })
+                              .map((q) => {
+                                const questionNumber = q.question_number;
+                                if (!questionNumber) return null;
+                                
+                                const answerKey = questionNumber || q.id;
+                                const answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
+                                
+                                return (
+                                  <div
+                                    key={`line-${questionNumber}`}
+                                    className={`h-0.5 w-8 ${
+                                      answered 
+                                        ? "bg-green-500" 
+                                        : "bg-gray-300 dark:bg-gray-600"
+                                    }`}
+                                  />
+                                );
+                              })}
+                          </div>
+                          
+                          {/* Question number buttons */}
+                          <div className="flex items-center gap-x-1 overflow-x-auto max-w-full p-2 rounded-md">
+                            {[...partQuestions]
+                              .sort((a, b) => {
+                                const aNum = a.question_number ?? 0;
+                                const bNum = b.question_number ?? 0;
+                                return aNum - bNum;
+                              })
+                              .map((q) => {
+                                const questionNumber = q.question_number;
+                                if (!questionNumber) return null;
+                                
+                                const answerKey = questionNumber || q.id;
+                                const answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
+                                const active = activeQuestion === questionNumber;
 
-    {/* Center: Question Pagination */}
-    <div className="flex items-center gap-1 flex-1 justify-center overflow-x-auto">
-      {currentPartData?.questions && currentPartData.questions.length > 0 ? (
-        [...currentPartData.questions]
-          .sort((a, b) => {
-            const aNum = a.question_number ?? 0;
-            const bNum = b.question_number ?? 0;
-            return aNum - bNum;
-          })
-          .map((q) => {
-            const questionNumber = q.question_number;
-            if (!questionNumber) return null;
-            
-            // Support both questions.id (for Fill-in-the-Blanks) and question_number (for other types)
-            // Match the logic used in question components: question_number || id
-            const answerKey = questionNumber || q.id;
-            const answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
-            const active = activeQuestion === questionNumber;
-
-            return (
-              <button
-                key={questionNumber}
-                onClick={() => scrollToQuestion(questionNumber)}
-                className={`
-                  w-9 h-9 rounded-md text-sm font-semibold transition-all flex items-center justify-center
-                  ${active ? "ring-2 ring-blue-500 ring-offset-1" : ""}
-                  ${
-                    answered
-                      ? "bg-green-600 text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }
-                `}
-                title={answered ? `Answered: ${answers[answerKey]}` : `Question ${questionNumber}`}
-              >
-                {questionNumber}
-              </button>
-            );
-          })
-      ) : (
-        <div className="text-sm text-gray-500">No questions available</div>
-      )}
-    </div>
-
-    {/* Right: Navigation Arrows and Finish Button */}
-    <div className="flex items-center gap-3 shrink-0">
-      <button
-        onClick={handlePreviousPart}
-        disabled={isFirstPart}
-        className="p-2 text-gray-700 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-        title="Previous part"
-      >
-        <FaChevronLeft className="w-5 h-5" />
-      </button>
-      
-      <button
-        onClick={handleNextPart}
-        disabled={isLastPart}
-        className="p-2 text-gray-700 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-        title="Next part"
-      >
-        <FaChevronRight className="w-5 h-5" />
-      </button>
-      
-      {status === 'taking' && (
-        <button
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-2 font-medium"
-          onClick={() => {
-            if (onFinish) {
-              onFinish();
-            }
-          }}
-        >
-          <FaCheck className="w-4 h-4" />
-          Finish
-        </button>
-      )}
-
-      {status === 'completed' && (
-        <>
+                                return (
+                                  <button
+                                    key={questionNumber}
+                                    onClick={() => scrollToQuestion(questionNumber)}
+                                    className={`
+                                      w-8 h-8 rounded text-sm font-semibold transition-all flex items-center justify-center shrink-0
+                                      bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 
+                                      border border-gray-300 dark:border-gray-600 
+                                      hover:bg-gray-100 dark:hover:bg-gray-600
+                                      ${active ? "ring-2 ring-blue-500 ring-offset-1" : ""}
+                                    `}
+                                    title={answered ? `Answered: ${answers[answerKey]}` : `Question ${questionNumber}`}
+                                  >
+                                    {questionNumber}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Inactive part: Show Part label and progress
+                    <div className='w-full h-20 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors'
+                    onClick={() => handlePartChange(partNumber)}
+                    >
+                      <div
+                       
+                        className="font-bold text-md text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                      >
+                        Part {partNumber}
+                      </div>
+                      {totalQuestions > 0 && (
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {answeredCount}/{totalQuestions}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium"
-            onClick={() => {
-              if (onReview) {
-                onReview();
-              }
-            }}
+            onClick={handlePreviousQuestion}
+            disabled={isFirstQuestion}
+            className="p-2 text-black dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Previous question"
           >
-            Review Test
+            <FaChevronLeft className="w-5 h-5" />
           </button>
+          
           <button
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors flex items-center gap-2 font-medium"
-            onClick={() => {
-              if (onRetake) {
-                onRetake();
-              }
-            }}
+            onClick={handleNextQuestion}
+            disabled={isLastQuestion}
+            className="p-2 text-black dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Next question"
           >
-            Retake Test
+            <FaChevronRight className="w-5 h-5" />
           </button>
-        </>
-      )}
+        </div>
 
-      {status === 'reviewing' && (
-        <button
-          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors flex items-center gap-2 font-medium"
-          onClick={() => {
-            if (onRetake) {
-              onRetake();
-            }
-          }}
-        >
-          Retake Test
-        </button>
-      )}
 
-      {/* Modal - only show in taking mode */}
-      {status === 'taking' && (
-        <FinishModal
-          link={resultLink || "/reading-result/"+id}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          testId={id}
-          onSubmit={onSubmitTest}
-        />
-      )}
-    </div>
-  </footer>
+        {/* Right: Finish Button */}
+        <div className="flex items-center gap-1 shrink-0">
+          {status === 'taking' && (
+            <button
+              className="flex items-center gap-1 transition-colors hover:opacity-80 p-2"
+              onClick={() => {
+                if (onFinish) {
+                  onFinish();
+                }
+              }}
+              title="Finish"
+            >
+              <div className="rounded bg-blue-500 dark:bg-blue-600 flex items-center text-white dark:text-white justify-center p-2 text-sm gap-2">
+                <FaCheck className="w-4 h-4 text-white dark:text-white" /> Finish
+              </div>
+            </button>
+          )}
+        </div>
+      </div>
+    </footer>
   )
 }
 

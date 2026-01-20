@@ -1,4 +1,4 @@
-import ComingSoonPage from '@/components/ComingSoonPage'
+import ComingSoonPage from '@/pages/dashboard/ComingSoonPage'
 import React from 'react'
 
 const WritingPage = () => {

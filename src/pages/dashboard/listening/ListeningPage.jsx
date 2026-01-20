@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { FaSearch } from "react-icons/fa";
 import { IoGridOutline, IoListOutline, IoChevronBack, IoChevronForward } from "react-icons/io5";
 import { Input } from "@/components/ui/input";
-import PremiumBanner from "@/components/premium_badges/PremiumBanner";
+import PremiumBanner from "@/components/badges/PremiumBanner";
 import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";

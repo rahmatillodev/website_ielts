@@ -6,7 +6,7 @@ import DashboardSidebar from '@/components/sidebar/DashboardSidebar';
 const DashboardLayout = () => {
   const { pathname } = useLocation()
 
-  const hideNavOn = ["/reading-practice", "/reading-result", "/listening-practice", "/listening-result"]
+  const hideNavOn = ["/reading-practice", "/reading-result", "/listening-practice", "/listening-result", "/pricing"]
   const isHide = hideNavOn.some((p) => pathname.startsWith(p))
 
   return (

@@ -20,7 +20,7 @@ const getUserIdFromLocalStorage = () => {
   }
 };
 
-export const submitTestAttempt = async (testId, answers, currentTest) => {
+export const submitTestAttempt = async (testId, answers, currentTest, timeTaken = null) => {
   try {
     // Get user id from localStorage
     const authenticatedUserId = getUserIdFromLocalStorage();
@@ -35,6 +35,11 @@ export const submitTestAttempt = async (testId, answers, currentTest) => {
     const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
     const bandScore = calculateBandScore(percentage);
 
+    // Calculate time_taken if not provided (fallback to 0)
+    const timeTakenSeconds = timeTaken !== null && timeTaken !== undefined 
+      ? Math.max(0, Math.floor(timeTaken)) 
+      : 0;
+
     // 1. Create user_attempt record
     const { data: attemptData, error: attemptError } = await supabase
       .from('user_attempts')
@@ -44,6 +49,7 @@ export const submitTestAttempt = async (testId, answers, currentTest) => {
         score: bandScore,
         total_questions: totalQuestions,
         correct_answers: correctCount,
+        time_taken: timeTakenSeconds,
         completed_at: new Date().toISOString(),
       })
       .select()
@@ -236,6 +242,7 @@ const calculateTestScore = (answers, currentTest) => {
       part.questionGroups.forEach((questionGroup) => {
         const groupQuestions = questionGroup.questions || [];
         
+        
         groupQuestions.forEach((question) => {
           const questionKey = question.question_number || question.id;
           if (!questionKey) return;
@@ -275,27 +282,67 @@ const calculateTestScore = (answers, currentTest) => {
  * @returns {string} Correct answer
  */
 const getCorrectAnswer = (question, questionGroup) => {
-  // Try to get correct answer from question's correct_answer field
+  const groupType = (questionGroup.type || '').toLowerCase();
+  const isMultipleChoice = groupType.includes('multiple') || groupType.includes('choice');
+  const isTableType = groupType.includes('table');
+
+  // For multiple_choice and table types: use options table with is_correct
+  if (isMultipleChoice || isTableType) {
+    // For multiple_choice: find correct option in question's options
+    if (isMultipleChoice && question.options && question.options.length > 0) {
+      const correctOption = question.options.find((opt) => opt.is_correct === true);
+      if (correctOption) {
+        // Use option_text as the answer value (not letter)
+        return correctOption.option_text || '';
+      }
+    }
+
+    // For table: try to get from question.correct_answer first (stored in testStore)
+    if (isTableType && question.correct_answer) {
+      return question.correct_answer;
+    }
+
+    // For table: find correct option in group options matching question_number
+    if (isTableType && questionGroup.options && questionGroup.options.length > 0) {
+      const correctOption = questionGroup.options.find(
+        (opt) => opt.is_correct === true && opt.question_number === question.question_number
+      );
+      if (correctOption) {
+        // Use option_text as the answer value (not letter)
+        return correctOption.option_text || '';
+      }
+    }
+
+    // Fallback: check question's options for table (in case options are stored per question)
+    if (isTableType && question.options && question.options.length > 0) {
+      const correctOption = question.options.find((opt) => opt.is_correct === true);
+      if (correctOption) {
+        return correctOption.option_text || '';
+      }
+    }
+  }
+
+  // For other question types: try to get correct answer from question's correct_answer field
   if (question.correct_answer) {
     return question.correct_answer.toString().trim();
   }
 
-  // For multiple choice, find correct option
+  // For other types with options: find correct option
   if (question.options && question.options.length > 0) {
     const correctOption = question.options.find((opt) => opt.is_correct);
     if (correctOption) {
-      return correctOption.letter || correctOption.option_text || '';
+      // For other types, prefer option_text but fallback to letter
+      return correctOption.option_text || correctOption.letter || '';
     }
   }
 
-  // For group-level options (e.g., table, drag-drop)
+  // For group-level options (e.g., drag-drop)
   if (questionGroup.options && questionGroup.options.length > 0) {
-    // This is tricky - we need to match by question_number
     const correctOption = questionGroup.options.find(
       (opt) => opt.is_correct && opt.question_number === question.question_number
     );
     if (correctOption) {
-      return correctOption.letter || correctOption.option_text || '';
+      return correctOption.option_text || correctOption.letter || '';
     }
   }
 
@@ -317,11 +364,7 @@ const normalizeAnswer = (answer) => {
   return answer.toString().trim().toLowerCase();
 };
 
-/**
- * Calculate IELTS band score from percentage
- * @param {number} percentage - Percentage score (0-100)
- * @returns {number} Band score (0-9, in 0.5 increments)
- */
+
 const calculateBandScore = (percentage) => {
   // IELTS Reading/Listening scoring table (approximate)
   if (percentage >= 95) return 9.0;

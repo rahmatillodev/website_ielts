@@ -5,16 +5,17 @@ import { FaArrowLeft } from "react-icons/fa6";
 import { IoPrint } from "react-icons/io5";
 import { LuTimer } from "react-icons/lu";
 import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { HiOutlineHome, HiOutlineRefresh } from "react-icons/hi";
 import { useTestStore } from "@/store/testStore";
 import { fetchLatestAttempt, deleteTestAttempts } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { generateTestResultsPDF } from "@/utils/pdfExport";
+import ResultBanner from "@/components/badges/ResultBanner";
 
 const ListeningResultPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { currentTest, fetchTestById } = useTestStore();
   const { authUser } = useAuthStore();
   const [resultData, setResultData] = useState(null);
@@ -119,8 +120,13 @@ const ListeningResultPage = () => {
     return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }, []);
 
-  // Calculate elapsed time - fix the negative time bug
+  // Calculate elapsed time - use time_taken from database if available, otherwise calculate from timestamps
   const elapsedTime = useMemo(() => {
+    // Prefer time_taken from database (in seconds)
+    if (attemptData?.time_taken !== null && attemptData?.time_taken !== undefined) {
+      return Math.max(0, attemptData.time_taken);
+    }
+    // Fallback to calculating from timestamps
     if (attemptData?.created_at && attemptData?.completed_at) {
       const created = new Date(attemptData.created_at).getTime();
       const completed = new Date(attemptData.completed_at).getTime();
@@ -162,7 +168,8 @@ const ListeningResultPage = () => {
 
   // Memoized stats calculations
   const stats = useMemo(() => {
-    const totalQuestions = answerDisplayData.length;
+    // Use total_questions from attempt data if available, otherwise use answered count
+    const totalQuestions = attemptData?.total_questions ?? answerDisplayData.length;
     const correctCount = answerDisplayData.filter(a => a.isCorrect).length;
     const timeTaken = formatTime(elapsedTime);
     const avgTime = totalQuestions > 0 ? formatTime(Math.floor(elapsedTime / totalQuestions)) : "0m 0s";
@@ -181,72 +188,16 @@ const ListeningResultPage = () => {
 
   // PDF Export function
   const downloadPDF = useCallback(() => {
-    if (!currentTest || !resultData || !answerDisplayData.length) return;
-
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    let yPos = margin;
-
-    // Title
-    doc.setFontSize(20);
-    doc.setFont(undefined, 'bold');
-    doc.text('IELTS Listening Test Results', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 10;
-
-    // Test Info
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Test: ${currentTest?.title || 'Academic Listening Practice Test'}`, margin, yPos);
-    yPos += 6;
-    doc.text(`Date: ${formatDate(attemptData?.completed_at || resultData?.completedAt)}`, margin, yPos);
-    yPos += 6;
-    doc.text(`Score: ${stats.score} / 9.0`, margin, yPos);
-    yPos += 6;
-    doc.text(`Correct Answers: ${stats.correctCount} / ${stats.totalQuestions}`, margin, yPos);
-    yPos += 6;
-    doc.text(`Time Taken: ${stats.timeTaken}`, margin, yPos);
-    yPos += 15;
-
-    // Prepare table data
-    const tableData = answerDisplayData.map((item) => {
-      const row = [
-        item.questionNumber.toString(),
-        item.isCorrect ? '✓' : '✗',
-        item.yourAnswer || 'N/A',
-      ];
-      
-      if (showCorrectAnswers) {
-        row.push(item.isCorrect ? item.yourAnswer : (item.correctAnswer || 'N/A'));
-      }
-      
-      return row;
+    generateTestResultsPDF({
+      test: currentTest,
+      stats,
+      answerDisplayData,
+      showCorrectAnswers,
+      formatDate,
+      completedDate: attemptData?.completed_at || resultData?.completedAt,
+      testType: 'Listening',
+      defaultTestTitle: 'Academic Listening Practice Test'
     });
-
-    const tableColumns = showCorrectAnswers
-      ? ['#', 'Status', 'Your Answer', 'Correct Answer']
-      : ['#', 'Status', 'Your Answer'];
-
-    // Add table
-    doc.autoTable({
-      startY: yPos,
-      head: [tableColumns],
-      body: tableData,
-      theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [249, 250, 251] },
-      styles: { fontSize: 9, cellPadding: 3 },
-      columnStyles: {
-        0: { cellWidth: 20 },
-        1: { cellWidth: 30, halign: 'center' },
-        2: { cellWidth: showCorrectAnswers ? 60 : 120 },
-        ...(showCorrectAnswers && { 3: { cellWidth: 60 } }),
-      },
-    });
-
-    // Save PDF
-    const fileName = `IELTS_Listening_Results_${currentTest?.title?.replace(/\s+/g, '_') || 'Test'}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
   }, [currentTest, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDate]);
 
   // Handle retake - delete previous attempts
@@ -257,8 +208,8 @@ const ListeningResultPage = () => {
     try {
       const result = await deleteTestAttempts(id);
       if (result.success) {
-        // Navigate to practice page with retake mode
-        window.location.href = `/listening-practice/${id}?mode=retake`;
+        // Navigate to practice page to retake the test
+        navigate(`/listening-practice/${id}`);
       } else {
         console.error('Failed to delete attempts:', result.error);
         alert('Failed to clear previous attempts. Please try again.');
@@ -269,7 +220,7 @@ const ListeningResultPage = () => {
     } finally {
       setIsDeleting(false);
     }
-  }, [authUser, id]);
+  }, [authUser, id, navigate]);
 
   if (loading) {
     return (
@@ -329,6 +280,9 @@ const ListeningResultPage = () => {
 
         <hr className="border-gray-200 mb-10" />
 
+        {/* Performance Banner */}
+        <ResultBanner score={stats.score} testType="Listening" />
+
         {/* Stats Cards - Redesigned */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-12">
           {/* Overall Score Card */}
@@ -351,11 +305,9 @@ const ListeningResultPage = () => {
                 ></div>
               </div>
             </div>
-            {/* Background Badge Icon */}
+            {/* Background Checkmark Icon */}
             <div className="absolute -right-4 -top-4 text-blue-200/30">
-              <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
+              <FaCheckCircle size={100} />
             </div>
           </div>
 
@@ -376,7 +328,7 @@ const ListeningResultPage = () => {
               </span>
             </div>
             <div className="text-sm font-semibold text-green-700">
-              {stats.percentage}% Accuracy
+              {stats.percentage >= 85 ? 'Top 15%' : stats.percentage >= 75 ? 'Top 25%' : stats.percentage >= 65 ? 'Top 35%' : stats.percentage >= 55 ? 'Top 45%' : 'Top 50%'} of test takers
             </div>
           </div>
 

@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { GraduationCap, Mail, Lock, Flame, ChevronLeft } from 'lucide-react'
+import { GraduationCap, Mail, Lock, ChevronLeft, BookOpen, Headphones, PenTool, ArrowRight } from 'lucide-react'
 import { toast } from "react-toastify"
 // Public Login page
 function LoginPage() {
@@ -32,16 +32,17 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-white justify-center items-center">
       {/* Left Panel - Blue Background */}
-      <div className="hidden lg:flex lg:w-2/5 text-white flex-col justify-between p-12 bg-primary">
+      <div className="hidden lg:flex lg:w-2/5 text-white flex-col justify-between p-12 bg-primary min-h-screen">
         <div>
-          <div
-            className="flex items-center justify-center mb-5 w-10 h-10 cursor-pointer rounded-full bg-white/90 hover:bg-white/80 transition duration-300"
+          <button
             onClick={() => navigate("/")}
+            className="flex items-center gap-2 mb-5 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-300 group"
           >
-            <ChevronLeft className="text-gray-600"/>
-          </div>
+            <ChevronLeft className="w-4 h-4 text-white group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium text-white">Back to Home</span>
+          </button>
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
             <GraduationCap className="w-8 h-8" />
@@ -59,29 +60,50 @@ function LoginPage() {
           </p>
         </div>
 
-        {/* Streak Card */}
+        {/* Features Card */}
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 max-w-sm">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm text-white/70 mb-1">CURRENT STREAK</p>
-              <p className="text-3xl font-bold mb-2">12 Days</p>
-              <p className="text-sm text-white/80">Keep it up! You're on a roll.</p>
+          <p className="text-sm text-white/70 mb-4 font-medium">WHAT'S INCLUDED</p>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 rounded-lg p-2.5">
+                <BookOpen className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Reading Practice</p>
+                <p className="text-xs text-white/70">Full-length simulations</p>
+              </div>
             </div>
-            <div className="bg-white rounded-full p-2">
-              <Flame className="w-6 h-6 text-orange-500" />
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 rounded-lg p-2.5">
+                <Headphones className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Listening Practice</p>
+                <p className="text-xs text-white/70">Audio-based exercises</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 rounded-lg p-2.5">
+                <PenTool className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Writing Practice</p>
+                <p className="text-xs text-white/70">Task 1 & 2 simulations</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Right Panel - White Background */}
-      <div className="w-full lg:w-3/5 p-8 bg-white">
-        <div
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-black/80 hover:bg-black/90 transition duration-300 lg:hidden cursor-pointer"
+      <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center">
+        <button
           onClick={() => navigate("/")}
+          className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-300 lg:hidden group"
         >
-          <ChevronLeft className="text-white"/>
-        </div>
+          <ChevronLeft className="w-4 h-4 text-gray-700 group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm font-medium text-gray-700">Back</span>
+        </button>
         <div className="w-full flex items-center justify-center mt-9">
           <div className="w-full max-w-md">
             <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
@@ -139,20 +161,34 @@ function LoginPage() {
             </form>
 
             {/* Links */}
-            <div className="mt-6 space-y-4 text-center">
-              <Link to="/forgot-password" className="block text-sm text-gray-600 hover:text-primary">
+            <div className="mt-6 space-y-4">
+              {/* <Link 
+                to="/forgot-password" 
+                className="block text-center text-sm text-gray-600 hover:text-primary transition-colors"
+              >
                 Forgot Password?
-              </Link>
-              <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
-                <Link to="/signup" className="text-primary hover:underline font-medium">
-                  Sign Up
+              </Link> */}
+              
+              {/* Sign Up CTA */}
+              <div className="mt-6 p-4 bg-linear-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                <p className="text-sm text-gray-700 text-center mb-3">
+                  New to IELTS Sim?
+                </p>
+                <Link to="/signup">
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    className="w-full border-primary/30 text-primary hover:bg-primary hover:text-white transition-all duration-300 group"
+                  >
+                    Create an Account
+                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </Button>
                 </Link>
-              </p>
+              </div>
             </div>
 
             {/* Legal Text */}
-            <p className="mt-8 text-xs text-gray-500 text-center">
+            {/* <p className="mt-8 text-xs text-gray-500 text-center">
               By logging in, you agree to our{' '}
               <Link to="/terms" className="text-primary underline hover:no-underline">
                 Terms of Service
@@ -162,7 +198,7 @@ function LoginPage() {
                 Privacy Policy
               </Link>
               .
-            </p>
+            </p> */}
           </div>
         </div>
       </div>

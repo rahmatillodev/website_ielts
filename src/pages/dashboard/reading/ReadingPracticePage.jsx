@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { LuChevronsLeftRight } from "react-icons/lu";
 import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import PrecticeFooter from "@/components/questions/PrecticeFooter";
 import QuestionHeader from "@/components/questions/QuestionHeader";
-import { saveReadingPracticeData, loadReadingPracticeData, clearReadingPracticeData } from "@/store/readingStorage";
+import { saveReadingPracticeData, loadReadingPracticeData, clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
+import FinishModal from "@/components/modal/FinishModal";
+import { convertDurationToSeconds } from "@/utils/testDuration";
 
 
 
@@ -23,7 +25,7 @@ const ReadingPracticePage = () => {
   const [status, setStatus] = useState('taking');
   const [currentPart, setCurrentPart] = useState(1); // Now represents part_number
   const [currentPage, setCurrentPage] = useState(1);
-  const [timeRemaining, setTimeRemaining] = useState(60 * 60);
+  const [timeRemaining, setTimeRemaining] = useState(null); // Will be set from test duration
   const [isStarted, setIsStarted] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false); // Track if user has interacted
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -41,6 +43,7 @@ const ReadingPracticePage = () => {
   const [leftWidth, setLeftWidth] = useState(50);
   const containerRef = useRef(null);
   const isResizing = useRef(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (id) {
@@ -61,8 +64,12 @@ const ReadingPracticePage = () => {
           // Calculate elapsed time since start
           const elapsedSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
           
-          // Calculate time remaining (60 minutes = 3600 seconds)
-          const initialTime = 60 * 60; // 1 hour in seconds
+          // Use saved timeRemaining if available, otherwise calculate from test duration
+          let initialTime = savedData.timeRemaining;
+          if (initialTime === undefined || initialTime === null) {
+            // Will be set when currentTest loads
+            initialTime = 60 * 60; // Fallback to 1 hour
+          }
           const remainingTime = Math.max(0, initialTime - elapsedSeconds);
           setTimeRemaining(remainingTime);
         } else if (savedData.timeRemaining !== undefined) {
@@ -78,6 +85,22 @@ const ReadingPracticePage = () => {
       // This will be handled by explicit clear calls on back/finish buttons
     };
   }, [id, fetchTestById]);
+
+  // Initialize timeRemaining from test duration when currentTest loads
+  useEffect(() => {
+    if (currentTest && timeRemaining === null && !isStarted && !hasInteracted) {
+      const durationInSeconds = convertDurationToSeconds(currentTest.duration);
+      setTimeRemaining(durationInSeconds);
+    } else if (currentTest && timeRemaining !== null && !isStarted && !hasInteracted) {
+      // If timeRemaining was set from localStorage but we don't have a saved startTime,
+      // update it to use the test duration to ensure consistency
+      const savedData = loadReadingPracticeData(id);
+      if (!savedData?.startTime) {
+        const durationInSeconds = convertDurationToSeconds(currentTest.duration);
+        setTimeRemaining(durationInSeconds);
+      }
+    }
+  }, [currentTest, timeRemaining, isStarted, hasInteracted, id]);
 
   const startResize = (e) => {
     isResizing.current = true;
@@ -106,7 +129,7 @@ const ReadingPracticePage = () => {
   }, []);
 
   // Utility function to sort parts by part_number
-  const getSortedParts = React.useCallback(() => {
+  const getSortedParts = useCallback(() => {
     if (!currentTest?.parts) return [];
     return [...currentTest.parts].sort((a, b) => {
       const aNum = a.part_number ?? 0;
@@ -120,7 +143,7 @@ const ReadingPracticePage = () => {
   
   // Get question groups from current part (already structured from store)
   // Sort groups by the minimum question_number in each group
-  const questionGroups = React.useMemo(() => {
+  const questionGroups = useMemo(() => {
     if (!currentPartData?.questionGroups) return [];
     
     return [...currentPartData.questionGroups]
@@ -203,6 +226,48 @@ const ReadingPracticePage = () => {
     }).length;
   };
 
+  // Get all questions across all parts, sorted by question_number
+  const getAllQuestions = React.useCallback(() => {
+    if (!currentTest?.parts) return [];
+    
+    const allQuestions = [];
+    const sortedParts = getSortedParts();
+    
+    sortedParts.forEach(part => {
+      // Get questions from part.questions
+      if (part.questions && Array.isArray(part.questions)) {
+        part.questions.forEach(q => {
+          if (q.question_number != null) {
+            allQuestions.push({
+              questionNumber: q.question_number,
+              partNumber: part.part_number ?? part.id,
+              question: q
+            });
+          }
+        });
+      }
+      
+      // Also get questions from questionGroups
+      if (part.questionGroups && Array.isArray(part.questionGroups)) {
+        part.questionGroups.forEach(group => {
+          if (group.questions && Array.isArray(group.questions)) {
+            group.questions.forEach(q => {
+              if (q.question_number != null) {
+                allQuestions.push({
+                  questionNumber: q.question_number,
+                  partNumber: part.part_number ?? part.id,
+                  question: q
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+    
+    return allQuestions.sort((a, b) => a.questionNumber - b.questionNumber);
+  }, [currentTest?.parts, getSortedParts]);
+
   const scrollToQuestion = (questionNumber) => {
     const el = questionRefs.current[questionNumber];
     if (!el || !questionsContainerRef.current) return;
@@ -221,6 +286,7 @@ const ReadingPracticePage = () => {
   // Smart Timer effect - starts when isStarted OR hasInteracted is true
   useEffect(() => {
     if (!isStarted && !hasInteracted) return;
+    if (timeRemaining === null) return; // Wait for timeRemaining to be initialized
 
     // Set start time if not already set
     if (!startTime) {
@@ -230,7 +296,7 @@ const ReadingPracticePage = () => {
 
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
-        if (prev <= 1) {
+        if (prev === null || prev <= 1) {
           setIsStarted(false);
           return 0;
         }
@@ -239,7 +305,27 @@ const ReadingPracticePage = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isStarted, hasInteracted, startTime]);
+  }, [isStarted, hasInteracted, startTime, timeRemaining]);
+
+  // Auto-submit when timer reaches zero
+  useEffect(() => {
+    if (timeRemaining === 0 && (isStarted || hasInteracted) && status === 'taking' && authUser && id && currentTest) {
+      // Auto-submit the test when timer reaches zero
+      const autoSubmit = async () => {
+        const result = await handleSubmitTest();
+        if (result.success) {
+          // Navigate to result page
+          navigate(`/reading-result/${id}`);
+        } else {
+          console.error('Auto-submit failed:', result.error);
+          // Still navigate to result page even if submission failed
+          navigate(`/reading-result/${id}`);
+        }
+      };
+      autoSubmit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining, status]);
 
   // Save answers to localStorage immediately when they change
   useEffect(() => {
@@ -358,10 +444,19 @@ const ReadingPracticePage = () => {
 
   // Handler for submitting test
   const handleSubmitTest = async () => {
-    if (!authUser || !id || !currentTest) return;
+    if (!authUser || !id || !currentTest) {
+      return { success: false, error: 'Missing required information' };
+    }
 
     try {
-      const result = await submitTestAttempt(id, answers, currentTest);
+      // Calculate time taken from startTime
+      let timeTaken = 0;
+      if (startTime) {
+        timeTaken = Math.floor((Date.now() - startTime) / 1000);
+      }
+      
+      // Submit even if answers object is empty - submitTestAttempt handles this
+      const result = await submitTestAttempt(id, answers, currentTest, timeTaken);
       
       if (result.success) {
         setLatestAttemptId(result.attemptId);
@@ -370,13 +465,15 @@ const ReadingPracticePage = () => {
         if (id) {
           clearReadingPracticeData(id);
         }
+        // Return success to allow modal to navigate
+        return { success: true };
       } else {
         console.error('Failed to submit test:', result.error);
-        alert('Failed to submit test. Please try again.');
+        return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error submitting test:', error);
-      alert('An error occurred while submitting the test.');
+      return { success: false, error: error.message };
     }
   };
 
@@ -432,7 +529,8 @@ const ReadingPracticePage = () => {
     setAnswers({});
     setReviewData({});
     setStatus('taking');
-    setTimeRemaining(60 * 60);
+    // Reset timeRemaining to test duration (will be set by useEffect when currentTest is available)
+    setTimeRemaining(currentTest ? convertDurationToSeconds(currentTest.duration) : 60 * 60);
     setIsStarted(false);
     setHasInteracted(false);
     setStartTime(null);
@@ -604,6 +702,25 @@ const ReadingPracticePage = () => {
                   {/* For Fill-in-the-Blanks, Drag-and-Drop, and Table: Render as a single group with group-level options */}
                   {(isFillInTheBlanks || isDragAndDrop || isTable) ? (
                     <div
+                      ref={(el) => {
+                        // Set ref for all questions in the group for scrolling
+                        if (el && groupQuestions.length > 0) {
+                          groupQuestions
+                            .filter(q => q.question_number != null)
+                            .forEach(q => {
+                              if (q.question_number) {
+                                questionRefs.current[q.question_number] = el;
+                              }
+                            });
+                        }
+                      }}
+                      data-question-number={groupQuestions
+                        .filter(q => q.question_number != null)
+                        .sort((a, b) => {
+                          const aNum = a.question_number ?? 0;
+                          const bNum = b.question_number ?? 0;
+                          return aNum - bNum;
+                        })[0]?.question_number}
                       className="p-4 rounded-lg border transition-all
                           border-gray-200 dark:border-gray-700
                           dark:hover:bg-gray-800
@@ -754,6 +871,16 @@ const ReadingPracticePage = () => {
         status={status}
         onReview={handleReviewTest}
         onRetake={handleRetakeTest}
+        getAllQuestions={getAllQuestions}
+      />
+
+      {/* Finish Modal */}
+      <FinishModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        link={`/reading-result/${id}`}
+        testId={id}
+        onSubmit={handleSubmitTest}
       />
     </div>
   );

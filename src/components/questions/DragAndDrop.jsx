@@ -77,12 +77,8 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
       style={{ borderStyle: answer ? 'solid' : 'dashed' }}
       title={questionNumber ? `Question ${questionNumber}` : undefined}
     >
-      {answer || (questionNumber ? `[${questionNumber}]` : "____")}
-      {showCorrect && (
-        <span className="ml-1 text-[10px] bg-green-500 text-white px-1 py-0.5 rounded-sm">
-          Correct
-        </span>
-      )}
+      {answer && answer.trim() !== '' ? `[${questionNumber}] `+answer : (questionNumber ? `[ ${questionNumber}]` : "____")}
+      
       
       {showWrong && correctAnswer && showCorrectAnswers && (
         <span className="absolute -top-2 left-0 text-xs text-green-600 font-medium whitespace-nowrap">
@@ -90,7 +86,7 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
         </span>
       )}
     </span>
-  );
+  );  
 };
 
 /**

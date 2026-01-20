@@ -32,6 +32,8 @@ const SidebarItem = ({ icon: Icon, label, link, isActive }) => (
 const DashboardSidebar = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const authUser = useAuthStore((state) => state.authUser);
+  const userProfile = useAuthStore((state) => state.userProfile);
   const signOut = useAuthStore((state) => state.signOut); 
 
   const handleLogout = async () => {
@@ -43,6 +45,7 @@ const DashboardSidebar = () => {
       toast.error(result.error);
     }
   };
+  
 
   const checkActive = (link) => pathname === link;
 
@@ -51,7 +54,7 @@ const DashboardSidebar = () => {
     <aside className="flex flex-col w-[320px] h-screen sticky top-0 bg-white border-r border-gray-100 font-sans overflow-hidden">
       
       {/* Logo qismi (Fiksirlangan balandlik) */}
-      <div className="h-24 flex-shrink-0 flex items-center px-6">
+      <div className="h-24 shrink-0 flex items-center px-6">
         <div className="flex items-center gap-3">
           <div className="size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
             <GraduationCap className="text-[#4A90E2] size-7" />
@@ -99,10 +102,9 @@ const DashboardSidebar = () => {
           isActive={checkActive("/profile")}
         />
       </nav>
-
-      {/* Pastki qism (Banner va Logout - doim ko'rinib turadi) */}
-      <div className="p-4 border-t border-gray-50 bg-white shrink-0 space-y-3">
-        {/* Upgrade Banner - Agar ekran juda kichik bo'lsa qisilib ketmasligi uchun min-height */}
+      {/* Upgrade Banner */}
+       <div className="p-4 border-t border-gray-50 bg-white shrink-0 space-y-3">
+      {userProfile?.subscription_status !== "premium" && (
         <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100 hidden sm:block">
           <div className="flex justify-between items-start mb-4">
             <div className="p-2 bg-white/20 rounded-xl text-white">
@@ -122,7 +124,7 @@ const DashboardSidebar = () => {
             </Button>
           </Link>
         </div>
-
+      )}
         {/* Logout Modal Integratsiyasi */}
         <LogoutModal onConfirm={handleLogout}>
           <button className="flex items-center gap-3 px-6 py-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-xl transition-all active:scale-[0.95] text-sm">

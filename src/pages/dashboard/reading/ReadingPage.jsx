@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { FaSearch } from "react-icons/fa";
 import { IoGridOutline, IoListOutline, IoChevronBack, IoChevronForward } from "react-icons/io5";
 import { Input } from "@/components/ui/input";
-import PremiumBanner from "@/components/premium_badges/PremiumBanner";
+import PremiumBanner from "@/components/badges/PremiumBanner";
 import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -84,59 +84,62 @@ const ReadingPage = () => {
     <div className="flex flex-col max-w-screen-2xl mx-auto bg-gray-50 h-full pb-4 px-4">
       <div className="flex-1 flex flex-col py-4">
         <div className="mb-8">
-          <h1 className="text-3xl font-black text-gray-900 mb-2">Reading Library</h1>
-          <p className="text-gray-500 font-medium tracking-tight">
-            Simulate the actual reading test environment. Each test contains 4 parts and 40 questions.
+          <h1 className="text-3xl font-black text-gray-900 mb-2">Master Your Reading Skills</h1>
+          <p className="text-gray-500 font-medium tracking-tight w-7/12">
+            Boost your band score with our extensive library of Academic and General Training reading tests. Each test is designed to mirror the real exam format with instant AI scoring and detailed answer keys.
           </p>
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-8 gap-4">
-            {/* Tabs */}
-            <div className="flex gap-2 bg-gray-100/80 p-1.5 rounded-2xl border border-gray-200">
+          <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center mt-10 gap-6">
+            {/* Tabs - Glassmorphism style */}
+            <div className="flex p-1.5 bg-gray-100/50 backdrop-blur-md rounded-2xl border border-gray-200/60 w-fit">
               {["All Tests", "free", "premium"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => handleFilterChange(tab)}
-                  className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === tab
-                    ? "bg-black text-white shadow-lg"
-                    : "text-gray-500 hover:bg-white hover:text-gray-900"
+                  className={`relative px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === tab
+                      ? "bg-white text-black shadow-[0_4px_12px_rgba(0,0,0,0.08)] ring-1 ring-black/5"
+                      : "text-gray-500 hover:text-gray-900 hover:bg-white/50"
                     }`}
                 >
                   {tab === "All Tests" ? tab : tab.charAt(0).toUpperCase() + tab.slice(1)}
+
                 </button>
               ))}
             </div>
 
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              {/* Search */}
-              <div className="relative flex-1 md:w-80">
-                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 lg:justify-end">
+              {/* Search - Refined with Focus effect */}
+              <div className="relative w-full sm:max-w-md group">
+                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black transition-colors" />
                 <Input
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  className="pl-12 bg-white border-gray-200 rounded-2xl h-12 shadow-sm focus:ring-2 focus:ring-blue-100 transition-all"
-                  placeholder="Search by title..."
+                  className="pl-11 pr-4 bg-gray-50/50 border-gray-200 rounded-2xl h-12 w-full shadow-sm focus:bg-white focus:ring-4 focus:ring-black/5 focus:border-black transition-all duration-300 placeholder:text-gray-400 placeholder:font-medium"
+                  placeholder="Search for IELTS topics..."
                 />
               </div>
+
+              {/* View Toggler - Sleek & Compact */}
               <ToggleGroup
                 type="single"
                 value={isGridView ? "grid" : "list"}
                 onValueChange={handleViewChange}
-                className="inline-flex items-center justify-center rounded-2xl bg-gray-50 p-2 gap-2 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2"
+                className="flex items-center bg-gray-100/80 p-1 rounded-xl border border-gray-200 shrink-0"
               >
                 <ToggleGroupItem
                   value="list"
-                  className="relative px-7 py-5 text-base font-semibold transition-all duration-200 rounded-xl border-2 border-transparent data-[state=on]:bg-white data-[state=on]:text-blue-600 data-[state=on]:shadow-lg data-[state=on]:shadow-blue-100 data-[state=on]:border-blue-200 data-[state=off]:text-gray-500 hover:data-[state=off]:bg-white hover:data-[state=off]:shadow-sm focus:outline-none focus:ring-0"
+                  aria-label="List view"
+                  className="p-2.5 rounded-xl transition-all duration-200 data-[state=on]:bg-white data-[state=on]:text-black data-[state=on]:shadow-md data-[state=off]:text-gray-400 hover:text-gray-600"
                 >
-                  <IoListOutline size={28} />
+                  <IoListOutline size={22} strokeWidth={2} />
                 </ToggleGroupItem>
-
-                <div className="h-10 w-px bg-gray-300" />
 
                 <ToggleGroupItem
                   value="grid"
-                  className="relative px-7 py-5 text-base font-semibold transition-all duration-200 rounded-xl border-2 border-transparent data-[state=on]:bg-white data-[state=on]:text-blue-600 data-[state=on]:shadow-lg data-[state=on]:shadow-blue-100 data-[state=on]:border-blue-200 data-[state=off]:text-gray-500 hover:data-[state=off]:bg-white hover:data-[state=off]:shadow-sm focus:outline-none focus:ring-0"
+                  aria-label="Grid view"
+                  className="p-2.5 rounded-xl transition-all duration-200 data-[state=on]:bg-white data-[state=on]:text-black data-[state=on]:shadow-md data-[state=off]:text-gray-400 hover:text-gray-600"
                 >
-                  <IoGridOutline size={28} />
+                  <IoGridOutline size={22} strokeWidth={2} />
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>

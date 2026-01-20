@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { LuChevronsLeftRight } from "react-icons/lu";
 import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaArrowLeft } from "react-icons/fa";
 import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import PrecticeFooter from "@/components/questions/PrecticeFooter";
-import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData } from "@/store/listeningStorage";
+import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData } from "@/store/LocalStorage/listeningStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -13,222 +13,23 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@radix-ui/react-switch";
 import { Label } from "@/components/ui/label";
 import QuestionHeader from "@/components/questions/QuestionHeader";
+import FinishModal from "@/components/modal/FinishModal";
+import { convertDurationToSeconds } from "@/utils/testDuration";
+import AudioPlayer from "@/components/AudioPlayer";
 
 // Audio Player Component
-const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange }) => {
-  const audioRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
 
-  // Update audio source when URL changes
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !audioUrl) return;
-    
-    // Only update source if it's different
-    if (audio.src !== audioUrl) {
-      audio.src = audioUrl;
-      audio.load();
-    }
-  }, [audioUrl]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => {
-      if (audio.duration && !isNaN(audio.duration)) {
-        setDuration(audio.duration);
-      }
-    };
-    const handleEnded = () => setIsPlaying(false);
-    const handleLoadedMetadata = () => {
-      if (audio.duration && !isNaN(audio.duration)) {
-        setDuration(audio.duration);
-      }
-    };
-
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('durationchange', updateDuration);
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('durationchange', updateDuration);
-      audio.removeEventListener('ended', handleEnded);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.playbackRate = playbackRate;
-    }
-  }, [playbackRate]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
-    }
-  }, [volume, isMuted]);
-
-  const togglePlayPause = () => {
-    if (!isTestMode) {
-      // In review mode, allow pause
-      if (isPlaying) {
-        audioRef.current?.pause();
-      } else {
-        audioRef.current?.play();
-      }
-      setIsPlaying(!isPlaying);
-    } else {
-      // In test mode, only allow play (no pause)
-      if (!isPlaying) {
-        audioRef.current?.play();
-        setIsPlaying(true);
-      }
-    }
-  };
-
-  const handleSeek = (e) => {
-    if (!isTestMode && audioRef.current) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const percentage = x / rect.width;
-      const newTime = percentage * duration;
-      audioRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-    }
-  };
-
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-  };
-
-  const formatTime = (seconds) => {
-    if (!seconds || isNaN(seconds)) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  if (!audioUrl) return null;
-
-  return (
-    <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4 shadow-sm">
-      <audio ref={audioRef} src={audioUrl} />
-      <div className="space-y-3">
-        {/* Main Controls */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={togglePlayPause}
-            disabled={isTestMode && isPlaying}
-            className={`p-3 rounded-full transition-colors ${
-              isTestMode && isPlaying
-                ? "bg-gray-300 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-            }`}
-            title={isTestMode && isPlaying ? "Cannot pause during test" : isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? <FaPause size={16} /> : <FaPlay size={16} />}
-          </button>
-
-          {/* Progress Bar */}
-          <div className="flex-1 relative">
-            <div
-              className="h-2 bg-gray-200 rounded-full cursor-pointer"
-              onClick={handleSeek}
-            >
-              <div
-                className="h-full bg-blue-600 rounded-full transition-all"
-                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-              />
-            </div>
-            {!isTestMode && (
-              <input
-                type="range"
-                min="0"
-                max={duration || 0}
-                value={currentTime}
-                onChange={(e) => {
-                  const newTime = parseFloat(e.target.value);
-                  if (audioRef.current) {
-                    audioRef.current.currentTime = newTime;
-                    setCurrentTime(newTime);
-                  }
-                }}
-                className="absolute inset-0 w-full h-2 opacity-0 cursor-pointer"
-              />
-            )}
-          </div>
-
-          {/* Time Display */}
-          <div className="text-sm font-medium text-gray-700 min-w-[80px] text-right">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </div>
-        </div>
-
-        {/* Secondary Controls */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Volume Control */}
-            <button
-              onClick={toggleMute}
-              className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
-              title={isMuted ? "Unmute" : "Mute"}
-            >
-              {isMuted ? <FaVolumeMute size={18} /> : <FaVolumeUp size={18} />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={isMuted ? 0 : volume}
-              onChange={(e) => {
-                setIsMuted(false);
-                onVolumeChange(parseFloat(e.target.value));
-              }}
-              className="w-24"
-            />
-          </div>
-
-          {/* Playback Speed - only in review mode */}
-          {!isTestMode && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Speed:</span>
-              <select
-                value={playbackRate}
-                onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
-                className="px-2 py-1 border border-gray-300 rounded text-sm"
-              >
-                <option value={1.0}>1x</option>
-                <option value={1.2}>1.2x</option>
-                <option value={1.5}>1.5x</option>
-              </select>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const ListeningPracticePage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { currentTest, fetchTestById, loading, error } = useTestStore();
+  const { currentTest, fetchTestById, loading } = useTestStore();
   const { authUser } = useAuthStore();
-  
   // Status: 'taking', 'completed', 'reviewing'
   const [status, setStatus] = useState('taking');
   const [currentPart, setCurrentPart] = useState(1);
-  const [timeRemaining, setTimeRemaining] = useState(60 * 60);
+  const [timeRemaining, setTimeRemaining] = useState(null); // Will be set from test duration
   const [isStarted, setIsStarted] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -280,7 +81,12 @@ const ListeningPracticePage = () => {
           setIsStarted(true);
           
           const elapsedSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
-          const initialTime = 60 * 60;
+          // Use saved timeRemaining if available, otherwise calculate from test duration
+          let initialTime = savedData.timeRemaining;
+          if (initialTime === undefined || initialTime === null) {
+            // Will be set when currentTest loads
+            initialTime = 60 * 60; // Fallback to 1 hour
+          }
           const remainingTime = Math.max(0, initialTime - elapsedSeconds);
           setTimeRemaining(remainingTime);
         } else if (savedData.timeRemaining !== undefined) {
@@ -289,6 +95,22 @@ const ListeningPracticePage = () => {
       }
     }
   }, [id, fetchTestById]);
+
+  // Initialize timeRemaining from test duration when currentTest loads
+  useEffect(() => {
+    if (currentTest && timeRemaining === null && !isStarted && !hasInteracted) {
+      const durationInSeconds = convertDurationToSeconds(currentTest.duration);
+      setTimeRemaining(durationInSeconds);
+    } else if (currentTest && timeRemaining !== null && !isStarted && !hasInteracted) {
+      // If timeRemaining was set from localStorage but we don't have a saved startTime,
+      // update it to use the test duration to ensure consistency
+      const savedData = loadListeningPracticeData(id);
+      if (!savedData?.startTime) {
+        const durationInSeconds = convertDurationToSeconds(currentTest.duration);
+        setTimeRemaining(durationInSeconds);
+      }
+    }
+  }, [currentTest, timeRemaining, isStarted, hasInteracted, id]);
 
   const startResize = (e) => {
     isResizing.current = true;
@@ -401,6 +223,48 @@ const ListeningPracticePage = () => {
     }).length;
   };
 
+  // Get all questions across all parts, sorted by question_number
+  const getAllQuestions = useCallback(() => {
+    if (!currentTest?.parts) return [];
+    
+    const allQuestions = [];
+    const sortedParts = getSortedParts();
+    
+    sortedParts.forEach(part => {
+      // Get questions from part.questions
+      if (part.questions && Array.isArray(part.questions)) {
+        part.questions.forEach(q => {
+          if (q.question_number != null) {
+            allQuestions.push({
+              questionNumber: q.question_number,
+              partNumber: part.part_number ?? part.id,
+              question: q
+            });
+          }
+        });
+      }
+      
+      // Also get questions from questionGroups
+      if (part.questionGroups && Array.isArray(part.questionGroups)) {
+        part.questionGroups.forEach(group => {
+          if (group.questions && Array.isArray(group.questions)) {
+            group.questions.forEach(q => {
+              if (q.question_number != null) {
+                allQuestions.push({
+                  questionNumber: q.question_number,
+                  partNumber: part.part_number ?? part.id,
+                  question: q
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+    
+    return allQuestions.sort((a, b) => a.questionNumber - b.questionNumber);
+  }, [currentTest?.parts, getSortedParts]);
+
   const scrollToQuestion = (questionNumber) => {
     const el = questionRefs.current[questionNumber];
     if (!el || !questionsContainerRef.current) return;
@@ -416,6 +280,7 @@ const ListeningPracticePage = () => {
 
   useEffect(() => {
     if (!isStarted && !hasInteracted) return;
+    if (timeRemaining === null) return; // Wait for timeRemaining to be initialized
 
     if (!startTime) {
       const now = Date.now();
@@ -424,7 +289,7 @@ const ListeningPracticePage = () => {
 
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
-        if (prev <= 1) {
+        if (prev === null || prev <= 1) {
           setIsStarted(false);
           return 0;
         }
@@ -433,7 +298,43 @@ const ListeningPracticePage = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isStarted, hasInteracted, startTime]);
+  }, [isStarted, hasInteracted, startTime, timeRemaining]);
+
+  // Auto-submit when timer reaches zero
+  useEffect(() => {
+    if (timeRemaining === 0 && (isStarted || hasInteracted) && status === 'taking' && authUser && id && currentTest) {
+      // Auto-submit the test when timer reaches zero
+      const autoSubmit = async () => {
+        const result = await handleSubmitTest();
+        if (result.success) {
+          // Navigate to result page
+          navigate(`/listening-result/${id}`);
+        } else {
+          console.error('Auto-submit failed:', result.error);
+          // Still navigate to result page even if submission failed
+          navigate(`/listening-result/${id}`);
+        }
+      };
+      autoSubmit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining, status]);
+
+  // Auto-submit when audio ends (only in test mode)
+  const handleAudioEnded = useCallback(async () => {
+    if (status === 'taking' && authUser && id && currentTest && (isStarted || hasInteracted)) {
+      const result = await handleSubmitTest();
+      if (result.success) {
+        // Navigate to result page
+        navigate(`/listening-result/${id}`);
+      } else {
+        console.error('Auto-submit on audio end failed:', result.error);
+        // Still navigate to result page even if submission failed
+        navigate(`/listening-result/${id}`);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, authUser, id, currentTest, isStarted, hasInteracted]);
 
   useEffect(() => {
     if (id && hasInteracted) {
@@ -534,21 +435,28 @@ const ListeningPracticePage = () => {
     if (id) {
       clearListeningPracticeData(id);
     }
-    navigate("/listening");
+    navigate("/dashboard");
   };
 
   const handleSubmitTest = async () => {
     if (!authUser || !id || !currentTest) {
-      alert('Missing required information. Please try again.');
       return { success: false, error: 'Missing required information' };
     }
 
     try {
-      const result = await submitTestAttempt(id, answers, currentTest);
+      // Calculate time taken from startTime
+      let timeTaken = 0;
+      if (startTime) {
+        timeTaken = Math.floor((Date.now() - startTime) / 1000);
+      }
+      
+      // Submit even if answers object is empty - submitTestAttempt handles this
+      const result = await submitTestAttempt(id, answers, currentTest, timeTaken);
       
       if (result.success) {
         setLatestAttemptId(result.attemptId);
         setStatus('completed');
+        // Clear practice data after successful submission
         if (id) {
           clearListeningPracticeData(id);
         }
@@ -556,12 +464,10 @@ const ListeningPracticePage = () => {
         return { success: true };
       } else {
         console.error('Failed to submit test:', result.error);
-        alert('Failed to submit test. Please try again.');
         return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error submitting test:', error);
-      alert('An error occurred while submitting the test.');
       return { success: false, error: error.message };
     }
   };
@@ -611,7 +517,8 @@ const ListeningPracticePage = () => {
     setAnswers({});
     setReviewData({});
     setStatus('taking');
-    setTimeRemaining(60 * 60);
+    // Reset timeRemaining to test duration (will be set by useEffect when currentTest is available)
+    setTimeRemaining(currentTest ? convertDurationToSeconds(currentTest.duration) : 60 * 60);
     setIsStarted(false);
     setHasInteracted(false);
     setStartTime(null);
@@ -678,60 +585,7 @@ const ListeningPracticePage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Header */}
-      {/* <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleBackClick}
-            className="flex items-center gap-2 text-gray-900 hover:text-primary transition-colors"
-          >
-            <FaArrowLeft className="w-4 h-4" />
-            <span>Back</span>
-          </button>
-          <div className="flex items-center gap-3">
-            <span className="text-xl font-bold text-gray-900">IELTS</span>
-            <span className="text-sm text-gray-600">ID: {currentTest?.id || id}</span>
-          </div>
-          {status === 'reviewing' && (
-            <div className="flex items-center gap-2 ml-4">
-              <Label htmlFor="show-correct-answers" className="flex items-center gap-2 cursor-pointer">
-                <span className="text-sm font-medium text-gray-700">Show Correct Answers</span>
-                <Switch
-                  id="show-correct-answers"
-                  checked={showCorrectAnswers}
-                  onCheckedChange={setShowCorrectAnswers}
-                />
-
-              </Label>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-4">
-          {status !== 'reviewing' && (
-            <>
-              <div className="text-lg font-semibold text-gray-900">
-                {Math.floor(timeRemaining / 60).toString().padStart(2, "0")}:{(timeRemaining % 60).toString().padStart(2, "0")}
-              </div>
-              <button
-                onClick={handleStart}
-                disabled={isStarted || hasInteracted}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                Start
-              </button>
-            </>
-          )}
-          {status === 'reviewing' && (
-            <button
-              onClick={handleRetakeTest}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium"
-            >
-              Redo Test
-            </button>
-          )}
-        </div>
-      </div> */}
+     
       <QuestionHeader
         currentTest={currentTest}
         id={id}
@@ -777,7 +631,7 @@ const ListeningPracticePage = () => {
             </div>
           </div>
         ) : (
-          <div className="border rounded-2xl border-gray-300 bg-gray-50" style={{ width: `${leftWidth}%` }} />
+          <div className="border rounded-2xl border-gray-300 bg-gray-50"  />
         )}
 
         {/* Resizer - only show in review mode when left panel is visible */}
@@ -811,6 +665,7 @@ const ListeningPracticePage = () => {
                 onPlaybackRateChange={setPlaybackRate}
                 volume={volume}
                 onVolumeChange={setVolume}
+                onAudioEnded={handleAudioEnded}
               />
             )}
 
@@ -838,7 +693,28 @@ const ListeningPracticePage = () => {
                     </div>
                 
                     {(isFillInTheBlanks || isDragAndDrop || isTable) ? (
-                      <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div 
+                        ref={(el) => {
+                          // Set ref for all questions in the group for scrolling
+                          if (el && groupQuestions.length > 0) {
+                            groupQuestions
+                              .filter(q => q.question_number != null)
+                              .forEach(q => {
+                                if (q.question_number) {
+                                  questionRefs.current[q.question_number] = el;
+                                }
+                              });
+                          }
+                        }}
+                        data-question-number={groupQuestions
+                          .filter(q => q.question_number != null)
+                          .sort((a, b) => {
+                            const aNum = a.question_number ?? 0;
+                            const bNum = b.question_number ?? 0;
+                            return aNum - bNum;
+                          })[0]?.question_number}
+                        className="p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                      >
                         <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
                           <QuestionRenderer
                             question={{
@@ -973,6 +849,16 @@ const ListeningPracticePage = () => {
         onReview={handleReviewTest}
         onRetake={handleRetakeTest}
         resultLink={`/listening-result/${id}`}
+        getAllQuestions={getAllQuestions}
+      />
+
+      {/* Finish Modal */}
+      <FinishModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        link={`/listening-result/${id}`}
+        testId={id}
+        onSubmit={handleSubmitTest}
       />
     </div>
   );

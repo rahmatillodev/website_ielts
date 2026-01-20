@@ -71,7 +71,7 @@ const CompletionGapFill = ({ question, groupQuestions, answers, onAnswerChange, 
                 <span key={idx} className="inline-block relative mx-2 align-middle">
                   <Input
                     type="text"
-                    value={answer}
+                    value={isReviewMode ? `[${part.questionNumber}] ${answer}` : answer}
                     onChange={(e) => {
                       if (mode !== 'review') {
                         onInteraction?.();
@@ -89,18 +89,18 @@ const CompletionGapFill = ({ question, groupQuestions, answers, onAnswerChange, 
                         : 'border-gray-400 focus-visible:ring-blue-500'
                     } ${mode === 'review' ? 'cursor-not-allowed' : ''}`}
                   />
-                  {showCorrect && (
+                  {/* {showCorrect && (
                     <span className="absolute -top-5 left-0 text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-sm">
                       Correct
                     </span>
-                  )}
+                  )} */}
                   {/* {showWrong && (
                     <span className="absolute -top-5 left-0 text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-sm">
                       Wrong
                     </span>
                   )} */}
                   {showWrong && correctAnswer && showCorrectAnswers && (
-                    <span className="absolute bottom-4 left-8 text-xs text-green-600 font-medium text-ellipsis overflow-hidden whitespace-nowrap">
+                    <span className="absolute bottom-10 left-8 text-xs text-green-600 font-medium text-ellipsis overflow-hidden whitespace-nowrap">
                       {correctAnswer}
                     </span>
                   )}

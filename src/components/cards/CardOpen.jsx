@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { MdHeadset, MdTimer, MdQuiz, MdCheckCircle, MdStar } from "react-icons/md";
+import { MdHeadset, MdTimer, MdQuiz, MdCheckCircle, MdStar, MdBolt, MdFlag, MdAutoAwesome } from "react-icons/md";
 import { HiOutlinePlay } from "react-icons/hi2";
 import { useNavigate } from "react-router-dom";
-import { clearReadingPracticeData } from "@/store/readingStorage";
-import { clearListeningPracticeData } from "@/store/listeningStorage";
+import { clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
+import { clearListeningPracticeData } from "@/store/LocalStorage/listeningStorage";
 import { checkTestCompleted } from "@/lib/testAttempts";
 import { IoBookOutline } from "react-icons/io5";
 import { useTestStore } from "@/store/testStore";
@@ -26,7 +26,7 @@ const ReadingCardOpen = ({
   const [attemptData, setAttemptData] = useState(null);
 
   // Get test completion state from store
-  const test_completed = useTestStore((state) => state.test_completed);
+  // const test_completed = useTestStore((state) => state.test_completed);
   const setTestCompleted = useTestStore((state) => state.setTestCompleted);
   const getTestCompleted = useTestStore((state) => state.getTestCompleted);
 
@@ -50,16 +50,16 @@ const ReadingCardOpen = ({
           isCompleted: result.isCompleted,
           attempt: result.attempt,
         });
-        
+
         // Update local state
         setHasCompleted(result.isCompleted);
         setAttemptData(result.attempt);
       }
     };
-    
+
     checkCompleted();
   }, [id, setTestCompleted, getTestCompleted]);
-  
+
   const formatDate = (dateString) => {
     if (!dateString) return '';
     try {
@@ -70,7 +70,7 @@ const ReadingCardOpen = ({
       return dateString;
     }
   };
-  
+
   const handleStartTest = (e) => {
     // Clear localStorage when starting a new test
     if (id) {
@@ -81,12 +81,12 @@ const ReadingCardOpen = ({
       }
     }
     // Navigate using navigate to ensure localStorage is cleared first
-    const practiceLink = testType === 'listening' 
+    const practiceLink = testType === 'listening'
       ? `/listening-practice/${id}`
       : (link || `/reading-practice/${id}`);
     navigate(practiceLink);
   };
-  
+
   const handleRetake = () => {
     if (id) {
       if (testType === 'listening') {
@@ -95,42 +95,41 @@ const ReadingCardOpen = ({
         clearReadingPracticeData(id);
       }
     }
-    const practiceLink = testType === 'listening' 
-      ? `/listening-practice/${id}?mode=retake`
-      : `/reading-practice/${id}?mode=retake`;
+    const practiceLink = testType === 'listening'
+      ? `/listening-practice/${id}`
+      : `/reading-practice/${id}`;
     navigate(practiceLink);
   };
-  
+
   const handleReview = () => {
-    const practiceLink = testType === 'listening' 
+    const practiceLink = testType === 'listening'
       ? `/listening-practice/${id}?mode=review`
       : `/reading-practice/${id}?mode=review`;
     navigate(practiceLink);
   };
   const cardStatus = is_premium ? "Premium" : "Free";
   const completedDate = attemptData?.completed_at ? formatDate(attemptData.completed_at) : (date ? formatDate(date) : '');
-  
+
   const score = attemptData?.score || null;
   const correctAnswers = attemptData?.correct_answers || 0;
   const totalQuestions = attemptData?.total_questions || question_quantity || 0;
-  
+
   // Container classes with green border for completed tests
   const containerClass = isGridView
-    ? `bg-white border ${hasCompleted ? 'border-t-4 border-t-green-500' : 'border-gray-100'} rounded-[32px] p-7 shadow-none hover:shadow-sm flex flex-col relative h-full`
-    : `bg-white border ${hasCompleted ? 'border-l-4 border-l-green-500' : 'border-gray-100'} rounded-[24px] p-4 shadow-none hover:shadow-sm flex items-center gap-4 mb-4 relative`;
+    ? `bg-white border border-t-4 ${hasCompleted ? 'border-t-green-500' : 'border-t-blue-500'} rounded-[32px] p-7 shadow-none hover:shadow-sm flex flex-col relative h-full`
+    : `bg-white border border-l-4 ${hasCompleted ? 'border-l-green-500' : 'border-l-blue-500'} rounded-[24px] p-4 shadow-none hover:shadow-sm flex items-center gap-4 mb-4 relative`;
 
   if (isGridView) {
     // Grid View
     return (
       <div className={containerClass}>
         {/* Premium/Free Badge */}
-        { 
+        {
           <div className={`${hasCompleted ? 'absolute top-5 right-30 z-10' : 'absolute top-5 right-5 z-10'}`}>
-            <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg tracking-widest border flex items-center gap-1 ${
-              is_premium 
-                ? "bg-amber-50 text-amber-600 border-amber-100" 
-                : "bg-green-50 text-green-600 border-green-100"
-            }`}>
+            <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg tracking-widest border flex items-center gap-1 ${is_premium
+              ? "bg-amber-50 text-amber-600 border-amber-100"
+              : "bg-green-50 text-green-600 border-green-100"
+              }`}>
               {is_premium && <MdStar />} {cardStatus}
             </span>
           </div>
@@ -149,11 +148,10 @@ const ReadingCardOpen = ({
 
         <div className="flex flex-col flex-1">
           {/* Icon */}
-          <div className={`size-16 mb-6 rounded-2xl ${
-            hasCompleted 
-              ? 'bg-green-50 text-green-500' 
-              : 'bg-blue-50 text-blue-400'
-          } flex items-center justify-center shrink-0`}>
+          <div className={`size-16 mb-6 rounded-2xl ${hasCompleted
+            ? 'bg-green-50 text-green-500'
+            : 'bg-blue-50 text-blue-400'
+            } flex items-center justify-center shrink-0`}>
             {hasCompleted ? (
               <MdCheckCircle className="text-3xl" />
             ) : (
@@ -171,10 +169,35 @@ const ReadingCardOpen = ({
               {title}
             </h3>
 
-            <p className="text-sm text-gray-500 font-semibold mt-1">
-              {hasCompleted 
-                ? `Completed on ${completedDate}` 
-                : `Difficulty: ${difficulty}`}
+            <p className="text-sm text-gray-500 font-semibold mt-1 flex items-center gap-2">
+              {(() => {
+                let diffIcon = null;
+                let diffColor = "";
+                // Import at top: import { MdBolt, MdFlag, MdAutoAwesome } from "react-icons/md";
+                if (difficulty?.toLowerCase() === "easy") {
+                  diffIcon = <MdBolt className="text-green-400 text-[16px]" title="Easy" />;
+                  diffColor = "text-green-500";
+                } else if (difficulty?.toLowerCase() === "medium") {
+                  diffIcon = <MdFlag className="text-yellow-500 text-[16px]" title="Medium" />;
+                  diffColor = "text-yellow-500";
+                } else if (difficulty?.toLowerCase() === "hard") {
+                  diffIcon = <MdAutoAwesome className="text-red-500 text-[16px]" title="Hard" />;
+                  diffColor = "text-red-400";
+                }
+                return (
+                  <>
+                    <span className={`flex items-center gap-1 font-bold ${diffColor}`}>
+                      {diffIcon}
+                      Difficulty: {difficulty}
+                    </span>
+                    {hasCompleted && (
+                      <span className="ml-1 text-xs text-gray-400 font-normal">
+                        • Completed on {completedDate}
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
             </p>
 
             <div className="flex gap-4 text-gray-500 mt-4">
@@ -227,11 +250,10 @@ const ReadingCardOpen = ({
     return (
       <div className={containerClass}>
         {/* Icon */}
-        <div className={`size-14 rounded-2xl ${
-          hasCompleted 
-            ? 'bg-green-50 text-green-500' 
-            : 'bg-blue-50 text-blue-400'
-        } flex items-center justify-center shrink-0`}>
+        <div className={`size-14 rounded-2xl ${hasCompleted
+          ? 'bg-green-50 text-green-500'
+          : 'bg-blue-50 text-blue-400'
+          } flex items-center justify-center shrink-0`}>
           {hasCompleted ? (
             <MdCheckCircle className="text-3xl" />
           ) : (
@@ -249,24 +271,48 @@ const ReadingCardOpen = ({
             <h3 className="text-lg font-black text-gray-900 line-clamp-1 overflow-hidden text-ellipsis">
               {title}
             </h3>
-            {!hasCompleted && (
-              <span className={`ml-4 px-2.5 py-1 text-[10px] font-black uppercase rounded-lg tracking-widest border flex items-center gap-1 shrink-0 ${
-                is_premium 
-                  ? "bg-amber-50 text-amber-600 border-amber-100" 
-                  : "bg-green-50 text-green-600 border-green-100"
+
+            <span className={`ml-4 px-2.5 py-1 text-[10px] font-black uppercase rounded-lg tracking-widest border flex items-center gap-1 shrink-0 ${is_premium
+              ? "bg-amber-50 text-amber-600 border-amber-100"
+              : "bg-green-50 text-green-600 border-green-100"
               }`}>
-                {is_premium && <MdStar className="text-xs" />} {cardStatus}
-              </span>
-            )}
+              {is_premium && <MdStar className="text-xs" />} {cardStatus}
+            </span>
+
           </div>
 
-          <p className="text-sm text-gray-500 font-semibold mt-1">
-            {hasCompleted 
-              ? `Completed on ${completedDate}` 
-              : `Difficulty: ${difficulty}`}
+          <p className="text-sm text-gray-500 font-semibold mt-1 flex items-center gap-2">
+            {(() => {
+              let diffIcon = null;
+              let diffColor = "";
+              // Import at top: import { MdBolt, MdFlag, MdAutoAwesome } from "react-icons/md";
+              if (difficulty?.toLowerCase() === "easy") {
+                diffIcon = <MdBolt className="text-green-400 text-[16px]" title="Easy" />;
+                diffColor = "text-green-500";
+              } else if (difficulty?.toLowerCase() === "medium") {
+                diffIcon = <MdFlag className="text-yellow-500 text-[16px]" title="Medium" />;
+                diffColor = "text-yellow-500";
+              } else if (difficulty?.toLowerCase() === "hard") {
+                diffIcon = <MdAutoAwesome className="text-red-500 text-[16px]" title="Hard" />;
+                diffColor = "text-red-400";
+              }
+              return (
+                <>
+                  <span className={`flex items-center gap-1 font-bold ${diffColor}`}>
+                    {diffIcon}
+                    Difficulty: {difficulty}
+                  </span>
+                  {hasCompleted && (
+                    <span className="ml-1 text-xs text-gray-400 font-normal">
+                      • Completed on {completedDate}
+                    </span>
+                  )}
+                </>
+              );
+            })()}
           </p>
 
-        
+
           <div className="flex gap-4 text-gray-500 mt-4">
             <span className="flex items-center gap-1 text-xs font-black pl-2 bg-gray-100 rounded-full px-3 py-1.5">
               <MdTimer /> {duration} min

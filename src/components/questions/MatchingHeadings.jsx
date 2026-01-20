@@ -2,7 +2,6 @@ import React from "react";
 import { sortOptionsByLetter, getOptionDisplayText, getOptionValue, isOptionSelected } from "../../store/optionUtils";
 
 const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true }) => {
-  // Sort options by letter (A, B, C, D, etc.)
   const sortedOptions = sortOptionsByLetter(options);
   
   // Get question number (use question_number from individual question)
@@ -43,13 +42,13 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
         <div className="p-4 bg-gray-50 flex items-center gap-3">
           {sortedOptions.map((option) => {
             const radioValue = getOptionValue(option);
-            const isSelected = isOptionSelected(option, userAnswer || answer);
             const optionLetter = option.letter || '';
+            const isSelected = isOptionSelected(option, userAnswer || answer);
             const isCorrectOption = isReviewMode && radioValue.toLowerCase() === correctAnswer.toLowerCase().trim();
             
             return (
               <label
-                key={option.id || optionLetter}
+                key={option.id}
                 className={`
                   flex flex-col items-center justify-center w-10 h-10 rounded-md border-2 transition-all
                   ${mode === 'review' ? 'cursor-default' : 'cursor-pointer'}
@@ -64,7 +63,7 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
                     : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50"
                   }
                 `}
-                title={getOptionDisplayText(option) || optionLetter}
+                title={getOptionDisplayText(option)}
               >
                 <input
                   type="radio"

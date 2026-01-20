@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { clearReadingPracticeData, loadReadingPracticeData, saveReadingResultData } from "@/store/readingStorage";
+import { clearReadingPracticeData, loadReadingPracticeData, saveReadingResultData } from "@/store/LocalStorage/readingStorage";
 
 export default function FinishModal({ isOpen, onClose, link, testId, onSubmit }) {
   const navigate = useNavigate();
@@ -23,9 +23,15 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit })
         if (result && result.success !== false) {
           onClose(); // Close modal first
           navigate(link);
+        } else {
+          // Show error message if submission failed
+          if (result && result.error) {
+            alert(`Failed to submit test: ${result.error}`);
+          } else {
+            alert('Failed to submit test. Please try again.');
+          }
+          // Modal stays open so user can try again
         }
-        // If submission failed, result will have success: false, so don't navigate
-        // Modal stays open so user can try again
       } else {
         // Legacy behavior: Save result data before clearing practice data
         if (testId) {
@@ -50,6 +56,7 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit })
       }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
+      alert('An error occurred while submitting the test. Please try again.');
       // Don't navigate on error, modal stays open
     }
   };

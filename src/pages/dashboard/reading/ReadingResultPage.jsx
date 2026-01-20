@@ -5,16 +5,17 @@ import { FaArrowLeft } from "react-icons/fa6";
 import { IoPrint } from "react-icons/io5";
 import { LuTimer } from "react-icons/lu";
 import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { HiOutlineHome, HiOutlineRefresh } from "react-icons/hi";
 import { useTestStore } from "@/store/testStore";
 import { fetchLatestAttempt, deleteTestAttempts } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { generateTestResultsPDF } from "@/utils/pdfExport";
+import ResultBanner from "@/components/badges/ResultBanner";
 
 const ReadingResultPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { currentTest, fetchTestById } = useTestStore();
   const { authUser } = useAuthStore();
   const [resultData, setResultData] = useState(null);
@@ -66,8 +67,8 @@ const ReadingResultPage = () => {
         // Fetch test and attempt in parallel
         const [testResult, attemptResult] = await Promise.all([
           currentFetchTestById(id),
-          currentAuthUser 
-            ? fetchLatestAttempt(currentAuthUser.id, id) 
+          currentAuthUser
+            ? fetchLatestAttempt(currentAuthUser.id, id)
             : Promise.resolve({ success: true, attempt: null, answers: {} })
         ]);
 
@@ -106,7 +107,7 @@ const ReadingResultPage = () => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours}h ${mins}m ${secs}s`;
     }
@@ -119,8 +120,13 @@ const ReadingResultPage = () => {
     return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }, []);
 
-  // Calculate elapsed time - fix the negative time bug
+  // Calculate elapsed time - use time_taken from database if available, otherwise calculate from timestamps
   const elapsedTime = useMemo(() => {
+    // Prefer time_taken from database (in seconds)
+    if (attemptData?.time_taken !== null && attemptData?.time_taken !== undefined) {
+      return Math.max(0, attemptData.time_taken);
+    }
+    // Fallback to calculating from timestamps
     if (attemptData?.created_at && attemptData?.completed_at) {
       const created = new Date(attemptData.created_at).getTime();
       const completed = new Date(attemptData.completed_at).getTime();
@@ -133,11 +139,11 @@ const ReadingResultPage = () => {
   // Get answer display data - memoized for performance
   const answerDisplayData = useMemo(() => {
     if (!resultData || !resultData.answers) return [];
-    
+
     const answers = resultData.answers || {};
     const reviewData = resultData.reviewData || {};
     const answerEntries = Object.entries(answers);
-    
+
     return answerEntries
       .filter(([key, value]) => value && value.toString().trim() !== '')
       .map(([key, value]) => {
@@ -162,7 +168,8 @@ const ReadingResultPage = () => {
 
   // Memoized stats calculations
   const stats = useMemo(() => {
-    const totalQuestions = answerDisplayData.length;
+    // Use total_questions from attempt data if available, otherwise use answered count
+    const totalQuestions = attemptData?.total_questions ?? answerDisplayData.length;
     const correctCount = answerDisplayData.filter(a => a.isCorrect).length;
     const timeTaken = formatTime(elapsedTime);
     const avgTime = totalQuestions > 0 ? formatTime(Math.floor(elapsedTime / totalQuestions)) : "0m 0s";
@@ -181,84 +188,28 @@ const ReadingResultPage = () => {
 
   // PDF Export function
   const downloadPDF = useCallback(() => {
-    if (!currentTest || !resultData || !answerDisplayData.length) return;
-
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    let yPos = margin;
-
-    // Title
-    doc.setFontSize(20);
-    doc.setFont(undefined, 'bold');
-    doc.text('IELTS Reading Test Results', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 10;
-
-    // Test Info
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Test: ${currentTest?.title || 'Academic Reading Practice Test'}`, margin, yPos);
-    yPos += 6;
-    doc.text(`Date: ${formatDate(attemptData?.completed_at || resultData?.completedAt)}`, margin, yPos);
-    yPos += 6;
-    doc.text(`Score: ${stats.score} / 9.0`, margin, yPos);
-    yPos += 6;
-    doc.text(`Correct Answers: ${stats.correctCount} / ${stats.totalQuestions}`, margin, yPos);
-    yPos += 6;
-    doc.text(`Time Taken: ${stats.timeTaken}`, margin, yPos);
-    yPos += 15;
-
-    // Prepare table data
-    const tableData = answerDisplayData.map((item) => {
-      const row = [
-        item.questionNumber.toString(),
-        item.isCorrect ? '✓' : '✗',
-        item.yourAnswer || 'N/A',
-      ];
-      
-      if (showCorrectAnswers) {
-        row.push(item.isCorrect ? item.yourAnswer : (item.correctAnswer || 'N/A'));
-      }
-      
-      return row;
+    generateTestResultsPDF({
+      test: currentTest,
+      stats,
+      answerDisplayData,
+      showCorrectAnswers,
+      formatDate,
+      completedDate: attemptData?.completed_at || resultData?.completedAt,
+      testType: 'Reading',
+      defaultTestTitle: 'Academic Reading Practice Test'
     });
-
-    const tableColumns = showCorrectAnswers
-      ? ['#', 'Status', 'Your Answer', 'Correct Answer']
-      : ['#', 'Status', 'Your Answer'];
-
-    // Add table
-    doc.autoTable({
-      startY: yPos,
-      head: [tableColumns],
-      body: tableData,
-      theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [249, 250, 251] },
-      styles: { fontSize: 9, cellPadding: 3 },
-      columnStyles: {
-        0: { cellWidth: 20 },
-        1: { cellWidth: 30, halign: 'center' },
-        2: { cellWidth: showCorrectAnswers ? 60 : 120 },
-        ...(showCorrectAnswers && { 3: { cellWidth: 60 } }),
-      },
-    });
-
-    // Save PDF
-    const fileName = `IELTS_Reading_Results_${currentTest?.title?.replace(/\s+/g, '_') || 'Test'}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
   }, [currentTest, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDate]);
 
   // Handle retake - delete previous attempts
   const handleRetake = useCallback(async () => {
     if (!authUser || !id) return;
-    
+
     setIsDeleting(true);
     try {
       const result = await deleteTestAttempts(id);
       if (result.success) {
-        // Navigate to practice page with retake mode
-        window.location.href = `/reading-practice/${id}?mode=retake`;
+        // Navigate to practice page to retake the test
+        navigate(`/reading-practice/${id}`);
       } else {
         console.error('Failed to delete attempts:', result.error);
         alert('Failed to clear previous attempts. Please try again.');
@@ -269,7 +220,7 @@ const ReadingResultPage = () => {
     } finally {
       setIsDeleting(false);
     }
-  }, [authUser, id]);
+  }, [authUser, id, navigate]);
 
   if (loading) {
     return (
@@ -329,10 +280,12 @@ const ReadingResultPage = () => {
 
         <hr className="border-gray-200 mb-10" />
 
+      
+
         {/* Stats Cards - Redesigned */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-12">
           {/* Overall Score Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-lg">
+          <div className="border-2 border-blue-200 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-lg">
             <div className="relative z-10">
               <h3 className="text-slate-600 font-bold text-xs sm:text-sm uppercase tracking-widest mb-4">
                 Overall Band Score
@@ -345,22 +298,20 @@ const ReadingResultPage = () => {
               </div>
               {/* Progress Bar */}
               <div className="w-full bg-blue-200 h-3 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="bg-blue-600 h-full rounded-full transition-all duration-500"
                   style={{ width: `${(parseFloat(stats.score) / 9.0) * 100}%` }}
                 ></div>
               </div>
             </div>
-            {/* Background Badge Icon */}
+            {/* Background Checkmark Icon */}
             <div className="absolute -right-4 -top-4 text-blue-200/30">
-              <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
+              <FaCheckCircle size={100} />
             </div>
           </div>
 
           {/* Correct Answers Card */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-6 sm:p-8 shadow-lg">
+          <div className=" border-2 border-grey-200 rounded-2xl p-6 sm:p-8 shadow-lg">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-slate-600 font-bold text-xs sm:text-sm uppercase tracking-widest">
                 Correct Answers
@@ -375,13 +326,13 @@ const ReadingResultPage = () => {
                 / {stats.totalQuestions}
               </span>
             </div>
-            <div className="text-sm font-semibold text-green-700">
-              {stats.percentage}% Accuracy
+            <div className="text-sm font-semibold text-gray-500">
+              {stats.percentage >= 85 ? 'Top 15%' : stats.percentage >= 75 ? 'Top 25%' : stats.percentage >= 65 ? 'Top 35%' : stats.percentage >= 55 ? 'Top 45%' : 'Top 50%'} of test takers
             </div>
           </div>
 
           {/* Time Taken Card */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl p-6 sm:p-8 shadow-lg">
+          <div className=" border-2 border-grey-200 rounded-2xl p-6 sm:p-8 shadow-lg">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-slate-600 font-bold text-xs sm:text-sm uppercase tracking-widest">
                 Time Taken
@@ -393,11 +344,13 @@ const ReadingResultPage = () => {
                 {stats.timeTaken}
               </span>
             </div>
-            <div className="text-sm font-semibold text-purple-700">
+            <div className="text-sm font-semibold text-gray-500">
               Avg. {stats.avgTime} per question
             </div>
           </div>
         </div>
+          {/* Performance Banner */}
+          <ResultBanner score={stats.score} testType="Reading" />
 
         {/* Detailed Answer Review Section */}
         <div className="mt-12">
@@ -480,13 +433,11 @@ const ReadingResultPage = () => {
                         </td>
                         {showCorrectAnswers && (
                           <td className="p-4">
-                            {!answerItem.isCorrect && answerItem.correctAnswer ? (
-                              <span className="text-green-600 font-semibold">
-                                {answerItem.correctAnswer}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
+
+                            <span className="text-green-600 font-semibold">
+                              {answerItem.correctAnswer}
+                            </span>
+
                           </td>
                         )}
                       </tr>
@@ -517,14 +468,14 @@ const ReadingResultPage = () => {
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <Link to={"/reading-practice/" + (id || '') + "?mode=review"} className="w-full sm:w-auto">
-                <Button 
+                <Button
                   variant="outline"
                   className="border-blue-600 text-blue-600 w-full sm:w-auto hover:bg-blue-50 font-bold px-8 h-12 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95"
                 >
                   Review Test
                 </Button>
               </Link>
-              <Button 
+              <Button
                 className="bg-blue-600 w-full sm:w-auto hover:bg-blue-700 text-white font-bold px-8 h-12 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                 onClick={handleRetake}
                 disabled={isDeleting || !authUser}

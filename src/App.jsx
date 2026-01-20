@@ -21,6 +21,7 @@ import { useTestStore } from "./store/testStore";
 import ListeningPage from "./pages/dashboard/listening/ListeningPage";
 import ListeningPracticePage from "./pages/dashboard/listening/ListeningPracticePage";
 import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
+import PricingRoute from "./components/PricingRoute";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -48,10 +49,17 @@ function App() {
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
           <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={<LandingPage />} />
         </Route>
+          <Route 
+            path="/pricing" 
+            element={
+              <PricingRoute>
+                <PricingPage />
+              </PricingRoute>
+            } 
+          />
 
         {/* Protected routes */}
         <Route element={<DashboardLayout />}>
@@ -59,6 +67,14 @@ function App() {
           <Route path="/reading" element={<ReadingPage />} />
           <Route path="/listening" element={<ListeningPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route 
+            path="/pricing" 
+            element={
+              <PricingRoute>
+                <PricingPage />
+              </PricingRoute>
+            } 
+          />
           <Route
             path="/reading-practice/:id"
             element={<ReadingPracticePage />}
@@ -73,7 +89,7 @@ function App() {
           
         </Route>
       </Routes>
-      <ToastContainer />
+      <ToastContainer duration={2000} />
     </DndProvider>
   );
 }
