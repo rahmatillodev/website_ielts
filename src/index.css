@@ -17,6 +17,26 @@
 }
 @custom-variant dark (&:is(.dark *));
 
+html {
+  scroll-behavior: smooth;
+  font-family: 'Poppins', sans-serif;
+}
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+}
+button {
+  cursor: pointer;
+}
+input {
+  outline: none;
+}
+textarea {
+  outline: none;
+}
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

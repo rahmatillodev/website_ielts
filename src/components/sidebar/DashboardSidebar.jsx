@@ -13,6 +13,8 @@ import { GraduationCap } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import LogoutModal from "../modal/LogoutModal";
 import { toast } from "react-toastify";
+import { TfiWrite } from "react-icons/tfi";
+import { RiSpeakLine } from "react-icons/ri";
 
 const SidebarItem = ({ icon: Icon, label, link, isActive }) => (
   <Link
@@ -86,12 +88,25 @@ const DashboardSidebar = () => {
           isActive={checkActive("/listening")}
         />
         <SidebarItem
+          icon={TfiWrite}
+          label="Writing Practice"
+          link="/writing"
+          isActive={checkActive("/writing")}
+        />
+        <SidebarItem
+          icon={RiSpeakLine}
+          label="Speaking Practice"
+          link="/speaking"
+          isActive={checkActive("/speaking")}
+        />
+        <SidebarItem
           icon={FaChartSimple}
           label="Analytics"
           link="/analytics"
           isActive={checkActive("/analytics")}
         />
 
+      
         <div className="mt-8 px-7 text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-3">
           Account
         </div>
