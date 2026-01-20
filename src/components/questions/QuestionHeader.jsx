@@ -44,7 +44,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
     if (onBack) {
       onBack();
     }
-    navigate("/reading");
+    navigate("/dashboard");
   };
 
   return (
@@ -58,7 +58,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
           <span>Back</span>
         </button>
         <div className="flex items-center gap-3">
-          <span className="text-xl font-bold text-gray-900">IELTS</span>
+          <span className="text-xl font-semibold text-gray-900">IELTS</span>
           <span className="text-sm text-gray-600">ID: {currentTest?.id.slice(0, 8) || id.slice(0, 8)}...</span>
         </div>
         {/* Show Correct Answers Toggle - only in review mode */}
@@ -85,7 +85,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             <button
               onClick={handleStart}
               disabled={isStarted || hasInteracted}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
               Start
             </button>

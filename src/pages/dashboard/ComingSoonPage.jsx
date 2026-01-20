@@ -75,6 +75,7 @@ const ComingSoonPage = () => {
               dark:to-white/20
               text-transparent
               bg-clip-text
+              font-black
               [-webkit-background-clip:text]
               [-webkit-text-fill-color:transparent]">
                 Coming
@@ -87,6 +88,7 @@ const ComingSoonPage = () => {
               dark:to-white/50
               text-transparent
               bg-clip-text
+              font-black
               [-webkit-background-clip:text]
               [-webkit-text-fill-color:transparent]">
                 Soon

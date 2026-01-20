@@ -61,11 +61,11 @@ const DashboardNavbar = () => {
               {/* <LuChevronDown className="text-gray-400 group-hover:text-gray-900" size={16} /> */}
               <div className="hidden md:flex flex-col items-end leading-tight">
                 <p className="text-[14px] font-black text-gray-900">{displayName}</p>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{subscriptionStatus}</p>
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-tighter">{subscriptionStatus}</p>
               </div>
               <Avatar className="size-10 border-2 border-transparent group-hover:border-blue-100">
                 <AvatarImage src={null} className="object-cover" />
-                <AvatarFallback className="bg-blue-50 text-blue-600 font-bold">
+                <AvatarFallback className="bg-blue-50 text-blue-600 font-semibold">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
@@ -78,14 +78,14 @@ const DashboardNavbar = () => {
             <DropdownMenuItem className="rounded-xl py-2.5 cursor-pointer focus:bg-blue-50 group">
               <Link to="/profile" className="flex items-center w-full gap-3">
                 <LuUser size={18} className="text-gray-400 group-focus:text-blue-600" />
-                <span className="font-bold">Profile Settings</span>
+                <span className="font-semibold">Profile Settings</span>
               </Link>
             </DropdownMenuItem>
 
             <DropdownMenuItem className="rounded-xl py-2.5 cursor-pointer focus:bg-blue-50 group">
               <Link to="/pricing" className="flex items-center w-full gap-3">
                 <LuSettings size={18} className="text-gray-400 group-focus:text-blue-600" />
-                <span className="font-bold">Billing</span>
+                <span className="font-semibold">Billing</span>
               </Link>
             </DropdownMenuItem>
 
@@ -99,7 +99,7 @@ const DashboardNavbar = () => {
               >
                 <div className="flex items-center w-full gap-3">
                   <LuLogOut size={18} className="text-gray-400 group-focus:text-red-600" />
-                  <span className="font-bold">Log out</span>
+                  <span className="font-semibold">Log out</span>
                 </div>
               </DropdownMenuItem>
             </LogoutModal>

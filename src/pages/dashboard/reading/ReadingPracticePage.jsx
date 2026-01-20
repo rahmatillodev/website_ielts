@@ -35,6 +35,7 @@ const ReadingPracticePage = () => {
   const [reviewData, setReviewData] = useState({}); // Stores review data: { [questionId]: { userAnswer, isCorrect, correctAnswer } }
   const [latestAttemptId, setLatestAttemptId] = useState(null);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true); // Toggle for showing correct answers in review mode
+  const [bookmarks, setBookmarks] = useState(new Set()); // Store bookmarked question IDs/numbers
 
   const questionRefs = useRef({});
   const questionsContainerRef = useRef(null);
@@ -55,6 +56,9 @@ const ReadingPracticePage = () => {
         if (savedData.answers && Object.keys(savedData.answers).length > 0) {
           setAnswers(savedData.answers);
           setHasInteracted(true); // User has interacted if there are saved answers
+        }
+        if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
+          setBookmarks(new Set(savedData.bookmarks));
         }
         if (savedData.startTime) {
           const savedStartTime = savedData.startTime;
@@ -340,9 +344,10 @@ const ReadingPracticePage = () => {
         timeRemaining,
         elapsedTime,
         startTime: startTime || (hasInteracted ? Date.now() : null),
+        bookmarks,
       });
     }
-  }, [answers, id, hasInteracted, timeRemaining, startTime]);
+  }, [answers, id, hasInteracted, timeRemaining, startTime, bookmarks]);
 
   // Save time remaining and elapsed time to localStorage periodically (every 5 seconds)
   useEffect(() => {
@@ -360,12 +365,13 @@ const ReadingPracticePage = () => {
           timeRemaining,
           elapsedTime,
           startTime: startTime || Date.now(),
+          bookmarks,
         });
       }
     }, 5000); // Save every 5 seconds
 
     return () => clearInterval(interval);
-  }, [id, timeRemaining, answers, hasInteracted, isStarted, startTime]);
+  }, [id, timeRemaining, answers, hasInteracted, isStarted, startTime, bookmarks]);
 
   // Intersection Observer for active question tracking
   useEffect(() => {
@@ -413,6 +419,20 @@ const ReadingPracticePage = () => {
     }));
   };
 
+  // Toggle bookmark for a question
+  const toggleBookmark = (questionIdOrNumber) => {
+    console.log('toggleBookmark', questionIdOrNumber);
+    setBookmarks((prev) => {
+      const newBookmarks = new Set(prev);
+      if (newBookmarks.has(questionIdOrNumber)) {
+        newBookmarks.delete(questionIdOrNumber);
+      } else {
+        newBookmarks.add(questionIdOrNumber);
+      }
+      return newBookmarks;
+    });
+  };
+
   const handlePartChange = (partNumber) => {
     setCurrentPart(partNumber);
     setCurrentPage(1); // Reset to first page when switching parts
@@ -431,6 +451,7 @@ const ReadingPracticePage = () => {
         timeRemaining,
         elapsedTime: 0,
         startTime: now,
+        bookmarks,
       });
     }
   };
@@ -623,7 +644,7 @@ const ReadingPracticePage = () => {
             </div>
             
             <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-6">
                 {currentPartData?.title || `Part ${currentPart}`}
               </h2>
               
@@ -752,6 +773,8 @@ const ReadingPracticePage = () => {
                             return acc;
                           }, {})) : {}}
                           showCorrectAnswers={showCorrectAnswers}
+                          bookmarks={bookmarks}
+                          toggleBookmark={toggleBookmark}
                         />
                       </div>
                     </div>
@@ -795,7 +818,7 @@ const ReadingPracticePage = () => {
                           )}
                           
                           {/* Show question number and text */}
-                          <p className="font-medium text-gray-900 mb-3">
+                          <p className="font-medium text-gray-900 mb-3 w-11/12">
                             {questionNumber}. {questionText}
                           </p>
 
@@ -832,6 +855,8 @@ const ReadingPracticePage = () => {
                                 return acc;
                               }, {})) : {}}
                               showCorrectAnswers={showCorrectAnswers}
+                              bookmarks={bookmarks}
+                              toggleBookmark={toggleBookmark}
                             />
                           </div>
                         </div>
@@ -872,6 +897,7 @@ const ReadingPracticePage = () => {
         onReview={handleReviewTest}
         onRetake={handleRetakeTest}
         getAllQuestions={getAllQuestions}
+        bookmarks={bookmarks}
       />
 
       {/* Finish Modal */}

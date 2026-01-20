@@ -1,10 +1,11 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
+import { FaRegBookmark, FaBookmark } from "react-icons/fa";
 
 /**
  * CompletionGapFill - Renders Fill-in-the-Blanks questions with inline inputs
  */
-const CompletionGapFill = ({ question, groupQuestions, answers, onAnswerChange, onInteraction, mode = 'test', reviewData = {}, showCorrectAnswers = true }) => {
+const CompletionGapFill = ({ question, groupQuestions, answers, onAnswerChange, onInteraction, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {} }) => {
   if (groupQuestions && groupQuestions.length > 0) {
     const getContentString = (content) => {
       if (typeof content === 'string') return content;
@@ -52,8 +53,8 @@ const CompletionGapFill = ({ question, groupQuestions, answers, onAnswerChange, 
     }
     
     return (
-      <div className="w-full bg-white p-4 rounded-lg shadow-sm">
-        <div className="text-gray-800 leading-12 text-lg">
+      <div className="w-full bg-white p-4 rounded-lg">
+        <div className="text-gray-800 leading-12">
           {parts.map((part, idx) => {
             if (part.type === 'text') {
               return <span key={idx}>{part.content}</span>;
@@ -67,8 +68,10 @@ const CompletionGapFill = ({ question, groupQuestions, answers, onAnswerChange, 
               const showWrong = isReviewMode && review.hasOwnProperty('isCorrect') && !isCorrect;
               const showCorrect = isReviewMode && isCorrect;
               
+              const isBookmarked = bookmarks.has(part.questionId) || bookmarks.has(part.questionNumber);
+              
               return (
-                <span key={idx} className="inline-block relative mx-2 align-middle">
+                <span key={idx} className="inline-flex items-center gap-1 relative mx-2 align-middle group">
                   <Input
                     type="text"
                     value={isReviewMode ? `[${part.questionNumber}] ${answer}` : answer}
@@ -81,7 +84,7 @@ const CompletionGapFill = ({ question, groupQuestions, answers, onAnswerChange, 
                     onFocus={onInteraction}
                     placeholder={part.questionNumber ? `[${part.questionNumber}]` : ''}
                     disabled={mode === 'review'}
-                    className={`w-24 h-9 px-2 text-base rounded-md focus-visible:ring-1 bg-gray-50/50 placeholder:text-gray-400 placeholder:font-semibold ${
+                    className={`w-30 h-8 px-2 text-base rounded-md focus-visible:ring-1 bg-gray-50/50 placeholder:text-gray-400  ${
                       showWrong 
                         ? 'border-red-500 bg-red-50 text-red-600 focus-visible:ring-red-500' 
                         : showCorrect
@@ -89,6 +92,23 @@ const CompletionGapFill = ({ question, groupQuestions, answers, onAnswerChange, 
                         : 'border-gray-400 focus-visible:ring-blue-500'
                     } ${mode === 'review' ? 'cursor-not-allowed' : ''}`}
                   />
+                  {/* Bookmark Icon */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleBookmark(part.questionId || part.questionNumber);
+                    }}
+                    className={`transition-all ${
+                      isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                    }`}
+                    title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
+                  >
+                    {isBookmarked ? (
+                      <FaBookmark className="w-4 h-4 text-red-500" />
+                    ) : (
+                      <FaRegBookmark className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                    )}
+                  </button>
                   {/* {showCorrect && (
                     <span className="absolute -top-5 left-0 text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-sm">
                       Correct
@@ -100,7 +120,7 @@ const CompletionGapFill = ({ question, groupQuestions, answers, onAnswerChange, 
                     </span>
                   )} */}
                   {showWrong && correctAnswer && showCorrectAnswers && (
-                    <span className="absolute bottom-10 left-8 text-xs text-green-600 font-medium text-ellipsis overflow-hidden whitespace-nowrap">
+                    <span className="absolute bottom-7 left-0 text-xs text-green-600 font-medium text-ellipsis overflow-hidden whitespace-nowrap">
                       {correctAnswer}
                     </span>
                   )}

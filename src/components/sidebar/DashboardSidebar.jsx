@@ -134,7 +134,7 @@ const DashboardSidebar = () => {
             Unlock unlimited tests and AI scoring.
           </p>
           <Link to="/pricing">
-            <Button className="w-full bg-white hover:bg-blue-50 text-[#4B8EE3] font-bold py-5 rounded-xl border-none shadow-sm active:scale-[0.98] transition-all text-[13px]">
+            <Button className="w-full bg-white hover:bg-blue-50 text-[#4B8EE3] font-semibold py-5 rounded-xl border-none shadow-sm active:scale-[0.98] transition-all text-[13px]">
               View Plans
             </Button>
           </Link>

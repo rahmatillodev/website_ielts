@@ -120,7 +120,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
                 onClick={handleAvatarClick}
               >
                 <AvatarImage src={avatarPreview} alt="Avatar" />
-                <AvatarFallback className="bg-gray-100 text-gray-400 text-2xl font-bold">
+                <AvatarFallback className="bg-gray-100 text-gray-400 text-2xl font-semibold">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
@@ -142,7 +142,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-bold text-gray-500">Full Name</Label>
+            <Label className="text-sm font-semibold text-gray-500">Full Name</Label>
             <Input
               name="full_name"
               value={formData.full_name}
@@ -153,7 +153,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
           </div>
           
           <div className="space-y-2">
-            <Label className="text-sm font-bold text-gray-500">Telegram Username</Label>
+            <Label className="text-sm font-semibold text-gray-500">Telegram Username</Label>
             <Input
               name="telegram_username"
               value={formData.telegram_username}
@@ -164,7 +164,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
           </div>
           
           <div className="space-y-2">
-            <Label className="text-sm font-bold text-gray-500">Phone Number</Label>
+            <Label className="text-sm font-semibold text-gray-500">Phone Number</Label>
             <Input
               name="phone_number"
               value={formData.phone_number}

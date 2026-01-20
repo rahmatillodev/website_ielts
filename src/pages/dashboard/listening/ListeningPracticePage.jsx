@@ -40,6 +40,7 @@ const ListeningPracticePage = () => {
   const [reviewData, setReviewData] = useState({});
   const [latestAttemptId, setLatestAttemptId] = useState(null);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
+  const [bookmarks, setBookmarks] = useState(new Set()); // Store bookmarked question IDs/numbers
 
   // Audio player state
   const [playbackRate, setPlaybackRate] = useState(1.0);
@@ -74,6 +75,9 @@ const ListeningPracticePage = () => {
         if (savedData.answers && Object.keys(savedData.answers).length > 0) {
           setAnswers(savedData.answers);
           setHasInteracted(true);
+        }
+        if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
+          setBookmarks(new Set(savedData.bookmarks));
         }
         if (savedData.startTime) {
           const savedStartTime = savedData.startTime;
@@ -268,8 +272,10 @@ const ListeningPracticePage = () => {
   const scrollToQuestion = (questionNumber) => {
     const el = questionRefs.current[questionNumber];
     if (!el || !questionsContainerRef.current) return;
+    
 
     const container = questionsContainerRef.current;
+    
     container.scrollTo({
       top: el.offsetTop - container.offsetTop - 20,
       behavior: "smooth",
@@ -320,21 +326,6 @@ const ListeningPracticePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRemaining, status]);
 
-  // Auto-submit when audio ends (only in test mode)
-  const handleAudioEnded = useCallback(async () => {
-    if (status === 'taking' && authUser && id && currentTest && (isStarted || hasInteracted)) {
-      const result = await handleSubmitTest();
-      if (result.success) {
-        // Navigate to result page
-        navigate(`/listening-result/${id}`);
-      } else {
-        console.error('Auto-submit on audio end failed:', result.error);
-        // Still navigate to result page even if submission failed
-        navigate(`/listening-result/${id}`);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, authUser, id, currentTest, isStarted, hasInteracted]);
 
   useEffect(() => {
     if (id && hasInteracted) {
@@ -347,9 +338,10 @@ const ListeningPracticePage = () => {
         timeRemaining,
         elapsedTime,
         startTime: startTime || (hasInteracted ? Date.now() : null),
+        bookmarks,
       });
     }
-  }, [answers, id, hasInteracted, timeRemaining, startTime]);
+  }, [answers, id, hasInteracted, timeRemaining, startTime, bookmarks]);
 
   useEffect(() => {
     if (!id || (!isStarted && !hasInteracted)) return;
@@ -365,12 +357,13 @@ const ListeningPracticePage = () => {
           timeRemaining,
           elapsedTime,
           startTime: startTime || Date.now(),
+          bookmarks,
         });
       }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [id, timeRemaining, answers, hasInteracted, isStarted, startTime]);
+  }, [id, timeRemaining, answers, hasInteracted, isStarted, startTime, bookmarks]);
 
   useEffect(() => {
     if (!questionsContainerRef.current) return;
@@ -411,6 +404,19 @@ const ListeningPracticePage = () => {
     }));
   };
 
+  // Toggle bookmark for a question
+  const toggleBookmark = (questionIdOrNumber) => {
+    setBookmarks((prev) => {
+      const newBookmarks = new Set(prev);
+      if (newBookmarks.has(questionIdOrNumber)) {
+        newBookmarks.delete(questionIdOrNumber);
+      } else {
+        newBookmarks.add(questionIdOrNumber);
+      }
+      return newBookmarks;
+    });
+  };
+
   const handlePartChange = (partNumber) => {
     setCurrentPart(partNumber);
   };
@@ -427,6 +433,7 @@ const ListeningPracticePage = () => {
         timeRemaining,
         elapsedTime: 0,
         startTime: now,
+        bookmarks,
       });
     }
   };
@@ -614,7 +621,7 @@ const ListeningPracticePage = () => {
               </h2>
             </div>
             <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-6">
                 {currentPartData?.title || `Part ${currentPart}`}
               </h2>
               <div className="prose prose-sm max-w-none">
@@ -656,16 +663,15 @@ const ListeningPracticePage = () => {
             className="space-y-8 overflow-y-auto border rounded-2xl border-gray-300 bg-white dark:bg-gray-800"
             style={{ width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%' }}
           >
-            {/* Sticky Audio Player */}
-            {audioUrl && (
+            {/* Sticky Audio Player - only in review mode */}
+            {audioUrl && status === 'reviewing' && (
               <AudioPlayer
                 audioUrl={audioUrl}
-                isTestMode={status === 'taking'}
+                isTestMode={false}
                 playbackRate={playbackRate}
                 onPlaybackRateChange={setPlaybackRate}
                 volume={volume}
                 onVolumeChange={setVolume}
-                onAudioEnded={handleAudioEnded}
               />
             )}
 
@@ -680,7 +686,7 @@ const ListeningPracticePage = () => {
                 const isTable = groupType.includes('table');
                 
                 return (
-                  <div key={questionGroup.id || groupIdx} className="space-y-6">
+                  <div key={questionGroup.id || groupIdx} className={`space-y-6 ${status === 'reviewing' ? 'w-full' : 'w-6/12'}`}>
                     <div className="space-y-3">
                       <h3 className="text-lg font-semibold text-gray-900">
                         Questions {questionRange}
@@ -713,7 +719,7 @@ const ListeningPracticePage = () => {
                             const bNum = b.question_number ?? 0;
                             return aNum - bNum;
                           })[0]?.question_number}
-                        className="p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                        className="p-4"
                       >
                         <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
                           <QuestionRenderer
@@ -738,6 +744,8 @@ const ListeningPracticePage = () => {
                               return acc;
                             }, {})) : {}}
                             showCorrectAnswers={showCorrectAnswers}
+                            bookmarks={bookmarks}
+                            toggleBookmark={toggleBookmark}
                           />
                         </div>
                       </div>
@@ -761,19 +769,19 @@ const ListeningPracticePage = () => {
                                 if (el) questionRefs.current[questionNumber] = el;
                               }}
                               data-question-number={questionNumber}
-                              className="p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                              className="p-4"
                             >
                               {question.image_url && (
                                 <div className="mb-4">
                                   <img 
                                     src={question.image_url} 
                                     alt={`Question ${questionNumber} image`}
-                                    className="w-full max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-700"
+                                    className="w-full max-w-full h-auto"
                                   />
                                 </div>
                               )}
                               
-                              <p className="font-medium text-gray-900 mb-3">
+                              <p className="font-medium text-gray-900 mb-3 w-11/12">
                                 {questionNumber}. {questionText}
                               </p>
 
@@ -808,6 +816,8 @@ const ListeningPracticePage = () => {
                                     return acc;
                                   }, {})) : {}}
                                   showCorrectAnswers={showCorrectAnswers}
+                                  bookmarks={bookmarks}
+                                  toggleBookmark={toggleBookmark}
                                 />
                               </div>
                             </div>
@@ -850,6 +860,7 @@ const ListeningPracticePage = () => {
         onRetake={handleRetakeTest}
         resultLink={`/listening-result/${id}`}
         getAllQuestions={getAllQuestions}
+        bookmarks={bookmarks}
       />
 
       {/* Finish Modal */}

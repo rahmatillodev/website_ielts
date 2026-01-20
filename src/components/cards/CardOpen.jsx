@@ -140,7 +140,7 @@ const ReadingCardOpen = ({
           <div className="absolute top-5 right-5 z-10">
 
             <div className="bg-white border border-gray-200 rounded-full px-3 py-1.5 flex items-center gap-1.5 shadow-sm">
-              <span className="text-xs text-gray-500 font-bold">Score</span>
+              <span className="text-xs text-gray-500 font-semibold">Score</span>
               <span className="text-base font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
             </div>
           </div>
@@ -165,11 +165,11 @@ const ReadingCardOpen = ({
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-black text-gray-900 line-clamp-2 overflow-hidden text-ellipsis mb-1">
+            <h3 className="text-xl font-semibold text-gray-900 line-clamp-2 overflow-hidden text-ellipsis mb-1">
               {title}
             </h3>
 
-            <p className="text-sm text-gray-500 font-semibold mt-1 flex items-center gap-2">
+            <p className="text-sm text-gray-500 font-medium mt-1 flex items-center gap-2">
               {(() => {
                 let diffIcon = null;
                 let diffColor = "";
@@ -186,7 +186,7 @@ const ReadingCardOpen = ({
                 }
                 return (
                   <>
-                    <span className={`flex items-center gap-1 font-bold ${diffColor}`}>
+                    <span className={`flex items-center gap-1 font-medium ${diffColor}`}>
                       {diffIcon}
                       Difficulty: {difficulty}
                     </span>
@@ -224,7 +224,7 @@ const ReadingCardOpen = ({
           <div className="mt-6 flex gap-3 w-full">
             <button
               onClick={handleReview}
-              className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold rounded-xl transition-all"
+              className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-all"
             >
               Review
             </button>
@@ -268,7 +268,7 @@ const ReadingCardOpen = ({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-black text-gray-900 line-clamp-1 overflow-hidden text-ellipsis">
+            <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 overflow-hidden text-ellipsis">
               {title}
             </h3>
 
@@ -281,7 +281,7 @@ const ReadingCardOpen = ({
 
           </div>
 
-          <p className="text-sm text-gray-500 font-semibold mt-1 flex items-center gap-2">
+          <p className="text-sm text-gray-500 font-medium mt-1 flex items-center gap-2">
             {(() => {
               let diffIcon = null;
               let diffColor = "";
@@ -298,7 +298,7 @@ const ReadingCardOpen = ({
               }
               return (
                 <>
-                  <span className={`flex items-center gap-1 font-bold ${diffColor}`}>
+                  <span className={`flex items-center gap-1 font-medium ${diffColor}`}>
                     {diffIcon}
                     Difficulty: {difficulty}
                   </span>
@@ -335,13 +335,13 @@ const ReadingCardOpen = ({
           {hasCompleted ? (
             <>
               <div className="flex flex-col items-end border-l border-gray-200 pl-6">
-                <span className="text-xs text-gray-500 font-bold mb-1">Score</span>
+                <span className="text-xs text-gray-500 font-semibold mb-1">Score</span>
                 <span className="text-2xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
               </div>
               <div className="flex flex-col gap-2 mr-4">
                 <button
                   onClick={handleReview}
-                  className="py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold rounded-md transition-all"
+                  className="py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-md transition-all"
                 >
                   Review
                 </button>

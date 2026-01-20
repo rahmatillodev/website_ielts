@@ -98,7 +98,7 @@ function App() {
           
         </Route>
       </Routes>
-      <ToastContainer />
+      <ToastContainer duration={2000} />
       <NetworkModal isOpen={!useNetworkStatus()} />
     </DndProvider>
   );

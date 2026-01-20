@@ -113,7 +113,7 @@ const ProfilePage = () => {
                         src={userProfile?.avatar_image}
                         alt="User Avatar"
                       />
-                      <AvatarFallback className="bg-gray-100 text-gray-400 text-3xl font-bold">
+                      <AvatarFallback className="bg-gray-100 text-gray-400 text-3xl font-semibold">
                         {getInitials()}
                       </AvatarFallback>
                     </Avatar>
@@ -257,7 +257,7 @@ const ProfilePage = () => {
               <p className="text-sm font-black text-gray-900">Telegram</p>
               <div className="flex items-center gap-1">
                 <Link to={settings?.telegram_admin_username} target="_blank">
-                  <p className="text-sm font-bold text-gray-400 leading-none">
+                  <p className="text-sm font-semibold text-gray-400 leading-none">
                     {displayData.supportTelegram}
                   </p>
                 </Link>
@@ -274,7 +274,7 @@ const ProfilePage = () => {
               <p className="text-sm font-black text-gray-900">Email</p>
               <div className="flex items-center gap-1">
                 <Link to={settings?.support_link} target="_blank">
-                  <p className="text-sm font-bold text-gray-400">
+                  <p className="text-sm font-semibold text-gray-400">
                     {displayData.supportEmail}{" "}
                   </p>
                 </Link>

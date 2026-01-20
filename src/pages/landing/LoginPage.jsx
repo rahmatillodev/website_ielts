@@ -50,7 +50,7 @@ function LoginPage() {
           </div>
 
           {/* Headline */}
-          <h2 className="text-4xl font-bold mb-6">
+          <h2 className="text-4xl font-semibold mb-6">
             Achieve your dream band score.
           </h2>
 
@@ -106,7 +106,7 @@ function LoginPage() {
         </button>
         <div className="w-full flex items-center justify-center mt-9">
           <div className="w-full max-w-md">
-            <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
+            <h1 className="text-3xl font-semibold mb-2">Welcome back</h1>
             <p className="text-gray-600 mb-8">Please enter your details to sign in.</p>
 
             <form onSubmit={handleLogin} className="space-y-6">

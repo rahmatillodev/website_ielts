@@ -10,6 +10,9 @@ export default {
   
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Poppins', 'sans-serif'],
+      },
       // Custom color palette - Primary colors
       colors: {
         // Primary brand colors

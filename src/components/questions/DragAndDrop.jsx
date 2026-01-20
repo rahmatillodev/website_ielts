@@ -1,5 +1,6 @@
 import React from "react";
 import { useDrag, useDrop } from "react-dnd";
+import { FaRegBookmark, FaBookmark } from "react-icons/fa";
 
 const ItemType = {
   WORD: "word",
@@ -38,7 +39,7 @@ const DraggableWord = ({ word, isUsed }) => {
 /**
  * DropZone - Matn ichidagi tushirish maydoni
  */
-const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 'test', reviewData = {}, showCorrectAnswers = true }) => {
+const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {} }) => {
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: ItemType.WORD,
     drop: (item) => onDrop(questionId, item.word),
@@ -56,6 +57,8 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
   const showWrong = isReviewMode && review.hasOwnProperty('isCorrect') && !isCorrect;
   const showCorrect = isReviewMode && isCorrect;
   
+  const isBookmarked = bookmarks.has(questionId) || bookmarks.has(questionNumber);
+  
   return (
     <span
       ref={isReviewMode ? null : drop}
@@ -65,23 +68,39 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
         }
       }}
       className={`
-        inline-flex items-center justify-center min-w-[100px] h-8 px-2 mx-1
-        border-b-2 transition-all align-middle relative
+        inline-flex items-center justify-center min-w-[100px] text-sm h-8 px-2 mx-1
+        border-2 transition-all align-middle relative group
         ${isReviewMode ? 'cursor-default' : 'cursor-pointer'}
         ${isOver && canDrop && !isReviewMode ? 'bg-green-100 border-green-500' : ''}
-        ${showCorrect ? 'border-green-500 bg-green-50 text-green-700 font-bold' : ''}
-        ${showWrong ? 'border-red-500 bg-red-50 text-red-600 font-bold' : ''}
-        ${answer && !showCorrect && !showWrong ? 'border-blue-500 text-blue-900 font-bold' : ''}
-        ${!answer ? 'border-gray-400' : ''}
+        ${showCorrect ? 'border-green-500 bg-green-50 text-green-700 font-semibold' : ''}
+        ${showWrong ? 'border-red-200 bg-red-50 text-red-300 font-semibold' : ''}
+        ${!answer ? 'border-gray-500' : ''}
       `}
-      style={{ borderStyle: answer ? 'solid' : 'dashed' }}
+      style={{ borderStyle: 'dashed' }}
       title={questionNumber ? `Question ${questionNumber}` : undefined}
     >
       {answer && answer.trim() !== '' ? `[${questionNumber}] `+answer : (questionNumber ? `[ ${questionNumber}]` : "____")}
       
+      {/* Bookmark Icon */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleBookmark(questionId || questionNumber);
+        }}
+        className={`ml-1 transition-all ${
+          isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}
+        title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
+      >
+        {isBookmarked ? (
+          <FaBookmark className="w-3 h-3 text-red-500" />
+        ) : (
+          <FaRegBookmark className="w-3 h-3 text-gray-400 hover:text-red-500" />
+        )}
+      </button>
       
       {showWrong && correctAnswer && showCorrectAnswers && (
-        <span className="absolute -top-2 left-0 text-xs text-green-600 font-medium whitespace-nowrap">
+        <span className="absolute -top-2 left-0 text-[10px] text-green-600 font-medium whitespace-nowrap">
            {correctAnswer}
         </span>
       )}
@@ -92,7 +111,7 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
 /**
  * Asosiy DragAndDrop Komponenti
  */
-const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInteraction, mode = 'test', reviewData = {}, showCorrectAnswers = true }) => {
+const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInteraction, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {} }) => {
   
   const getContentString = (content) => {
     if (typeof content === 'string') return content;
@@ -181,8 +200,8 @@ const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInte
   };
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-      <div className="text-gray-800 leading-10 text-lg mb-8">
+    <div className="p-6 bg-white rounded-xl">
+      <div className="text-gray-800 leading-10 text-base mb-8">
         {parts.map((part, idx) => (
           part.type === 'text' 
             ? <span key={idx}>{part.content}</span>
@@ -196,13 +215,14 @@ const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInte
                 mode={mode}
                 reviewData={reviewData}
                 showCorrectAnswers={showCorrectAnswers}
+                bookmarks={bookmarks}
+                toggleBookmark={toggleBookmark}
               />
         ))}
       </div>
 
       {wordBank.length > 0 && mode !== 'review' && (
         <div className="pt-6 border-t border-gray-100">
-          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-4 tracking-wider">Tanlov uchun so'zlar:</h4>
           <div className="flex flex-wrap gap-3">
             {wordBank.map((word, idx) => (
               <DraggableWord 

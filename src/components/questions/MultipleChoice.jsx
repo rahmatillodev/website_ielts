@@ -1,9 +1,11 @@
 import React from "react";
 import { sortOptionsByLetter, getOptionDisplayText, getOptionValue, isOptionSelected } from "../../store/optionUtils";
+import { FaRegBookmark, FaBookmark } from "react-icons/fa";
 
-const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, useTableFormat = false }) => {
+const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, useTableFormat = false, bookmarks = new Set(), toggleBookmark = () => {} }) => {
   const questionNumber = question.question_number || question.id;
   const questionText = question.question_text || question.text || '';
+  const isBookmarked = bookmarks.has(questionNumber);
   
   // Sort options by letter (A, B, C, D, etc.)
   const sortedOptions = sortOptionsByLetter(options);
@@ -49,7 +51,7 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
               showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : 'bg-white'
             }`}>
               {/* Question Column */}
-              <td className={`px-4 py-3 text-gray-900 ${showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : ''}`}>
+              <td className={`px-4 py-3 text-gray-900 relative group ${showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : ''}`}>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium">{questionNumber}.</span>
                   <span>{questionText}</span>
@@ -65,6 +67,23 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                     <span className="text-xs text-green-600 font-medium ml-2">Correct: {correctAnswer}</span>
                   )}
                 </div>
+                {/* Bookmark Icon */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleBookmark(questionNumber);
+                  }}
+                  className={`absolute right-10 top-1/2 -translate-y-1/2 transition-all ${
+                    isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
+                  title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
+                >
+                  {isBookmarked ? (
+                    <FaBookmark className="w-4 h-4 text-red-500" />
+                  ) : (
+                    <FaRegBookmark className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                  )}
+                </button>
               </td>
               {/* Option Columns with Radio Buttons */}
               {sortedOptions.map((option) => {
@@ -111,7 +130,24 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
 
   // Default list format
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 group relative">
+      {/* Bookmark Icon */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleBookmark(questionNumber);
+        }}
+        className={`absolute right-0 -top-10 transition-all ${
+          isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}
+        title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
+      >
+        {isBookmarked ? (
+          <FaBookmark className="w-4 h-4 text-red-500" />
+        ) : (
+          <FaRegBookmark className="w-4 h-4 text-gray-400 hover:text-red-500" />
+        )}
+      </button>
       {sortedOptions.map((option) => {
         const displayText = getOptionDisplayText(option);
         const optionValue = getOptionValue(option); // Use option_text as value

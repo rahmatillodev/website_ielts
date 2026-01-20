@@ -1,8 +1,10 @@
 import React from "react";
+import { FaRegBookmark, FaBookmark } from "react-icons/fa";
 
-const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', reviewData = {}, showCorrectAnswers = true }) => {
+const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {} }) => {
   const questionNumber = question.question_number || question.id;
   const isReviewMode = mode === 'review';
+  const isBookmarked = bookmarks.has(questionNumber);
   const review = reviewData[questionNumber] || {};
   const isCorrect = review.isCorrect;
   const correctAnswer = review.correctAnswer || '';
@@ -11,7 +13,24 @@ const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', re
   const showCorrect = isReviewMode && isCorrect;
   
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 group relative">
+      {/* Bookmark Icon */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleBookmark(questionNumber);
+        }}
+        className={`absolute right-0 -top-10 transition-all ${
+          isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}
+        title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
+      >
+        {isBookmarked ? (
+          <FaBookmark className="w-4 h-4 text-red-500" />
+        ) : (
+          <FaRegBookmark className="w-4 h-4 text-gray-400 hover:text-red-500" />
+        )}
+      </button>
       {["TRUE", "FALSE", "NOT GIVEN"].map((option) => {
         const isSelected = (userAnswer || answer) === option;
         const isCorrectOption = isReviewMode && option === correctAnswer;

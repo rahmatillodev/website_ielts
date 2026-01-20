@@ -22,6 +22,34 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
         }
     }, [audioUrl]);
 
+    // Auto-play when audio is loaded (only in review mode)
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio || !audioUrl || isTestMode) return;
+
+        const handleCanPlay = async () => {
+            try {
+                await audio.play();
+                setIsPlaying(true);
+            } catch (error) {
+                // Browser autoplay policy may prevent auto-play
+                // Silently fail - user can manually start playback
+                console.log('Auto-play prevented by browser policy');
+            }
+        };
+
+        audio.addEventListener('canplay', handleCanPlay);
+        
+        // Also try to play if audio is already ready
+        if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or higher
+            handleCanPlay();
+        }
+
+        return () => {
+            audio.removeEventListener('canplay', handleCanPlay);
+        };
+    }, [audioUrl, isTestMode]);
+
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;

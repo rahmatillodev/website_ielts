@@ -52,7 +52,7 @@ function SignUpPage() {
           </div>
 
           {/* Headline */}
-          <h2 className="text-4xl font-bold mb-6">
+          <h2 className="text-4xl font-semibold mb-6">
             Achieve your dream band score.
           </h2>
 
@@ -108,7 +108,7 @@ function SignUpPage() {
         </button>
         <div className="w-full flex items-center justify-center mt-5">
           <div className="w-full max-w-md">
-            <h1 className="text-3xl font-bold mb-2">Create an account</h1>
+            <h1 className="text-3xl font-semibold mb-2">Create an account</h1>
             <p className="text-gray-600 mb-8">Please enter your details to create an account.</p>
 
             <form onSubmit={handleSignUp} className="space-y-6">
