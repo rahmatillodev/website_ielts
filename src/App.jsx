@@ -1,13 +1,5 @@
-import { useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
-import PublicLayout from "./layouts/LandingLayout";
-import DashboardLayout from "./layouts/DashboardLayout";
-// import Settings from './pages/Settings'
-import PricingPage from "./pages/landing/PricingPage";
-import DashboardPage from "./pages/dashboard/DashboardPage";
-import LoginPage from "./pages/landing/LoginPage";
-import SignUpPage from "./pages/landing/SignUpPage";
 import LandingPage from "./pages/landing/LandingPage";
+import DashboardPage from "./pages/dashboard/DashboardPage";
 import ReadingPage from "./pages/dashboard/reading/ReadingPage";
 import ReadingPracticePage from "./pages/dashboard/reading/ReadingPracticePage";
 import ProfilePage from "./pages/dashboard/ProfilePage";
@@ -16,14 +8,19 @@ import { useAuthStore } from "./store/authStore";
 import { ToastContainer } from "react-toastify";
 import {useSettingsStore} from "./store/systemStore";
 import { useTestStore } from "./store/testStore";
-
+import LoginPage from "./pages/landing/LoginPage";
+import SignUpPage from "./pages/landing/SignUpPage";
+import PricingPage from "./pages/landing/PricingPage";
+import DashboardLayout from "./layouts/DashboardLayout";
+import PublicLayout from "./layouts/LandingLayout";
 import ListeningPage from "./pages/dashboard/listening/ListeningPage";
 import ListeningPracticePage from "./pages/dashboard/listening/ListeningPracticePage";
 import NetworkModal from "./components/modal/NetworkModal";
 import useNetworkStatus from "./hooks/use_network_status";
 import Writing from "./pages/dashboard/Writing";
 import Speaking from "./pages/dashboard/Speaking";
-
+import { useEffect } from "react";
+import { Routes, Route } from "react-router-dom";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
