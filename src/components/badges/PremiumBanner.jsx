@@ -31,7 +31,7 @@ const PremiumBanner = ({
             {/* BLACK BADGE END */}
           </div>
 
-          <h3 className="text-xl md:text-2xl font-bold mb-2">
+          <h3 className="text-xl md:text-2xl font-semibold mb-2">
             {title}
           </h3>
 
@@ -44,7 +44,7 @@ const PremiumBanner = ({
         <div className="shrink-0">
           <Link
             to="/pricing"
-            className="w-full md:w-auto bg-white text-yellow-400 font-bold px-8 py-3.5 rounded-xl shadow-xl hover:bg-gray-50 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
+            className="w-full md:w-auto bg-white text-yellow-400 font-semibold px-8 py-3.5 rounded-xl shadow-xl hover:bg-gray-50 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
           >
              {buttonText} <FaArrowRight className="text-yellow-400 text-[16px] ml-1 mb-0.5" />
           </Link>

@@ -1,5 +1,7 @@
 import React, { useMemo } from "react";
-import { sortOptionsByLetter, getOptionValue } from "../../store/optionUtils";
+import { getOptionValue } from "../../store/optionUtils";
+import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import { useAppearance } from "@/contexts/AppearanceContext";
 
 /**
  * Table - Renders a unified table for table-type questions with nested options
@@ -14,12 +16,15 @@ import { sortOptionsByLetter, getOptionValue } from "../../store/optionUtils";
  * - Subsequent columns: Radio buttons for options (A, B, C, etc.)
  * - Perfect vertical alignment: all Option A columns align, all Option B columns align, etc.
  */
-const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true }) => {
+const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {} }) => {
   // Prepare unified table structure with all unique options for column headers
   const tableData = useMemo(() => {
     if (!groupQuestions || groupQuestions.length === 0) {
       return { questions: [], columnOptions: [] };
     }
+
+
+
 
     // Collect all unique options from all questions to create unified column headers
     // This ensures perfect vertical alignment (all Option A columns align, etc.)
@@ -123,14 +128,17 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
 
   const { questions, columnOptions } = tableData;
 
+  const appearance = useAppearance();
+  const themeColors = appearance.themeColors;
+
   return (
     <div className="overflow-x-auto mb-6">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="rounded-lg shadow-sm border border-gray-200 overflow-hidden" style={{ backgroundColor: themeColors.background }}>
         <table className="min-w-full border-collapse">
           <thead>
-            <tr className="bg-gray-50">
+            <tr className="bg-gray-50" style={{ backgroundColor: themeColors.background }}>
               {/* First column header: Question */}
-              <th className="px-4 py-3 text-left font-semibold text-gray-700 border-r border-gray-200">
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ color: themeColors.text }}>
                 Question
               </th>
               {/* Subsequent column headers: Option letters (A, B, C, etc.) */}
@@ -142,6 +150,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                     key={option.id || optionLetter || optionText}
                     className="px-4 py-3 text-center font-semibold text-gray-700"
                     title={optionText} // Show option text on hover
+                    style={{ backgroundColor: themeColors.background, color: themeColors.text }}
                   >
                     {optionLetter}
                   </th>
@@ -163,29 +172,50 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
               const showWrong = isReviewMode && !isCorrect;
               const showCorrect = isReviewMode && isCorrect;
 
+              const isBookmarked = bookmarks.has(qNumber);
+
               return (
                 <tr
                   key={q.id || qNumber}
-                  className={`border-t border-gray-200 transition-colors ${
+                  className={`border-t border-gray-200 transition-colors group ${
                     showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : 'bg-white hover:bg-gray-50'
                   }`}
                 >
                   {/* First Column: Question Number and Question Text */}
-                  <td className={`px-4 py-3 text-gray-900 border-r border-gray-200 ${showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : ''}`}>
-                    <div className="flex gap-2">
-                      <span className="font-medium">{qNumber}.</span>
-                      <span>{questionText}</span>
-                      {showCorrect && (
-                        <span className="text-xs text-green-700 font-medium ml-2">Correct</span>
-                      )}
-                      {/* {showWrong && (
-                        <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-sm ml-2">
-                          Wrong
-                        </span>
-                      )} */}
-                      {showWrong && correctAnswer && showCorrectAnswers && (
-                        <span className="text-xs text-green-600 font-medium ml-2 flex whitespace-nowrap">Correct: {correctAnswer}</span>
-                      )}
+                  <td className={`px-4 py-3 text-gray-900 border-r border-gray-200 ${showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : ''}`} style={{ backgroundColor: themeColors.background, color: themeColors.text }}>
+                    <div className="flex gap-2 items-center justify-between">
+                      <div className="flex gap-2">
+                        <span className="font-medium">{qNumber}.</span>
+                        <span>{questionText}</span>
+                        {showCorrect && (
+                          <span className="text-xs text-green-700 font-medium ml-2">Correct</span>
+                        )}
+                        {/* {showWrong && (
+                          <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-sm ml-2">
+                            Wrong
+                          </span>
+                        )} */}
+                        {showWrong && correctAnswer && showCorrectAnswers && (
+                          <span className="text-xs text-green-600 font-medium ml-2 flex whitespace-nowrap">Correct: {correctAnswer}</span>
+                        )}
+                      </div>
+                      {/* Bookmark Icon */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleBookmark(qNumber);
+                        }}
+                        className={`ml-2 transition-all ${
+                          isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        }`}
+                        title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
+                      >
+                        {isBookmarked ? (
+                          <FaBookmark className="w-4 h-4 text-red-500" />
+                        ) : (
+                          <FaRegBookmark className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                        )}
+                      </button>
                     </div>
                   </td>
                   
@@ -205,6 +235,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                         <td
                           key={`${q.id}-${columnOption.id || columnOptionLetter || columnOptionText}`}
                           className="px-4 py-3 text-center"
+                          style={{ backgroundColor: themeColors.background, color: themeColors.text }}
                         >
                           {/* Empty cell - question doesn't have this option, maintaining column alignment */}
                         </td>
@@ -227,6 +258,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                           isSelected && showWrong ? 'bg-red-400' : 
                           (isCorrectOption || isCorrectAnswerMatch) && isReviewMode && !isSelected ? 'bg-green-50' : ''
                         }`}
+                        style={{ backgroundColor: themeColors.background, color: themeColors.text }}
                       >
                         <label className={`flex items-center justify-center ${mode === 'review' ? 'cursor-default' : 'cursor-pointer'}`}>
                           <input

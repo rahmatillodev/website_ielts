@@ -241,10 +241,17 @@ const calculateTestScore = (answers, currentTest) => {
     if (part.questionGroups) {
       part.questionGroups.forEach((questionGroup) => {
         const groupQuestions = questionGroup.questions || [];
+        const groupType = (questionGroup.type || '').toLowerCase();
+        const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
         
+        // For drag and drop, only process questions with question_number (exclude word bank entries)
+        const validQuestions = isDragAndDrop 
+          ? groupQuestions.filter(q => q.question_number != null)
+          : groupQuestions;
         
-        groupQuestions.forEach((question) => {
-          const questionKey = question.question_number || question.id;
+        validQuestions.forEach((question) => {
+          // Use question_number as primary key (consistent with DragAndDrop component)
+          const questionKey = question.question_number;
           if (!questionKey) return;
 
           totalQuestions++;
@@ -336,7 +343,7 @@ const getCorrectAnswer = (question, questionGroup) => {
     }
   }
 
-  // For group-level options (e.g., drag-drop)
+  // For group-level options (e.g., drag-drop, matching headings)
   if (questionGroup.options && questionGroup.options.length > 0) {
     const correctOption = questionGroup.options.find(
       (opt) => opt.is_correct && opt.question_number === question.question_number
@@ -346,11 +353,8 @@ const getCorrectAnswer = (question, questionGroup) => {
     }
   }
 
-  // For drag-drop and fill-in-the-blank, correct answer might be in question_text
-  if (question.question_text) {
-    return question.question_text.toString().trim();
-  }
-
+  // If no correct answer found, return empty string
+  // This will be marked as incorrect during scoring
   return '';
 };
 

@@ -5464,7 +5464,7 @@ index 0000000..819780e
 +          <div className="md:w-1/3">
 +            <div className="flex items-center space-x-2 mb-4">
 +              <FaGlobe className="text-blue-400 text-2xl" />
-+              <h1 className="text-2xl font-bold">IELTS Sim</h1>
++              <h1 className="text-2xl font-semibold">IELTS Sim</h1>
 +            </div>
 +            <p className="text-gray-300 mb-4 max-w-md">
 +              The most realistic Computer-Delivered IELTS simulator on the web. 
@@ -5472,10 +5472,10 @@ index 0000000..819780e
 +            </p>
 +            <div className="flex space-x-4">
 +              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-+                <span className="font-bold">E</span>
++                <span className="font-semibold">E</span>
 +              </div>
 +              <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
-+                <span className="font-bold">T</span>
++                <span className="font-semibold">T</span>
 +              </div>
 +            </div>
 +          </div>
@@ -5638,12 +5638,12 @@ index 0000000..e63a0f8
 +        </AlertDialogHeader>
 +        
 +        <AlertDialogFooter className="flex gap-3 sm:justify-center pt-4">
-+          <AlertDialogCancel className="flex-1 rounded-xl font-bold border-gray-100 hover:bg-gray-50 h-12">
++          <AlertDialogCancel className="flex-1 rounded-xl font-semibold border-gray-100 hover:bg-gray-50 h-12">
 +            Cancel
 +          </AlertDialogCancel>
 +          <AlertDialogAction 
 +            onClick={onConfirm}
-+            className="flex-1 rounded-xl font-bold bg-red-500 hover:bg-red-600 text-white border-none h-12"
++            className="flex-1 rounded-xl font-semibold bg-red-500 hover:bg-red-600 text-white border-none h-12"
 +          >
 +            Yes, Log out
 +          </AlertDialogAction>
@@ -5723,13 +5723,13 @@ index 0000000..f94c3f1
 +            <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-1.5 pr-3 rounded-2xl transition-all group">
 +              <Avatar className="size-10 border-2 border-transparent group-hover:border-blue-100">
 +                <AvatarImage src={null} className="object-cover" />
-+                <AvatarFallback className="bg-blue-50 text-blue-600 font-bold">
++                <AvatarFallback className="bg-blue-50 text-blue-600 font-semibold">
 +                  {getInitials()}
 +                </AvatarFallback>
 +              </Avatar>
 +              <div className="hidden md:flex flex-col items-start leading-tight">
 +                <p className="text-[14px] font-black text-gray-900">{displayName}</p>
-+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{subscriptionStatus}</p>
++                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-tighter">{subscriptionStatus}</p>
 +              </div>
 +              <LuChevronDown className="text-gray-400 group-hover:text-gray-900" size={16} />
 +            </div>
@@ -5741,14 +5741,14 @@ index 0000000..f94c3f1
 +            <DropdownMenuItem className="rounded-xl py-2.5 cursor-pointer focus:bg-blue-50 group">
 +              <Link to="/profile" className="flex items-center w-full gap-3">
 +                <LuUser size={18} className="text-gray-400 group-focus:text-blue-600" />
-+                <span className="font-bold">Profile Settings</span>
++                <span className="font-semibold">Profile Settings</span>
 +              </Link>
 +            </DropdownMenuItem>
 +
 +            <DropdownMenuItem className="rounded-xl py-2.5 cursor-pointer focus:bg-blue-50 group">
 +              <Link to="/billing" className="flex items-center w-full gap-3">
 +                <LuSettings size={18} className="text-gray-400 group-focus:text-blue-600" />
-+                <span className="font-bold">Billing</span>
++                <span className="font-semibold">Billing</span>
 +              </Link>
 +            </DropdownMenuItem>
 +
@@ -5762,7 +5762,7 @@ index 0000000..f94c3f1
 +              >
 +                <div className="flex items-center w-full gap-3">
 +                  <LuLogOut size={18} className="text-gray-400 group-focus:text-red-600" />
-+                  <span className="font-bold">Log out</span>
++                  <span className="font-semibold">Log out</span>
 +                </div>
 +              </DropdownMenuItem>
 +            </LogoutModal>
@@ -5846,12 +5846,12 @@ index 0000000..7dba937
 +            <span className="icon-filled text-yellow-300">
 +              <FaStar/>
 +            </span>
-+            <span className="text-xs font-bold uppercase tracking-wide opacity-90">
++            <span className="text-xs font-semibold uppercase tracking-wide opacity-90">
 +              Premium Access
 +            </span>
 +          </div>
 +
-+          <h3 className="text-xl md:text-2xl font-bold mb-2">
++          <h3 className="text-xl md:text-2xl font-semibold mb-2">
 +            {title}
 +          </h3>
 +
@@ -5864,7 +5864,7 @@ index 0000000..7dba937
 +        <div className="shrink-0">
 +          <button
 +            onClick={onAction}
-+            className="w-full md:w-auto bg-white text-primary font-bold px-6 md:px-8 py-3 rounded-lg shadow hover:bg-white/90 hover:scale-105 transition-all"
++            className="w-full md:w-auto bg-white text-primary font-semibold px-6 md:px-8 py-3 rounded-lg shadow hover:bg-white/90 hover:scale-105 transition-all"
 +          >
 +            {buttonText}
 +          </button>
@@ -5996,7 +5996,7 @@ index 0000000..1b99aa9
 +            Unlock unlimited tests and AI scoring.
 +          </p>
 +          <Link to="/pricing">
-+            <Button className="w-full bg-white hover:bg-blue-50 text-[#4B8EE3] font-bold py-5 rounded-xl border-none shadow-sm active:scale-[0.98] transition-all text-[13px]">
++            <Button className="w-full bg-white hover:bg-blue-50 text-[#4B8EE3] font-semibold py-5 rounded-xl border-none shadow-sm active:scale-[0.98] transition-all text-[13px]">
 +              View Plans
 +            </Button>
 +          </Link>
@@ -8305,7 +8305,7 @@ index 0000000..f741c8f
 +                    className="hover:bg-gray-50 transition-colors"
 +                  >
 +                    <td className="px-6 py-4 whitespace-nowrap">
-+                      <div className="text-sm font-bold text-gray-900">
++                      <div className="text-sm font-semibold text-gray-900">
 +                        {user.id.substring(0, 8)}...{user.id.substring(user.id.length - 4)}
 +                      </div>
 +                      <div className="text-xs text-gray-400 mt-0.5">
@@ -8313,13 +8313,13 @@ index 0000000..f741c8f
 +                      </div>
 +                    </td>
 +                    <td className="px-6 py-4 whitespace-nowrap">
-+                      <div className="text-sm font-bold text-gray-900">
++                      <div className="text-sm font-semibold text-gray-900">
 +                        {user.full_name || 'Not provided'}
 +                      </div>
 +                    </td>
 +                    <td className="px-6 py-4 whitespace-nowrap">
 +                      <span
-+                        className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
++                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
 +                          user.role === 'admin'
 +                            ? 'bg-purple-100 text-purple-800'
 +                            : 'bg-blue-100 text-blue-800'
@@ -8330,7 +8330,7 @@ index 0000000..f741c8f
 +                    </td>
 +                    <td className="px-6 py-4 whitespace-nowrap">
 +                      <span
-+                        className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
++                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
 +                          user.subscription_status === 'premium'
 +                            ? 'bg-yellow-100 text-yellow-800'
 +                            : user.subscription_status === 'pending'
@@ -8354,7 +8354,7 @@ index 0000000..f741c8f
 +
 +      {/* Summary */}
 +      <div className="mt-6 text-sm text-gray-500">
-+        Total users: <span className="font-bold text-gray-900">{users.length}</span>
++        Total users: <span className="font-semibold text-gray-900">{users.length}</span>
 +      </div>
 +    </div>
 +  )
@@ -8457,7 +8457,7 @@ index 0000000..0af7612
 +              <div className="relative">
 +                <Avatar className="size-24 border-2 border-gray-50 shadow-sm">
 +                  <AvatarImage src={null} alt="User Avatar" />
-+                  <AvatarFallback className="bg-gray-100 text-gray-400 text-3xl font-bold">
++                  <AvatarFallback className="bg-gray-100 text-gray-400 text-3xl font-semibold">
 +                    {getInitials()}
 +                  </AvatarFallback>
 +                </Avatar>
@@ -8542,7 +8542,7 @@ index 0000000..0af7612
 +              <p className="text-sm font-black text-gray-900">Telegram</p>
 +              <div className="flex items-center gap-1">
 +                <Link to={settings?.telegram_admin_username} target="_blank">
-+                  <p className="text-sm font-bold text-gray-400 leading-none">
++                  <p className="text-sm font-semibold text-gray-400 leading-none">
 +                    {displayData.supportTelegram}
 +                  </p>
 +                </Link>
@@ -8559,7 +8559,7 @@ index 0000000..0af7612
 +              <p className="text-sm font-black text-gray-900">Email</p>
 +              <div className="flex items-center gap-1">
 +                <Link to={settings?.support_link} target="_blank">
-+                  <p className="text-sm font-bold text-gray-400">
++                  <p className="text-sm font-semibold text-gray-400">
 +                    {displayData.supportEmail}{" "}
 +                  </p>
 +                </Link>
@@ -8653,7 +8653,7 @@ index 0000000..f19e7cc
 +              <button
 +                key={tab}
 +                onClick={() => handleFilterChange(tab)}
-+                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
++                className={`px-6 py-2 rounded-xl text-sm font-semibold transition-all ${
 +                  activeTab === tab
 +                    ? "bg-black text-white shadow-lg"
 +                    : "text-gray-500 hover:bg-white hover:text-gray-900"
@@ -8718,7 +8718,7 @@ index 0000000..f19e7cc
 +        </div>
 +
 +      ) : (
-+        <div className="py-20 text-center text-gray-400 font-bold">Hech narsa topilmadi...</div>
++        <div className="py-20 text-center text-gray-400 font-semibold">Hech narsa topilmadi...</div>
 +      )}
 +
 +      {/* Pagination */}
@@ -8737,7 +8737,7 @@ index 0000000..f19e7cc
 +              <button
 +                key={i + 1}
 +                onClick={() => setCurrentPage(i + 1)}
-+                className={`w-11 h-11 rounded-xl font-bold transition-all ${
++                className={`w-11 h-11 rounded-xl font-semibold transition-all ${
 +                  currentPage === i + 1
 +                    ? "bg-blue-600 text-white shadow-md shadow-blue-200"
 +                    : "bg-white border text-gray-600 hover:bg-gray-50"
@@ -8960,7 +8960,7 @@ index 0000000..f0232c8
 +            <span>Back</span>
 +          </button>
 +          <div className="flex items-center gap-3">
-+            <span className="text-xl font-bold text-gray-900 dark:text-white">
++            <span className="text-xl font-semibold text-gray-900 dark:text-white">
 +              IELTS
 +            </span>
 +            <span className="text-sm text-gray-900 dark:text-white opacity-70">
@@ -9012,7 +9012,7 @@ index 0000000..f0232c8
 +          style={{ width: `${leftWidth}%` }}
 +        >
 +          <div className="p-6">
-+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
++            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
 +              {currentPartData?.title}
 +            </h2>
 +            <p className="text-sm text-gray-900 dark:text-white opacity-70 mb-6">
@@ -9481,7 +9481,7 @@ index 0000000..ff306ff
 +        {/* Back Link */}
 +        <Link
 +          to="/dashboard"
-+          className="flex max-w-max items-center gap-2 text-blue-500 font-bold text-sm mb-6 cursor-pointer uppercase tracking-wider"
++          className="flex max-w-max items-center gap-2 text-blue-500 font-semibold text-sm mb-6 cursor-pointer uppercase tracking-wider"
 +        >
 +          <FaArrowLeft size={14} />
 +          <span>Back to Dashboard</span>
@@ -9522,14 +9522,14 @@ index 0000000..ff306ff
 +          {/* Overall Score Card */}
 +          <div className="bg-white border-2 border-blue-100 rounded-2xl p-8 relative overflow-hidden shadow-sm">
 +            <div className="relative z-10">
-+              <h3 className="text-slate-500 font-bold text-sm uppercase tracking-widest mb-4">
++              <h3 className="text-slate-500 font-semibold text-sm uppercase tracking-widest mb-4">
 +                Overall Band Score
 +              </h3>
 +              <div className="flex items-baseline gap-1">
 +                <span className="text-6xl font-black text-blue-500">
 +                  {data.score}
 +                </span>
-+                <span className="text-gray-400 font-bold text-xl">/ 9.0</span>
++                <span className="text-gray-400 font-semibold text-xl">/ 9.0</span>
 +              </div>
 +              {/* Progress Bar */}
 +              <div className="w-full bg-gray-100 h-2.5 rounded-full mt-8 overflow-hidden">
@@ -9552,7 +9552,7 @@ index 0000000..ff306ff
 +          {/* Correct Answers Card */}
 +          <div className="bg-white border-2 border-gray-100 rounded-2xl p-8 shadow-sm">
 +            <div className="flex justify-between items-start mb-4">
-+              <h3 className="text-slate-500 font-bold text-sm uppercase tracking-widest">
++              <h3 className="text-slate-500 font-semibold text-sm uppercase tracking-widest">
 +                Correct Answers
 +              </h3>
 +              <FaCheckCircle className="text-green-500 text-xl" />
@@ -9561,7 +9561,7 @@ index 0000000..ff306ff
 +              <span className="text-5xl font-black text-gray-800">
 +                {data.correct}
 +              </span>
-+              <span className="text-gray-400 font-bold text-xl">
++              <span className="text-gray-400 font-semibold text-xl">
 +                / {data.total}
 +              </span>
 +            </div>
@@ -9571,7 +9571,7 @@ index 0000000..ff306ff
 +          {/* Time Taken Card */}
 +          <div className="bg-white border-2 border-gray-100 rounded-2xl p-8 shadow-sm">
 +            <div className="flex justify-between items-start mb-4">
-+              <h3 className="text-slate-500 font-bold text-sm uppercase tracking-widest">
++              <h3 className="text-slate-500 font-semibold text-sm uppercase tracking-widest">
 +                Time Taken
 +              </h3>
 +              <LuTimer className="text-blue-500 text-xl" />
@@ -9598,11 +9598,11 @@ index 0000000..ff306ff
 +              <div className="flex items-center gap-6">
 +                <Button
 +                  variant="ghost"
-+                  className="bg-white shadow-sm border font-bold px-6 py-2 rounded-lg"
++                  className="bg-white shadow-sm border font-semibold px-6 py-2 rounded-lg"
 +                >
 +                  All Questions
 +                </Button>
-+                <div className="flex gap-4 font-bold text-sm">
++                <div className="flex gap-4 font-semibold text-sm">
 +                  <span className="text-slate-500">
 +                    Correct{" "}
 +                    <span className="bg-green-100 text-green-600 px-2 py-0.5 rounded-full ml-1">
@@ -9635,7 +9635,7 @@ index 0000000..ff306ff
 +                    key={q.id}
 +                    className="grid grid-cols-[60px_80px_1fr_250px] p-6 items-start hover:bg-slate-50/50 transition-colors"
 +                  >
-+                    <div className="text-slate-400 font-bold">{q.id}</div>
++                    <div className="text-slate-400 font-semibold">{q.id}</div>
 +                    <div>
 +                      {q.status === "correct" ? (
 +                        <FaCheckCircle className="text-green-500 text-xl" />
@@ -9647,11 +9647,11 @@ index 0000000..ff306ff
 +                      <div className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-wider">
 +                        {q.type}
 +                      </div>
-+                      <p className="text-gray-800 font-bold leading-relaxed">
++                      <p className="text-gray-800 font-semibold leading-relaxed">
 +                        {q.snippet}
 +                      </p>
 +                    </div>
-+                    <div className="text-sm font-bold flex flex-col gap-3">
++                    <div className="text-sm font-semibold flex flex-col gap-3">
 +                      <div className="flex justify-between border-b border-dashed pb-1">
 +                        <span className="text-slate-400 font-medium">
 +                          Your Answer:
@@ -9685,7 +9685,7 @@ index 0000000..ff306ff
 +              <Link to="/dashboard">
 +                <Button
 +                  variant="ghost"
-+                  className="text-slate-500 w-md hover:text-black bg-blue-100 hover:bg-blue-200 font-bold transition-all flex items-center gap-2 px-6 h-12 rounded-xl"
++                  className="text-slate-500 w-md hover:text-black bg-blue-100 hover:bg-blue-200 font-semibold transition-all flex items-center gap-2 px-6 h-12 rounded-xl"
 +                >
 +                  <HiOutlineHome className="text-xl" />
 +                  Go To Home
@@ -9693,7 +9693,7 @@ index 0000000..ff306ff
 +              </Link>
 +
 +              <Link to={"/reading-practice/" + data.id}>
-+                <Button className="bg-blue-600 w-md hover:bg-blue-700 text-white font-bold px-8 h-12 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center gap-2 active:scale-95">
++                <Button className="bg-blue-600 w-md hover:bg-blue-700 text-white font-semibold px-8 h-12 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center gap-2 active:scale-95">
 +                  <HiOutlineRefresh className="text-xl" />
 +                  Retake Exam
 +                </Button>
@@ -9742,7 +9742,7 @@ index 0000000..c0f9f8d
 +            {title}
 +          </h3>
 +
-+          <p className="text-sm text-gray-500 font-bold">
++          <p className="text-sm text-gray-500 font-semibold">
 +            {cardStatus} content
 +          </p>
 +        </div>
@@ -9801,7 +9801,7 @@ index 0000000..846ca2d
 +            {title}
 +          </h3>
 +
-+          <p className="text-sm text-gray-500 font-bold">
++          <p className="text-sm text-gray-500 font-semibold">
 +            {isCompleted ? `Completed on ${date}` : `Difficulty: ${difficulty}`}
 +          </p>
 +
@@ -9900,7 +9900,7 @@ index 0000000..b93d4d6
 +          </div>
 +
 +          {/* Headline */}
-+          <h2 className="text-4xl font-bold mb-6">
++          <h2 className="text-4xl font-semibold mb-6">
 +            Achieve your dream band score.
 +          </h2>
 +
@@ -9915,7 +9915,7 @@ index 0000000..b93d4d6
 +          <div className="flex items-start justify-between">
 +            <div>
 +              <p className="text-sm text-white/70 mb-1">CURRENT STREAK</p>
-+              <p className="text-3xl font-bold mb-2">12 Days</p>
++              <p className="text-3xl font-semibold mb-2">12 Days</p>
 +              <p className="text-sm text-white/80">Keep it up! You're on a roll.</p>
 +            </div>
 +            <div className="bg-white rounded-full p-2">
@@ -9935,7 +9935,7 @@ index 0000000..b93d4d6
 +        </div>
 +        <div className="w-full flex items-center justify-center mt-9">
 +          <div className="w-full max-w-md">
-+            <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
++            <h1 className="text-3xl font-semibold mb-2">Welcome back</h1>
 +            <p className="text-gray-600 mb-8">Please enter your details to sign in.</p>
 +
 +            <form onSubmit={handleLogin} className="space-y-6">
@@ -10138,7 +10138,7 @@ index 0000000..f5d7d35
 +                  <span className="text-5xl font-black text-gray-900">
 +                    49,000
 +                  </span>
-+                  <span className="text-xl font-bold text-gray-400">UZS</span>
++                  <span className="text-xl font-semibold text-gray-400">UZS</span>
 +                </div>
 +              </div>
 +
@@ -10182,12 +10182,12 @@ index 0000000..f5d7d35
 +                      <p className="text-2xl text-black font-black tracking-[4px] font-mono">
 +                        {cardNumber}
 +                      </p>
-+                      <p className="text-sm font-bold uppercase tracking-widest text-gray-700">
++                      <p className="text-sm font-semibold uppercase tracking-widest text-gray-700">
 +                        {cardHolder}
 +                      </p>
 +                    </div>
 +                  </div>
-+                  <p className="text-[11px] text-center text-gray-400 font-bold uppercase">
++                  <p className="text-[11px] text-center text-gray-400 font-semibold uppercase">
 +                    Supported banks: Any local bank app
 +                  </p>
 +                </div>
@@ -10197,7 +10197,7 @@ index 0000000..f5d7d35
 +                    <div className="size-6 shrink-0 rounded-full bg-blue-50 text-[#4A90E2] flex items-center justify-center text-xs font-black">
 +                      2
 +                    </div>
-+                    <p className="text-gray-600 font-bold">
++                    <p className="text-gray-600 font-semibold">
 +                      Take a Screenshot <br />
 +                      <span className="text-gray-400 font-medium">
 +                        Capture the successful transaction receipt.
@@ -10208,7 +10208,7 @@ index 0000000..f5d7d35
 +                    <div className="size-6 shrink-0 rounded-full bg-blue-50 text-[#4A90E2] flex items-center justify-center text-xs font-black">
 +                      3
 +                    </div>
-+                    <p className="text-gray-600 font-bold">
++                    <p className="text-gray-600 font-semibold">
 +                      Verify on Telegram <br />
 +                      <span className="text-gray-400 font-medium">
 +                        Send the screenshot to our bot to upgrade.
@@ -10299,7 +10299,7 @@ index 0000000..2d2cb45
 +          </div>
 +
 +          {/* Headline */}
-+          <h2 className="text-4xl font-bold mb-6">
++          <h2 className="text-4xl font-semibold mb-6">
 +            Achieve your dream band score.
 +          </h2>
 +
@@ -10314,7 +10314,7 @@ index 0000000..2d2cb45
 +          <div className="flex items-start justify-between">
 +            <div>
 +              <p className="text-sm text-white/70 mb-1">CURRENT STREAK</p>
-+              <p className="text-3xl font-bold mb-2">12 Days</p>
++              <p className="text-3xl font-semibold mb-2">12 Days</p>
 +              <p className="text-sm text-white/80">Keep it up! You're on a roll.</p>
 +            </div>
 +            <div className="bg-white rounded-full p-2">
@@ -10334,7 +10334,7 @@ index 0000000..2d2cb45
 +        </div>
 +        <div className="w-full flex items-center justify-center mt-5">
 +          <div className="w-full max-w-md">
-+            <h1 className="text-3xl font-bold mb-2">Create an account</h1>
++            <h1 className="text-3xl font-semibold mb-2">Create an account</h1>
 +            <p className="text-gray-600 mb-8">Please enter your details to create an account.</p>
 +
 +            <form onSubmit={handleSignUp} className="space-y-6">

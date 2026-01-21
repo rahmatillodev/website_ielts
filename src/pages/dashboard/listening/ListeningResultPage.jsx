@@ -137,34 +137,68 @@ const ListeningResultPage = () => {
   }, [attemptData, resultData]);
 
   // Get answer display data - memoized for performance
+  // Include ALL questions from the test, not just answered ones
   const answerDisplayData = useMemo(() => {
-    if (!resultData || !resultData.answers) return [];
-    
+    if (!resultData || !currentTest) return [];
+
     const answers = resultData.answers || {};
     const reviewData = resultData.reviewData || {};
-    const answerEntries = Object.entries(answers);
     
-    return answerEntries
-      .filter(([key, value]) => value && value.toString().trim() !== '')
-      .map(([key, value]) => {
-        const review = reviewData[key] || {};
-        return {
-          questionNumber: key,
-          yourAnswer: value.toString(),
-          isCorrect: review.isCorrect || false,
-          correctAnswer: review.correctAnswer || '',
-        };
-      })
-      .sort((a, b) => {
-        // Sort by question number if numeric, otherwise by string
-        const aNum = Number(a.questionNumber);
-        const bNum = Number(b.questionNumber);
-        if (!isNaN(aNum) && !isNaN(bNum)) {
-          return aNum - bNum;
+    // Collect all questions from the test
+    const allQuestionsMap = new Map();
+    
+    if (currentTest.parts) {
+      currentTest.parts.forEach((part) => {
+        if (part.questionGroups) {
+          part.questionGroups.forEach((questionGroup) => {
+            const groupQuestions = questionGroup.questions || [];
+            groupQuestions.forEach((question) => {
+              const questionKey = question.question_number || question.id;
+              if (questionKey) {
+                allQuestionsMap.set(questionKey, {
+                  questionNumber: questionKey,
+                  question: question,
+                  questionGroup: questionGroup
+                });
+              }
+            });
+          });
         }
-        return a.questionNumber.localeCompare(b.questionNumber);
       });
-  }, [resultData]);
+    }
+
+    // Create display data for all questions
+    const displayData = Array.from(allQuestionsMap.values()).map(({ questionNumber, question, questionGroup }) => {
+      // Try to find review data with type conversion (handle string/number mismatch)
+      const review = reviewData[questionNumber] || 
+                     reviewData[String(questionNumber)] || 
+                     reviewData[Number(questionNumber)] || 
+                     {};
+      // Try to find user answer with type conversion
+      const userAnswer = answers[questionNumber] || 
+                         answers[String(questionNumber)] || 
+                         answers[Number(questionNumber)] || 
+                         '';
+      
+      return {
+        questionNumber: questionNumber,
+        yourAnswer: userAnswer ? userAnswer.toString().trim() : '',
+        isCorrect: review.isCorrect || false,
+        correctAnswer: review.correctAnswer || '',
+      };
+    });
+
+    // Sort by question number
+    return displayData.sort((a, b) => {
+      const aNum = Number(a.questionNumber);
+      const bNum = Number(b.questionNumber);
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum;
+      }
+      // Convert to string for localeCompare
+      return String(a.questionNumber).localeCompare(String(b.questionNumber));
+    });
+  }, [resultData, currentTest]);
 
   // Memoized stats calculations
   const stats = useMemo(() => {
@@ -187,8 +221,8 @@ const ListeningResultPage = () => {
   }, [answerDisplayData, elapsedTime, attemptData, formatTime]);
 
   // PDF Export function
-  const downloadPDF = useCallback(() => {
-    generateTestResultsPDF({
+  const downloadPDF = useCallback(async () => {
+    await generateTestResultsPDF({
       test: currentTest,
       stats,
       answerDisplayData,
@@ -249,7 +283,7 @@ const ListeningResultPage = () => {
         {/* Back Link */}
         <Link
           to="/dashboard"
-          className="flex max-w-max items-center gap-2 text-blue-500 font-bold text-sm mb-6 cursor-pointer uppercase tracking-wider hover:text-blue-600 transition-colors"
+          className="flex max-w-max items-center gap-2 text-blue-500 font-semibold text-sm mb-6 cursor-pointer uppercase tracking-wider hover:text-blue-600 transition-colors"
         >
           <FaArrowLeft size={14} />
           <span>Back to Dashboard</span>
@@ -288,14 +322,14 @@ const ListeningResultPage = () => {
           {/* Overall Score Card */}
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-lg">
             <div className="relative z-10">
-              <h3 className="text-slate-600 font-bold text-xs sm:text-sm uppercase tracking-widest mb-4">
+              <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest mb-4">
                 Overall Band Score
               </h3>
               <div className="flex items-baseline gap-1 mb-6">
                 <span className="text-5xl sm:text-6xl font-black text-blue-600">
                   {stats.score}
                 </span>
-                <span className="text-gray-500 font-bold text-xl">/ 9.0</span>
+                <span className="text-gray-500 font-semibold text-xl">/ 9.0</span>
               </div>
               {/* Progress Bar */}
               <div className="w-full bg-blue-200 h-3 rounded-full overflow-hidden">
@@ -314,7 +348,7 @@ const ListeningResultPage = () => {
           {/* Correct Answers Card */}
           <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-6 sm:p-8 shadow-lg">
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-slate-600 font-bold text-xs sm:text-sm uppercase tracking-widest">
+              <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest">
                 Correct Answers
               </h3>
               <FaCheckCircle className="text-green-600 text-xl sm:text-2xl" />
@@ -323,7 +357,7 @@ const ListeningResultPage = () => {
               <span className="text-4xl sm:text-5xl font-black text-gray-800">
                 {stats.correctCount}
               </span>
-              <span className="text-gray-500 font-bold text-xl">
+              <span className="text-gray-500 font-semibold text-xl">
                 / {stats.totalQuestions}
               </span>
             </div>
@@ -335,7 +369,7 @@ const ListeningResultPage = () => {
           {/* Time Taken Card */}
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl p-6 sm:p-8 shadow-lg">
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-slate-600 font-bold text-xs sm:text-sm uppercase tracking-widest">
+              <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest">
                 Time Taken
               </h3>
               <LuTimer className="text-purple-600 text-xl sm:text-2xl" />
@@ -369,7 +403,7 @@ const ListeningResultPage = () => {
                   Show Correct Answers
                 </label>
               </div>
-              <div className="flex gap-4 font-bold text-sm">
+              <div className="flex gap-4 font-semibold text-sm">
                 <span className="text-slate-500">
                   Correct{" "}
                   <span className="bg-green-100 text-green-600 px-2 py-0.5 rounded-full ml-1">
@@ -415,24 +449,31 @@ const ListeningResultPage = () => {
                         key={answerItem.questionNumber}
                         className="hover:bg-slate-50/50 transition-colors"
                       >
-                        <td className="p-4 text-slate-400 font-bold">
+                        <td className="p-4 text-slate-400 font-semibold">
                           {answerItem.questionNumber}
                         </td>
                         <td className="p-4">
-                          {answerItem.isCorrect ? (
-                            <FaCheckCircle className="text-green-500 text-xl" />
+                          {answerItem.yourAnswer ? (
+                            answerItem.isCorrect ? (
+                              <FaCheckCircle className="text-green-500 text-xl" />
+                            ) : (
+                              <FaTimesCircle className="text-red-500 text-xl" />
+                            )
                           ) : (
-                            <FaTimesCircle className="text-red-500 text-xl" />
+                            <span className="text-gray-400">—</span>
                           )}
                         </td>
                         <td className="p-4">
-                          <span className={answerItem.isCorrect ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                            {answerItem.yourAnswer || "N/A"}
+                          <span className={answerItem.yourAnswer 
+                            ? (answerItem.isCorrect ? "text-green-600 font-semibold" : "text-red-600 font-semibold")
+                            : "text-gray-400"
+                          }>
+                            {answerItem.yourAnswer || "Not answered"}
                           </span>
                         </td>
                         {showCorrectAnswers && (
                           <td className="p-4">
-                            {!answerItem.isCorrect && answerItem.correctAnswer ? (
+                            {answerItem.correctAnswer ? (
                               <span className="text-green-600 font-semibold">
                                 {answerItem.correctAnswer}
                               </span>
@@ -460,7 +501,7 @@ const ListeningResultPage = () => {
             <Link to="/dashboard">
               <Button
                 variant="ghost"
-                className="text-slate-500 w-full sm:w-auto hover:text-black bg-blue-100 hover:bg-blue-200 font-bold transition-all flex items-center gap-2 px-6 h-12 rounded-xl"
+                className="text-slate-500 w-full sm:w-auto hover:text-black bg-blue-100 hover:bg-blue-200 font-semibold transition-all flex items-center gap-2 px-6 h-12 rounded-xl"
               >
                 <HiOutlineHome className="text-xl" />
                 Go To Home
@@ -471,13 +512,13 @@ const ListeningResultPage = () => {
               <Link to={"/listening-practice/" + (id || '') + "?mode=review"} className="w-full sm:w-auto">
                 <Button 
                   variant="outline"
-                  className="border-blue-600 text-blue-600 w-full sm:w-auto hover:bg-blue-50 font-bold px-8 h-12 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95"
+                  className="border-blue-600 text-blue-600 w-full sm:w-auto hover:bg-blue-50 font-semibold px-8 h-12 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95"
                 >
                   Review Test
                 </Button>
               </Link>
               <Button 
-                className="bg-blue-600 w-full sm:w-auto hover:bg-blue-700 text-white font-bold px-8 h-12 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                className="bg-blue-600 w-full sm:w-auto hover:bg-blue-700 text-white font-semibold px-8 h-12 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                 onClick={handleRetake}
                 disabled={isDeleting || !authUser}
               >

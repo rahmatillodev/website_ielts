@@ -107,7 +107,7 @@ const PricingPage = () => {
                   <span className="text-5xl font-black text-gray-900">
                     49,000
                   </span>
-                  <span className="text-xl font-bold text-gray-400">UZS</span>
+                  <span className="text-xl font-semibold text-gray-400">UZS</span>
                 </div>
               </div>
 
@@ -151,12 +151,12 @@ const PricingPage = () => {
                       <p className="text-2xl text-black font-black tracking-[4px] font-mono">
                         {cardNumber}
                       </p>
-                      <p className="text-sm font-bold uppercase tracking-widest text-gray-700">
+                      <p className="text-sm font-semibold uppercase tracking-widest text-gray-700">
                         {cardHolder}
                       </p>
                     </div>
                   </div>
-                  <p className="text-[11px] text-center text-gray-400 font-bold uppercase">
+                  <p className="text-[11px] text-center text-gray-400 font-semibold uppercase">
                     Supported banks: Any local bank app
                   </p>
                 </div>
@@ -166,7 +166,7 @@ const PricingPage = () => {
                     <div className="size-6 shrink-0 rounded-full bg-blue-50 text-[#4A90E2] flex items-center justify-center text-xs font-black">
                       2
                     </div>
-                    <p className="text-gray-600 font-bold">
+                    <p className="text-gray-600 font-semibold">
                       Take a Screenshot <br />
                       <span className="text-gray-400 font-medium">
                         Capture the successful transaction receipt.
@@ -177,7 +177,7 @@ const PricingPage = () => {
                     <div className="size-6 shrink-0 rounded-full bg-blue-50 text-[#4A90E2] flex items-center justify-center text-xs font-black">
                       3
                     </div>
-                    <p className="text-gray-600 font-bold">
+                    <p className="text-gray-600 font-semibold">
                       Verify on Telegram <br />
                       <span className="text-gray-400 font-medium">
                         Send the screenshot to our bot to upgrade.

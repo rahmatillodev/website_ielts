@@ -20,7 +20,9 @@ const QuestionRenderer = ({
   onInteraction,
   mode = 'test',
   reviewData = {},
-  showCorrectAnswers = true
+  showCorrectAnswers = true,
+  bookmarks = new Set(),
+  toggleBookmark = () => {}
 }) => {
   const questionType = question.type;
   const normalizedType = questionType.toLowerCase().trim();
@@ -39,6 +41,8 @@ const QuestionRenderer = ({
         mode={mode}
         reviewData={reviewData}
         showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
       />
     );
   }
@@ -60,6 +64,8 @@ const QuestionRenderer = ({
         mode={mode}
         reviewData={reviewData}
         showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
       />
     );
   }
@@ -76,6 +82,8 @@ const QuestionRenderer = ({
         mode={mode}
         reviewData={reviewData}
         showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
       />
     );
   }
@@ -94,6 +102,8 @@ const QuestionRenderer = ({
         mode={mode}
         reviewData={reviewData}
         showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
       />
     );
   }
@@ -112,6 +122,8 @@ const QuestionRenderer = ({
         mode={mode}
         reviewData={reviewData}
         showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
       />
     );
   }
@@ -128,11 +140,22 @@ const QuestionRenderer = ({
         mode={mode}
         reviewData={reviewData}
         showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
       />
     );
   }
 
-  return null;
+  // FillInTheBlank fallback
+  return (
+    <FillInTheBlank
+      question={question}
+      answer={answer}
+      onAnswerChange={onAnswerChange}
+      bookmarks={bookmarks}
+      toggleBookmark={toggleBookmark}
+    />
+  );
 };
 
 export default QuestionRenderer;

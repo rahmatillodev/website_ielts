@@ -77,7 +77,7 @@ const addBrandHeader = async (doc, pageWidth, testType) => {
 
   try {
     // Load and add logo
-    const logoUrl = '/vite.svg';
+    const logoUrl = '/logo.svg';
     const logoDataUrl = await imageToBase64(logoUrl);
     doc.addImage(logoDataUrl, 'PNG', margin, yPos, logoSize, logoSize);
 

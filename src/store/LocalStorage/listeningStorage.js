@@ -24,8 +24,13 @@ export const saveListeningPracticeData = (testId, data) => {
       timeRemaining: data.timeRemaining || 0,
       elapsedTime: data.elapsedTime || 0,
       startTime: data.startTime || Date.now(),
+      bookmarks: data.bookmarks || new Set(),
       lastSaved: Date.now(),
     };
+    // Convert Set to Array for JSON serialization
+    if (storageData.bookmarks instanceof Set) {
+      storageData.bookmarks = Array.from(storageData.bookmarks);
+    }
     localStorage.setItem(key, JSON.stringify(storageData));
   } catch (error) {
     console.error('Error saving listening practice data:', error);

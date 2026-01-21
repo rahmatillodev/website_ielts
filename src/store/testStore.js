@@ -5,7 +5,8 @@ export const useTestStore = create((set, get) => ({
   test_reading: [],
   test_listening: [],
   currentTest: null,
-  loading: false,
+  loading: false, // Loading state for fetchTests
+  loadingTest: false, // Separate loading state for fetchTestById
   error: null,
   loaded: false,
   // test_completed: Map of testId -> { isCompleted, attempt }
@@ -13,9 +14,24 @@ export const useTestStore = create((set, get) => ({
 
   fetchTests: async () => {
     const currentState = get();
-    // Return early if already loaded or currently loading to prevent race conditions
-    if (currentState.loaded || currentState.loading) {
-      // Return the current state data to maintain consistency
+    
+    // Allow refetch if data is empty even if loaded is true
+    const hasData = (currentState.test_reading?.length > 0 || currentState.test_listening?.length > 0);
+    
+    // Return early only if already loaded with data AND not currently loading
+    // This prevents race conditions while allowing refetch when data is empty
+    if (currentState.loaded && hasData && !currentState.loading) {
+      return {
+        test_reading: currentState.test_reading || [],
+        test_listening: currentState.test_listening || [],
+        loaded: currentState.loaded,
+      };
+    }
+
+    // If loading is stuck, reset it after a reasonable timeout check
+    // But proceed with fetch if we don't have data
+    if (currentState.loading && hasData) {
+      // If we're loading but have data, return current data
       return {
         test_reading: currentState.test_reading || [],
         test_listening: currentState.test_listening || [],
@@ -47,6 +63,7 @@ export const useTestStore = create((set, get) => ({
         test_listening: filtered_data_listening,
         loading: false,
         loaded: true,
+        error: null, // Clear any previous errors
       });
 
       return {
@@ -60,13 +77,20 @@ export const useTestStore = create((set, get) => ({
       }
 
       console.error("Error fetching tests:", error);
-      set({ error: error.message, loading: false });
+      // Reset loaded flag on error to allow retry
+      set({ 
+        error: error.message, 
+        loading: false,
+        loaded: false, // Reset loaded flag to allow refetch
+      });
       throw error;
     }
   },
 
   fetchTestById: async (testId) => {
-    set({ loading: true, error: null });
+    // Clear previous test data when fetching a new one
+    // Use separate loadingTest flag to avoid interfering with fetchTests
+    set({ loadingTest: true, error: null, currentTest: null });
     try {
       // Fetch test
       const { data: testData, error: testError } = await supabase
@@ -80,7 +104,7 @@ export const useTestStore = create((set, get) => ({
       // Handle case where test doesn't exist
       if (!testData) {
         const errorMessage = `Test with ID ${testId} not found`;
-        set({ error: errorMessage, loading: false });
+        set({ error: errorMessage, loadingTest: false });
         throw new Error(errorMessage);
       }
 
@@ -100,7 +124,7 @@ export const useTestStore = create((set, get) => ({
         };
         set({
           currentTest: completeTest,
-          loading: false,
+          loadingTest: false,
         });
         return completeTest;
       }
@@ -429,18 +453,18 @@ export const useTestStore = create((set, get) => ({
       set({
         currentTest: completeTest,
         loading: false,
+        loadingTest: false,
       });
-      console.log(completeTest);
 
       return completeTest;
     } catch (error) {
       if (error.name === "AbortError") {
-        set({ loading: false });
+        set({ loadingTest: false, loading: false });
         return;
       }
 
       console.error("Error fetching test by ID:", error);
-      set({ error: error.message, loading: false });
+      set({ error: error.message, loadingTest: false, loading: false });
       throw error;
     }
   },
@@ -477,5 +501,19 @@ export const useTestStore = create((set, get) => ({
   // Clear all test completion statuses
   clearAllTestCompleted: () => {
     set({ test_completed: {} });
+  },
+
+  // Reset the store state (useful for debugging or when switching contexts)
+  resetStore: () => {
+    set({
+      test_reading: [],
+      test_listening: [],
+      currentTest: null,
+      loading: false,
+      loadingTest: false,
+      error: null,
+      loaded: false,
+      test_completed: {},
+    });
   },
 }));
