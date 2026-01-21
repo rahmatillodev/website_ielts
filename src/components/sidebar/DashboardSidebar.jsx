@@ -16,10 +16,12 @@ import { toast } from "react-toastify";
 import { TfiWrite } from "react-icons/tfi";
 import { RiSpeakLine } from "react-icons/ri";
 
-const SidebarItem = ({ icon: Icon, label, link, isActive }) => (
+const SidebarItem = ({ icon: Icon, label, link, isActive }) => {
+  const IconComponent = Icon;
+  return (
   <Link
     to={link}
-    className={`flex mx-3 items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl cursor-pointer transition-all duration-200
+      className={`flex mx-2 md:mx-3 items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-medium rounded-xl cursor-pointer transition-all duration-200
       ${
         isActive
           ? "bg-[#EBF5FF] text-[#4A90E2]"
@@ -30,6 +32,7 @@ const SidebarItem = ({ icon: Icon, label, link, isActive }) => (
     <span className="truncate">{label}</span>
   </Link>
 );
+};
 
 const DashboardSidebar = () => {
   const { pathname } = useLocation();
@@ -61,7 +64,7 @@ const DashboardSidebar = () => {
           <div className="size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
             <GraduationCap className="text-[#4A90E2] size-7" />
           </div>
-          <span className="text-xl font-black text-[#1E293B] tracking-tight">
+          <span className="text-lg md:text-xl font-black text-[#1E293B] tracking-tight">
             IELTS Sim
           </span>
         </div>

@@ -27,6 +27,7 @@ import SpeakingPage from "./pages/dashboard/SpeakingPage";
 import PricingRoute from "./components/PricingRoute";
 import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
 import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
+import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
 
 // Main App component with routing
 function App() {
@@ -76,6 +77,7 @@ function App() {
           <Route path="/writing" element={<WritingPage />} />
           <Route path="/speaking" element={<SpeakingPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/writing-own" element={<OwnWritingPage />} />
           <Route 
             path="/pricing" 
             element={
