@@ -60,6 +60,7 @@ const ListeningPracticePageContent = () => {
   // Annotation system
   const { addHighlight, addNote } = useAnnotation();
   const selectableContentRef = useRef(null);
+  const universalContentRef = useRef(null); // Universal container for all selectable content
 
   // Get audio URL from first part - use this for entire session
   const audioUrl = React.useMemo(() => {
@@ -73,41 +74,69 @@ const ListeningPracticePageContent = () => {
   }, [currentTest?.parts]);
 
   useEffect(() => {
-    if (id) {
-      fetchTestById(id);
-
-      // Load saved data from localStorage
-      const savedData = loadListeningPracticeData(id);
-      if (savedData) {
-        if (savedData.answers && Object.keys(savedData.answers).length > 0) {
-          setAnswers(savedData.answers);
-          setHasInteracted(true);
-        }
-        if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
-          setBookmarks(new Set(savedData.bookmarks));
-        }
-        if (savedData.startTime) {
-          const savedStartTime = savedData.startTime;
-          setStartTime(savedStartTime);
-          setIsStarted(true);
-
-          const elapsedSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
-          // Use saved timeRemaining if available, otherwise calculate from test duration
-          let initialTime = savedData.timeRemaining;
-          if (initialTime === undefined || initialTime === null) {
-            // Will be set when currentTest loads
-            initialTime = 60 * 60; // Fallback to 1 hour
-          }
-          const remainingTime = Math.max(0, initialTime - elapsedSeconds);
-          setTimeRemaining(remainingTime);
-        } else if (savedData.timeRemaining !== undefined) {
-          setTimeRemaining(savedData.timeRemaining);
-        }
-      }
+    // GUARD CLAUSE: Validate id parameter
+    if (!id || (typeof id !== 'string' && typeof id !== 'number')) {
+      console.error('[ListeningPracticePage] Invalid test ID:', id);
+      return;
     }
 
-    // Cleanup: Clear currentTest when component unmounts
+    // Component lifecycle management: Track if component is mounted
+    let isMounted = true;
+
+    const loadTestData = async () => {
+      try {
+        // Fetch test data
+        await fetchTestById(id);
+        
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
+        // Load saved data from localStorage
+        const savedData = loadListeningPracticeData(id);
+        if (savedData && isMounted) {
+          if (savedData.answers && Object.keys(savedData.answers).length > 0) {
+            setAnswers(savedData.answers);
+            setHasInteracted(true);
+          }
+          if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
+            setBookmarks(new Set(savedData.bookmarks));
+          }
+          if (savedData.startTime) {
+            const savedStartTime = savedData.startTime;
+            setStartTime(savedStartTime);
+            setIsStarted(true);
+
+            const elapsedSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
+            // Use saved timeRemaining if available, otherwise calculate from test duration
+            let initialTime = savedData.timeRemaining;
+            if (initialTime === undefined || initialTime === null) {
+              // Will be set when currentTest loads
+              initialTime = 60 * 60; // Fallback to 1 hour
+            }
+            const remainingTime = Math.max(0, initialTime - elapsedSeconds);
+            if (isMounted) {
+              setTimeRemaining(remainingTime);
+            }
+          } else if (savedData.timeRemaining !== undefined && isMounted) {
+            setTimeRemaining(savedData.timeRemaining);
+          }
+        }
+      } catch (error) {
+        // Only log if component is still mounted
+        if (isMounted) {
+          console.error('[ListeningPracticePage] Error loading test data:', {
+            testId: id,
+            error: error.message
+          });
+        }
+      }
+    };
+
+    loadTestData();
+
+    // Cleanup: Clear currentTest when component unmounts and prevent state updates
     return () => {
+      isMounted = false;
       const { clearCurrentTest } = useTestStore.getState();
       clearCurrentTest();
     };
@@ -115,18 +144,25 @@ const ListeningPracticePageContent = () => {
 
   // Initialize timeRemaining from test duration when currentTest loads
   useEffect(() => {
-    if (currentTest && timeRemaining === null && !isStarted && !hasInteracted) {
+    // Component lifecycle management: Track if component is mounted
+    let isMounted = true;
+
+    if (currentTest && timeRemaining === null && !isStarted && !hasInteracted && isMounted) {
       const durationInSeconds = convertDurationToSeconds(currentTest.duration);
       setTimeRemaining(durationInSeconds);
-    } else if (currentTest && timeRemaining !== null && !isStarted && !hasInteracted) {
+    } else if (currentTest && timeRemaining !== null && !isStarted && !hasInteracted && isMounted) {
       // If timeRemaining was set from localStorage but we don't have a saved startTime,
       // update it to use the test duration to ensure consistency
       const savedData = loadListeningPracticeData(id);
-      if (!savedData?.startTime) {
+      if (!savedData?.startTime && isMounted) {
         const durationInSeconds = convertDurationToSeconds(currentTest.duration);
         setTimeRemaining(durationInSeconds);
       }
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [currentTest, timeRemaining, isStarted, hasInteracted, id]);
 
   const startResize = (e) => {
@@ -324,21 +360,38 @@ const ListeningPracticePageContent = () => {
 
   // Auto-submit when timer reaches zero
   useEffect(() => {
-    if (timeRemaining === 0 && (isStarted || hasInteracted) && status === 'taking' && authUser && id && currentTest) {
+    // Component lifecycle management: Track if component is mounted
+    let isMounted = true;
+
+    if (timeRemaining === 0 && (isStarted || hasInteracted) && status === 'taking' && authUser && id && currentTest && isMounted) {
       // Auto-submit the test when timer reaches zero
       const autoSubmit = async () => {
-        const result = await handleSubmitTest();
-        if (result.success) {
-          // Navigate to result page
-          navigate(`/listening-result/${id}`);
-        } else {
-          console.error('Auto-submit failed:', result.error);
-          // Still navigate to result page even if submission failed
-          navigate(`/listening-result/${id}`);
+        try {
+          const result = await handleSubmitTest();
+          // Only navigate if component is still mounted
+          if (isMounted) {
+            if (result.success) {
+              // Navigate to result page
+              navigate(`/listening-result/${id}`);
+            } else {
+              console.error('[ListeningPracticePage] Auto-submit failed:', result.error);
+              // Still navigate to result page even if submission failed
+              navigate(`/listening-result/${id}`);
+            }
+          }
+        } catch (error) {
+          if (isMounted) {
+            console.error('[ListeningPracticePage] Auto-submit error:', error);
+            navigate(`/listening-result/${id}`);
+          }
         }
       };
       autoSubmit();
     }
+
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRemaining, status]);
 
@@ -570,12 +623,21 @@ const ListeningPracticePageContent = () => {
   }, [currentTest]);
 
   useEffect(() => {
+    // Component lifecycle management: Track if component is mounted
+    let isMounted = true;
+
     const mode = searchParams.get('mode');
-    if (mode === 'review' && authUser && id && currentTest) {
-      handleReviewTest();
-    } else if (mode === 'retake' && authUser && id) {
-      handleRetakeTest();
+    if (isMounted) {
+      if (mode === 'review' && authUser && id && currentTest) {
+        handleReviewTest();
+      } else if (mode === 'retake' && authUser && id) {
+        handleRetakeTest();
+      }
     }
+
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, authUser, id, currentTest]);
 
@@ -584,11 +646,28 @@ const ListeningPracticePageContent = () => {
   //   handleBack();
   // };
 
-  // Annotation handlers
-  const handleHighlight = useCallback((range, text, partId) => {
-    if (!selectableContentRef.current) return;
+  // Annotation handlers - now support sectionType and testType
+  const handleHighlight = useCallback((range, text, partId, sectionType = 'passage', testType = 'listening') => {
+    // Find the appropriate container based on section type
+    let container = null;
+    if (sectionType === 'passage') {
+      container = selectableContentRef.current;
+    } else {
+      // For questions section, find the container from the range
+      container = range.commonAncestorContainer;
+      // Walk up to find a suitable container
+      let element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
+      while (element && element !== universalContentRef.current) {
+        if (element.hasAttribute('data-selectable') || element.hasAttribute('data-section')) {
+          container = element;
+          break;
+        }
+        element = element.parentElement;
+      }
+    }
     
-    const container = selectableContentRef.current;
+    if (!container) return;
+    
     const offsets = getTextOffsets(container, range);
     
     // Apply highlight to DOM
@@ -596,8 +675,10 @@ const ListeningPracticePageContent = () => {
       text,
       startOffset: offsets.startOffset,
       endOffset: offsets.endOffset,
-      containerId: `part-${partId}`,
+      containerId: `${sectionType}-part-${partId}`,
       partId,
+      sectionType,
+      testType,
       range: range.cloneRange(),
     });
     
@@ -608,10 +689,27 @@ const ListeningPracticePageContent = () => {
     window.getSelection().removeAllRanges();
   }, [addHighlight]);
 
-  const handleNote = useCallback((range, text, partId) => {
-    if (!selectableContentRef.current) return;
+  const handleNote = useCallback((range, text, partId, sectionType = 'passage', testType = 'listening') => {
+    // Find the appropriate container based on section type
+    let container = null;
+    if (sectionType === 'passage') {
+      container = selectableContentRef.current;
+    } else {
+      // For questions section, find the container from the range
+      container = range.commonAncestorContainer;
+      // Walk up to find a suitable container
+      let element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
+      while (element && element !== universalContentRef.current) {
+        if (element.hasAttribute('data-selectable') || element.hasAttribute('data-section')) {
+          container = element;
+          break;
+        }
+        element = element.parentElement;
+      }
+    }
     
-    const container = selectableContentRef.current;
+    if (!container) return;
+    
     const offsets = getTextOffsets(container, range);
     
     // Apply note to DOM
@@ -620,8 +718,10 @@ const ListeningPracticePageContent = () => {
       note: '',
       startOffset: offsets.startOffset,
       endOffset: offsets.endOffset,
-      containerId: `part-${partId}`,
+      containerId: `${sectionType}-part-${partId}`,
       partId,
+      sectionType,
+      testType,
       range: range.cloneRange(),
     });
     
@@ -647,10 +747,11 @@ const ListeningPracticePageContent = () => {
     >
       {/* Text Selection Tooltip - Rendered at top level */}
       <TextSelectionTooltip
-        containerRef={selectableContentRef}
+        universalContentRef={universalContentRef}
         partId={currentPart}
         onHighlight={handleHighlight}
         onNote={handleNote}
+        testType="listening"
       />
       
       {/* Initial Modal - only show on first visit, not in review/retake mode */}
@@ -694,18 +795,22 @@ const ListeningPracticePageContent = () => {
         onRetake={handleRetakeTest}
       />
 
-      {/* Main Content */}
+      {/* Main Content - Universal Container for all selectable content */}
       <div 
         className="flex flex-1 overflow-hidden p-3 transition-all duration-300" 
         ref={containerRef}
         style={{
-          marginRight: isSidebarOpen ? '400px' : '0',
+          maxWidth:'100%',
         }}
       >
+        <div ref={universalContentRef} className="flex flex-1 overflow-hidden w-full">
         {/* Left Panel - Transcript (only in review mode) */}
         {status === 'reviewing' && currentPartData ? (
           <div
             className="border rounded-2xl overflow-y-auto"
+            data-part-id={currentPart}
+            data-section="passage"
+            data-section-type="passage"
             style={{ 
               width: `${leftWidth}%`,
               backgroundColor: themeColors.background,
@@ -782,6 +887,9 @@ const ListeningPracticePageContent = () => {
           <div
             ref={questionsContainerRef}
             className="space-y-8 overflow-y-auto border rounded-2xl"
+            data-part-id={currentPart}
+            data-section="questions"
+            data-section-type="questions"
             style={{ 
               width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%',
               backgroundColor: themeColors.background,
@@ -816,6 +924,9 @@ const ListeningPracticePageContent = () => {
                     <div className="space-y-3">
                       <h3 
                         className="text-lg font-semibold"
+                        data-selectable="true"
+                        data-part-id={currentPart}
+                        data-section-type="questions"
                         style={{ color: themeColors.text }}
                       >
                         Questions {questionRange}
@@ -823,6 +934,9 @@ const ListeningPracticePageContent = () => {
                       {questionGroup.instruction && (
                         <p 
                           className="text-sm leading-relaxed"
+                          data-selectable="true"
+                          data-part-id={currentPart}
+                          data-section-type="questions"
                           style={{ color: themeColors.text }}
                         >
                           {questionGroup.instruction}
@@ -915,6 +1029,9 @@ const ListeningPracticePageContent = () => {
 
                               <p 
                                 className="font-medium mb-3 w-11/12"
+                                data-selectable="true"
+                                data-part-id={currentPart}
+                                data-section-type="questions"
                                 style={{ color: themeColors.text }}
                               >
                                 {questionNumber}. {questionText}
@@ -974,6 +1091,7 @@ const ListeningPracticePageContent = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Footer */}

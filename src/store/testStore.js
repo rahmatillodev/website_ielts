@@ -40,17 +40,54 @@ export const useTestStore = create((set, get) => ({
     }
 
     set({ loading: true, error: null });
+
+    // Timeout mechanism: 30 seconds max
+    const timeoutMs = 30000;
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs);
+    });
+
     try {
-      const { data, error } = await supabase
+      const testsQueryPromise = supabase
         .from("test")
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      const { data, error } = await Promise.race([
+        testsQueryPromise,
+        timeoutPromise
+      ]);
+
+      // Explicit error check immediately after query
+      if (error) {
+        console.error('[fetchTests] Supabase Error (test table):', {
+          table: 'test',
+          filter: 'is_active = true',
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // Check for RLS policy denial
+        if (error.code === 'PGRST116' || error.message?.includes('permission') || error.message?.includes('policy')) {
+          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'test' table. Error: ${error.message}`;
+          console.error('[fetchTests] RLS Policy Issue:', rlsError);
+          throw new Error(rlsError);
+        }
+        
+        throw error;
+      }
 
       // Ensure data is an array before filtering
       const tests = Array.isArray(data) ? data : [];
+      
+      // Handle case where query returns null/undefined (no data found)
+      if (!tests || tests.length === 0) {
+        console.warn('[fetchTests] No active tests found. This may be normal if no tests are marked as active, or check RLS policies.');
+      }
+
       const filtered_data_reading = tests.filter(
         (test) => test.type === "reading"
       );
@@ -61,9 +98,14 @@ export const useTestStore = create((set, get) => ({
       set({
         test_reading: filtered_data_reading,
         test_listening: filtered_data_listening,
-        loading: false,
         loaded: true,
         error: null, // Clear any previous errors
+      });
+
+      console.log('[fetchTests] Success:', {
+        totalTests: tests.length,
+        readingTests: filtered_data_reading.length,
+        listeningTests: filtered_data_listening.length
       });
 
       return {
@@ -71,53 +113,150 @@ export const useTestStore = create((set, get) => ({
         test_listening: filtered_data_listening,
       };
     } catch (error) {
+      // Handle AbortError (cancelled requests)
       if (error.name === "AbortError") {
+        console.warn('[fetchTests] Request aborted');
         set({ loading: false });
-        return;
+        return {
+          test_reading: currentState.test_reading || [],
+          test_listening: currentState.test_listening || [],
+          loaded: currentState.loaded,
+        };
       }
 
-      console.error("Error fetching tests:", error);
+      // Handle timeout errors
+      if (error.message?.includes('timeout')) {
+        console.error('[fetchTests] Network Timeout:', {
+          error: error.message,
+          suggestion: 'Check network connection or increase timeout duration'
+        });
+      } else {
+        // Log comprehensive error details
+        console.error('[fetchTests] Error fetching tests:', {
+          errorName: error.name,
+          errorMessage: error.message,
+          errorStack: error.stack,
+          errorCode: error.code,
+          suggestion: 'Check RLS policies for "test" table and ensure Supabase connection is active'
+        });
+      }
+
       // Reset loaded flag on error to allow retry
       set({ 
-        error: error.message, 
-        loading: false,
+        error: error.message || 'Failed to fetch tests. Please check your connection and try again.',
         loaded: false, // Reset loaded flag to allow refetch
       });
+      
       throw error;
+    } finally {
+      // CRUCIAL: Always set loading to false to prevent infinite loading states
+      set({ loading: false });
     }
   },
 
   fetchTestById: async (testId) => {
+    // GUARD CLAUSE: Validate testId parameter
+    if (!testId || typeof testId !== 'string' && typeof testId !== 'number') {
+      const errorMessage = `Invalid testId: ${testId}. Expected a valid string or number.`;
+      console.error('[fetchTestById] Validation Error:', errorMessage);
+      set({ 
+        error: errorMessage, 
+        loadingTest: false, 
+        currentTest: null 
+      });
+      throw new Error(errorMessage);
+    }
+
     // Clear previous test data when fetching a new one
     // Use separate loadingTest flag to avoid interfering with fetchTests
     set({ loadingTest: true, error: null, currentTest: null });
+
+    // Timeout mechanism: 30 seconds max
+    const timeoutMs = 30000;
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs);
+    });
+
     try {
-      // Fetch test
-      const { data: testData, error: testError } = await supabase
+      // Fetch test with timeout
+      const testQueryPromise = supabase
         .from("test")
         .select("*")
         .eq("id", testId)
         .maybeSingle();
 
-      if (testError) throw testError;
+      const { data: testData, error: testError } = await Promise.race([
+        testQueryPromise,
+        timeoutPromise
+      ]);
+
+      // Explicit error check immediately after query
+      if (testError) {
+        console.error('[fetchTestById] Supabase Error (test table):', {
+          table: 'test',
+          testId,
+          error: testError.message,
+          code: testError.code,
+          details: testError.details,
+          hint: testError.hint
+        });
+        
+        // Check for RLS policy denial
+        if (testError.code === 'PGRST116' || testError.message?.includes('permission') || testError.message?.includes('policy')) {
+          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'test' table. Error: ${testError.message}`;
+          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
+          throw new Error(rlsError);
+        }
+        
+        throw testError;
+      }
 
       // Handle case where test doesn't exist
       if (!testData) {
-        const errorMessage = `Test with ID ${testId} not found`;
-        set({ error: errorMessage, loadingTest: false });
+        const errorMessage = `Test with ID ${testId} not found in 'test' table. Verify the ID exists and RLS policies allow access.`;
+        console.error('[fetchTestById] No Data Found:', {
+          table: 'test',
+          testId,
+          message: errorMessage
+        });
+        set({ error: errorMessage, loadingTest: false, currentTest: null });
         throw new Error(errorMessage);
       }
 
       // Fetch parts for this test - sorted by part_number ascending
-      const { data: partsData, error: partsError } = await supabase
+      const partsQueryPromise = supabase
         .from("part")
         .select("*")
         .eq("test_id", testId)
         .order("part_number", { ascending: true });
 
-      if (partsError) throw partsError;
+      const { data: partsData, error: partsError } = await Promise.race([
+        partsQueryPromise,
+        timeoutPromise
+      ]);
 
+      if (partsError) {
+        console.error('[fetchTestById] Supabase Error (part table):', {
+          table: 'part',
+          testId,
+          error: partsError.message,
+          code: partsError.code,
+          details: partsError.details,
+          hint: partsError.hint
+        });
+        
+        if (partsError.code === 'PGRST116' || partsError.message?.includes('permission') || partsError.message?.includes('policy')) {
+          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'part' table. Error: ${partsError.message}`;
+          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
+          throw new Error(rlsError);
+        }
+        
+        throw partsError;
+      }
+
+      // Handle case where no parts exist (valid scenario)
       if (!partsData || partsData.length === 0) {
+        console.warn('[fetchTestById] No parts found for test:', testId);
         const completeTest = {
           ...testData,
           parts: [],
@@ -125,42 +264,126 @@ export const useTestStore = create((set, get) => ({
         set({
           currentTest: completeTest,
           loadingTest: false,
+          error: null
         });
         return completeTest;
       }
 
       const partIds = partsData.map((p) => p.id);
 
+      // Guard clause: Ensure we have valid part IDs
+      if (!partIds || partIds.length === 0) {
+        console.warn('[fetchTestById] No valid part IDs extracted');
+        const completeTest = {
+          ...testData,
+          parts: [],
+        };
+        set({
+          currentTest: completeTest,
+          loadingTest: false,
+          error: null
+        });
+        return completeTest;
+      }
+
       // Fetch question groups (from 'question' table) for all parts
       // These represent question groups with type, instruction, question_range
-      const { data: questionGroupsData, error: questionGroupsError } =
-        await supabase.from("question").select("*").in("part_id", partIds);
+      const questionGroupsQueryPromise = supabase
+        .from("question")
+        .select("*")
+        .in("part_id", partIds);
 
-      if (questionGroupsError) throw questionGroupsError;
+      const { data: questionGroupsData, error: questionGroupsError } = await Promise.race([
+        questionGroupsQueryPromise,
+        timeoutPromise
+      ]);
+
+      if (questionGroupsError) {
+        console.error('[fetchTestById] Supabase Error (question table):', {
+          table: 'question',
+          partIds,
+          error: questionGroupsError.message,
+          code: questionGroupsError.code,
+          details: questionGroupsError.details,
+          hint: questionGroupsError.hint
+        });
+        
+        if (questionGroupsError.code === 'PGRST116' || questionGroupsError.message?.includes('permission') || questionGroupsError.message?.includes('policy')) {
+          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'question' table. Error: ${questionGroupsError.message}`;
+          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
+          throw new Error(rlsError);
+        }
+        
+        throw questionGroupsError;
+      }
 
       // Fetch individual questions (from 'questions' table) for all question groups
       // These are the actual questions with question_number, question_text, correct_answer
-      const questionGroupIds = questionGroupsData.map((qg) => qg.id);
+      const questionGroupIds = (questionGroupsData || []).map((qg) => qg.id).filter(Boolean);
 
       let individualQuestionsData = [];
       if (questionGroupIds.length > 0) {
-        const { data: questionsData, error: questionsError } = await supabase
+        const questionsQueryPromise = supabase
           .from("questions")
           .select("*")
           .in("question_id", questionGroupIds)
           .order("question_number", { ascending: true });
 
-        if (questionsError) throw questionsError;
+        const { data: questionsData, error: questionsError } = await Promise.race([
+          questionsQueryPromise,
+          timeoutPromise
+        ]);
+
+        if (questionsError) {
+          console.error('[fetchTestById] Supabase Error (questions table):', {
+            table: 'questions',
+            questionGroupIds,
+            error: questionsError.message,
+            code: questionsError.code,
+            details: questionsError.details,
+            hint: questionsError.hint
+          });
+          
+          if (questionsError.code === 'PGRST116' || questionsError.message?.includes('permission') || questionsError.message?.includes('policy')) {
+            const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'questions' table. Error: ${questionsError.message}`;
+            console.error('[fetchTestById] RLS Policy Issue:', rlsError);
+            throw new Error(rlsError);
+          }
+          
+          throw questionsError;
+        }
         individualQuestionsData = questionsData || [];
       }
 
       // Fetch options from the options table for this test
-      const { data: optionsData, error: optionsError } = await supabase
+      const optionsQueryPromise = supabase
         .from("options")
         .select("*")
         .eq("test_id", testId);
 
-      if (optionsError) throw optionsError;
+      const { data: optionsData, error: optionsError } = await Promise.race([
+        optionsQueryPromise,
+        timeoutPromise
+      ]);
+
+      if (optionsError) {
+        console.error('[fetchTestById] Supabase Error (options table):', {
+          table: 'options',
+          testId,
+          error: optionsError.message,
+          code: optionsError.code,
+          details: optionsError.details,
+          hint: optionsError.hint
+        });
+        
+        if (optionsError.code === 'PGRST116' || optionsError.message?.includes('permission') || optionsError.message?.includes('policy')) {
+          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'options' table. Error: ${optionsError.message}`;
+          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
+          throw new Error(rlsError);
+        }
+        
+        throw optionsError;
+      }
       const allOptions = optionsData || [];
 
       // Helper function to generate letter from index (A, B, C, D, etc.)
@@ -454,18 +677,53 @@ export const useTestStore = create((set, get) => ({
         currentTest: completeTest,
         loading: false,
         loadingTest: false,
+        error: null, // Clear any previous errors on success
+      });
+
+      console.log('[fetchTestById] Success:', {
+        testId,
+        partsCount: partsWithQuestionGroups.length,
+        questionGroupsCount: partsWithQuestionGroups.reduce((sum, p) => sum + (p.questionGroups?.length || 0), 0)
       });
 
       return completeTest;
     } catch (error) {
+      // Handle AbortError (cancelled requests)
       if (error.name === "AbortError") {
+        console.warn('[fetchTestById] Request aborted:', testId);
         set({ loadingTest: false, loading: false });
-        return;
+        return null;
       }
 
-      console.error("Error fetching test by ID:", error);
-      set({ error: error.message, loadingTest: false, loading: false });
+      // Handle timeout errors
+      if (error.message?.includes('timeout')) {
+        console.error('[fetchTestById] Network Timeout:', {
+          testId,
+          error: error.message,
+          suggestion: 'Check network connection or increase timeout duration'
+        });
+      } else {
+        // Log comprehensive error details
+        console.error('[fetchTestById] Error fetching test by ID:', {
+          testId,
+          errorName: error.name,
+          errorMessage: error.message,
+          errorStack: error.stack,
+          errorCode: error.code,
+          suggestion: 'Verify test ID exists, check RLS policies, and ensure Supabase connection is active'
+        });
+      }
+
+      // Set error state - loading will be set to false in finally block
+      set({ 
+        error: error.message || 'Failed to fetch test. Please check your connection and try again.',
+        currentTest: null
+      });
+      
       throw error;
+    } finally {
+      // CRUCIAL: Always set loading to false to prevent infinite loading states
+      set({ loadingTest: false, loading: false });
     }
   },
 

@@ -26,6 +26,8 @@ export const AnnotationProvider = ({ children }) => {
       endOffset: highlightData.endOffset,
       containerId: highlightData.containerId,
       partId: highlightData.partId,
+      sectionType: highlightData.sectionType || 'passage', // 'passage' or 'questions'
+      testType: highlightData.testType || 'reading', // 'reading' or 'listening'
       range: highlightData.range, // Store range for re-rendering
     };
     setHighlights((prev) => [...prev, newHighlight]);
@@ -49,6 +51,8 @@ export const AnnotationProvider = ({ children }) => {
       endOffset: noteData.endOffset,
       containerId: noteData.containerId,
       partId: noteData.partId,
+      sectionType: noteData.sectionType || 'passage', // 'passage' or 'questions'
+      testType: noteData.testType || 'reading', // 'reading' or 'listening'
       range: noteData.range, // Store range for re-rendering
     };
     setNotes((prev) => [...prev, newNote]);

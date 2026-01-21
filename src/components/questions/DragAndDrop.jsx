@@ -189,11 +189,15 @@ const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInte
   return (
     <div className="p-6 rounded-xl shadow-sm border border-gray-100" style={{ backgroundColor: themeColors.background }}>
       {/* Bu yerda 'prose' va list stillari qo'shildi */}
-      <div className="prose prose-slate max-w-none 
+      <div 
+        className="prose prose-slate max-w-none 
     [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:mb-4
     [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:mb-4
     [&_li]:pl-1 [&_li]:mb-1
-    text-gray-800 leading-9" style={{ color: themeColors.text }}>
+    text-gray-800 leading-9" 
+        data-selectable="true"
+        style={{ color: themeColors.text }}
+      >
         {parse(questionText, options)}
       </div>
 

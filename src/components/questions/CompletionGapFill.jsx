@@ -113,12 +113,16 @@ const CompletionGapFill = ({
 
   return (
     <div className="w-full" style={{ backgroundColor: themeColors.background }}>
-      <div className="prose prose-slate max-w-none 
+      <div 
+        className="prose prose-slate max-w-none 
         [&_h3]:text-xl [&_h3]:font-bold [&_h3]:mb-3 
         [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:mt-4 [&_h4]:mb-2
         [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4
         [&_li]:mb-2 [&_p]:mb-3 
-        text-gray-800 leading-9" style={{ color: themeColors.text }}>
+        text-gray-800 leading-9" 
+        data-selectable="true"
+        style={{ color: themeColors.text }}
+      >
         {parse(questionText, options)}
       </div>
     </div>

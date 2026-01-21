@@ -64,7 +64,7 @@ const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', re
               disabled={mode === 'review'}
               className="accent-blue-500"
             />
-            <span className="flex-1">{option}</span>
+            <span className="flex-1" data-selectable="true">{option}</span>
             {isSelected && showCorrect && (
               <span className="text-xs text-green-700 font-medium">Correct</span>
             )}

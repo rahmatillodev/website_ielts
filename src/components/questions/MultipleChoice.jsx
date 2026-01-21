@@ -54,7 +54,7 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
               <td className={`px-4 py-3 text-gray-900 relative group ${showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : ''}`}>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium">{questionNumber}.</span>
-                  <span>{questionText}</span>
+                  <span data-selectable="true">{questionText}</span>
                   {showCorrect && (
                     <span className="text-xs text-green-700 font-medium ml-2">Correct</span>
                   )}
@@ -185,7 +185,7 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
               disabled={mode === 'review'}
               className="accent-blue-500"
             />
-            <span className="flex-1">{displayText}</span>
+            <span className="flex-1" data-selectable="true">{displayText}</span>
             {isSelected && showCorrect && (
               <span className="text-xs text-green-700 font-medium">Correct</span>
             )}

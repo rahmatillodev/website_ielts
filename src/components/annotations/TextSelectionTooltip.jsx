@@ -4,7 +4,7 @@ import { FaHighlighter, FaQuoteLeft, FaTrash } from 'react-icons/fa';
 import { useAppearance } from '@/contexts/AppearanceContext';
 import { useAnnotation } from '@/contexts/AnnotationContext';
 
-const TextSelectionTooltip = ({ containerRef, partId, onHighlight, onNote }) => {
+const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHighlight, onNote, testType = 'reading' }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const [selectedText, setSelectedText] = useState('');
@@ -12,14 +12,58 @@ const TextSelectionTooltip = ({ containerRef, partId, onHighlight, onNote }) => 
   const [isExistingHighlight, setIsExistingHighlight] = useState(false);
   const [highlightId, setHighlightId] = useState(null);
   const [noteId, setNoteId] = useState(null);
+  const [currentPartId, setCurrentPartId] = useState(defaultPartId);
+  const [currentSectionType, setCurrentSectionType] = useState('passage');
   const tooltipRef = useRef(null);
   const { themeColors } = useAppearance();
   const { removeHighlight, openNoteSidebar } = useAnnotation();
 
+  // Helper function to find partId and sectionType from element
+  const findContextFromElement = (node) => {
+    if (!node) return { partId: defaultPartId, sectionType: 'passage' };
+    
+    // Convert text node to element node if needed
+    let element = node;
+    if (node.nodeType === Node.TEXT_NODE) {
+      element = node.parentElement;
+    } else if (node.nodeType !== Node.ELEMENT_NODE) {
+      // If it's not a text node or element node, try to get parent
+      element = node.parentElement || node.parentNode;
+    }
+    
+    if (!element || typeof element.closest !== 'function') {
+      return { partId: defaultPartId, sectionType: 'passage' };
+    }
+    
+    // Try to find data-part-id attribute
+    const partElement = element.closest('[data-part-id]');
+    if (partElement) {
+      const partId = parseInt(partElement.getAttribute('data-part-id')) || defaultPartId;
+      const sectionType = partElement.getAttribute('data-section-type') || 'passage';
+      return { partId, sectionType };
+    }
+    
+    // Fallback: check if it's in questions section
+    const questionsSection = element.closest('[data-section="questions"]');
+    if (questionsSection) {
+      const partId = parseInt(questionsSection.getAttribute('data-part-id')) || defaultPartId;
+      return { partId, sectionType: 'questions' };
+    }
+    
+    // Fallback: check if it's in passage section
+    const passageSection = element.closest('[data-section="passage"]');
+    if (passageSection) {
+      const partId = parseInt(passageSection.getAttribute('data-part-id')) || defaultPartId;
+      return { partId, sectionType: 'passage' };
+    }
+    
+    return { partId: defaultPartId, sectionType: 'passage' };
+  };
+
   useEffect(() => {
     const handleMouseUp = (e) => {
       const selection = window.getSelection();
-      const container = containerRef?.current;
+      const container = universalContentRef?.current;
       
       // Check if clicking on an existing highlight
       const clickedElement = e.target;
@@ -91,6 +135,11 @@ const TextSelectionTooltip = ({ containerRef, partId, onHighlight, onNote }) => 
         return;
       }
 
+      // Find context (partId and sectionType) from the selection
+      const context = findContextFromElement(range.commonAncestorContainer);
+      setCurrentPartId(context.partId);
+      setCurrentSectionType(context.sectionType);
+
       const rect = range.getBoundingClientRect();
       const tooltipHeight = 70; 
       const tooltipWidth = 160; 
@@ -140,12 +189,12 @@ const TextSelectionTooltip = ({ containerRef, partId, onHighlight, onNote }) => 
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('click', handleClickOutside, true);
     };
-  }, [containerRef, openNoteSidebar]);
+  }, [universalContentRef, openNoteSidebar, defaultPartId]);
 
   const checkIfAnnotated = (range) => {
     const container = range.commonAncestorContainer;
     let element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
-    while (element && element !== containerRef.current) {
+    while (element && element !== universalContentRef?.current) {
       if (element.tagName === 'MARK' || element.hasAttribute('data-note-id')) return true;
       element = element.parentElement;
     }
@@ -154,7 +203,7 @@ const TextSelectionTooltip = ({ containerRef, partId, onHighlight, onNote }) => 
 
   const handleAction = (callback) => {
     if (callback && selectedRange) {
-      callback(selectedRange, selectedText, partId);
+      callback(selectedRange, selectedText, currentPartId, currentSectionType, testType);
     }
     setShowTooltip(false);
     window.getSelection().removeAllRanges();
@@ -176,7 +225,7 @@ const TextSelectionTooltip = ({ containerRef, partId, onHighlight, onNote }) => 
     <>
       <style>{`
         .ielts-tooltip {
-          z-index: 99999 !important;
+          z-index: 40 !important;
           box-shadow: 0 4px 15px rgba(0,0,0,0.15);
           border: 1px solid #d1d5db;
           user-select: none;

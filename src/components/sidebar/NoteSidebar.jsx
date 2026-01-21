@@ -1,10 +1,20 @@
 import React, { useEffect, useRef } from 'react';
-import { FaTrash, FaStickyNote, FaTimes } from 'react-icons/fa';
+import { FaTrash, FaStickyNote } from 'react-icons/fa';
+import { X } from "lucide-react";
 import { useAnnotation } from '@/contexts/AnnotationContext';
 import { useAppearance } from '@/contexts/AppearanceContext';
 
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+
 const NoteSidebar = () => {
-  const { notes, updateNote, deleteNote, isSidebarOpen, closeSidebar, focusedNoteId, openNoteSidebar } = useAnnotation();
+  const { notes, updateNote, deleteNote, isSidebarOpen, closeSidebar, focusedNoteId } = useAnnotation();
   const { themeColors, theme } = useAppearance();
   const noteRefs = useRef({});
 
@@ -15,11 +25,6 @@ const NoteSidebar = () => {
       noteElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [isSidebarOpen, focusedNoteId]);
-
-  // Only show sidebar if it's open
-  if (!isSidebarOpen) {
-    return null;
-  }
 
   const handleNoteChange = (noteId, newNoteText) => {
     updateNote(noteId, { note: newNoteText });
@@ -40,137 +45,147 @@ const NoteSidebar = () => {
   };
 
   return (
-    <div
-      className="fixed right-0 top-0 bottom-0 h-full z-40 overflow-y-auto"
-      style={{
-        width: '400px',
-        backgroundColor: themeColors.background,
-        borderLeft: `1px solid ${themeColors.border}`,
-        boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)',
-        animation: 'slideInRight 0.3s ease-out',
-      }}
-    >
-      <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: themeColors.border }}>
-        <div className="flex items-center gap-2">
-          <FaStickyNote style={{ color: themeColors.text }} />
-          <h2
-            className="text-lg font-semibold"
-            style={{ color: themeColors.text }}
-          >
-            Notes ({notes.length})
-          </h2>
-        </div>
-        <button
-          onClick={closeSidebar}
-          className="p-1 rounded transition-colors"
-          style={{ color: themeColors.text }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-          title="Close sidebar"
-        >
-          <FaTimes className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="p-4 space-y-4">
-        {notes.length === 0 ? (
-          <div 
-            className="text-center py-8"
-            style={{ color: themeColors.text, opacity: 0.6 }}
-          >
-            <FaStickyNote className="w-12 h-12 mx-auto mb-3" style={{ opacity: 0.3 }} />
-            <p className="text-sm">No notes yet. Select text and click "Note" to create one.</p>
+    <Sheet open={isSidebarOpen} onOpenChange={open => !open && closeSidebar()}>
+      <SheetContent
+        side="right"
+        className="w-[400px] px-0 pt-0 h-full"
+        style={{
+          backgroundColor: themeColors.background,
+          borderLeft: `1px solid ${themeColors.border}`,
+          boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)'
+        }}
+      >
+        {/* Header */}
+        <SheetHeader className="sticky top-0 z-10 bg-opacity-95 px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: themeColors.border, background: themeColors.background }}>
+          <div className="flex items-center gap-2">
+            <FaStickyNote style={{ color: themeColors.text }} />
+            <SheetTitle asChild>
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: themeColors.text }}
+              >
+                Notes ({notes.length})
+              </h2>
+            </SheetTitle>
           </div>
-        ) : (
-          notes.map((note) => (
-          <div
-            key={note.id}
-            ref={(el) => {
-              if (el) noteRefs.current[note.id] = el;
-            }}
-            className="p-4 rounded-lg border"
-            style={{
-              backgroundColor: theme === 'light' ? '#f9fafb' : 'rgba(255, 255, 255, 0.05)',
-              borderColor: focusedNoteId === note.id ? '#3b82f6' : themeColors.border,
-              borderWidth: focusedNoteId === note.id ? '2px' : '1px',
-              transition: 'border-color 0.3s ease-in-out, border-width 0.3s ease-in-out',
-            }}
-          >
-            {/* Quote section */}
-            <div className="mb-3">
+          <SheetClose asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded transition-colors absolute top-4 right-4"
+              style={{ color: themeColors.text, background: "transparent" }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = theme === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.1)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              title="Close sidebar"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </SheetClose>
+        </SheetHeader>
+
+        <div className="p-6 pt-2 space-y-4 h-full overflow-y-auto">
+          {notes.length === 0 ? (
+            <div 
+              className="text-center py-8"
+              style={{ color: themeColors.text, opacity: 0.6 }}
+            >
+              <FaStickyNote className="w-12 h-12 mx-auto mb-3" style={{ opacity: 0.3 }} />
+              <p className="text-sm">No notes yet. Select text and click &quot;Note&quot; to create one.</p>
+            </div>
+          ) : (
+            notes.map((note) => (
               <div
-                className="text-sm italic p-2 rounded border-l-4"
+                key={note.id}
+                ref={(el) => {
+                  if (el) noteRefs.current[note.id] = el;
+                }}
+                className={
+                  "p-4 rounded-lg border shadow-sm transition-all duration-200" +
+                  (focusedNoteId === note.id
+                    ? " border-blue-500 ring-2 ring-blue-100"
+                    : "")
+                }
                 style={{
-                  color: themeColors.text,
-                  opacity: 0.8,
-                  borderLeftColor: '#3b82f6',
-                  backgroundColor: theme === 'light' ? '#eff6ff' : 'rgba(59, 130, 246, 0.1)',
+                  backgroundColor: theme === 'light'
+                    ? '#f9fafb'
+                    : 'rgba(255, 255, 255, 0.05)',
+                  borderColor: focusedNoteId === note.id
+                    ? '#3b82f6'
+                    : themeColors.border,
+                  borderWidth: focusedNoteId === note.id ? '2px' : '1px'
                 }}
               >
-                "{note.text}"
+                {/* Quote section */}
+                <div className="mb-3">
+                  <div
+                    className="text-sm italic p-2 rounded border-l-4"
+                    style={{
+                      color: themeColors.text,
+                      opacity: 0.8,
+                      borderLeftColor: '#3b82f6',
+                      backgroundColor: theme === 'light'
+                        ? '#eff6ff'
+                        : 'rgba(59, 130, 246, 0.1)'
+                    }}
+                  >
+                    &quot;{note.text}&quot;
+                  </div>
+                </div>
+
+                {/* Textarea for note */}
+                <textarea
+                  value={note.note || ''}
+                  onChange={(e) => handleNoteChange(note.id, e.target.value)}
+                  placeholder="Add your note here..."
+                  className="w-full p-2 rounded text-sm resize-none border transition-all focus:ring-1 focus:ring-blue-200"
+                  rows={4}
+                  style={{
+                    backgroundColor: themeColors.background,
+                    color: themeColors.text,
+                    border: `1px solid ${themeColors.border}`,
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = themeColors.border;
+                  }}
+                />
+
+                {/* Delete button */}
+                <div className="mt-2 flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="flex items-center gap-2 text-red-600 font-medium px-3 py-1.5 rounded hover:bg-red-50"
+                    style={{
+                      backgroundColor: 'transparent'
+                    }}
+                    onClick={() => handleDeleteNote(note.id)}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = theme === 'light'
+                        ? '#fee2e2'
+                        : 'rgba(239, 68, 68, 0.1)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <FaTrash className="w-4 h-4" />
+                    Delete
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            {/* Textarea for note */}
-            <textarea
-              value={note.note || ''}
-              onChange={(e) => handleNoteChange(note.id, e.target.value)}
-              placeholder="Add your note here..."
-              className="w-full p-2 rounded text-sm resize-none"
-              rows={4}
-              style={{
-                backgroundColor: themeColors.background,
-                color: themeColors.text,
-                border: `1px solid ${themeColors.border}`,
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#3b82f6';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = themeColors.border;
-              }}
-            />
-
-            {/* Delete button */}
-            <div className="mt-2 flex justify-end">
-              <button
-                onClick={() => handleDeleteNote(note.id)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors"
-                style={{
-                  color: '#ef4444',
-                  backgroundColor: 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme === 'light' ? '#fee2e2' : 'rgba(239, 68, 68, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-              >
-                <FaTrash className="w-4 h-4" />
-                Delete
-              </button>
-            </div>
-          </div>
-          ))
-        )}
-      </div>
-
-      <style>{`
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-          }
-          to {
-            transform: translateX(0);
-          }
-        }
-      `}</style>
-    </div>
+            ))
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 

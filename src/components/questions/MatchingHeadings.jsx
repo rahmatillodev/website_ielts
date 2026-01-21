@@ -23,7 +23,7 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
         {/* Left: Question Text */}
         <div className={`p-4 relative ${showWrong ? 'bg-red-50 border-red-500' : showCorrect ? 'bg-green-50 border-green-500' : 'bg-white'} ${showWrong || showCorrect ? 'border-2' : ''}`}>
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-gray-900 font-medium">
+            <p className="text-gray-900 font-medium" data-selectable="true">
               {questionText}
             </p>
             {showCorrect && (

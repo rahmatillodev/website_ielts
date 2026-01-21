@@ -25,6 +25,9 @@ const ReadingPracticePageContent = () => {
   const [searchParams] = useSearchParams();
   const { currentTest, fetchTestById, loadingTest: LoadingTest, error } = useTestStore();
   
+  
+  
+  
 
 
 
@@ -60,46 +63,75 @@ const ReadingPracticePageContent = () => {
   // Annotation system
   const { addHighlight, addNote, highlights, notes } = useAnnotation();
   const selectableContentRef = useRef(null);
+  const universalContentRef = useRef(null); // Universal container for all selectable content
 
   useEffect(() => {
-    if (id) {
-      fetchTestById(id);
-      
-      // Load saved data from localStorage
-      const savedData = loadReadingPracticeData(id);
-      if (savedData) {
-        if (savedData.answers && Object.keys(savedData.answers).length > 0) {
-          setAnswers(savedData.answers);
-          setHasInteracted(true); // User has interacted if there are saved answers
-        }
-        if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
-          setBookmarks(new Set(savedData.bookmarks));
-        }
-        if (savedData.startTime) {
-          const savedStartTime = savedData.startTime;
-          setStartTime(savedStartTime);
-          setIsStarted(true);
-          
-          // Calculate elapsed time since start
-          const elapsedSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
-          
-          // Use saved timeRemaining if available, otherwise calculate from test duration
-          let initialTime = savedData.timeRemaining;
-          if (initialTime === undefined || initialTime === null) {
-            // Will be set when currentTest loads
-            initialTime = 60 * 60; // Fallback to 1 hour
+    // GUARD CLAUSE: Validate id parameter
+    if (!id || (typeof id !== 'string' && typeof id !== 'number')) {
+      console.error('[ReadingPracticePage] Invalid test ID:', id);
+      return;
+    }
+
+    // Component lifecycle management: Track if component is mounted
+    let isMounted = true;
+
+    const loadTestData = async () => {
+      try {
+        // Fetch test data
+        await fetchTestById(id);
+        
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+        
+        // Load saved data from localStorage
+        const savedData = loadReadingPracticeData(id);
+        if (savedData && isMounted) {
+          if (savedData.answers && Object.keys(savedData.answers).length > 0) {
+            setAnswers(savedData.answers);
+            setHasInteracted(true); // User has interacted if there are saved answers
           }
-          const remainingTime = Math.max(0, initialTime - elapsedSeconds);
-          setTimeRemaining(remainingTime);
-        } else if (savedData.timeRemaining !== undefined) {
-          // Fallback: use saved timeRemaining if startTime is not available
-          setTimeRemaining(savedData.timeRemaining);
+          if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
+            setBookmarks(new Set(savedData.bookmarks));
+          }
+          if (savedData.startTime) {
+            const savedStartTime = savedData.startTime;
+            setStartTime(savedStartTime);
+            setIsStarted(true);
+            
+            // Calculate elapsed time since start
+            const elapsedSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
+            
+            // Use saved timeRemaining if available, otherwise calculate from test duration
+            let initialTime = savedData.timeRemaining;
+            if (initialTime === undefined || initialTime === null) {
+              // Will be set when currentTest loads
+              initialTime = 60 * 60; // Fallback to 1 hour
+            }
+            const remainingTime = Math.max(0, initialTime - elapsedSeconds);
+            if (isMounted) {
+              setTimeRemaining(remainingTime);
+            }
+          } else if (savedData.timeRemaining !== undefined && isMounted) {
+            // Fallback: use saved timeRemaining if startTime is not available
+            setTimeRemaining(savedData.timeRemaining);
+          }
+        }
+      } catch (error) {
+        // Only log if component is still mounted
+        if (isMounted) {
+          console.error('[ReadingPracticePage] Error loading test data:', {
+            testId: id,
+            error: error.message
+          });
         }
       }
-    }
+    };
+
+    loadTestData();
     
-    // Cleanup: Clear currentTest when component unmounts
+    // Cleanup: Clear currentTest when component unmounts and prevent state updates
     return () => {
+      isMounted = false;
       const { clearCurrentTest } = useTestStore.getState();
       clearCurrentTest();
     };
@@ -107,18 +139,25 @@ const ReadingPracticePageContent = () => {
 
   // Initialize timeRemaining from test duration when currentTest loads
   useEffect(() => {
-    if (currentTest && timeRemaining === null && !isStarted && !hasInteracted) {
+    // Component lifecycle management: Track if component is mounted
+    let isMounted = true;
+
+    if (currentTest && timeRemaining === null && !isStarted && !hasInteracted && isMounted) {
       const durationInSeconds = convertDurationToSeconds(currentTest.duration);
       setTimeRemaining(durationInSeconds);
-    } else if (currentTest && timeRemaining !== null && !isStarted && !hasInteracted) {
+    } else if (currentTest && timeRemaining !== null && !isStarted && !hasInteracted && isMounted) {
       // If timeRemaining was set from localStorage but we don't have a saved startTime,
       // update it to use the test duration to ensure consistency
       const savedData = loadReadingPracticeData(id);
-      if (!savedData?.startTime) {
+      if (!savedData?.startTime && isMounted) {
         const durationInSeconds = convertDurationToSeconds(currentTest.duration);
         setTimeRemaining(durationInSeconds);
       }
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [currentTest, timeRemaining, isStarted, hasInteracted, id]);
 
   const startResize = (e) => {
@@ -331,21 +370,38 @@ const ReadingPracticePageContent = () => {
 
   // Auto-submit when timer reaches zero
   useEffect(() => {
-    if (timeRemaining === 0 && (isStarted || hasInteracted) && status === 'taking' && authUser && id && currentTest) {
+    // Component lifecycle management: Track if component is mounted
+    let isMounted = true;
+
+    if (timeRemaining === 0 && (isStarted || hasInteracted) && status === 'taking' && authUser && id && currentTest && isMounted) {
       // Auto-submit the test when timer reaches zero
       const autoSubmit = async () => {
-        const result = await handleSubmitTest();
-        if (result.success) {
-          // Navigate to result page
-          navigate(`/reading-result/${id}`);
-        } else {
-          console.error('Auto-submit failed:', result.error);
-          // Still navigate to result page even if submission failed
-          navigate(`/reading-result/${id}`);
+        try {
+          const result = await handleSubmitTest();
+          // Only navigate if component is still mounted
+          if (isMounted) {
+            if (result.success) {
+              // Navigate to result page
+              navigate(`/reading-result/${id}`);
+            } else {
+              console.error('[ReadingPracticePage] Auto-submit failed:', result.error);
+              // Still navigate to result page even if submission failed
+              navigate(`/reading-result/${id}`);
+            }
+          }
+        } catch (error) {
+          if (isMounted) {
+            console.error('[ReadingPracticePage] Auto-submit error:', error);
+            navigate(`/reading-result/${id}`);
+          }
         }
       };
       autoSubmit();
     }
+
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRemaining, status]);
 
@@ -611,20 +667,46 @@ const ReadingPracticePageContent = () => {
 
   // Check URL params for mode (review or retake) - after functions are defined
   useEffect(() => {
+    // Component lifecycle management: Track if component is mounted
+    let isMounted = true;
+
     const mode = searchParams.get('mode');
-    if (mode === 'review' && authUser && id && currentTest) {
-      handleReviewTest();
-    } else if (mode === 'retake' && authUser && id) {
-      handleRetakeTest();
+    if (isMounted) {
+      if (mode === 'review' && authUser && id && currentTest) {
+        handleReviewTest();
+      } else if (mode === 'retake' && authUser && id) {
+        handleRetakeTest();
+      }
     }
+
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, authUser, id, currentTest]);
 
-  // Annotation handlers
-  const handleHighlight = useCallback((range, text, partId) => {
-    if (!selectableContentRef.current) return;
+  // Annotation handlers - now support sectionType and testType
+  const handleHighlight = useCallback((range, text, partId, sectionType = 'passage', testType = 'reading') => {
+    // Find the appropriate container based on section type
+    let container = null;
+    if (sectionType === 'passage') {
+      container = selectableContentRef.current;
+    } else {
+      // For questions section, find the container from the range
+      container = range.commonAncestorContainer;
+      // Walk up to find a suitable container
+      let element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
+      while (element && element !== universalContentRef.current) {
+        if (element.hasAttribute('data-selectable') || element.hasAttribute('data-section')) {
+          container = element;
+          break;
+        }
+        element = element.parentElement;
+      }
+    }
     
-    const container = selectableContentRef.current;
+    if (!container) return;
+    
     const offsets = getTextOffsets(container, range);
     
     // Apply highlight to DOM
@@ -632,8 +714,10 @@ const ReadingPracticePageContent = () => {
       text,
       startOffset: offsets.startOffset,
       endOffset: offsets.endOffset,
-      containerId: `part-${partId}`,
+      containerId: `${sectionType}-part-${partId}`,
       partId,
+      sectionType,
+      testType,
       range: range.cloneRange(),
     });
     
@@ -644,10 +728,27 @@ const ReadingPracticePageContent = () => {
     window.getSelection().removeAllRanges();
   }, [addHighlight]);
 
-  const handleNote = useCallback((range, text, partId) => {
-    if (!selectableContentRef.current) return;
+  const handleNote = useCallback((range, text, partId, sectionType = 'passage', testType = 'reading') => {
+    // Find the appropriate container based on section type
+    let container = null;
+    if (sectionType === 'passage') {
+      container = selectableContentRef.current;
+    } else {
+      // For questions section, find the container from the range
+      container = range.commonAncestorContainer;
+      // Walk up to find a suitable container
+      let element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
+      while (element && element !== universalContentRef.current) {
+        if (element.hasAttribute('data-selectable') || element.hasAttribute('data-section')) {
+          container = element;
+          break;
+        }
+        element = element.parentElement;
+      }
+    }
     
-    const container = selectableContentRef.current;
+    if (!container) return;
+    
     const offsets = getTextOffsets(container, range);
     
     // Apply note to DOM
@@ -656,8 +757,10 @@ const ReadingPracticePageContent = () => {
       note: '',
       startOffset: offsets.startOffset,
       endOffset: offsets.endOffset,
-      containerId: `part-${partId}`,
+      containerId: `${sectionType}-part-${partId}`,
       partId,
+      sectionType,
+      testType,
       range: range.cloneRange(),
     });
     
@@ -683,10 +786,11 @@ const ReadingPracticePageContent = () => {
     >
       {/* Text Selection Tooltip - Rendered at top level */}
       <TextSelectionTooltip
-        containerRef={selectableContentRef}
+        universalContentRef={universalContentRef}
         partId={currentPart}
         onHighlight={handleHighlight}
         onNote={handleNote}
+        testType="reading"
       />
       
       {/* Header */}
@@ -704,8 +808,12 @@ const ReadingPracticePageContent = () => {
         onRetake={handleRetakeTest}
       />
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden p-3" ref={containerRef}>
+      {/* Main Content - Universal Container for all selectable content */}
+      <div 
+        className="flex flex-1 overflow-hidden p-3" 
+        ref={containerRef}
+      >
+        <div ref={universalContentRef} className="flex flex-1 overflow-hidden w-full">
         {/* Left Panel - Reading Passage */}
         {LoadingTest ? (
           <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700  dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%`, backgroundColor: themeColors.background, color: themeColors.text }}>
@@ -719,6 +827,9 @@ const ReadingPracticePageContent = () => {
           <div
             key={`passage-${currentPart}`}
             className="w-1/2 border rounded-2xl overflow-y-auto"
+            data-part-id={currentPart}
+            data-section="passage"
+            data-section-type="passage"
             style={{ 
               width: `${leftWidth}%`,
               backgroundColor: themeColors.background,
@@ -803,6 +914,9 @@ const ReadingPracticePageContent = () => {
           <div
             ref={questionsContainerRef}
             className="w-1/2 space-y-8 overflow-y-auto p-6 border rounded-2xl"
+            data-part-id={currentPart}
+            data-section="questions"
+            data-section-type="questions"
             style={{ 
               width: `${100 - leftWidth}%`,
               backgroundColor: themeColors.background,
@@ -829,13 +943,16 @@ const ReadingPracticePageContent = () => {
                       Questions {questionRange}
                     </h3>
                     {questionGroup.instruction && (
-                      <p 
-                        className="text-sm leading-relaxed"
-                        style={{ color: themeColors.text }}
-                      >
-                        {questionGroup.instruction}
-                      </p>
-                    )}
+                        <p 
+                          className="text-sm leading-relaxed"
+                          data-selectable="true"
+                          data-part-id={currentPart}
+                          data-section-type="questions"
+                          style={{ color: themeColors.text }}
+                        >
+                          {questionGroup.instruction}
+                        </p>
+                      )}
                   </div>
                 
                   {/* For Fill-in-the-Blanks, Drag-and-Drop, and Table: Render as a single group with group-level options */}
@@ -938,6 +1055,9 @@ const ReadingPracticePageContent = () => {
                           {/* Show question number and text */}
                           <p 
                             className="font-medium mb-3 w-11/12"
+                            data-selectable="true"
+                            data-part-id={currentPart}
+                            data-section-type="questions"
                             style={{ color: themeColors.text }}
                           >
                             {questionNumber}. {questionText}
@@ -998,6 +1118,7 @@ const ReadingPracticePageContent = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Footer */}

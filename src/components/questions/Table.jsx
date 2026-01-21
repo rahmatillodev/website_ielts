@@ -186,7 +186,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                     <div className="flex gap-2 items-center justify-between">
                       <div className="flex gap-2">
                         <span className="font-medium">{qNumber}.</span>
-                        <span>{questionText}</span>
+                        <span data-selectable="true">{questionText}</span>
                         {showCorrect && (
                           <span className="text-xs text-green-700 font-medium ml-2">Correct</span>
                         )}
