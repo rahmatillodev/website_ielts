@@ -28,7 +28,6 @@ const ListeningPracticePageContent = () => {
   const { currentTest, fetchTestById, loadingTest: loading } = useTestStore();
   const { authUser } = useAuthStore();
   const { theme, themeColors, fontSizeValue } = useAppearance();
-  const { isSidebarOpen } = useAnnotation();
   // Status: 'taking', 'completed', 'reviewing'
   const [status, setStatus] = useState('taking');
   const [currentPart, setCurrentPart] = useState(1);
@@ -918,6 +917,7 @@ const ListeningPracticePageContent = () => {
                 const isFillInTheBlanks = groupType === 'fill_in_blanks';
                 const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
                 const isTable = groupType.includes('table');
+                const isMap = groupType.includes('map');
 
                 return (
                   <div key={questionGroup.id || groupIdx} className={`space-y-6 ${status === 'reviewing' ? 'w-full' : 'w-6/12'}`}>
@@ -944,7 +944,7 @@ const ListeningPracticePageContent = () => {
                       )}
                     </div>
 
-                    {(isFillInTheBlanks || isDragAndDrop || isTable) ? (
+                    {(isFillInTheBlanks || isDragAndDrop || isTable || isMap) ? (
                       <div
                         ref={(el) => {
                           // Set ref for all questions in the group for scrolling
@@ -1043,14 +1043,15 @@ const ListeningPracticePageContent = () => {
                                     ...question,
                                     type: questionGroup.type,
                                     instruction: questionGroup.instruction,
-                                    options: (groupType.includes('drag') || groupType.includes('summary') || groupType.includes('table'))
+                                    options: (groupType.includes('drag') || groupType.includes('summary') || groupType.includes('table') || groupType.includes('map'))
                                       ? (questionGroup.options || [])
                                       : (question.options || questionGroup.options || [])
                                   }}
                                   groupQuestions={
                                     (groupType.includes('drag') ||
                                       groupType.includes('summary') ||
-                                      groupType.includes('table'))
+                                      groupType.includes('table') ||
+                                      groupType.includes('map'))
                                       ? groupQuestions
                                       : undefined
                                   }

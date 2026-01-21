@@ -331,6 +331,14 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
             </button>
           )}
         </div>
+        {status === 'reviewing' && onRetake && (
+          <button
+            onClick={onRetake}
+            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium"
+          >
+            Redo Test
+          </button>
+        )}  
       </div>
 
     </footer>

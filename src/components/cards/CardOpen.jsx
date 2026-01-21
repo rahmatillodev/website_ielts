@@ -85,6 +85,7 @@ const ReadingCardOpen = ({
       ? `/listening-practice/${id}`
       : (link || `/reading-practice/${id}`);
     navigate(practiceLink);
+    console.log(practiceLink);
   };
 
   const handleRetake = () => {

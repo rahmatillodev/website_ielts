@@ -931,6 +931,7 @@ const ReadingPracticePageContent = () => {
               const isFillInTheBlanks = groupType === 'fill_in_blanks';
               const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
               const isTable = groupType.includes('table');
+              const isMap = groupType.includes('map');
               
               return (
                 <div key={questionGroup.id || groupIdx} className="space-y-6">
@@ -955,8 +956,8 @@ const ReadingPracticePageContent = () => {
                       )}
                   </div>
                 
-                  {/* For Fill-in-the-Blanks, Drag-and-Drop, and Table: Render as a single group with group-level options */}
-                  {(isFillInTheBlanks || isDragAndDrop || isTable) ? (
+                  {/* For Fill-in-the-Blanks, Drag-and-Drop, Table, and Map: Render as a single group with group-level options */}
+                  {(isFillInTheBlanks || isDragAndDrop || isTable || isMap) ? (
                     <div
                       ref={(el) => {
                         // Set ref for all questions in the group for scrolling
@@ -1069,16 +1070,17 @@ const ReadingPracticePageContent = () => {
                                 ...question,
                                 type: questionGroup.type,
                                 instruction: questionGroup.instruction,
-                                // For drag-drop, summary, and table, use group-level options; otherwise use question-specific options
-                                options: (groupType.includes('drag') || groupType.includes('summary') || groupType.includes('table'))
+                                // For drag-drop, summary, table, and map, use group-level options; otherwise use question-specific options
+                                options: (groupType.includes('drag') || groupType.includes('summary') || groupType.includes('table') || groupType.includes('map'))
                                   ? (questionGroup.options || [])
                                   : (question.options || questionGroup.options || [])
                               }}
                               groupQuestions={
-                                // Pass group questions for drag-drop, summary, and table
+                                // Pass group questions for drag-drop, summary, table, and map
                                 (groupType.includes('drag') ||
                                  groupType.includes('summary') ||
-                                 groupType.includes('table'))
+                                 groupType.includes('table') ||
+                                 groupType.includes('map'))
                                 ? groupQuestions 
                                 : undefined
                               }

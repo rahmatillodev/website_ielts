@@ -81,7 +81,7 @@ const CompletionGapFill = ({
         </button>
         {/* To'g'ri javobni ko'rsatish */}
         {showWrong && correctAnswer && showCorrectAnswers && (
-          <span className="absolute -top-3 left-0 text-[10px] text-green-600 font-bold whitespace-nowrap">
+          <span className="absolute -top-5 left-0 text-[10px] text-green-600 font-bold whitespace-nowrap">
             {correctAnswer}
           </span>
         )}

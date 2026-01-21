@@ -1,11 +1,14 @@
 import React from "react";
 import TrueFalseNotGiven from "./TrueFalseNotGiven";
+import YesNoNotGiven from "./YesNoNotGiven";
 import MultipleChoice from "./MultipleChoice";
 import FillInTheBlank from "./FillInTheBlank";
 import MatchingHeadings from "./MatchingHeadings";
 import CompletionGapFill from "./CompletionGapFill";
 import DragAndDrop from "./DragAndDrop";
 import Table from "./Table";
+
+import TypeMap from "./TypeMap";
 
 /**
  * Smart QuestionRenderer - Routes to appropriate component based on question type
@@ -88,6 +91,24 @@ const QuestionRenderer = ({
     );
   }
 
+  // Yes/No/Not Given
+  if (
+    normalizedType.includes('yes_no_not_given')
+  ) {
+    return (
+      <YesNoNotGiven
+        question={question}
+        answer={answer}
+        onAnswerChange={onAnswerChange}
+        mode={mode}
+        reviewData={reviewData}
+        showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
+      />
+    );
+  }
+
   // Multiple Choice
   if (
     normalizedType.includes('multiple') ||
@@ -117,6 +138,24 @@ const QuestionRenderer = ({
       <MatchingHeadings
         question={question}
         answer={answer}
+        onAnswerChange={onAnswerChange}
+        options={question.options || []}
+        mode={mode}
+        reviewData={reviewData}
+        showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
+      />
+    );
+  }
+
+  // Map - with image_url, instruction, and table matching interface
+  if (normalizedType.includes('map')) {
+    return (
+      <TypeMap
+        question={question}
+        groupQuestions={groupQuestions}
+        answers={answers}
         onAnswerChange={onAnswerChange}
         options={question.options || []}
         mode={mode}

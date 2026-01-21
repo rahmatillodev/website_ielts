@@ -7,7 +7,7 @@ import AppearanceSettingsModal from '@/components/modal/AppearanceSettingsModal'
 import { useAppearance } from '@/contexts/AppearanceContext'
 import { useAnnotation } from '@/contexts/AnnotationContext'
 
-const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, handleStart, onBack, showCorrectAnswers, onToggleShowCorrect, status, onRetake }) => {
+const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, handleStart, onBack, showCorrectAnswers, onToggleShowCorrect, status }) => {
   // Try to use appearance context, but don't fail if not available (for backward compatibility)
   let themeColors = { text: '#000000', background: '#ffffff', border: '#e5e7eb' };
   let theme = 'light';
@@ -155,14 +155,14 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
 
       <div className="flex items-center gap-4">
 
-        {status === 'reviewing' && onRetake && (
-          <button
-            onClick={onRetake}
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium"
-          >
-            Redo Test
-          </button>
-        )}
+          {/* {status === 'reviewing' && onRetake && (
+            <button
+              onClick={onRetake}
+              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium"
+            >
+              Redo Test
+            </button>
+          )} */}
         <div className="flex items-center gap-2">
           <button
             onClick={toggleFullscreen}
