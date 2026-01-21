@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { LuChevronsLeftRight } from "react-icons/lu";
-import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaArrowLeft } from "react-icons/fa";
 import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import PrecticeFooter from "@/components/questions/PrecticeFooter";
@@ -10,22 +9,26 @@ import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@radix-ui/react-switch";
-import { Label } from "@/components/ui/label";
+
 import QuestionHeader from "@/components/questions/QuestionHeader";
 import FinishModal from "@/components/modal/FinishModal";
 import { convertDurationToSeconds } from "@/utils/testDuration";
 import AudioPlayer from "@/components/AudioPlayer";
+import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
+import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext";
+import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip";
+import NoteSidebar from "@/components/sidebar/NoteSidebar";
+import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 
-// Audio Player Component
 
-
-const ListeningPracticePage = () => {
+const ListeningPracticePageContent = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { currentTest, fetchTestById, loading } = useTestStore();
+  const { currentTest, fetchTestById, loadingTest: loading } = useTestStore();
   const { authUser } = useAuthStore();
+  const { theme, themeColors, fontSizeValue } = useAppearance();
+  const { isSidebarOpen } = useAnnotation();
   // Status: 'taking', 'completed', 'reviewing'
   const [status, setStatus] = useState('taking');
   const [currentPart, setCurrentPart] = useState(1);
@@ -53,6 +56,10 @@ const ListeningPracticePage = () => {
   const [leftWidth, setLeftWidth] = useState(50);
   const containerRef = useRef(null);
   const isResizing = useRef(false);
+  
+  // Annotation system
+  const { addHighlight, addNote } = useAnnotation();
+  const selectableContentRef = useRef(null);
 
   // Get audio URL from first part - use this for entire session
   const audioUrl = React.useMemo(() => {
@@ -68,7 +75,7 @@ const ListeningPracticePage = () => {
   useEffect(() => {
     if (id) {
       fetchTestById(id);
-      
+
       // Load saved data from localStorage
       const savedData = loadListeningPracticeData(id);
       if (savedData) {
@@ -83,7 +90,7 @@ const ListeningPracticePage = () => {
           const savedStartTime = savedData.startTime;
           setStartTime(savedStartTime);
           setIsStarted(true);
-          
+
           const elapsedSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
           // Use saved timeRemaining if available, otherwise calculate from test duration
           let initialTime = savedData.timeRemaining;
@@ -98,6 +105,12 @@ const ListeningPracticePage = () => {
         }
       }
     }
+
+    // Cleanup: Clear currentTest when component unmounts
+    return () => {
+      const { clearCurrentTest } = useTestStore.getState();
+      clearCurrentTest();
+    };
   }, [id, fetchTestById]);
 
   // Initialize timeRemaining from test duration when currentTest loads
@@ -152,10 +165,10 @@ const ListeningPracticePage = () => {
   }, [currentTest?.parts]);
 
   const currentPartData = currentTest?.parts?.find(part => part.part_number === currentPart);
-  
+
   const questionGroups = React.useMemo(() => {
     if (!currentPartData?.questionGroups) return [];
-    
+
     return [...currentPartData.questionGroups]
       .map(questionGroup => {
         const sortedQuestions = [...(questionGroup.questions || [])].sort((a, b) => {
@@ -163,7 +176,7 @@ const ListeningPracticePage = () => {
           const bNum = b.question_number ?? Number.MAX_SAFE_INTEGER;
           return aNum - bNum;
         });
-        
+
         return {
           ...questionGroup,
           questions: sortedQuestions
@@ -172,17 +185,17 @@ const ListeningPracticePage = () => {
       .sort((a, b) => {
         const aQuestions = a.questions || [];
         const bQuestions = b.questions || [];
-        
+
         const aMin = aQuestions
           .map(q => q.question_number)
           .filter(num => num != null)
           .sort((x, y) => x - y)[0] ?? Number.MAX_SAFE_INTEGER;
-        
+
         const bMin = bQuestions
           .map(q => q.question_number)
           .filter(num => num != null)
           .sort((x, y) => x - y)[0] ?? Number.MAX_SAFE_INTEGER;
-        
+
         return aMin - bMin;
       });
   }, [currentPartData]);
@@ -190,7 +203,7 @@ const ListeningPracticePage = () => {
   const getQuestionRange = (questionGroup) => {
     const questions = questionGroup.questions || [];
     if (questions.length === 0) return '';
-    
+
     const questionsWithNumbers = questions
       .filter(q => q.question_number != null)
       .sort((a, b) => {
@@ -198,12 +211,12 @@ const ListeningPracticePage = () => {
         const bNum = b.question_number ?? 0;
         return aNum - bNum;
       });
-    
+
     if (questionsWithNumbers.length === 0) return '';
-    
+
     const first = questionsWithNumbers[0]?.question_number ?? 0;
     const last = questionsWithNumbers[questionsWithNumbers.length - 1]?.question_number ?? 0;
-    
+
     return first === last ? `${first}` : `${first}-${last}`;
   };
 
@@ -230,15 +243,17 @@ const ListeningPracticePage = () => {
   // Get all questions across all parts, sorted by question_number
   const getAllQuestions = useCallback(() => {
     if (!currentTest?.parts) return [];
-    
+
     const allQuestions = [];
+    const seenQuestionNumbers = new Set(); // Track seen question numbers to avoid duplicates
     const sortedParts = getSortedParts();
-    
+
     sortedParts.forEach(part => {
-      // Get questions from part.questions
-      if (part.questions && Array.isArray(part.questions)) {
+      // Get questions from part.questions (this is already a flattened list)
+      if (part.questions && Array.isArray(part.questions) && part.questions.length > 0) {
         part.questions.forEach(q => {
-          if (q.question_number != null) {
+          if (q.question_number != null && !seenQuestionNumbers.has(q.question_number)) {
+            seenQuestionNumbers.add(q.question_number);
             allQuestions.push({
               questionNumber: q.question_number,
               partNumber: part.part_number ?? part.id,
@@ -246,36 +261,37 @@ const ListeningPracticePage = () => {
             });
           }
         });
-      }
-      
-      // Also get questions from questionGroups
-      if (part.questionGroups && Array.isArray(part.questionGroups)) {
-        part.questionGroups.forEach(group => {
-          if (group.questions && Array.isArray(group.questions)) {
-            group.questions.forEach(q => {
-              if (q.question_number != null) {
-                allQuestions.push({
-                  questionNumber: q.question_number,
-                  partNumber: part.part_number ?? part.id,
-                  question: q
-                });
-              }
-            });
-          }
-        });
+      } else {
+        // Fallback: get questions from questionGroups if part.questions is empty
+        if (part.questionGroups && Array.isArray(part.questionGroups)) {
+          part.questionGroups.forEach(group => {
+            if (group.questions && Array.isArray(group.questions)) {
+              group.questions.forEach(q => {
+                if (q.question_number != null && !seenQuestionNumbers.has(q.question_number)) {
+                  seenQuestionNumbers.add(q.question_number);
+                  allQuestions.push({
+                    questionNumber: q.question_number,
+                    partNumber: part.part_number ?? part.id,
+                    question: q
+                  });
+                }
+              });
+            }
+          });
+        }
       }
     });
-    
+
     return allQuestions.sort((a, b) => a.questionNumber - b.questionNumber);
   }, [currentTest?.parts, getSortedParts]);
 
   const scrollToQuestion = (questionNumber) => {
     const el = questionRefs.current[questionNumber];
     if (!el || !questionsContainerRef.current) return;
-    
+
 
     const container = questionsContainerRef.current;
-    
+
     container.scrollTo({
       top: el.offsetTop - container.offsetTop - 20,
       behavior: "smooth",
@@ -329,10 +345,10 @@ const ListeningPracticePage = () => {
 
   useEffect(() => {
     if (id && hasInteracted) {
-      const elapsedTime = startTime 
+      const elapsedTime = startTime
         ? Math.floor((Date.now() - startTime) / 1000)
         : 0;
-      
+
       saveListeningPracticeData(id, {
         answers,
         timeRemaining,
@@ -348,10 +364,10 @@ const ListeningPracticePage = () => {
 
     const interval = setInterval(() => {
       if (hasInteracted) {
-        const elapsedTime = startTime 
+        const elapsedTime = startTime
           ? Math.floor((Date.now() - startTime) / 1000)
           : 0;
-        
+
         saveListeningPracticeData(id, {
           answers,
           timeRemaining,
@@ -393,11 +409,11 @@ const ListeningPracticePage = () => {
 
   const handleAnswerChange = (questionIdOrNumber, answer) => {
     if (status === 'reviewing') return;
-    
+
     if (!hasInteracted && !isStarted) {
       setHasInteracted(true);
     }
-    
+
     setAnswers((prev) => ({
       ...prev,
       [questionIdOrNumber]: answer,
@@ -426,7 +442,7 @@ const ListeningPracticePage = () => {
     setIsStarted(true);
     setHasInteracted(true);
     setStartTime(now);
-    
+
     if (id) {
       saveListeningPracticeData(id, {
         answers,
@@ -456,10 +472,10 @@ const ListeningPracticePage = () => {
       if (startTime) {
         timeTaken = Math.floor((Date.now() - startTime) / 1000);
       }
-      
+
       // Submit even if answers object is empty - submitTestAttempt handles this
       const result = await submitTestAttempt(id, answers, currentTest, timeTaken);
-      
+
       if (result.success) {
         setLatestAttemptId(result.attemptId);
         setStatus('completed');
@@ -484,7 +500,7 @@ const ListeningPracticePage = () => {
 
     try {
       const result = await fetchLatestAttempt(authUser.id, id);
-      
+
       if (result.success && result.attempt && result.answers) {
         const reviewDataObj = {};
         Object.keys(result.answers).forEach((questionId) => {
@@ -500,7 +516,8 @@ const ListeningPracticePage = () => {
         setStatus('reviewing');
         setLatestAttemptId(result.attempt.id);
         setShowCorrectAnswers(true);
-        
+        setShowInitialModal(false);
+
         const answersObj = {};
         Object.keys(reviewDataObj).forEach((questionId) => {
           answersObj[questionId] = reviewDataObj[questionId].userAnswer;
@@ -520,7 +537,7 @@ const ListeningPracticePage = () => {
 
   const handleRetakeTest = () => {
     if (!id) return;
-    
+
     setAnswers({});
     setReviewData({});
     setStatus('taking');
@@ -534,7 +551,7 @@ const ListeningPracticePage = () => {
     setShowInitialModal(true);
     setPlaybackRate(1.0);
     setVolume(1.0);
-    
+
     clearListeningPracticeData(id);
   };
 
@@ -563,14 +580,82 @@ const ListeningPracticePage = () => {
   }, [searchParams, authUser, id, currentTest]);
 
   // Update QuestionHeader to support listening navigation
-  const handleBackClick = () => {
-    handleBack();
-  };
+  // const handleBackClick = () => {
+  //   handleBack();
+  // };
+
+  // Annotation handlers
+  const handleHighlight = useCallback((range, text, partId) => {
+    if (!selectableContentRef.current) return;
+    
+    const container = selectableContentRef.current;
+    const offsets = getTextOffsets(container, range);
+    
+    // Apply highlight to DOM
+    const highlightId = addHighlight({
+      text,
+      startOffset: offsets.startOffset,
+      endOffset: offsets.endOffset,
+      containerId: `part-${partId}`,
+      partId,
+      range: range.cloneRange(),
+    });
+    
+    // Apply visual highlight
+    applyHighlight(range, highlightId);
+    
+    // Clear selection
+    window.getSelection().removeAllRanges();
+  }, [addHighlight]);
+
+  const handleNote = useCallback((range, text, partId) => {
+    if (!selectableContentRef.current) return;
+    
+    const container = selectableContentRef.current;
+    const offsets = getTextOffsets(container, range);
+    
+    // Apply note to DOM
+    const noteId = addNote({
+      text,
+      note: '',
+      startOffset: offsets.startOffset,
+      endOffset: offsets.endOffset,
+      containerId: `part-${partId}`,
+      partId,
+      range: range.cloneRange(),
+    });
+    
+    // Apply visual note
+    applyNote(range, noteId);
+    
+    // Clear selection
+    window.getSelection().removeAllRanges();
+  }, [addNote]);
+
+  // Calculate font size in rem (base 16px = 1rem)
+  const baseFontSize = fontSizeValue.base / 16; // Convert px to rem
 
   return (
-    <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark">
+    <div 
+      className="flex flex-col h-screen"
+      style={{ 
+        backgroundColor: themeColors.background,
+        color: themeColors.text,
+        fontSize: `${baseFontSize}rem`,
+        transition: 'font-size 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out'
+      }}
+    >
+      {/* Text Selection Tooltip - Rendered at top level */}
+      <TextSelectionTooltip
+        containerRef={selectableContentRef}
+        partId={currentPart}
+        onHighlight={handleHighlight}
+        onNote={handleNote}
+      />
+      
       {/* Initial Modal - only show on first visit, not in review/retake mode */}
-      <Dialog open={showInitialModal && !hasInteracted && status === 'taking'} onOpenChange={() => {}}>
+
+      <Dialog open={showInitialModal && !hasInteracted && status === 'taking'} onOpenChange={() => { }}>
         <DialogContent className="sm:max-w-[500px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Listening Test Instructions</DialogTitle>
@@ -579,7 +664,7 @@ const ListeningPracticePage = () => {
             You will be listening to an audio clip during this test. You will not be permitted to pause or rewind the audio while answering the questions. To continue, click Play.
           </p>
           <DialogFooter>
-            <Button 
+            <Button
               onClick={() => {
                 setShowInitialModal(false);
                 handleStart();
@@ -592,7 +677,9 @@ const ListeningPracticePage = () => {
         </DialogContent>
       </Dialog>
 
-     
+
+
+
       <QuestionHeader
         currentTest={currentTest}
         id={id}
@@ -608,28 +695,56 @@ const ListeningPracticePage = () => {
       />
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden p-3" ref={containerRef}>
+      <div 
+        className="flex flex-1 overflow-hidden p-3 transition-all duration-300" 
+        ref={containerRef}
+        style={{
+          marginRight: isSidebarOpen ? '400px' : '0',
+        }}
+      >
         {/* Left Panel - Transcript (only in review mode) */}
         {status === 'reviewing' && currentPartData ? (
           <div
-            className="border rounded-2xl border-gray-300 bg-white overflow-y-auto"
-            style={{ width: `${leftWidth}%` }}
+            className="border rounded-2xl overflow-y-auto"
+            style={{ 
+              width: `${leftWidth}%`,
+              backgroundColor: themeColors.background,
+              borderColor: themeColors.border,
+              transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
+            }}
           >
-            <div className="bg-gray-100 border-b border-gray-200 px-6 py-3">
-              <h2 className="text-lg font-semibold text-gray-800">
+            <div 
+              className="border-b px-6 py-3"
+              style={{ 
+                backgroundColor: theme === 'light' ? '#f3f4f6' : themeColors.background,
+                borderColor: themeColors.border
+              }}
+            >
+              <h2 
+                className="text-lg font-semibold"
+                style={{ color: themeColors.text }}
+              >
                 Part {currentPart}: Transcript
               </h2>
             </div>
             <div className="p-6">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-6">
+              <h2 
+                className="text-2xl font-semibold mb-6"
+                style={{ color: themeColors.text }}
+              >
                 {currentPartData?.title || `Part ${currentPart}`}
               </h2>
-              <div className="prose prose-sm max-w-none">
-                <div className="text-gray-900 leading-relaxed whitespace-pre-line space-y-4">
+              <div className="prose prose-sm max-w-none relative">
+                <div 
+                  ref={selectableContentRef}
+                  data-selectable="true"
+                  className="leading-relaxed whitespace-pre-line space-y-4 relative"
+                  style={{ color: themeColors.text }}
+                >
                   {currentPartData?.content ? (
-                    currentPartData.content.split('\n').map((paragraph, idx) => 
+                    currentPartData.content.split('\n').map((paragraph, idx) =>
                       paragraph.trim() ? (
-                        <p key={idx} className="mb-4">{paragraph}</p>
+                        <p key={idx} className="mb-4" data-selectable="true">{paragraph}</p>
                       ) : null
                     )
                   ) : null}
@@ -638,7 +753,13 @@ const ListeningPracticePage = () => {
             </div>
           </div>
         ) : (
-          <div className="border rounded-2xl border-gray-300 bg-gray-50"  />
+          <div 
+            className="border rounded-2xl"
+            style={{ 
+              backgroundColor: themeColors.background,
+              borderColor: themeColors.border
+            }}
+          />
         )}
 
         {/* Resizer - only show in review mode when left panel is visible */}
@@ -660,8 +781,13 @@ const ListeningPracticePage = () => {
         {questionGroups && questionGroups.length > 0 ? (
           <div
             ref={questionsContainerRef}
-            className="space-y-8 overflow-y-auto border rounded-2xl border-gray-300 bg-white dark:bg-gray-800"
-            style={{ width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%' }}
+            className="space-y-8 overflow-y-auto border rounded-2xl"
+            style={{ 
+              width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%',
+              backgroundColor: themeColors.background,
+              borderColor: themeColors.border,
+              transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
+            }}
           >
             {/* Sticky Audio Player - only in review mode */}
             {audioUrl && status === 'reviewing' && (
@@ -684,22 +810,28 @@ const ListeningPracticePage = () => {
                 const isFillInTheBlanks = groupType === 'fill_in_blanks';
                 const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
                 const isTable = groupType.includes('table');
-                
+
                 return (
                   <div key={questionGroup.id || groupIdx} className={`space-y-6 ${status === 'reviewing' ? 'w-full' : 'w-6/12'}`}>
                     <div className="space-y-3">
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 
+                        className="text-lg font-semibold"
+                        style={{ color: themeColors.text }}
+                      >
                         Questions {questionRange}
                       </h3>
                       {questionGroup.instruction && (
-                        <p className="text-sm text-gray-700 leading-relaxed">
+                        <p 
+                          className="text-sm leading-relaxed"
+                          style={{ color: themeColors.text }}
+                        >
                           {questionGroup.instruction}
                         </p>
                       )}
                     </div>
-                
+
                     {(isFillInTheBlanks || isDragAndDrop || isTable) ? (
-                      <div 
+                      <div
                         ref={(el) => {
                           // Set ref for all questions in the group for scrolling
                           if (el && groupQuestions.length > 0) {
@@ -759,9 +891,9 @@ const ListeningPracticePage = () => {
                         .map((question) => {
                           const questionNumber = question.question_number;
                           if (!questionNumber) return null;
-                        
+
                           const questionText = question.question_text || question.text || '';
-                          
+
                           return (
                             <div
                               key={question.id || questionNumber}
@@ -773,15 +905,18 @@ const ListeningPracticePage = () => {
                             >
                               {question.image_url && (
                                 <div className="mb-4">
-                                  <img 
-                                    src={question.image_url} 
+                                  <img
+                                    src={question.image_url}
                                     alt={`Question ${questionNumber} image`}
                                     className="w-full max-w-full h-auto"
                                   />
                                 </div>
                               )}
-                              
-                              <p className="font-medium text-gray-900 mb-3 w-11/12">
+
+                              <p 
+                                className="font-medium mb-3 w-11/12"
+                                style={{ color: themeColors.text }}
+                              >
                                 {questionNumber}. {questionText}
                               </p>
 
@@ -797,10 +932,10 @@ const ListeningPracticePage = () => {
                                   }}
                                   groupQuestions={
                                     (groupType.includes('drag') ||
-                                     groupType.includes('summary') ||
-                                     groupType.includes('table'))
-                                    ? groupQuestions 
-                                    : undefined
+                                      groupType.includes('summary') ||
+                                      groupType.includes('table'))
+                                      ? groupQuestions
+                                      : undefined
                                   }
                                   answer={answers[questionNumber]}
                                   answers={answers}
@@ -842,15 +977,15 @@ const ListeningPracticePage = () => {
       </div>
 
       {/* Footer */}
-      <PrecticeFooter 
-        currentTest={currentTest} 
-        currentPart={currentPart} 
-        handlePartChange={handlePartChange} 
-        getPartAnsweredCount={getPartAnsweredCount} 
-        answers={answers} 
-        scrollToQuestion={scrollToQuestion} 
-        isModalOpen={isModalOpen} 
-        setIsModalOpen={setIsModalOpen} 
+      <PrecticeFooter
+        currentTest={currentTest}
+        currentPart={currentPart}
+        handlePartChange={handlePartChange}
+        getPartAnsweredCount={getPartAnsweredCount}
+        answers={answers}
+        scrollToQuestion={scrollToQuestion}
+        isModalOpen={isModalOpen}
+        setIsModalOpen={setIsModalOpen}
         id={id}
         activeQuestion={activeQuestion}
         onFinish={handleFinish}
@@ -871,7 +1006,21 @@ const ListeningPracticePage = () => {
         testId={id}
         onSubmit={handleSubmitTest}
       />
+
+      {/* Note Sidebar */}
+      
+      <NoteSidebar />
     </div>
+  );
+};
+
+const ListeningPracticePage = () => {
+  return (
+    <AppearanceProvider>
+      <AnnotationProvider>
+        <ListeningPracticePageContent />
+      </AnnotationProvider>
+    </AppearanceProvider>
   );
 };
 

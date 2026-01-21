@@ -137,34 +137,68 @@ const ListeningResultPage = () => {
   }, [attemptData, resultData]);
 
   // Get answer display data - memoized for performance
+  // Include ALL questions from the test, not just answered ones
   const answerDisplayData = useMemo(() => {
-    if (!resultData || !resultData.answers) return [];
-    
+    if (!resultData || !currentTest) return [];
+
     const answers = resultData.answers || {};
     const reviewData = resultData.reviewData || {};
-    const answerEntries = Object.entries(answers);
     
-    return answerEntries
-      .filter(([key, value]) => value && value.toString().trim() !== '')
-      .map(([key, value]) => {
-        const review = reviewData[key] || {};
-        return {
-          questionNumber: key,
-          yourAnswer: value.toString(),
-          isCorrect: review.isCorrect || false,
-          correctAnswer: review.correctAnswer || '',
-        };
-      })
-      .sort((a, b) => {
-        // Sort by question number if numeric, otherwise by string
-        const aNum = Number(a.questionNumber);
-        const bNum = Number(b.questionNumber);
-        if (!isNaN(aNum) && !isNaN(bNum)) {
-          return aNum - bNum;
+    // Collect all questions from the test
+    const allQuestionsMap = new Map();
+    
+    if (currentTest.parts) {
+      currentTest.parts.forEach((part) => {
+        if (part.questionGroups) {
+          part.questionGroups.forEach((questionGroup) => {
+            const groupQuestions = questionGroup.questions || [];
+            groupQuestions.forEach((question) => {
+              const questionKey = question.question_number || question.id;
+              if (questionKey) {
+                allQuestionsMap.set(questionKey, {
+                  questionNumber: questionKey,
+                  question: question,
+                  questionGroup: questionGroup
+                });
+              }
+            });
+          });
         }
-        return a.questionNumber.localeCompare(b.questionNumber);
       });
-  }, [resultData]);
+    }
+
+    // Create display data for all questions
+    const displayData = Array.from(allQuestionsMap.values()).map(({ questionNumber, question, questionGroup }) => {
+      // Try to find review data with type conversion (handle string/number mismatch)
+      const review = reviewData[questionNumber] || 
+                     reviewData[String(questionNumber)] || 
+                     reviewData[Number(questionNumber)] || 
+                     {};
+      // Try to find user answer with type conversion
+      const userAnswer = answers[questionNumber] || 
+                         answers[String(questionNumber)] || 
+                         answers[Number(questionNumber)] || 
+                         '';
+      
+      return {
+        questionNumber: questionNumber,
+        yourAnswer: userAnswer ? userAnswer.toString().trim() : '',
+        isCorrect: review.isCorrect || false,
+        correctAnswer: review.correctAnswer || '',
+      };
+    });
+
+    // Sort by question number
+    return displayData.sort((a, b) => {
+      const aNum = Number(a.questionNumber);
+      const bNum = Number(b.questionNumber);
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum;
+      }
+      // Convert to string for localeCompare
+      return String(a.questionNumber).localeCompare(String(b.questionNumber));
+    });
+  }, [resultData, currentTest]);
 
   // Memoized stats calculations
   const stats = useMemo(() => {
@@ -419,20 +453,27 @@ const ListeningResultPage = () => {
                           {answerItem.questionNumber}
                         </td>
                         <td className="p-4">
-                          {answerItem.isCorrect ? (
-                            <FaCheckCircle className="text-green-500 text-xl" />
+                          {answerItem.yourAnswer ? (
+                            answerItem.isCorrect ? (
+                              <FaCheckCircle className="text-green-500 text-xl" />
+                            ) : (
+                              <FaTimesCircle className="text-red-500 text-xl" />
+                            )
                           ) : (
-                            <FaTimesCircle className="text-red-500 text-xl" />
+                            <span className="text-gray-400">—</span>
                           )}
                         </td>
                         <td className="p-4">
-                          <span className={answerItem.isCorrect ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                            {answerItem.yourAnswer || "N/A"}
+                          <span className={answerItem.yourAnswer 
+                            ? (answerItem.isCorrect ? "text-green-600 font-semibold" : "text-red-600 font-semibold")
+                            : "text-gray-400"
+                          }>
+                            {answerItem.yourAnswer || "Not answered"}
                           </span>
                         </td>
                         {showCorrectAnswers && (
                           <td className="p-4">
-                            {!answerItem.isCorrect && answerItem.correctAnswer ? (
+                            {answerItem.correctAnswer ? (
                               <span className="text-green-600 font-semibold">
                                 {answerItem.correctAnswer}
                               </span>

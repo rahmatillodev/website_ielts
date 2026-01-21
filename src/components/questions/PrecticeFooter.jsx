@@ -1,7 +1,12 @@
 import React from 'react'
 import { FaCheck, FaChevronLeft, FaChevronRight, FaBookmark } from 'react-icons/fa';
+import { useAppearance } from '@/contexts/AppearanceContext';
 
 const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set() }) => {
+  // Try to use appearance context, but don't fail if not available
+  const appearance = useAppearance();
+  const themeColors = appearance.themeColors;
+
   const currentPartData = currentTest?.parts?.find(p => p.part_number === currentPart) || currentTest?.parts?.[0];
 
   // Utility function to sort parts by part_number
@@ -16,28 +21,56 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
   // Get all questions once
   const allQuestions = getAllQuestions ? getAllQuestions() : [];
 
-  // Find current question index
-  const currentQuestionIndex = activeQuestion
-    ? allQuestions.findIndex(q => q.questionNumber === activeQuestion)
+  // Find current question index - ensure type consistency for comparison
+  const currentQuestionIndex = activeQuestion != null
+    ? allQuestions.findIndex(q => Number(q.questionNumber) === Number(activeQuestion))
     : -1;
 
   // Check if we're at the first or last question
-  const isFirstQuestion = currentQuestionIndex <= 0;
-  const isLastQuestion = currentQuestionIndex >= allQuestions.length - 1;
+  // If currentQuestionIndex is -1 (not found), we can't determine if we're at first/last
+  const isFirstQuestion = currentQuestionIndex === -1 ? false : currentQuestionIndex <= 0;
+  const isLastQuestion = currentQuestionIndex === -1 ? false : currentQuestionIndex >= allQuestions.length - 1;
+
+  // Debug logging for disabled state (can be removed in production)
+  // if (activeQuestion != null) {
+  //   console.log('Footer state:', {
+  //     activeQuestion,
+  //     currentQuestionIndex,
+  //     totalQuestions: allQuestions.length,
+  //     isFirstQuestion,
+  //     isLastQuestion,
+  //     shouldDisableNext: isLastQuestion
+  //   });
+  // }
 
   // Handle previous/next question navigation
   const handlePreviousQuestion = () => {
-    if (!getAllQuestions || !activeQuestion || allQuestions.length === 0) return;
+    if (!getAllQuestions || allQuestions.length === 0) return;
+    if (activeQuestion == null) return;
 
+    // Find current question index - ensure type consistency for comparison
+    const currentIdx = allQuestions.findIndex(q => Number(q.questionNumber) === Number(activeQuestion));
 
-    // Find current question index
-    const currentIdx = allQuestions.findIndex(q => q.questionNumber === activeQuestion);
+    if (currentIdx === -1) {
+      console.log('handlePreviousQuestion: Could not find current question in allQuestions array');
+      return;
+    }
 
     if (currentIdx > 0) {
       const prevQuestion = allQuestions[currentIdx - 1];
 
+      // Safety check: ensure prevQuestion exists and has required properties
+      if (!prevQuestion || prevQuestion.questionNumber == null) {
+        console.log('Previous question missing or invalid:', prevQuestion);
+        return;
+      }
+
+      // Convert both to numbers for consistent comparison
+      const prevPartNumber = Number(prevQuestion.partNumber);
+      const currentPartNumber = Number(currentPart);
+
       // Switch to the part containing the previous question if needed
-      if (prevQuestion.partNumber !== currentPart) {
+      if (prevPartNumber !== currentPartNumber) {
         handlePartChange(prevQuestion.partNumber);
         // Use setTimeout to ensure part change completes before scrolling
         setTimeout(() => {
@@ -50,20 +83,30 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
   };
 
   const handleNextQuestion = () => {
-    if (!getAllQuestions || !activeQuestion || allQuestions.length === 0) return;
-  
+    if (!getAllQuestions || allQuestions.length === 0) return;
+    if (activeQuestion == null) return;
 
-    // Find current question index
-    const currentIdx = allQuestions.findIndex(q => q.questionNumber === activeQuestion);
-    
+
+    // Find current question index - ensure type consistency for comparison
+    const currentIdx = allQuestions.findIndex(q => Number(q.questionNumber) === Number(activeQuestion));
+
+    if (currentIdx === -1) return;
+
+
     if (currentIdx < allQuestions.length - 1 && currentIdx >= 0) {
       const nextQuestion = allQuestions[currentIdx + 1];
-      console.log(nextQuestion);
-      
-      
+
+      // Safety check: ensure nextQuestion exists and has required properties
+      if (!nextQuestion || nextQuestion.questionNumber == null) {
+        return;
+      }
+
+      // Convert both to numbers for consistent comparison
+      const nextPartNumber = Number(nextQuestion.partNumber);
+      const currentPartNumber = Number(currentPart);
+
       // Switch to the part containing the next question if needed
-      if (nextQuestion.partNumber !== currentPart) {
-        
+      if (nextPartNumber !== currentPartNumber) {
         handlePartChange(nextQuestion.partNumber);
         // Use setTimeout to ensure part change completes before scrolling
         setTimeout(() => {
@@ -83,9 +126,15 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
   // };
 
   return (
-    <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 h-20 z-50 ">
+    <footer 
+      className="border-t px-6 h-20 z-50"
+      style={{ 
+        backgroundColor: themeColors.background,
+        borderColor: themeColors.border
+      }}
+    >
       <div className="flex items-center justify-between h-full ">
-       
+
 
         {/* Center: All Parts with Progress */}
         <div className="flex-1 flex items-center justify-between">
@@ -98,11 +147,20 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
               const isActive = currentPart === partNumber;
 
               return (
-                <div key={part.id} className={`flex flex-col items-center w-full h-full ${isActive ? 'bg-gray-100' : ''}`}>
+                <div 
+                  key={part.id} 
+                  className="flex flex-col items-center w-full h-full"
+                  style={isActive ? { 
+                    backgroundColor: themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)' 
+                  } : {}}
+                >
                   {isActive ? (
                     // Active part: Show Part label and question numbers
                     <div>
-                      <div className="font-semibold text-md text-gray-900 dark:text-gray-100 text-center ">
+                      <div 
+                        className="font-semibold text-md text-center"
+                        style={{ color: themeColors.text }}
+                      >
                         Part {partNumber}
                       </div>
                       {partQuestions.length > 0 && (
@@ -122,13 +180,17 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                 const answerKey = questionNumber || q.id;
                                 const answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
 
+
+                                // Determine line color: only answered questions are green, default is gray
+                                let lineColor = "bg-gray-300 dark:bg-gray-600";
+                                if (answered) {
+                                  lineColor = "bg-green-500";
+                                }
+
                                 return (
                                   <div
                                     key={`line-${questionNumber}`}
-                                    className={`h-0.5 w-8 ${answered
-                                        ? "bg-green-500"
-                                        : "bg-gray-300 dark:bg-gray-600"
-                                      }`}
+                                    className={`h-0.5 w-8 ${lineColor}`}
                                   />
                                 );
                               })}
@@ -147,8 +209,15 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                 if (!questionNumber) return null;
                                 const answerKey = questionNumber || q.id;
                                 const answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
-                                const active = activeQuestion === questionNumber;
-                                const isBookmarked = bookmarks.has(questionNumber) || bookmarks.has(answerKey);
+                                // Ensure type consistency for comparison
+                                const active = activeQuestion != null && Number(activeQuestion) === Number(questionNumber);
+                                // Check bookmarks: some components use question_number, others use id
+                                // Handle type mismatches by checking both number and string versions
+                                const questionId = q.id;
+                                const isBookmarked = bookmarks.has(questionNumber) ||
+                                  bookmarks.has(Number(questionNumber)) ||
+                                  bookmarks.has(String(questionNumber)) ||
+                                  (questionId && bookmarks.has(questionId));
 
                                 return (
                                   <div key={questionNumber} className="relative flex flex-col items-center shrink-0">
@@ -159,11 +228,20 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                       onClick={() => scrollToQuestion(questionNumber)}
                                       className={`
                                         w-8 h-8 rounded text-sm font-semibold transition-all flex items-center justify-center shrink-0
-                                        bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 
-                                        border border-gray-300 dark:border-gray-600 
-                                        hover:bg-gray-100 dark:hover:bg-gray-600
+                                        border
                                         ${active ? "ring-2 ring-blue-500 ring-offset-1" : ""}
                                       `}
+                                      style={{
+                                        backgroundColor: themeColors.background,
+                                        color: themeColors.text,
+                                        borderColor: themeColors.border
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = themeColors.background;
+                                      }}
                                       title={answered ? `Answered: ${answers[answerKey]}` : `Question ${questionNumber}`}
                                     >
                                       {questionNumber}
@@ -177,17 +255,30 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                     </div>
                   ) : (
                     // Inactive part: Show Part label and progress
-                    <div className='w-full h-20 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors'
+                    <div 
+                      className='w-full h-20 flex items-center justify-center gap-2 cursor-pointer rounded transition-colors'
+                      style={{
+                        backgroundColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
                       onClick={() => handlePartChange(partNumber)}
                     >
                       <div
-
-                        className="font-semibold text-md text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                        className="font-semibold text-md transition-colors"
+                        style={{ color: themeColors.text }}
                       >
                         Part {partNumber}
                       </div>
                       {totalQuestions > 0 && (
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                        <span 
+                          className="text-sm"
+                          style={{ color: themeColors.text, opacity: 0.7 }}
+                        >
                           {answeredCount}/{totalQuestions}
                         </span>
                       )}
@@ -199,24 +290,26 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-        <button
-          onClick={handlePreviousQuestion}
-          disabled={isFirstQuestion}
-          className="p-4  rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Previous question"
-        >
-          <FaChevronLeft className="w-5 h-5" />
-        </button>
+          <button
+            onClick={handlePreviousQuestion}
+            disabled={isFirstQuestion}
+            className="p-4 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            style={{ color: themeColors.text }}
+            title="Previous question"
+          >
+            <FaChevronLeft className="w-5 h-5" />
+          </button>
 
-        <button
-          onClick={handleNextQuestion}
-          disabled={isLastQuestion}
-          className="p-4   rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Next question"
-        >
-          <FaChevronRight className="w-5 h-5" />
-        </button>
-      </div>
+          <button
+            onClick={handleNextQuestion}
+            disabled={isLastQuestion}
+            className="p-4 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            style={{ color: themeColors.text }}
+            title="Next question"
+          >
+            <FaChevronRight className="w-5 h-5" />
+          </button>
+        </div>
 
 
 
@@ -239,7 +332,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
           )}
         </div>
       </div>
-      
+
     </footer>
   )
 }

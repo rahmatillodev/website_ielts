@@ -116,8 +116,8 @@ const ReadingCardOpen = ({
 
   // Container classes with green border for completed tests
   const containerClass = isGridView
-    ? `bg-white border border-t-4 ${hasCompleted ? 'border-t-green-500' : 'border-t-blue-500'} rounded-[32px] p-7 shadow-none hover:shadow-sm flex flex-col relative h-full`
-    : `bg-white border border-l-4 ${hasCompleted ? 'border-l-green-500' : 'border-l-blue-500'} rounded-[24px] p-4 shadow-none hover:shadow-sm flex items-center gap-4 mb-4 relative`;
+    ? `bg-white border border-t-4 ${hasCompleted ? 'border-t-green-500' : 'border-t-blue-500'} rounded-2xl md:rounded-[32px] p-4 md:p-7 shadow-none hover:shadow-sm flex flex-col relative h-full`
+    : `bg-white border border-l-4 ${hasCompleted ? 'border-l-green-500' : 'border-l-blue-500'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-none hover:shadow-sm flex items-center gap-3 md:gap-4 mb-4 relative`;
 
   if (isGridView) {
     // Grid View
@@ -125,73 +125,72 @@ const ReadingCardOpen = ({
       <div className={containerClass}>
         {/* Premium/Free Badge */}
         {
-          <div className={`${hasCompleted ? 'absolute top-5 right-30 z-10' : 'absolute top-5 right-5 z-10'}`}>
-            <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg tracking-widest border flex items-center gap-1 ${is_premium
+          <div className={`${hasCompleted ? 'absolute top-3 md:top-5 right-20 md:right-30 z-10' : 'absolute top-3 md:top-5 right-3 md:right-5 z-10'}`}>
+            <span className={`px-2 md:px-2.5 py-0.5 md:py-1 text-[9px] md:text-[10px] font-black uppercase rounded-md md:rounded-lg tracking-widest border flex items-center gap-1 ${is_premium
               ? "bg-amber-50 text-amber-600 border-amber-100"
               : "bg-green-50 text-green-600 border-green-100"
               }`}>
-              {is_premium && <MdStar />} {cardStatus}
+              {is_premium && <MdStar className="text-xs" />} {cardStatus}
             </span>
           </div>
         }
 
         {/* Score Badge for Completed */}
         {hasCompleted && (
-          <div className="absolute top-5 right-5 z-10">
-
-            <div className="bg-white border border-gray-200 rounded-full px-3 py-1.5 flex items-center gap-1.5 shadow-sm">
-              <span className="text-xs text-gray-500 font-semibold">Score</span>
-              <span className="text-base font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
+          <div className="absolute top-3 md:top-5 right-3 md:right-5 z-10">
+            <div className="bg-white border border-gray-200 rounded-full px-2 md:px-3 py-1 md:py-1.5 flex items-center gap-1 md:gap-1.5 shadow-sm">
+              <span className="text-[10px] md:text-xs text-gray-500 font-semibold">Score</span>
+              <span className="text-sm md:text-base font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
             </div>
           </div>
         )}
 
         <div className="flex flex-col flex-1">
           {/* Icon */}
-          <div className={`size-16 mb-6 rounded-2xl ${hasCompleted
+          <div className={`size-12 md:size-16 mb-4 md:mb-6 rounded-xl md:rounded-2xl ${hasCompleted
             ? 'bg-green-50 text-green-500'
             : 'bg-blue-50 text-blue-400'
             } flex items-center justify-center shrink-0`}>
             {hasCompleted ? (
-              <MdCheckCircle className="text-3xl" />
+              <MdCheckCircle className="text-2xl md:text-3xl" />
             ) : (
               testType === 'listening' ? (
-                <MdHeadset className="text-3xl" />
+                <MdHeadset className="text-2xl md:text-3xl" />
               ) : (
-                <IoBookOutline className="text-3xl" />
+                <IoBookOutline className="text-2xl md:text-3xl" />
               )
             )}
           </div>
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-semibold text-gray-900 line-clamp-2 overflow-hidden text-ellipsis mb-1">
+            <h3 className="text-lg md:text-xl font-semibold text-gray-900 line-clamp-2 overflow-hidden text-ellipsis mb-1">
               {title}
             </h3>
 
-            <p className="text-sm text-gray-500 font-medium mt-1 flex items-center gap-2">
+            <p className="text-xs md:text-sm text-gray-500 font-medium mt-1 flex items-center gap-2 flex-wrap">
               {(() => {
                 let diffIcon = null;
                 let diffColor = "";
                 // Import at top: import { MdBolt, MdFlag, MdAutoAwesome } from "react-icons/md";
                 if (difficulty?.toLowerCase() === "easy") {
-                  diffIcon = <MdBolt className="text-green-400 text-[16px]" title="Easy" />;
+                  diffIcon = <MdBolt className="text-green-400 text-sm md:text-[16px]" title="Easy" />;
                   diffColor = "text-green-500";
                 } else if (difficulty?.toLowerCase() === "medium") {
-                  diffIcon = <MdFlag className="text-yellow-500 text-[16px]" title="Medium" />;
+                  diffIcon = <MdFlag className="text-yellow-500 text-sm md:text-[16px]" title="Medium" />;
                   diffColor = "text-yellow-500";
                 } else if (difficulty?.toLowerCase() === "hard") {
-                  diffIcon = <MdAutoAwesome className="text-red-500 text-[16px]" title="Hard" />;
+                  diffIcon = <MdAutoAwesome className="text-red-500 text-sm md:text-[16px]" title="Hard" />;
                   diffColor = "text-red-400";
                 }
                 return (
                   <>
                     <span className={`flex items-center gap-1 font-medium ${diffColor}`}>
                       {diffIcon}
-                      Difficulty: {difficulty}
+                      <span className="hidden sm:inline">Difficulty: </span>{difficulty}
                     </span>
                     {hasCompleted && (
-                      <span className="ml-1 text-xs text-gray-400 font-normal">
+                      <span className="ml-1 text-[10px] md:text-xs text-gray-400 font-normal">
                         • Completed on {completedDate}
                       </span>
                     )}
@@ -200,18 +199,18 @@ const ReadingCardOpen = ({
               })()}
             </p>
 
-            <div className="flex gap-4 text-gray-500 mt-4">
-              <span className="flex items-center gap-1 text-xs font-black pl-2 bg-gray-100 rounded-full px-3 py-1.5">
-                <MdTimer /> {duration} min
+            <div className="flex gap-2 md:gap-4 text-gray-500 mt-3 md:mt-4 flex-wrap">
+              <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
+                <MdTimer className="text-xs md:text-sm" /> {duration} min
               </span>
               {hasCompleted ? (
-                <span className="flex items-center gap-1 text-xs font-black pl-2 bg-gray-100 rounded-full px-3 py-1.5">
-                  <MdQuiz /> {correctAnswers}/{totalQuestions} Correct
+                <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
+                  <MdQuiz className="text-xs md:text-sm" /> {correctAnswers}/{totalQuestions} Correct
                 </span>
               ) : (
                 question_quantity && (
-                  <span className="flex items-center gap-1 text-xs font-black pl-2 bg-gray-100 rounded-full px-3 py-1.5">
-                    <MdQuiz /> {question_quantity} {question_quantity < 2 ? "question" : "questions"}
+                  <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
+                    <MdQuiz className="text-xs md:text-sm" /> {question_quantity} {question_quantity < 2 ? "question" : "questions"}
                   </span>
                 )
               )}
@@ -221,26 +220,26 @@ const ReadingCardOpen = ({
 
         {/* Actions */}
         {hasCompleted ? (
-          <div className="mt-6 flex gap-3 w-full">
+          <div className="mt-4 md:mt-6 flex gap-2 md:gap-3 w-full">
             <button
               onClick={handleReview}
-              className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-all"
+              className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs md:text-sm font-semibold rounded-lg md:rounded-xl transition-all"
             >
               Review
             </button>
             <button
               onClick={handleRetake}
-              className="flex-1 py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white text-sm font-black rounded-xl flex items-center justify-center gap-2 transition-all"
+              className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
             >
-              Retake <HiOutlinePlay />
+              Retake <HiOutlinePlay className="text-sm md:text-base" />
             </button>
           </div>
         ) : (
           <button
             onClick={handleStartTest}
-            className="mt-6 py-3 bg-blue-500 hover:bg-blue-600 text-white text-sm font-black rounded-xl flex items-center justify-center gap-2 w-full transition-all"
+            className="mt-4 md:mt-6 py-2.5 md:py-3 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 w-full transition-all"
           >
-            Start Practice <HiOutlinePlay />
+            Start Practice <HiOutlinePlay className="text-sm md:text-base" />
           </button>
         )}
       </div>
@@ -250,29 +249,29 @@ const ReadingCardOpen = ({
     return (
       <div className={containerClass}>
         {/* Icon */}
-        <div className={`size-14 rounded-2xl ${hasCompleted
+        <div className={`size-10 md:size-14 rounded-xl md:rounded-2xl ${hasCompleted
           ? 'bg-green-50 text-green-500'
           : 'bg-blue-50 text-blue-400'
           } flex items-center justify-center shrink-0`}>
           {hasCompleted ? (
-            <MdCheckCircle className="text-3xl" />
+            <MdCheckCircle className="text-2xl md:text-3xl" />
           ) : (
             testType === 'listening' ? (
-              <MdHeadset className="text-3xl" />
+              <MdHeadset className="text-2xl md:text-3xl" />
             ) : (
-              <IoBookOutline className="text-3xl" />
+              <IoBookOutline className="text-2xl md:text-3xl" />
             )
           )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 overflow-hidden text-ellipsis">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 line-clamp-1 overflow-hidden text-ellipsis">
               {title}
             </h3>
 
-            <span className={`ml-4 px-2.5 py-1 text-[10px] font-black uppercase rounded-lg tracking-widest border flex items-center gap-1 shrink-0 ${is_premium
+            <span className={`ml-2 md:ml-4 px-2 md:px-2.5 py-0.5 md:py-1 text-[9px] md:text-[10px] font-black uppercase rounded-md md:rounded-lg tracking-widest border flex items-center gap-1 shrink-0 ${is_premium
               ? "bg-amber-50 text-amber-600 border-amber-100"
               : "bg-green-50 text-green-600 border-green-100"
               }`}>
@@ -281,7 +280,7 @@ const ReadingCardOpen = ({
 
           </div>
 
-          <p className="text-sm text-gray-500 font-medium mt-1 flex items-center gap-2">
+          <p className="text-xs md:text-sm text-gray-500 font-medium mt-1 flex items-center gap-2 flex-wrap">
             {(() => {
               let diffIcon = null;
               let diffColor = "";
@@ -313,41 +312,41 @@ const ReadingCardOpen = ({
           </p>
 
 
-          <div className="flex gap-4 text-gray-500 mt-4">
-            <span className="flex items-center gap-1 text-xs font-black pl-2 bg-gray-100 rounded-full px-3 py-1.5">
-              <MdTimer /> {duration} min
+          <div className="flex gap-2 md:gap-4 text-gray-500 mt-3 md:mt-4 flex-wrap">
+            <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
+              <MdTimer className="text-xs md:text-sm" /> {duration} min
             </span>
             {hasCompleted ? (
-              <span className="flex items-center gap-1 text-xs font-black pl-2 bg-gray-100 rounded-full px-3 py-1.5">
-                <MdQuiz /> {correctAnswers}/{totalQuestions} Correct
+              <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
+                <MdQuiz className="text-xs md:text-sm" /> {correctAnswers}/{totalQuestions} Correct
               </span>
             ) : (
               question_quantity && (
-                <span className="flex items-center gap-1 text-xs font-black pl-2 bg-gray-100 rounded-full px-3 py-1.5">
-                  <MdQuiz /> {question_quantity} {question_quantity < 2 ? "question" : "questions"}
+                <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
+                  <MdQuiz className="text-xs md:text-sm" /> {question_quantity} {question_quantity < 2 ? "question" : "questions"}
                 </span>
               )
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-6 shrink-0 ">
+        <div className="flex items-center gap-3 md:gap-6 shrink-0">
           {hasCompleted ? (
             <>
-              <div className="flex flex-col items-end border-l border-gray-200 pl-6">
-                <span className="text-xs text-gray-500 font-semibold mb-1">Score</span>
-                <span className="text-2xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
+              <div className="flex flex-col items-end border-l border-gray-200 pl-3 md:pl-6">
+                <span className="text-[10px] md:text-xs text-gray-500 font-semibold mb-1">Score</span>
+                <span className="text-xl md:text-2xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
               </div>
-              <div className="flex flex-col gap-2 mr-4">
+              <div className="flex flex-col gap-1.5 md:gap-2 mr-2 md:mr-4">
                 <button
                   onClick={handleReview}
-                  className="py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-md transition-all"
+                  className="py-1.5 md:py-2 px-3 md:px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs md:text-sm font-semibold rounded-md transition-all"
                 >
                   Review
                 </button>
                 <button
                   onClick={handleRetake}
-                  className="py-1  text-sm font-semibold text-blue-400 hover:text-blue-700 transition-all text-left"
+                  className="py-1 text-xs md:text-sm font-semibold text-blue-400 hover:text-blue-700 transition-all text-left"
                 >
                   Retake Test
                 </button>
@@ -356,9 +355,9 @@ const ReadingCardOpen = ({
           ) : (
             <button
               onClick={handleStartTest}
-              className="py-3 px-6 bg-blue-500 hover:bg-blue-600 text-white text-sm font-black rounded-xl flex items-center justify-center gap-2 transition-all"
+              className="py-2 md:py-3 px-4 md:px-6 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
             >
-              Start Practice <HiOutlinePlay />
+              Start Practice <HiOutlinePlay className="text-sm md:text-base" />
             </button>
           )}
         </div>

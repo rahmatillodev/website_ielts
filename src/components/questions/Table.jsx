@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
-import { sortOptionsByLetter, getOptionValue } from "../../store/optionUtils";
+import { getOptionValue } from "../../store/optionUtils";
 import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import { useAppearance } from "@/contexts/AppearanceContext";
 
 /**
  * Table - Renders a unified table for table-type questions with nested options
@@ -21,6 +22,9 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
     if (!groupQuestions || groupQuestions.length === 0) {
       return { questions: [], columnOptions: [] };
     }
+
+
+
 
     // Collect all unique options from all questions to create unified column headers
     // This ensures perfect vertical alignment (all Option A columns align, etc.)
@@ -124,14 +128,17 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
 
   const { questions, columnOptions } = tableData;
 
+  const appearance = useAppearance();
+  const themeColors = appearance.themeColors;
+
   return (
     <div className="overflow-x-auto mb-6">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="rounded-lg shadow-sm border border-gray-200 overflow-hidden" style={{ backgroundColor: themeColors.background }}>
         <table className="min-w-full border-collapse">
           <thead>
-            <tr className="bg-gray-50">
+            <tr className="bg-gray-50" style={{ backgroundColor: themeColors.background }}>
               {/* First column header: Question */}
-              <th className="px-4 py-3 text-left font-semibold text-gray-700 border-r border-gray-200">
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 border-r border-gray-200" style={{ color: themeColors.text }}>
                 Question
               </th>
               {/* Subsequent column headers: Option letters (A, B, C, etc.) */}
@@ -143,6 +150,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                     key={option.id || optionLetter || optionText}
                     className="px-4 py-3 text-center font-semibold text-gray-700"
                     title={optionText} // Show option text on hover
+                    style={{ backgroundColor: themeColors.background, color: themeColors.text }}
                   >
                     {optionLetter}
                   </th>
@@ -174,7 +182,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                   }`}
                 >
                   {/* First Column: Question Number and Question Text */}
-                  <td className={`px-4 py-3 text-gray-900 border-r border-gray-200 ${showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : ''}`}>
+                  <td className={`px-4 py-3 text-gray-900 border-r border-gray-200 ${showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : ''}`} style={{ backgroundColor: themeColors.background, color: themeColors.text }}>
                     <div className="flex gap-2 items-center justify-between">
                       <div className="flex gap-2">
                         <span className="font-medium">{qNumber}.</span>
@@ -227,6 +235,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                         <td
                           key={`${q.id}-${columnOption.id || columnOptionLetter || columnOptionText}`}
                           className="px-4 py-3 text-center"
+                          style={{ backgroundColor: themeColors.background, color: themeColors.text }}
                         >
                           {/* Empty cell - question doesn't have this option, maintaining column alignment */}
                         </td>
@@ -249,6 +258,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                           isSelected && showWrong ? 'bg-red-400' : 
                           (isCorrectOption || isCorrectAnswerMatch) && isReviewMode && !isSelected ? 'bg-green-50' : ''
                         }`}
+                        style={{ backgroundColor: themeColors.background, color: themeColors.text }}
                       >
                         <label className={`flex items-center justify-center ${mode === 'review' ? 'cursor-default' : 'cursor-pointer'}`}>
                           <input

@@ -11,15 +11,26 @@ import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
 import FinishModal from "@/components/modal/FinishModal";
 import { convertDurationToSeconds } from "@/utils/testDuration";
+import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
+import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext";
+import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip";
+import NoteSidebar from "@/components/sidebar/NoteSidebar";
+import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 
 
 
 
-const ReadingPracticePage = () => {
+const ReadingPracticePageContent = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const { currentTest, fetchTestById, loading, error } = useTestStore();
+  const { currentTest, fetchTestById, loadingTest: LoadingTest, error } = useTestStore();
+  
+
+
+
   const { authUser } = useAuthStore();
+  const { theme, themeColors, fontSizeValue } = useAppearance();
+  const { isSidebarOpen } = useAnnotation();
   
   // Status: 'taking', 'completed', 'reviewing'
   const [status, setStatus] = useState('taking');
@@ -45,6 +56,10 @@ const ReadingPracticePage = () => {
   const containerRef = useRef(null);
   const isResizing = useRef(false);
   const navigate = useNavigate();
+  
+  // Annotation system
+  const { addHighlight, addNote, highlights, notes } = useAnnotation();
+  const selectableContentRef = useRef(null);
 
   useEffect(() => {
     if (id) {
@@ -83,10 +98,10 @@ const ReadingPracticePage = () => {
       }
     }
     
-    // Cleanup: Clear localStorage when component unmounts if user navigates away
+    // Cleanup: Clear currentTest when component unmounts
     return () => {
-      // Only clear if modal is not open (user didn't finish properly)
-      // This will be handled by explicit clear calls on back/finish buttons
+      const { clearCurrentTest } = useTestStore.getState();
+      clearCurrentTest();
     };
   }, [id, fetchTestById]);
 
@@ -235,13 +250,15 @@ const ReadingPracticePage = () => {
     if (!currentTest?.parts) return [];
     
     const allQuestions = [];
+    const seenQuestionNumbers = new Set(); // Track seen question numbers to avoid duplicates
     const sortedParts = getSortedParts();
     
     sortedParts.forEach(part => {
-      // Get questions from part.questions
-      if (part.questions && Array.isArray(part.questions)) {
+      // Get questions from part.questions (this is already a flattened list)
+      if (part.questions && Array.isArray(part.questions) && part.questions.length > 0) {
         part.questions.forEach(q => {
-          if (q.question_number != null) {
+          if (q.question_number != null && !seenQuestionNumbers.has(q.question_number)) {
+            seenQuestionNumbers.add(q.question_number);
             allQuestions.push({
               questionNumber: q.question_number,
               partNumber: part.part_number ?? part.id,
@@ -249,23 +266,24 @@ const ReadingPracticePage = () => {
             });
           }
         });
-      }
-      
-      // Also get questions from questionGroups
-      if (part.questionGroups && Array.isArray(part.questionGroups)) {
-        part.questionGroups.forEach(group => {
-          if (group.questions && Array.isArray(group.questions)) {
-            group.questions.forEach(q => {
-              if (q.question_number != null) {
-                allQuestions.push({
-                  questionNumber: q.question_number,
-                  partNumber: part.part_number ?? part.id,
-                  question: q
-                });
-              }
-            });
-          }
-        });
+      } else {
+        // Fallback: get questions from questionGroups if part.questions is empty
+        if (part.questionGroups && Array.isArray(part.questionGroups)) {
+          part.questionGroups.forEach(group => {
+            if (group.questions && Array.isArray(group.questions)) {
+              group.questions.forEach(q => {
+                if (q.question_number != null && !seenQuestionNumbers.has(q.question_number)) {
+                  seenQuestionNumbers.add(q.question_number);
+                  allQuestions.push({
+                    questionNumber: q.question_number,
+                    partNumber: part.part_number ?? part.id,
+                    question: q
+                  });
+                }
+              });
+            }
+          });
+        }
       }
     });
     
@@ -536,7 +554,7 @@ const ReadingPracticePage = () => {
       }
     } catch (error) {
       console.error('Error fetching attempt:', error);
-      alert('An error occurred while loading review data.');
+      alert('An error occurred while LoadingTest review data.');
       // If there's an error, turn off "Show Correct Answers"
       setShowCorrectAnswers(false);
     }
@@ -602,8 +620,75 @@ const ReadingPracticePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, authUser, id, currentTest]);
 
+  // Annotation handlers
+  const handleHighlight = useCallback((range, text, partId) => {
+    if (!selectableContentRef.current) return;
+    
+    const container = selectableContentRef.current;
+    const offsets = getTextOffsets(container, range);
+    
+    // Apply highlight to DOM
+    const highlightId = addHighlight({
+      text,
+      startOffset: offsets.startOffset,
+      endOffset: offsets.endOffset,
+      containerId: `part-${partId}`,
+      partId,
+      range: range.cloneRange(),
+    });
+    
+    // Apply visual highlight
+    applyHighlight(range, highlightId);
+    
+    // Clear selection
+    window.getSelection().removeAllRanges();
+  }, [addHighlight]);
+
+  const handleNote = useCallback((range, text, partId) => {
+    if (!selectableContentRef.current) return;
+    
+    const container = selectableContentRef.current;
+    const offsets = getTextOffsets(container, range);
+    
+    // Apply note to DOM
+    const noteId = addNote({
+      text,
+      note: '',
+      startOffset: offsets.startOffset,
+      endOffset: offsets.endOffset,
+      containerId: `part-${partId}`,
+      partId,
+      range: range.cloneRange(),
+    });
+    
+    // Apply visual note
+    applyNote(range, noteId);
+    
+    // Clear selection
+    window.getSelection().removeAllRanges();
+  }, [addNote]);
+
+  // Calculate font size in rem (base 16px = 1rem)
+  const baseFontSize = fontSizeValue.base / 16; // Convert px to rem
+
   return (
-    <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark">
+    <div 
+      className="flex flex-col h-screen"
+      style={{ 
+        backgroundColor: themeColors.background,
+        color: themeColors.text,
+        fontSize: `${baseFontSize}rem`,
+        transition: 'font-size 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out'
+      }}
+    >
+      {/* Text Selection Tooltip - Rendered at top level */}
+      <TextSelectionTooltip
+        containerRef={selectableContentRef}
+        partId={currentPart}
+        onHighlight={handleHighlight}
+        onNote={handleNote}
+      />
+      
       {/* Header */}
       <QuestionHeader
         currentTest={currentTest}
@@ -622,29 +707,46 @@ const ReadingPracticePage = () => {
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden p-3" ref={containerRef}>
         {/* Left Panel - Reading Passage */}
-        {loading ? (
-          <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
-            <div className="text-gray-500">Loading...</div>
+        {LoadingTest ? (
+          <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700  dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%`, backgroundColor: themeColors.background, color: themeColors.text }}>
+            <div className="text-gray-500">LoadingTest...</div>
           </div>
         ) : error ? (
-          <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
+          <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700  dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%`, backgroundColor: themeColors.background, color: themeColors.text }}>
             <div className="text-red-500">Error: {error}</div>
           </div>
         ) : currentPartData ? (
           <div
             key={`passage-${currentPart}`}
-            className="w-1/2 border rounded-2xl border-gray-300 bg-white overflow-y-auto transition-opacity duration-300 ease-in-out"
-            style={{ width: `${leftWidth}%` }}
+            className="w-1/2 border rounded-2xl overflow-y-auto"
+            style={{ 
+              width: `${leftWidth}%`,
+              backgroundColor: themeColors.background,
+              borderColor: themeColors.border,
+              transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
+            }}
           >
-            {/* Grey Sub-Header Bar */}
-            <div className="bg-gray-100 border-b border-gray-200 px-6 py-3">
-              <h2 className="text-lg font-semibold text-gray-800">
+            {/* Sub-Header Bar */}
+            <div 
+              className="border-b px-6 py-3"
+              style={{ 
+                backgroundColor: theme === 'light' ? '#f3f4f6' : themeColors.background,
+                borderColor: themeColors.border
+              }}
+            >
+              <h2 
+                className="text-lg font-semibold"
+                style={{ color: themeColors.text }}
+              >
                 Part {currentPart}: Read the text and answer questions {getPartQuestionRange()}.
               </h2>
             </div>
             
             <div className="p-6">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-6">
+              <h2 
+                className="text-2xl font-semibold mb-6"
+                style={{ color: themeColors.text }}
+              >
                 {currentPartData?.title || `Part ${currentPart}`}
               </h2>
               
@@ -654,19 +756,24 @@ const ReadingPracticePage = () => {
                   <img 
                     src={currentPartData.image_url} 
                     alt={currentPartData.title || `Part ${currentPart} image`}
-                    className="w-full max-w-full object-contain max-h-[500px] rounded-lg border border-gray-300 dark:border-gray-700"
-                     
+                    className="w-full max-w-full object-contain max-h-[500px] rounded-lg border"
+                    style={{ borderColor: themeColors.border }}
                   />
                  
                 </div>
               )}
               
-              <div className="prose prose-sm max-w-none">
-                <div className="text-gray-900 leading-relaxed whitespace-pre-line space-y-4">
+              <div className="prose prose-sm max-w-none relative">
+                <div 
+                  ref={selectableContentRef}
+                  data-selectable="true"
+                  className="leading-relaxed whitespace-pre-line space-y-4 relative"
+                  style={{ color: themeColors.text }}
+                >
                   {currentPartData?.content ? (
                     currentPartData.content.split('\n').map((paragraph, idx) => 
                       paragraph.trim() ? (
-                        <p key={idx} className="mb-4">{paragraph}</p>
+                        <p key={idx} className="mb-4" data-selectable="true">{paragraph}</p>
                       ) : null
                     )
                   ) : null}
@@ -685,8 +792,8 @@ const ReadingPracticePage = () => {
             className="w-0.5 cursor-col-resize bg-gray-600 dark:bg-gray-600 h-full flex justify-center items-center relative"
             title="Drag to resize"
           >
-            <div className="w-6 h-6 rounded-2xl bg-white flex items-center justify-center absolute border-2">
-              <LuChevronsLeftRight />
+            <div className="w-6 h-6 rounded-2xl bg-white flex items-center justify-center absolute border-2" style={{ borderColor: themeColors.border, backgroundColor: themeColors.background }}>
+              <LuChevronsLeftRight style={{ color: themeColors.text }} />
             </div>
           </div>
         </div>
@@ -695,8 +802,13 @@ const ReadingPracticePage = () => {
         {questionGroups && questionGroups.length > 0 ? (
           <div
             ref={questionsContainerRef}
-            className="w-1/2 space-y-8 overflow-y-auto p-6 border rounded-2xl border-gray-300 bg-white dark:bg-gray-800"
-            style={{ width: `${100 - leftWidth}%` }}
+            className="w-1/2 space-y-8 overflow-y-auto p-6 border rounded-2xl"
+            style={{ 
+              width: `${100 - leftWidth}%`,
+              backgroundColor: themeColors.background,
+              borderColor: themeColors.border,
+              transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
+            }}
           >
             {questionGroups.map((questionGroup, groupIdx) => {
               const questionRange = getQuestionRange(questionGroup);
@@ -710,11 +822,17 @@ const ReadingPracticePage = () => {
                 <div key={questionGroup.id || groupIdx} className="space-y-6">
                   {/* Group Header with Instruction and Range */}
                   <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 
+                      className="text-lg font-semibold"
+                      style={{ color: themeColors.text }}
+                    >
                       Questions {questionRange}
                     </h3>
                     {questionGroup.instruction && (
-                      <p className="text-sm text-gray-700 leading-relaxed">
+                      <p 
+                        className="text-sm leading-relaxed"
+                        style={{ color: themeColors.text }}
+                      >
                         {questionGroup.instruction}
                       </p>
                     )}
@@ -742,11 +860,11 @@ const ReadingPracticePage = () => {
                           const bNum = b.question_number ?? 0;
                           return aNum - bNum;
                         })[0]?.question_number}
-                      className="p-4 rounded-lg border transition-all
-                          border-gray-200 dark:border-gray-700
-                          dark:hover:bg-gray-800
-                          dark:active:bg-gray-700
-                          "
+                      className="p-4 rounded-lg border transition-all"
+                      style={{ 
+                        borderColor: themeColors.border,
+                        backgroundColor: themeColors.background
+                      }}
                     >
                      
 
@@ -799,11 +917,11 @@ const ReadingPracticePage = () => {
                             if (el) questionRefs.current[questionNumber] = el;
                           }}
                           data-question-number={questionNumber}
-                          className="p-4 rounded-lg border transition-all
-                              border-gray-200 dark:border-gray-700
-                              dark:hover:bg-gray-800
-                              dark:active:bg-gray-700
-                              "
+                          className="p-4 rounded-lg border transition-all"
+                          style={{ 
+                            borderColor: themeColors.border,
+                            backgroundColor: themeColors.background
+                          }}
                         >
                           {/* Question Image if available */}
                           {question.image_url && (
@@ -818,7 +936,10 @@ const ReadingPracticePage = () => {
                           )}
                           
                           {/* Show question number and text */}
-                          <p className="font-medium text-gray-900 mb-3 w-11/12">
+                          <p 
+                            className="font-medium mb-3 w-11/12"
+                            style={{ color: themeColors.text }}
+                          >
                             {questionNumber}. {questionText}
                           </p>
 
@@ -870,10 +991,10 @@ const ReadingPracticePage = () => {
         ) : (
           <div
             className="w-1/2 space-y-8 overflow-y-auto p-6 border rounded-2xl border-gray-300 bg-white dark:bg-gray-800 flex items-center justify-center"
-            style={{ width: `${100 - leftWidth}%` }}
+            style={{ width: `${100 - leftWidth}%`, backgroundColor: themeColors.background, color: themeColors.text }}
           >
             <div className="text-gray-500">
-              {loading ? "Loading questions..." : "No questions available"}
+              {LoadingTest ? "LoadingTest questions..." : "No questions available"}
             </div>
           </div>
         )}
@@ -908,7 +1029,20 @@ const ReadingPracticePage = () => {
         testId={id}
         onSubmit={handleSubmitTest}
       />
+
+      {/* Note Sidebar */}
+        <NoteSidebar />
     </div>
+  );
+};
+
+const ReadingPracticePage = () => {
+  return (
+    <AppearanceProvider>
+      <AnnotationProvider>
+        <ReadingPracticePageContent />
+      </AnnotationProvider>
+    </AppearanceProvider>
   );
 };
 

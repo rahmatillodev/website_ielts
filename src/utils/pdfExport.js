@@ -77,7 +77,8 @@ const addBrandHeader = async (doc, pageWidth, testType) => {
 
   try {
     // Load and add logo
-    const logoUrl = '/logo.svg';
+    // const logoUrl = '/logo.svg';
+    const logoUrl = "/image.png"
     const logoDataUrl = await imageToBase64(logoUrl);
     doc.addImage(logoDataUrl, 'PNG', margin, yPos, logoSize, logoSize);
     
