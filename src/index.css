@@ -294,6 +294,20 @@ textarea {
   --color-white: var(--white);
 }
 
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 60s linear infinite;
+  will-change: transform;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -38,6 +38,41 @@ const scaleIn = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.5 } }
 };
 
+// Изображения из public/images/humans для аватарок
+const MEN_IMAGES = [
+  "/images/humans/men/загрузка (14).jpg",
+  "/images/humans/men/загрузка (16).jpg",
+  "/images/humans/men/загрузка (4).jpg",
+  "/images/humans/men/загрузка (7).jpg",
+  "/images/humans/men/загрузка.jpg",
+  "/images/humans/men/загрузка23.jpg",
+];
+
+const WOMEN_IMAGES = [
+  "/images/humans/women/feedback1-woman.jpg",
+  "/images/humans/women/загрузка (18).jpg",
+  "/images/humans/women/загрузка (2).jpg",
+  "/images/humans/women/загрузка (20).jpg",
+  "/images/humans/women/загрузка (3).jpg",
+  "/images/humans/women/загрузка (5).jpg",
+];
+
+// Mock data для карточек отзывов
+const TESTIMONIALS_MOCK = [
+  { name: "Dilshodbek R.", subtitle: "WIUT Student", quote: "The analytics provided by IELTS SIM were eye-opening. I finally understood why my Writing score was stuck at 6.0 and managed to push it to 7.5 in just 3 weeks.", emoji: "📈", result: "Improved from 6.0 to 7.5", avatar: MEN_IMAGES[0] },
+  { name: "Sarah Jenkins", subtitle: "International Student", quote: "Highly realistic interface. On the actual test day, I felt completely at home because the SIM environment was identical. Achieved a Band 8.5 overall!", emoji: "🎯", result: "Achieved Band 8.5", avatar: WOMEN_IMAGES[0] },
+  { name: "Azamat K.", subtitle: "TUIT Tech Graduate", quote: "I used to struggle with the Speaking section. The feedback provided on the SIM was practical and directly applicable. I jumped from 6.5 to 8.0.", emoji: "🚀", result: "Improved from 6.5 to 8.0", avatar: MEN_IMAGES[1] },
+  { name: "Nodira S.", subtitle: "MDIS Student", quote: "The Listening practice tests are incredibly close to the real exam. I improved my focus and note-taking skills. Reading and Listening both went from 6.5 to 8.0.", emoji: "📊", result: "Improved from 6.5 to 8.0", avatar: WOMEN_IMAGES[1] },
+  { name: "Jasur T.", subtitle: "Webster University", quote: "AI Writing feedback is a game-changer. I knew exactly what to fix before my real test. My essay structure and coherence improved dramatically.", emoji: "💪", result: "Improved from 6.0 to 7.5", avatar: MEN_IMAGES[2] },
+  { name: "Madina A.", subtitle: "TSUL Graduate", quote: "The analytics provided by IELTS SIM were eye-opening. I finally understood why my Writing score was stuck at 6.0 and managed to push it to 7.5 in just 3 weeks.", emoji: "⭐", result: "Improved from 6.0 to 7.5", avatar: WOMEN_IMAGES[2] },
+  { name: "Oliver Chen", subtitle: "Exchange Student", quote: "Score Predictor helped me set realistic goals. I knew I was ready when it showed 7.5+. The full mock tests built my stamina for the real 3-hour exam.", emoji: "🎓", result: "Achieved Band 7.5", avatar: MEN_IMAGES[3] },
+  { name: "Aisha M.", subtitle: "WIUT Student", quote: "Speaking mock tests with AI evaluation were exactly what I needed. I got used to the format and reduced my nervousness. Went from 6.0 to 7.5 in Speaking.", emoji: "🗣️", result: "Improved from 6.0 to 7.5", avatar: WOMEN_IMAGES[3] },
+  { name: "David Kim", subtitle: "International Student", quote: "Best investment for IELTS prep. The combination of practice tests, instant feedback, and score tracking kept me motivated. Overall Band 8.0 on first attempt!", emoji: "🏆", result: "Achieved Band 8.0", avatar: MEN_IMAGES[4] },
+  { name: "Zebo K.", subtitle: "TUIT Student", quote: "Vocabulary lists and study guides are well structured. I used them alongside the mock tests. Reading improved from 5.5 to 7.0 in 2 months.", emoji: "📚", result: "Improved from 5.5 to 7.0", avatar: WOMEN_IMAGES[4] },
+  { name: "Emma Wilson", subtitle: "MDIS Graduate", quote: "I tried other platforms before IELTS SIM. This one felt the most authentic. Writing task 2 feedback pointed out my logical gaps — that alone was worth it.", emoji: "✨", result: "Achieved Band 7.5", avatar: WOMEN_IMAGES[5] },
+  { name: "Rustam B.", subtitle: "TSUL Student", quote: "Listening and Reading sections are spot-on. The difficulty progression in practice tests prepared me well. Got 8.0 in both on the real exam.", emoji: "🎧", result: "Achieved 8.0 in L & R", avatar: MEN_IMAGES[5] },
+];
+
 // Animated Section Component
 const AnimatedSection = ({ children, className = "", id = "" }) => {
   const ref = useRef(null);
@@ -179,7 +214,7 @@ const LandingPage = () => {
             <motion.div variants={fadeInUp}>
               <Button
                 size="lg"
-                className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white px-6 sm:px-8 py-4 sm:py-6 rounded-xl font-semibold text-sm sm:text-base w-full sm:w-auto group transition-all hover:scale-105 hover:shadow-lg"
+                className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white px-6 sm:px-8 py-4 sm:py-6 rounded-full font-semibold text-sm sm:text-base w-full sm:w-auto group transition-all hover:scale-105 shadow-[0_4px_20px_rgba(74,144,226,0.4)]"
               >
                 Start Free Practice <LuArrowRight className="ml-2 inline transition-transform group-hover:translate-x-1" />
               </Button>
@@ -191,13 +226,18 @@ const LandingPage = () => {
               className="flex items-center justify-center lg:justify-start gap-2 pt-4"
             >
               <div className="flex -space-x-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
+                {[
+                  "/images/humans/avatar/загрузка (1).jpg",
+                  "/images/humans/avatar/загрузка (8).jpg",
+                  "/images/humans/avatar/загрузка (9).jpg",
+                  "/images/humans/avatar/загрузка23.jpg",
+                ].map((avatar, i) => (
+                  <img
                     key={i}
-                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 border-2 border-white flex items-center justify-center text-white text-xs font-semibold"
-                  >
-                    {String.fromCharCode(64 + i)}
-                  </div>
+                    src={avatar}
+                    alt={`Student ${i + 1}`}
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white object-cover"
+                  />
                 ))}
               </div>
               <p className="text-xs sm:text-sm text-gray-600 ml-2">
@@ -211,12 +251,12 @@ const LandingPage = () => {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 max-w-md w-full mx-auto lg:mx-0 hover:shadow-2xl transition-shadow duration-300"
+            className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 xl:p-8 2xl:p-10 max-w-md xl:max-w-lg 2xl:max-w-xl w-full mx-auto lg:mx-0 hover:shadow-2xl transition-shadow duration-300"
           >
-            <div className="flex items-start justify-between mb-4 sm:mb-6">
+            <div className="flex items-start justify-between mb-4 sm:mb-6 xl:mb-8">
               <div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900">My Progress</h3>
-                <p className="text-[10px] sm:text-xs text-gray-500 mt-1">
+                <h3 className="text-lg sm:text-xl xl:text-2xl 2xl:text-3xl font-semibold text-gray-900">My Progress</h3>
+                <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base text-gray-500 mt-1">
                   Last updated: Today, 10:30 AM
                 </p>
               </div>
@@ -224,13 +264,13 @@ const LandingPage = () => {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.6, type: "spring" }}
-                className="px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-semibold rounded-full bg-green-100 text-green-600 whitespace-nowrap"
+                className="px-2 sm:px-3 xl:px-4 2xl:px-5 py-1 xl:py-1.5 text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold rounded-full bg-green-100 text-green-600 whitespace-nowrap"
               >
                 Active Session
               </motion.span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:gap-5 2xl:gap-6 mb-4 sm:mb-6 xl:mb-8">
               {[
                 { name: "Listening", score: 8.5, icon: LuHeadphones, color: "text-blue-500", delay: 0.4 },
                 { name: "Reading", score: 7.5, icon: LuBookOpen, color: "text-orange-500", delay: 0.5 },
@@ -243,13 +283,13 @@ const LandingPage = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: s.delay, duration: 0.4 }}
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gray-50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border hover:border-blue-300 transition-colors cursor-pointer"
+                  className="bg-gray-50 rounded-xl sm:rounded-2xl p-3 sm:p-4 xl:p-5 2xl:p-6 border hover:border-blue-300 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                    <s.icon className={`${s.color} text-base sm:text-lg`} />
-                    <p className="text-[10px] sm:text-xs font-semibold text-gray-500">{s.name}</p>
+                  <div className="flex items-center gap-1.5 sm:gap-2 xl:gap-2.5 mb-1.5 sm:mb-2 xl:mb-3">
+                    <s.icon className={`${s.color} text-base sm:text-lg xl:text-xl 2xl:text-2xl`} />
+                    <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500">{s.name}</p>
                   </div>
-                  <p className="text-xl sm:text-2xl font-semibold">{s.score}</p>
+                  <p className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-semibold">{s.score}</p>
                 </motion.div>
               ))}
             </div>
@@ -259,16 +299,16 @@ const LandingPage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
-              className="bg-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 flex items-center justify-between"
+              className="bg-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 xl:p-6 2xl:p-8 flex items-center justify-between"
             >
               <div>
-                <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase">
+                <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase">
                   Target Score
                 </p>
-                <p className="text-xl sm:text-2xl font-semibold">Band 8.5</p>
+                <p className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-semibold">Band 8.5</p>
               </div>
 
-              <div className="relative w-12 h-12 sm:w-14 sm:h-14">
+              <div className="relative w-12 h-12 sm:w-14 sm:h-14 xl:w-16 xl:h-16 2xl:w-20 2xl:h-20">
                 <svg className="-rotate-90 w-full h-full" viewBox="0 0 36 36">
                   <circle cx="18" cy="18" r="16" fill="none" stroke="#E5E7EB" strokeWidth="3" />
                   <motion.circle
@@ -284,7 +324,7 @@ const LandingPage = () => {
                     transition={{ duration: 1.5, ease: "easeOut" }}
                   />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-xs font-semibold text-blue-600">
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-blue-600">
                   {Math.round(progress)}%
                 </span>
               </div>
@@ -306,7 +346,7 @@ const LandingPage = () => {
             variants={staggerContainer}
             className="flex flex-wrap justify-center items-center gap-8 sm:gap-12 lg:gap-16"
           >
-            {["WIUT", "TUIT", "MDIS", "WEBSTER", "TSUL"].map((name, index) => (
+            {["WIUT", "TUIT", "MDIS", "WEBSTER", "TSUL"].map((name) => (
               <motion.span
                 key={name}
                 variants={fadeInUp}
@@ -358,13 +398,10 @@ const LandingPage = () => {
               <p className="text-xs sm:text-sm text-gray-500 leading-relaxed mb-3 sm:mb-4">
                 Where weak answers go to die — and Band 8s are born. Built to train your brain and your stamina.
               </p>
-              <button className="text-blue-600 text-xs sm:text-sm font-semibold hover:underline flex items-center gap-1 group">
-                Learn more <LuArrowRight className="text-xs transition-transform group-hover:translate-x-1" />
-              </button>
             </motion.div>
 
             {/* AI Evaluation */}
-            <motion.div 
+            <motion.div
               variants={scaleIn}
               whileHover={{ y: -8, scale: 1.02 }}
               className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-xl transition-all duration-300"
@@ -379,9 +416,6 @@ const LandingPage = () => {
               <p className="text-xs sm:text-sm text-gray-500 leading-relaxed mb-3 sm:mb-4">
                 Honest feedback. Zero sugarcoating. Get instant, detailed Writing & Speaking scores based on official IELTS criteria.
               </p>
-              <button className="text-blue-600 text-xs sm:text-sm font-semibold hover:underline flex items-center gap-1 group">
-                Try AI Engine <LuArrowRight className="text-xs transition-transform group-hover:translate-x-1" />
-              </button>
             </motion.div>
 
             {/* Score Predictor */}
@@ -400,25 +434,31 @@ const LandingPage = () => {
               <p className="text-xs sm:text-sm text-gray-500 leading-relaxed mb-3 sm:mb-4">
                 Because "I think I got a 7" isn't a strategy. Your daily practice and see realistic band score predictions that update as you improve.
               </p>
-              <button className="text-blue-600 text-xs sm:text-sm font-semibold hover:underline flex items-center gap-1 group">
-                See my score <LuArrowRight className="text-xs transition-transform group-hover:translate-x-1" />
-              </button>
             </motion.div>
           </motion.div>
         </div>
       </AnimatedSection>
 
       {/* ================= OUR IMPACT ================= */}
-      <AnimatedSection id="our-impact" className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-[#0A3D4A] to-[#0D5266]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <AnimatedSection id="our-impact" className="relative py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-[#0A3D4A] to-[#0D5266] overflow-hidden">
+        {/* Blur элемент - за "10+" (вторая колонка) */}
+        <div 
+          className="absolute top-1/2 left-[37.5%] md:left-[37.5%] w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2"
+          style={{
+            background: 'radial-gradient(circle, rgba(96, 165, 250, 0.5) 0%, rgba(59, 130, 246, 0.3) 50%, transparent 70%)',
+            filter: 'blur(50px)',
+          }}
+        />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.p 
             variants={fadeInUp}
             className="text-center text-[10px] sm:text-xs font-semibold tracking-widest text-blue-400 uppercase mb-8 sm:mb-12"
           >
             Our Impact
           </motion.p>
-          
-          <motion.div 
+
+          <motion.div
             variants={staggerContainer}
             className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center text-white"
           >
@@ -464,216 +504,102 @@ const LandingPage = () => {
             People like you. Scores they're proud of.
           </motion.h2>
 
-         
-          <div 
-            variants={staggerContainer}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
-          >
-            {/* Testimonial 1 */}
-            <motion.div 
-              variants={scaleIn}
-              whileHover={{ y: -5, scale: 1.02 }}
-              className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl transition-all duration-300"
-            >
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <motion.div 
-                  whileHover={{ scale: 1.1 }}
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full shrink-0"
-                ></motion.div>
-                <div>
-                  <h4 className="text-sm sm:text-base font-semibold text-gray-900">Dilshodbek R.</h4>
-                  <p className="text-[10px] sm:text-xs text-gray-500">WIUT Student</p>
-                </div>
-              </div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
-                "The analytics provided by IELTS SIM were eye-opening. I finally understood why my Writing score was stuck at 6.0 and managed to push it to 7.5 in just 3 weeks."
-              </p>
-              <div className="flex items-center gap-2 text-green-600">
-                <motion.span 
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                  className="text-lg sm:text-xl"
+          <div className="overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8 py-4">
+            <div className="flex gap-6 sm:gap-8 animate-marquee">
+              {/* Первый набор всех карточек */}
+              {TESTIMONIALS_MOCK.map((t, i) => (
+                <div
+                  key={`first-${i}`}
+                  className="shrink-0 w-[280px] sm:w-[320px] md:w-[360px]"
                 >
-                  📈
-                </motion.span>
-                <span className="text-[10px] sm:text-xs font-semibold">Improved from 6.0 to 7.5</span>
-              </div>
-            </motion.div>
-
-            {/* Testimonial 2 */}
-            <motion.div 
-              variants={scaleIn}
-              whileHover={{ y: -5, scale: 1.02 }}
-              className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl transition-all duration-300"
-            >
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <motion.div 
-                  whileHover={{ scale: 1.1 }}
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full shrink-0"
-                ></motion.div>
-                <div>
-                  <h4 className="text-sm sm:text-base font-semibold text-gray-900">Sarah Jenkins</h4>
-                  <p className="text-[10px] sm:text-xs text-gray-500">International Student</p>
+                  <div className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                      <img
+                        src={t.avatar}
+                        alt={t.name}
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full shrink-0 object-cover"
+                      />
+                      <div>
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900">{t.name}</h4>
+                        <p className="text-[10px] sm:text-xs text-gray-500">{t.subtitle}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
+                      "{t.quote}"
+                    </p>
+                    <div className="flex items-center gap-2 text-green-600">
+                      <motion.span
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                        className="text-lg sm:text-xl"
+                      >
+                        {t.emoji}
+                      </motion.span>
+                      <span className="text-[10px] sm:text-xs font-semibold">{t.result}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
-                "Highly realistic interface. On the actual test day, I felt completely at home because the SIM environment was identical. Achieved a Band 8.5 overall!"
-              </p>
-              <div className="flex items-center gap-2 text-green-600">
-                <motion.span 
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                  className="text-lg sm:text-xl"
+              ))}
+              {/* Дублированный набор для бесконечного цикла */}
+              {TESTIMONIALS_MOCK.map((t, i) => (
+                <div
+                  key={`second-${i}`}
+                  className="shrink-0 w-[280px] sm:w-[320px] md:w-[360px]"
                 >
-                  🎯
-                </motion.span>
-                <span className="text-[10px] sm:text-xs font-semibold">Achieved Band 8.5</span>
-              </div>
-            </motion.div>
-
-            {/* Testimonial 3 */}
-            <motion.div 
-              variants={scaleIn}
-              whileHover={{ y: -5, scale: 1.02 }}
-              className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl transition-all duration-300"
-            >
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <motion.div 
-                  whileHover={{ scale: 1.1 }}
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full shrink-0"
-                ></motion.div>
-                <div>
-                  <h4 className="text-sm sm:text-base font-semibold text-gray-900">Azamat K.</h4>
-                  <p className="text-[10px] sm:text-xs text-gray-500">TUIT Tech Graduate</p>
+                  <div className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                      <img
+                        src={t.avatar}
+                        alt={t.name}
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full shrink-0 object-cover"
+                      />
+                      <div>
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900">{t.name}</h4>
+                        <p className="text-[10px] sm:text-xs text-gray-500">{t.subtitle}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
+                      "{t.quote}"
+                    </p>
+                    <div className="flex items-center gap-2 text-green-600">
+                      <motion.span
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                        className="text-lg sm:text-xl"
+                      >
+                        {t.emoji}
+                      </motion.span>
+                      <span className="text-[10px] sm:text-xs font-semibold">{t.result}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
-                "I used to struggle with the Speaking section. The feedback provided on the SIM was practical and directly applicable. I jumped from 6.5 to 8.0."
-              </p>
-              <div className="flex items-center gap-2 text-green-600">
-                <motion.span 
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                  className="text-lg sm:text-xl"
-                >
-                  🚀
-                </motion.span>
-                <span className="text-[10px] sm:text-xs font-semibold">Improved from 6.5 to 8.0</span>
-              </div>
-            </motion.div>
-
-            {/* Testimonial 4 */}
-            <motion.div 
-              variants={scaleIn}
-              whileHover={{ y: -5, scale: 1.02 }}
-              className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl transition-all duration-300"
-            >
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <motion.div 
-                  whileHover={{ scale: 1.1 }}
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full shrink-0"
-                ></motion.div>
-                <div>
-                  <h4 className="text-sm sm:text-base font-semibold text-gray-900">Sarah Jenkins</h4>
-                  <p className="text-[10px] sm:text-xs text-gray-500">International Student</p>
-                </div>
-              </div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
-                "Highly realistic interface. On the actual test day, I felt completely at home because the SIM environment was identical. Achieved a Band 8.5 overall!"
-              </p>
-              <div className="flex items-center gap-2 text-green-600">
-                <motion.span 
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                  className="text-lg sm:text-xl"
-                >
-                  📊
-                </motion.span>
-                <span className="text-[10px] sm:text-xs font-semibold">Achieved Band 8.5</span>
-              </div>
-            </motion.div>
-
-            {/* Testimonial 5 */}
-            <motion.div 
-              variants={scaleIn}
-              whileHover={{ y: -5, scale: 1.02 }}
-              className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl transition-all duration-300"
-            >
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <motion.div 
-                  whileHover={{ scale: 1.1 }}
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full shrink-0"
-                ></motion.div>
-                <div>
-                  <h4 className="text-sm sm:text-base font-semibold text-gray-900">Azamat K.</h4>
-                  <p className="text-[10px] sm:text-xs text-gray-500">MDIS Tech Teacher</p>
-                </div>
-              </div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
-                "I used to struggle with the Speaking section. The feedback provided on the SIM was practical and directly applicable. I jumped from 6.5 to 8.0."
-              </p>
-              <div className="flex items-center gap-2 text-green-600">
-                <motion.span 
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                  className="text-lg sm:text-xl"
-                >
-                  💪
-                </motion.span>
-                <span className="text-[10px] sm:text-xs font-semibold">Improved from 6.5 to 8.0</span>
-              </div>
-            </motion.div>
-
-            {/* Testimonial 6 */}
-            <motion.div 
-              variants={scaleIn}
-              whileHover={{ y: -5, scale: 1.02 }}
-              className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl transition-all duration-300"
-            >
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <motion.div 
-                  whileHover={{ scale: 1.1 }}
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full shrink-0"
-                ></motion.div>
-                <div>
-                  <h4 className="text-sm sm:text-base font-semibold text-gray-900">Dilshodbek R.</h4>
-                  <p className="text-[10px] sm:text-xs text-gray-500">WIUT Student</p>
-                </div>
-              </div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
-                "The analytics provided by IELTS SIM were eye-opening. I finally understood why my Writing score was stuck at 6.0 and managed to push it to 7.5 in just 3 weeks."
-              </p>
-              <div className="flex items-center gap-2 text-green-600">
-                <motion.span 
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                  className="text-lg sm:text-xl"
-                >
-                  ⭐
-                </motion.span>
-                <span className="text-[10px] sm:text-xs font-semibold">Improved from 6.0 to 7.5</span>
-              </div>
-            </motion.div>
+              ))}
+            </div>
           </div>
-
-          <motion.div 
-            variants={fadeInUp}
-            className="text-center mt-8 sm:mt-12"
-          >
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="text-blue-600 font-semibold text-xs sm:text-sm hover:underline flex items-center gap-2 mx-auto group"
-            >
-              View more <LuArrowRight className="text-xs transition-transform group-hover:translate-x-1" />
-            </motion.button>
-          </motion.div>
         </div>
       </AnimatedSection>
 
       {/* ================= CTA ================= */}
-      <AnimatedSection className="py-16 sm:py-24 lg:py-32 bg-[#082C36] text-center px-4 sm:px-6 lg:px-8 rounded-2xl sm:rounded-3xl mx-2 sm:mx-4 my-6 sm:my-8">
-        <div className="max-w-4xl mx-auto">
+      <AnimatedSection className="relative py-16 sm:py-24 lg:py-32 bg-[#082C36] text-center px-4 sm:px-6 lg:px-8 rounded-2xl sm:rounded-3xl mx-2 sm:mx-4 my-6 sm:my-8 overflow-hidden">
+        {/* Blur элемент - нижний левый угол */}
+        <div 
+          className="absolute bottom-0 left-0 w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full -translate-x-1/4 translate-y-1/4 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(96, 165, 250, 0.6) 0%, rgba(59, 130, 246, 0.4) 50%, transparent 70%)',
+            filter: 'blur(60px)',
+          }}
+        />
+        
+        {/* Blur элемент - верхний правый угол */}
+        <div 
+          className="absolute top-0 right-0 w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full translate-x-1/4 -translate-y-1/4 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(94, 234, 212, 0.6) 0%, rgba(20, 184, 166, 0.4) 50%, transparent 70%)',
+            filter: 'blur(60px)',
+          }}
+        />
+        
+        <div className="max-w-4xl mx-auto relative z-10">
           <motion.p 
             variants={fadeInUp}
             className="text-[10px] sm:text-xs font-semibold tracking-widest text-blue-300 uppercase mb-3 sm:mb-4"
@@ -695,7 +621,7 @@ const LandingPage = () => {
           <motion.div variants={fadeInUp}>
             <Button
               size="lg"
-              className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold shadow-lg transition-all text-sm sm:text-base w-full sm:w-auto group"
+              className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-full font-semibold transition-all text-sm sm:text-base w-full sm:w-auto group shadow-[0_4px_20px_rgba(74,144,226,0.4)]"
             >
               Get Started Now <LuArrowRight className="ml-2 inline transition-transform group-hover:translate-x-1" />
             </Button>
