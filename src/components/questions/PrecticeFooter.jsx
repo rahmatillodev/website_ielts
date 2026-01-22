@@ -127,11 +127,9 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
 
   return (
     <footer
-      className="border-t px-6 h-20 z-50"
+      className="border-t border-gray-300 px-6 h-20 z-50"
       style={{
-        backgroundColor: themeColors.background,
-        borderColor: themeColors.border
-      }}
+        backgroundColor: themeColors.background      }}
     >
       <div className="flex items-center justify-between h-full ">
 
@@ -149,7 +147,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
               return (
                 <div
                   key={part.id}
-                  className="flex flex-col items-center w-full h-full"
+                  className="flex flex-col items-center w-full h-full "
                   style={isActive ? {
                     backgroundColor: themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)'
                   } : {}}
@@ -164,7 +162,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                         Part {partNumber}
                       </div>
                       {partQuestions.length > 0 && (
-                        <div className="flex flex-col gap-1 w-full items-center">
+                        <div className="flex flex-col  w-full items-center">
                           {/* Progress bars above question buttons */}
                           <div className="flex items-center gap-x-1 overflow-x-auto max-w-full">
                             {[...partQuestions]
@@ -325,8 +323,8 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
               }}
               title="Finish"
             >
-              <div className="rounded flex items-center justify-center  gap-2" style={{ color: themeColors.text }}>
-                <FaCheck className="w-4 h-4 text-4xl"  />
+              <div className="rounded-sm flex items-center justify-center text-sm bg-black text-white gap-2 p-2" >
+                <FaCheck className="w-4 h-4"  /> Submit
               </div>
             </button>
           )}

@@ -169,7 +169,7 @@ const ComingSoonPage = ({ title, description, type }) => {
           </motion.p>
         </div>
         <motion.div variants={itemVariants}>
-          {type === "writing" && <Link to="/writing-own">
+          {type === "writing" && <Link to="/writing-practice">
             <Button>
               <LuPenTool className='w-4 h-4' />
               <span>Practice Now</span>

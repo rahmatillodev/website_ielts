@@ -779,7 +779,7 @@ const ReadingPracticePageContent = () => {
     <div 
       className="flex flex-col h-screen"
       style={{ 
-        backgroundColor: themeColors.background,
+        backgroundColor: themeColors.backgroundColor,
         color: themeColors.text,
         fontSize: `${baseFontSize}rem`,
         transition: 'font-size 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out'

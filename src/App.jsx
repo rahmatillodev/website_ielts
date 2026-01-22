@@ -52,7 +52,7 @@ function App() {
     fetchTests();
   }, [fetchTests])
 
-  const isPracticePage = location.pathname.includes("/reading-practice") || location.pathname.includes("/listening-practice");
+  const isPracticePage = location.pathname.includes("/reading-practice") || location.pathname.includes("/listening-practice") || location.pathname.includes("/writing-practice") || location.pathname.includes("/speaking-practice");
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -87,7 +87,7 @@ function App() {
           <Route path="/speaking" element={<SpeakingPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/mock-tests" element={<MockTestsPage />} />
-          <Route path="/writing-own" element={<OwnWritingPage />} />
+          <Route path="/writing-practice" element={<OwnWritingPage />} />
           <Route
             path="/pricing"
             element={

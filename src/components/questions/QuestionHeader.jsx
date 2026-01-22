@@ -75,7 +75,6 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
     }
     navigate("/dashboard");
   };
-
   return (
     <header 
       className="border-b px-6 py-4 flex items-center justify-between relative"
@@ -87,7 +86,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
       <div className="flex items-center gap-4">
         <button
           onClick={handleBackClick}
-          className="flex items-center gap-2 hover:text-primary transition-colors bg-gray-200 p-1 rounded-full px-4"
+          className="flex items-center gap-2 hover:text-primary transition-colors bg-gray-200 p-1 rounded-sm px-4"
           style={{ color: themeColors.text }}
         >
           <FaArrowLeft className="w-4 h-4" />

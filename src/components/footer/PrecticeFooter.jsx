@@ -78,7 +78,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
   // };
 
   return (
-    <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 h-20 z-50 relative">
+    <footer className="bg-white border-t border-gray-400  px-6 h-20 z-50 relative">
       <div className="flex items-center justify-between  h-full ">
         {/* Left: Navigation Arrows */}
 

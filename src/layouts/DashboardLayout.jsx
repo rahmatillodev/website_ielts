@@ -26,7 +26,7 @@ const DashboardLayout = () => {
     }
   }, [isSmallScreen])
 
-  const hideNavOn = ["/reading-practice", "/reading-result", "/listening-practice", "/listening-result", "/pricing", "/writing-own"]
+  const hideNavOn = ["/reading-practice", "/reading-result", "/listening-practice", "/listening-result", "/pricing", "/writing-practice"]
   const isHide = hideNavOn.some((p) => pathname.startsWith(p))
 
   const handleDismiss = () => {
