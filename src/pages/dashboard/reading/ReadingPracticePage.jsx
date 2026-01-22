@@ -130,10 +130,11 @@ const ReadingPracticePageContent = () => {
     loadTestData();
     
     // Cleanup: Clear currentTest when component unmounts and prevent state updates
+    // Also clear test list data to force refetch when navigating back
     return () => {
       isMounted = false;
       const { clearCurrentTest } = useTestStore.getState();
-      clearCurrentTest();
+      clearCurrentTest(true); // Clear test list data to force refetch
     };
   }, [id, fetchTestById]);
 
@@ -839,7 +840,7 @@ const ReadingPracticePageContent = () => {
           >
             {/* Sub-Header Bar */}
             <div 
-              className="border-b px-6 py-3"
+              className="border px-6 py-3 m-4 rounded-md"
               style={{ 
                 backgroundColor: theme === 'light' ? '#f3f4f6' : themeColors.background,
                 borderColor: themeColors.border

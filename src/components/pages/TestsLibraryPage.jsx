@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { FaSearch } from "react-icons/fa";
-import { IoGridOutline, IoListOutline, IoChevronBack, IoChevronForward } from "react-icons/io5";
+import { IoGridOutline, IoListOutline } from "react-icons/io5";
 import { Input } from "@/components/ui/input";
-import PremiumBanner from "@/components/badges/PremiumBanner";
-import { useTestStore } from "@/store/testStore";
+// import PremiumBanner from "@/components/badges/PremiumBanner";
+// import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import CardLocked from "../cards/CardLocked";
@@ -21,22 +22,38 @@ const TestsLibraryPage = ({
   const [isGridView, setIsGridView] = useState(true);
   const [activeTab, setActiveTab] = useState("All Tests");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 9;
+  const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
+  const itemsPerLoad = 9; // Items to load per scroll
+  const scrollContainerRef = useRef(null);
+  const isLoadingMoreRef = useRef(false);
 
   const userProfile = useAuthStore((state) => state.userProfile);
+  const location = useLocation();
 
   // Ensure allTests is always an array
   const allTests = Array.isArray(testData) ? testData : [];
 
-  // Ensure tests are fetched when component mounts
+  // Ensure tests are fetched when component mounts or route changes
+  // Force refresh if data was cleared (when navigating back from practice page)
   useEffect(() => {
-    // Fetch if not loaded, or if loaded but no data (allows refetch on empty data)
-    const shouldFetch = (!loaded || (loaded && allTests.length === 0)) && !loading && fetchTests;
-    if (shouldFetch) {
-      fetchTests();
+    if (!fetchTests) return;
+    
+    // Always fetch when route changes to this page (navigating back from practice page)
+    // If not loaded or no data, fetch with forceRefresh to ensure fresh data
+    // This handles the case when navigating back from practice pages where data was cleared
+    const shouldForceRefresh = !loaded || allTests.length === 0;
+    
+    if (!loading) {
+      if (shouldForceRefresh) {
+        // Force refresh to bypass cache and ensure fresh data
+        fetchTests(true);
+      } else if (!loaded) {
+        // Normal fetch if not loaded
+        fetchTests();
+      }
     }
-  }, [loaded, loading, fetchTests, allTests.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, loaded, allTests.length, loading, fetchTests]); // Re-run when route changes or data state changes
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(allTests) || allTests.length === 0) {
@@ -69,46 +86,85 @@ const TestsLibraryPage = ({
     }
   };
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentItems = filteredData.slice(startIndex, startIndex + itemsPerPage);
+  // Lazy loading: Get items to display
+  const currentItems = useMemo(() => {
+    return filteredData.slice(0, displayedItems);
+  }, [filteredData, displayedItems]);
+
+  // Check if there are more items to load
+  const hasMoreItems = displayedItems < filteredData.length;
+
+  // Handle scroll for lazy loading
+  const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container || isLoadingMoreRef.current || !hasMoreItems) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    // Load more when user is 200px from bottom
+    const threshold = 200;
+    
+    if (scrollHeight - scrollTop - clientHeight < threshold) {
+      isLoadingMoreRef.current = true;
+      setDisplayedItems((prev) => Math.min(prev + itemsPerLoad, filteredData.length));
+      // Reset loading flag after a short delay
+      setTimeout(() => {
+        isLoadingMoreRef.current = false;
+      }, 300);
+    }
+  }, [hasMoreItems, filteredData.length, itemsPerLoad]);
+
+  // Attach scroll listener
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => {
+        container.removeEventListener('scroll', handleScroll);
+      };
+    }
+  }, [handleScroll]);
+
+  // Reset displayed items when filtered data changes (filters/search)
+  useEffect(() => {
+    setDisplayedItems(9);
+    // Scroll to top when filter/search changes
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [activeTab, searchQuery]);
 
   const handleFilterChange = (tab) => {
     setActiveTab(tab);
-    setCurrentPage(1);
   };
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
-    setCurrentPage(1);
   };
 
   return (
-    <div className="flex flex-col max-w-screen-2xl mx-auto bg-gray-50 h-full pb-4 px-3 md:px-4">
-      <div className="flex-1 flex flex-col py-3 md:py-4">
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">{title}</h1>
-          <p className="text-sm md:text-base text-gray-500 font-medium tracking-tight">
-            {description}
-          </p>
+    <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
+      
+      <div className="bg-gray-50 pt-4 pb-4 md:pb-6 shrink-0"> 
+        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">{title}</h1>
+        <p className="text-sm md:text-base text-gray-500 font-medium tracking-tight w-full md:w-8/12">
+          {description}
+        </p>
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-6 md:mt-8 gap-4">
-            {/* Tabs */}
-            <div className="flex gap-1.5 md:gap-2 bg-gray-100/80 p-1 md:p-1.5 rounded-xl md:rounded-2xl border border-gray-200 w-full md:w-auto overflow-x-auto">
-              {["All Tests", "free", "premium"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => handleFilterChange(tab)}
-                  className={`px-4 md:px-6 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold transition-all whitespace-nowrap ${activeTab === tab
-                    ? "bg-black text-white shadow-lg"
-                    : "text-gray-500 hover:bg-white hover:text-gray-900"
-                    }`}
-                >
-                  {tab === "All Tests" ? tab : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-            </div>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 md:mt-4 gap-4">
+          <div className="flex gap-1.5 md:gap-2 bg-gray-100/80 p-1 md:p-1.5 rounded-xl md:rounded-2xl border border-gray-200 w-full md:w-auto overflow-x-auto">
+            {["All Tests", "free", "premium"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => handleFilterChange(tab)}
+                className={`px-4 md:px-6 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold transition-all whitespace-nowrap ${
+                  activeTab === tab ? "bg-black text-white shadow-lg" : "text-gray-500 hover:bg-white hover:text-gray-900"
+                }`}
+              >
+                {tab === "All Tests" ? tab : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+
 
             <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
               {/* Search */}
@@ -147,88 +203,64 @@ const TestsLibraryPage = ({
           </div>
         </div>
 
-        {loading  ? (
-          <div className="flex flex-1 items-center justify-center min-h-[300px]">
-            <div className="py-20 text-center text-gray-400 font-semibold w-full">
-              Loading tests...
+        {/* Scrollable Cards Container */}
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto pb-4 -mx-3 md:-mx-8 px-3 md:px-8"
+        >
+          {loading ? (
+            <div className="flex flex-1 items-center justify-center min-h-[300px]">
+              <div className="py-20 text-center text-gray-400 font-semibold w-full">
+                Loading tests...
+              </div>
             </div>
-          </div>
-        ) : currentItems.length > 0 ? (
-          <div
-            className={
-              isGridView
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8"
-                : "flex flex-col gap-1"
-            }
-          >
-            {currentItems.map((test) => {
-              const subscriptionStatus = userProfile?.subscription_status ?? "free";
-              const canAccess =
-                subscriptionStatus === "premium" || !test.is_premium;
+          ) : currentItems.length > 0 ? (
+            <>
+              <div
+                className={
+                  isGridView
+                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16"
+                    : "flex flex-col gap-1 mb-16"
+                }
+              >
+                {currentItems.map((test) => {
+                  const subscriptionStatus = userProfile?.subscription_status ?? "free";
+                  const canAccess =
+                    subscriptionStatus === "premium" || !test.is_premium;
 
-              return canAccess ? (
-                <CardOpen
-                  key={test.id}
-                  {...test}
-                  isGridView={isGridView}
-                  testType={testType}
-                />
-              ) : (
-                <CardLocked
-                  key={test.id}
-                  {...test}
-                  isGridView={isGridView}
-                />
-              );
-            })}
-          </div>
-        ) : !loading && allTests.length > 0 ? (
-          <div className="flex flex-1 items-center justify-center min-h-[300px]">
-            <div className="py-20 text-center text-gray-400 font-semibold w-full">Hech narsa topilmadi...</div>
-          </div>
-        ) : null}
-
-        {/* Pagination - show if we have items to paginate */}
-        {currentItems.length > 0 && totalPages > 1 && !(loading && allTests.length === 0) && (
-          <div className="flex justify-center md:justify-end items-center mt-8 md:mt-12 gap-2 md:mr-8 overflow-x-auto pb-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 md:p-3 rounded-lg md:rounded-xl border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all shrink-0"
-            >
-              <IoChevronBack size={18} className="md:w-5 md:h-5" />
-            </button>
-
-            <div className="flex gap-1.5 md:gap-2">
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 h-9 md:w-11 md:h-11 rounded-lg md:rounded-xl font-semibold text-sm md:text-base transition-all shrink-0 ${currentPage === i + 1
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-200"
-                    : "bg-white border text-gray-600 hover:bg-gray-50"
-                    }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
+                  return canAccess ? (
+                    <CardOpen
+                      key={test.id}
+                      {...test}
+                      isGridView={isGridView}
+                      testType={testType}
+                    />
+                  ) : (
+                    <CardLocked
+                      key={test.id}
+                      {...test}
+                      isGridView={isGridView}
+                    />
+                  );
+                })}
+              </div>
+              
+              {/* Loading indicator when loading more */}
+              {hasMoreItems && (
+                <div className="flex justify-center items-center py-8">
+                  <div className="text-sm text-gray-400 font-medium">
+                    Loading more...
+                  </div>
+                </div>
+              )}
+            </>
+          ) : !loading && allTests.length > 0 ? (
+            <div className="flex flex-1 items-center justify-center min-h-[300px]">
+              <div className="py-20 text-center text-gray-400 font-semibold w-full">Hech narsa topilmadi...</div>
             </div>
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 md:p-3 rounded-lg md:rounded-xl border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all shrink-0"
-            >
-              <IoChevronForward size={18} className="md:w-5 md:h-5" />
-            </button>
-          </div>
-        )}
+          ) : null}
+        </div>
       </div>
-      {/* Always pinned to the bottom */}
-      <div className="mt-16">
-        <PremiumBanner />
-      </div>
-    </div>
   );
 };
 

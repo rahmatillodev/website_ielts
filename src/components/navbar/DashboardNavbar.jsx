@@ -27,6 +27,7 @@ const DashboardNavbar = ({ onMenuClick }) => {
 
   const displayName = userProfile?.full_name || authUser?.email?.split('@')[0] || 'User';
   const email = authUser?.email || 'user@example.com';
+  const subscriptionStatus = userProfile?.subscription_status || 'Free';
 
   const handleLogout = async () => {
     const result = await signOut();
@@ -49,7 +50,7 @@ const DashboardNavbar = ({ onMenuClick }) => {
   };
 
   return (
-    <nav className="w-full h-20 bg-white border-b border-gray-100 sticky top-0 z-50">
+    <nav className="w-full h-16 bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="h-full px-4 md:px-8 flex items-center justify-between md:justify-end">
         <button onClick={onMenuClick} className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
           <LuMenu className="w-6 h-6 text-gray-700" />
@@ -57,11 +58,29 @@ const DashboardNavbar = ({ onMenuClick }) => {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Avatar className="size-10 cursor-pointer border-2 border-transparent hover:border-blue-100 transition-all shadow-sm">
-              <AvatarFallback className="bg-[#00838f] text-white text-lg font-medium">
-                {getInitials()[0]}
-              </AvatarFallback>
-            </Avatar>
+            <div className="flex items-center gap-3 cursor-pointer">
+            <div className="hidden md:flex flex-col items-end">
+                <span className="text-[15px] font-semibold text-gray-900 leading-tight">
+                  {displayName}
+                </span>
+                {/* <span className="text-xs text-gray-500">
+                  {email}
+                </span> */}
+                {subscriptionStatus && (
+                  <span
+                    className={`text-[11px] text-gray-500 font-semibold`}>
+                    {subscriptionStatus.charAt(0).toUpperCase() +
+                      subscriptionStatus.slice(1)}
+                  </span>
+                )}
+              </div>
+              <Avatar className="size-10 border-2 border-transparent hover:border-blue-100 transition-all shadow-sm">
+                <AvatarFallback className="bg-[#00838f] text-white text-lg font-medium">
+                  {getInitials()[0]}
+                </AvatarFallback>
+              </Avatar>
+             
+            </div>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent 

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import PublicLayout from "./layouts/LandingLayout";
@@ -16,7 +16,7 @@ import ProfilePage from "./pages/dashboard/ProfilePage";
 import ReadingResultPage from "./pages/dashboard/reading/ReadingResultPage";
 import { useAuthStore } from "./store/authStore";
 import { ToastContainer } from "react-toastify";
-import {useSettingsStore} from "./store/systemStore";
+import { useSettingsStore } from "./store/systemStore";
 import { useTestStore } from "./store/testStore";
 import ListeningPage from "./pages/dashboard/listening/ListeningPage";
 import ListeningPracticePage from "./pages/dashboard/listening/ListeningPracticePage";
@@ -27,12 +27,17 @@ import SpeakingPage from "./pages/dashboard/SpeakingPage";
 import PricingRoute from "./components/PricingRoute";
 import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
 import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
-
+import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
+import MockTestsPage from "./pages/dashboard/MockTestsPage";
+import "./App.css";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
-  const {fetchSettings} = useSettingsStore()
-  const {fetchTests} = useTestStore();
+  const user = useAuthStore((state) => state.authUser);
+  const { fetchSettings } = useSettingsStore()
+  const { fetchTests } = useTestStore();
+
+  const location = useLocation();
 
   useEffect(() => {
     // Initialize session on app load
@@ -47,25 +52,30 @@ function App() {
     fetchTests();
   }, [fetchTests])
 
+  const isPracticePage = location.pathname.includes("/reading-practice") || location.pathname.includes("/listening-practice");
 
   return (
     <DndProvider backend={HTML5Backend}>
       <Routes>
+        <Route
+          path="/"
+          element={user ? <Navigate to="/dashboard" replace /> : <LandingPage />}
+        />
         {/* Public routes */}
         <Route element={<PublicLayout />}>
+
           <Route path="/" element={<LandingPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="*" element={<LandingPage />} />
         </Route>
-          <Route 
-            path="/pricing" 
-            element={
-              <PricingRoute>
-                <PricingPage />
-              </PricingRoute>
-            } 
-          />
+        <Route
+          path="/pricing"
+          element={
+            <PricingRoute>
+              <PricingPage />
+            </PricingRoute>
+          }
+        />
 
         {/* Protected routes */}
         <Route element={<DashboardLayout />}>
@@ -76,13 +86,15 @@ function App() {
           <Route path="/writing" element={<WritingPage />} />
           <Route path="/speaking" element={<SpeakingPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route 
-            path="/pricing" 
+          <Route path="/mock-tests" element={<MockTestsPage />} />
+          <Route path="/writing-own" element={<OwnWritingPage />} />
+          <Route
+            path="/pricing"
             element={
               <PricingRoute>
                 <PricingPage />
               </PricingRoute>
-            } 
+            }
           />
           <Route
             path="/reading-practice/:id"
@@ -94,14 +106,35 @@ function App() {
           />
           <Route path="/reading-result/:id" element={<ReadingResultPage />} />
           <Route path="/listening-result/:id" element={<ListeningResultPage />} />
-          <Route path="*" element={<DashboardPage />} />
-          
+
         </Route>
+
+        <Route
+          path="*"
+          element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/" replace />}
+        />
+
       </Routes>
       <ToastContainer duration={2000} />
       <NetworkModal isOpen={!useNetworkStatus()} />
+      {!isPracticePage && <div className='fixed_bottom_right_container'>
+       
+      </div>}
     </DndProvider>
   );
 }
 
 export default App;
+
+
+
+
+/// Profile Navbar Name and status completed
+/// sidebar ni sectionlarga bo'lish va add full mock test completed
+/// readingdagi question 2types 
+/// payement  pageda center bilan ishlash 
+/// beta tag and hello world completed
+///  refine ui shimmer qo'shsih , cardlardagi chipslar , animation for card and navigation animations
+/// only cards scroll bo'lsin va paginatin change lazy loading completed
+/// writing page da own writing qo'shish with headers another pages completed
+/// change color 

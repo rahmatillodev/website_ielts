@@ -13,19 +13,16 @@ import { useSettingsStore } from "@/store/systemStore";
 /* ================= Feature Item ================= */
 const FeatureItem = ({ icon: Icon, title, description, disabled = false }) => (
   <div
-    className={`flex gap-3 p-4 sm:p-5 lg:p-6 bg-white border border-gray-200 rounded-xl sm:rounded-2xl shadow-sm ${
-      disabled ? "opacity-50" : ""
-    }`}
+    className={`flex gap-3 p-4 sm:p-5 lg:p-6 bg-white border border-gray-200 rounded-xl sm:rounded-2xl shadow-sm ${disabled ? "opacity-50" : ""
+      }`}
   >
     <div
-      className={`size-10 sm:size-12 lg:size-14 rounded-xl flex items-center justify-center shrink-0 ${
-        disabled ? "bg-gray-100" : "bg-[#F0F7FF]"
-      }`}
+      className={`size-10 sm:size-12 lg:size-14 rounded-xl flex items-center justify-center shrink-0 ${disabled ? "bg-gray-100" : "bg-[#F0F7FF]"
+        }`}
     >
       <Icon
-        className={`size-5 sm:size-6 lg:size-7 ${
-          disabled ? "text-gray-400" : "text-[#4A90E2]"
-        }`}
+        className={`size-5 sm:size-6 lg:size-7 ${disabled ? "text-gray-400" : "text-[#4A90E2]"
+          }`}
       />
     </div>
     <div className="flex-1 min-w-0">
@@ -49,7 +46,7 @@ const LandingPricing = () => {
   });
 
 
- 
+
   const settings = useSettingsStore((state) => state.settings);
 
   const calculateDiscount = () => {
@@ -112,27 +109,34 @@ const LandingPricing = () => {
               </p>
 
               <div className="shrink-0">
+                
+
                 <div className="flex items-baseline gap-2">
+
                   <span className="text-4xl sm:text-5xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-black text-gray-900">
                     {pricing.monthly_cost.toLocaleString()}
                   </span>
-                  <span className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-400">UZS</span>
+                  <span className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-400">SO'M</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
+                <span className="text-sm sm:text-base lg:text-lg text-gray-500 font-medium text-end">
+                  Early-access monthly
+                </span>
                   {pricing.premium_old_price && (
                     <>
-                      <span className="text-xs sm:text-sm text-gray-400 line-through">
-                        {typeof pricing.premium_old_price === 'number' 
-                          ? pricing.premium_old_price.toLocaleString() 
-                          : pricing.premium_old_price}
-                        {" "}
-                        UZS
-                      </span>
-                      {discountPercentage > 0 && (
+                     {discountPercentage > 0 && (
                         <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] sm:text-xs font-black rounded-full">
                           -{discountPercentage}%
                         </span>
                       )}
+                      <span className="text-xs sm:text-sm text-gray-400 line-through">
+                        {typeof pricing.premium_old_price === 'number'
+                          ? pricing.premium_old_price.toLocaleString()
+                          : pricing.premium_old_price}
+                        {" "}
+                        SO'M
+                      </span>
+                     
                     </>
                   )}
                 </div>
@@ -193,7 +197,7 @@ const LandingPricing = () => {
                     <span className="text-[10px] sm:text-xs font-black uppercase text-gray-600">
                       Local Bank Card
                     </span>
-                    <button 
+                    <button
                       onClick={copyToClipboard}
                       className="text-gray-600 hover:text-gray-900 transition-colors"
                     >

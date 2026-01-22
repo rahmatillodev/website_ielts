@@ -1,9 +1,10 @@
 
 import { useRef, useState, useEffect } from "react";
 import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
-
+import { useAppearance } from "@/contexts/AppearanceContext";
 
 const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded }) => {
+    const { themeColors } = useAppearance();
     const audioRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -141,7 +142,7 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
     if (!audioUrl) return null;
 
     return (
-        <div className="sticky top-2 z-10 bg-white border border-gray-200 p-4 shadow-sm w-7/12 mx-auto rounded-2xl">
+        <div className="sticky top-2 z-10 border border-gray-200 p-4 shadow-sm w-7/12 mx-auto rounded-2xl" style={{ backgroundColor: themeColors.background, borderColor: themeColors.border }}>
             <audio ref={audioRef} src={audioUrl} />
             <div className="space-y-3">
                 {/* Main Controls */}
@@ -151,11 +152,11 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
                         disabled={isTestMode && isPlaying}
                         className={`p-3 rounded-full transition-colors ${isTestMode && isPlaying
                                 ? "bg-gray-300 cursor-not-allowed"
-                                : "bg-blue-600 hover:bg-blue-700 text-white"
+                                    : "bg-blue-600 hover:bg-blue-700 text-white"
                             }`}
                         title={isTestMode && isPlaying ? "Cannot pause during test" : isPlaying ? "Pause" : "Play"}
                     >
-                        {isPlaying ? <FaPause size={16} /> : <FaPlay size={16} />}
+                        {isPlaying ? <FaPause size={16} style={{ color: themeColors.text }} /> : <FaPlay size={16} style={{ color: themeColors.text }} />}
                     </button>
 
                     {/* Progress Bar */}

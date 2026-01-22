@@ -2,7 +2,7 @@
 import DashboardRoute from '@/components/DashboardRoute';
 import LandingFooter from '@/components/footer/LandingFooter';
 import LandingNavbar from '@/components/navbar/LandingNavbar';
-import { Outlet, useLocation } from 'react-router-dom'
+import { useLocation ,  Outlet} from 'react-router-dom'
 
 // Public layout for public pages
 function LandingLayout() {

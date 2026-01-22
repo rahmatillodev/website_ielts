@@ -1,4 +1,5 @@
 import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   LuLayoutDashboard,
   LuBookOpen,
@@ -6,6 +7,9 @@ import {
   LuSettings,
   LuStar,
   LuLogOut,
+  LuTestTube,
+  LuChevronLeft,
+  LuChevronRight,
 } from "react-icons/lu";
 import { FaChartSimple } from "react-icons/fa6";
 import { Button } from "../ui/button";
@@ -15,21 +19,42 @@ import LogoutModal from "../modal/LogoutModal";
 import { toast } from "react-toastify";
 import { TfiWrite } from "react-icons/tfi";
 import { RiSpeakLine } from "react-icons/ri";
+import { IoDocumentAttachOutline } from "react-icons/io5";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
-const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate }) => (
-  <Link
-    to={link}
-    onClick={onNavigate}
-    className={`flex mx-3 items-center gap-3 px-4 py-2.5 2xl:py-3 text-sm font-medium rounded-xl cursor-pointer transition-all duration-200
-      ${isActive
-        ? "bg-[#EBF5FF] text-[#4A90E2]"
-        : "text-[#64748B] hover:text-gray-900 hover:bg-gray-50"
-      }`}
-  >
-    <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 ${isActive ? "text-[#4A90E2]" : "text-[#64748B]"}`} />
-    <span className="truncate">{label}</span>
-  </Link>
-);
+const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapsed }) => {
+  const content = (
+    <Link
+      to={link}
+      onClick={onNavigate}
+      className={`flex items-center gap-3 px-4 py-2.5 2xl:py-3 text-sm font-medium rounded-xl cursor-pointer transition-all duration-200
+        ${isActive
+          ? "bg-[#EBF5FF] text-[#4A90E2]"
+          : "text-[#64748B] hover:text-gray-900 hover:bg-gray-50"
+        }
+        ${isCollapsed ? "mx-2 justify-center" : "mx-3"}
+      `}
+    >
+      <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 shrink-0 ${isActive ? "text-[#4A90E2]" : "text-[#64748B]"}`} />
+      {!isCollapsed && <span className="truncate">{label}</span>}
+    </Link>
+  );
+
+  if (isCollapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {content}
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return content;
+};
 
 const DashboardSidebar = ({ onNavigate }) => {
   const { pathname } = useLocation();
@@ -37,6 +62,21 @@ const DashboardSidebar = ({ onNavigate }) => {
   const authUser = useAuthStore((state) => state.authUser);
   const userProfile = useAuthStore((state) => state.userProfile);
   const signOut = useAuthStore((state) => state.signOut);
+
+  // Load collapsed state from localStorage, default to false
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sidebarCollapsed");
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  // Save collapsed state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", JSON.stringify(isCollapsed));
+  }, [isCollapsed]);
+
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
+  };
 
   const handleLogout = async () => {
     const result = await signOut();
@@ -48,22 +88,50 @@ const DashboardSidebar = ({ onNavigate }) => {
     }
   };
 
-
   const checkActive = (link) => pathname === link;
 
   return (
-    <aside className="flex flex-col w-[280px] 2xl:w-[320px] h-screen sticky top-0 bg-white border-r border-gray-100 font-sans overflow-hidden">
+    <aside className={`flex flex-col h-screen sticky top-0 bg-white border-r border-gray-100 font-sans overflow-hidden transition-all duration-300 ${
+      isCollapsed ? "w-[80px] 2xl:w-[90px]" : "w-[280px] 2xl:w-[320px]"
+    }`}>
 
       {/* Logo qismi - balandlik qisqardi */}
-      <div className="h-20 2xl:h-24 shrink-0 flex items-center px-6">
-        <div className="flex items-center gap-3">
-          <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
-            <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
+      <div className={`h-20 2xl:h-24 shrink-0 flex items-center px-4 2xl:px-6 ${
+        isCollapsed ? "justify-center" : "justify-between"
+      }`}>
+        {!isCollapsed ? (
+          <>
+            <div className="flex items-center gap-3">
+              <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
+                <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
+              </div>
+              <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
+                IELTS Sim
+              </span>
+              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-semibold">Beta</span>
+            </div>
+            <button
+              onClick={toggleSidebar}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors duration-200 shrink-0"
+              aria-label="Collapse sidebar"
+            >
+              <LuChevronLeft className="w-4 h-4 text-[#64748B]" />
+            </button>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2 w-full">
+            <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
+              <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
+            </div>
+            <button
+              onClick={toggleSidebar}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors duration-200 shrink-0"
+              aria-label="Expand sidebar"
+            >
+              <LuChevronRight className="w-4 h-4 text-[#64748B]" />
+            </button>
           </div>
-          <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
-            IELTS Sim
-          </span>
-        </div>
+        )}
       </div>
 
       {/* Navigatsiya - paddinglar qisqardi */}
@@ -74,13 +142,21 @@ const DashboardSidebar = ({ onNavigate }) => {
           link="/dashboard"
           isActive={checkActive("/dashboard")}
           onNavigate={onNavigate}
+          isCollapsed={isCollapsed}
         />
+
+        {!isCollapsed && (
+          <div className="mt-0 2xl:mt-2 px-4 2xl:px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-2">
+            Practice
+          </div>
+        )}
         <SidebarItem
           icon={LuBookOpen}
           label="Reading Practice"
           link="/reading"
           isActive={pathname.startsWith("/reading")}
           onNavigate={onNavigate}
+          isCollapsed={isCollapsed}
         />
         <SidebarItem
           icon={LuHeadphones}
@@ -88,6 +164,7 @@ const DashboardSidebar = ({ onNavigate }) => {
           link="/listening"
           isActive={checkActive("/listening")}
           onNavigate={onNavigate}
+          isCollapsed={isCollapsed}
         />
         <SidebarItem
           icon={TfiWrite}
@@ -95,6 +172,7 @@ const DashboardSidebar = ({ onNavigate }) => {
           link="/writing"
           isActive={checkActive("/writing")}
           onNavigate={onNavigate}
+          isCollapsed={isCollapsed}
         />
         <SidebarItem
           icon={RiSpeakLine}
@@ -102,6 +180,21 @@ const DashboardSidebar = ({ onNavigate }) => {
           link="/speaking"
           isActive={checkActive("/speaking")}
           onNavigate={onNavigate}
+          isCollapsed={isCollapsed}
+        />
+
+        {!isCollapsed && (
+          <div className="mt-2 2xl:mt-4 px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-2">
+            Tests & Analytics
+          </div>
+        )}
+        <SidebarItem
+          icon={IoDocumentAttachOutline}
+          label="Mock Tests"
+          link="/mock-tests"
+          isActive={checkActive("/mock-tests")}
+          onNavigate={onNavigate}
+          isCollapsed={isCollapsed}
         />
         <SidebarItem
           icon={FaChartSimple}
@@ -109,23 +202,27 @@ const DashboardSidebar = ({ onNavigate }) => {
           link="/analytics"
           isActive={checkActive("/analytics")}
           onNavigate={onNavigate}
+          isCollapsed={isCollapsed}
         />
 
-        <div className="mt-4 2xl:mt-8 px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-2">
-          Account
-        </div>
+        {!isCollapsed && (
+          <div className="mt-2 2xl:mt-4 px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-2">
+            Account
+          </div>
+        )}
         <SidebarItem
           icon={LuSettings}
           label="Profile Settings"
           link="/profile"
           isActive={checkActive("/profile")}
           onNavigate={onNavigate}
+          isCollapsed={isCollapsed}
         />
       </nav>
 
       {/* Pastki qism - ixchamroq dizayn */}
       <div className="p-3 2xl:p-4 border-t border-gray-50 bg-white shrink-0 space-y-2 2xl:space-y-3">
-        {userProfile?.subscription_status !== "premium" && (
+        {userProfile?.subscription_status !== "premium" && !isCollapsed && (
           <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100  sm:block">
             <div className="flex justify-between items-start mb-4">
               <div className="p-2 bg-white/20 rounded-xl text-white">
@@ -147,10 +244,39 @@ const DashboardSidebar = ({ onNavigate }) => {
           </div>
         )}
 
+        {userProfile?.subscription_status !== "premium" && isCollapsed && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to="/pricing"
+                className="flex items-center justify-center p-3 bg-[#4B8EE3] rounded-xl hover:bg-[#3a7bc8] transition-colors"
+              >
+                <LuStar size={20} className="text-white" fill="currentColor" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              Upgrade to Pro
+            </TooltipContent>
+          </Tooltip>
+        )}
+
         <LogoutModal onConfirm={handleLogout}>
-          <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
-            <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" /> Log out
-          </button>
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className="flex items-center justify-center p-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95]">
+                  <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                Log out
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
+              <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" /> Log out
+            </button>
+          )}
         </LogoutModal>
       </div>
     </aside>

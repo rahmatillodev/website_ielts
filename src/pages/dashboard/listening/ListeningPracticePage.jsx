@@ -134,10 +134,11 @@ const ListeningPracticePageContent = () => {
     loadTestData();
 
     // Cleanup: Clear currentTest when component unmounts and prevent state updates
+    // Also clear test list data to force refetch when navigating back
     return () => {
       isMounted = false;
       const { clearCurrentTest } = useTestStore.getState();
-      clearCurrentTest();
+      clearCurrentTest(true); // Clear test list data to force refetch
     };
   }, [id, fetchTestById]);
 
@@ -874,7 +875,7 @@ const ListeningPracticePageContent = () => {
               className="w-0.5 cursor-col-resize bg-gray-600 h-full flex justify-center items-center relative"
               title="Drag to resize"
             >
-              <div className="w-6 h-6 rounded-2xl bg-white flex items-center justify-center absolute border-2">
+              <div className="w-6 h-6 rounded-2xl flex items-center justify-center absolute border-2" style={{ borderColor: themeColors.border, backgroundColor: themeColors.background }}>
                 <LuChevronsLeftRight />
               </div>
             </div>
@@ -1084,8 +1085,8 @@ const ListeningPracticePageContent = () => {
           </div>
         ) : (
           <div
-            className="space-y-8 overflow-y-auto p-6 border rounded-2xl border-gray-300 bg-white dark:bg-gray-800 flex items-center justify-center"
-            style={{ width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%' }}
+            className="space-y-8 overflow-y-auto p-6 border rounded-2xl border-gray-300  dark:bg-gray-800 flex items-center justify-center"
+            style={{ width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%', backgroundColor: themeColors.background, color: themeColors.text }}
           >
             <div className="text-gray-500">
               {loading ? "Loading questions..." : "No questions available"}

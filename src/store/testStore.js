@@ -12,15 +12,15 @@ export const useTestStore = create((set, get) => ({
   // test_completed: Map of testId -> { isCompleted, attempt }
   test_completed: {},
 
-  fetchTests: async () => {
+  fetchTests: async (forceRefresh = false) => {
     const currentState = get();
     
     // Allow refetch if data is empty even if loaded is true
     const hasData = (currentState.test_reading?.length > 0 || currentState.test_listening?.length > 0);
     
-    // Return early only if already loaded with data AND not currently loading
-    // This prevents race conditions while allowing refetch when data is empty
-    if (currentState.loaded && hasData && !currentState.loading) {
+    // Return early only if already loaded with data AND not currently loading AND not forcing refresh
+    // This prevents race conditions while allowing refetch when data is empty or when forceRefresh is true
+    if (currentState.loaded && hasData && !currentState.loading && !forceRefresh) {
       return {
         test_reading: currentState.test_reading || [],
         test_listening: currentState.test_listening || [],
@@ -29,9 +29,9 @@ export const useTestStore = create((set, get) => ({
     }
 
     // If loading is stuck, reset it after a reasonable timeout check
-    // But proceed with fetch if we don't have data
-    if (currentState.loading && hasData) {
-      // If we're loading but have data, return current data
+    // But proceed with fetch if we don't have data or if forcing refresh
+    if (currentState.loading && hasData && !forceRefresh) {
+      // If we're loading but have data and not forcing refresh, return current data
       return {
         test_reading: currentState.test_reading || [],
         test_listening: currentState.test_listening || [],
@@ -727,8 +727,18 @@ export const useTestStore = create((set, get) => ({
     }
   },
 
-  clearCurrentTest: () => {
-    set({ currentTest: null });
+  clearCurrentTest: (clearTestList = false) => {
+    if (clearTestList) {
+      // Clear both currentTest and test list data to force refetch
+      set({ 
+        currentTest: null,
+        test_reading: [],
+        test_listening: [],
+        loaded: false
+      });
+    } else {
+      set({ currentTest: null });
+    }
   },
 
   // Set test completion status for a specific test
