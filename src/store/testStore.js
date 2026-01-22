@@ -1,11 +1,12 @@
-import { create } from 'zustand';
-import supabase from '@/lib/supabase';
+import { create } from "zustand";
+import supabase from "@/lib/supabase";
 
 export const useTestStore = create((set, get) => ({
   test_reading: [],
   test_listening: [],
   currentTest: null,
-  loading: false,
+  loading: false, // Loading state for fetchTests
+  loadingTest: false, // Separate loading state for fetchTestById
   error: null,
   loaded: false,
   // test_completed: Map of testId -> { isCompleted, attempt }
@@ -13,158 +14,595 @@ export const useTestStore = create((set, get) => ({
 
   fetchTests: async () => {
     const currentState = get();
-    // Return early if already loaded or currently loading to prevent race conditions
-    if (currentState.loaded || currentState.loading) {
-      // Return the current state data to maintain consistency
+    
+    // Allow refetch if data is empty even if loaded is true
+    const hasData = (currentState.test_reading?.length > 0 || currentState.test_listening?.length > 0);
+    
+    // Return early only if already loaded with data AND not currently loading
+    // This prevents race conditions while allowing refetch when data is empty
+    if (currentState.loaded && hasData && !currentState.loading) {
       return {
         test_reading: currentState.test_reading || [],
         test_listening: currentState.test_listening || [],
-        loaded: currentState.loaded
+        loaded: currentState.loaded,
       };
     }
-    
-    set({ loading: true, error: null });
-    try {
-      const { data, error } = await supabase
-        .from('test')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
 
-      if (error) throw error;
+    // If loading is stuck, reset it after a reasonable timeout check
+    // But proceed with fetch if we don't have data
+    if (currentState.loading && hasData) {
+      // If we're loading but have data, return current data
+      return {
+        test_reading: currentState.test_reading || [],
+        test_listening: currentState.test_listening || [],
+        loaded: currentState.loaded,
+      };
+    }
+
+    set({ loading: true, error: null });
+
+    // Timeout mechanism: 30 seconds max
+    const timeoutMs = 30000;
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs);
+    });
+
+    try {
+      const testsQueryPromise = supabase
+        .from("test")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      const { data, error } = await Promise.race([
+        testsQueryPromise,
+        timeoutPromise
+      ]);
+
+      // Explicit error check immediately after query
+      if (error) {
+        console.error('[fetchTests] Supabase Error (test table):', {
+          table: 'test',
+          filter: 'is_active = true',
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // Check for RLS policy denial
+        if (error.code === 'PGRST116' || error.message?.includes('permission') || error.message?.includes('policy')) {
+          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'test' table. Error: ${error.message}`;
+          console.error('[fetchTests] RLS Policy Issue:', rlsError);
+          throw new Error(rlsError);
+        }
+        
+        throw error;
+      }
 
       // Ensure data is an array before filtering
       const tests = Array.isArray(data) ? data : [];
-      const filtered_data_reading = tests.filter((test) => test.type === "reading");
-      const filtered_data_listening = tests.filter((test) => test.type === "listening");
       
-      set({ 
+      // Handle case where query returns null/undefined (no data found)
+      if (!tests || tests.length === 0) {
+        console.warn('[fetchTests] No active tests found. This may be normal if no tests are marked as active, or check RLS policies.');
+      }
+
+      const filtered_data_reading = tests.filter(
+        (test) => test.type === "reading"
+      );
+      const filtered_data_listening = tests.filter(
+        (test) => test.type === "listening"
+      );
+
+      set({
         test_reading: filtered_data_reading,
-        test_listening: filtered_data_listening, 
-        loading: false,
-        loaded: true
+        test_listening: filtered_data_listening,
+        loaded: true,
+        error: null, // Clear any previous errors
+      });
+
+      console.log('[fetchTests] Success:', {
+        totalTests: tests.length,
+        readingTests: filtered_data_reading.length,
+        listeningTests: filtered_data_listening.length
       });
 
       return {
         test_reading: filtered_data_reading,
-        test_listening: filtered_data_listening
+        test_listening: filtered_data_listening,
       };
     } catch (error) {
-        if (error.name === 'AbortError') {
-          set({ loading: false });
-          return;
-        }
+      // Handle AbortError (cancelled requests)
+      if (error.name === "AbortError") {
+        console.warn('[fetchTests] Request aborted');
+        set({ loading: false });
+        return {
+          test_reading: currentState.test_reading || [],
+          test_listening: currentState.test_listening || [],
+          loaded: currentState.loaded,
+        };
+      }
 
-        console.error('Error fetching tests:', error);
-        set({ error: error.message, loading: false });
-        throw error;
+      // Handle timeout errors
+      if (error.message?.includes('timeout')) {
+        console.error('[fetchTests] Network Timeout:', {
+          error: error.message,
+          suggestion: 'Check network connection or increase timeout duration'
+        });
+      } else {
+        // Log comprehensive error details
+        console.error('[fetchTests] Error fetching tests:', {
+          errorName: error.name,
+          errorMessage: error.message,
+          errorStack: error.stack,
+          errorCode: error.code,
+          suggestion: 'Check RLS policies for "test" table and ensure Supabase connection is active'
+        });
+      }
+
+      // Reset loaded flag on error to allow retry
+      set({ 
+        error: error.message || 'Failed to fetch tests. Please check your connection and try again.',
+        loaded: false, // Reset loaded flag to allow refetch
+      });
+      
+      throw error;
+    } finally {
+      // CRUCIAL: Always set loading to false to prevent infinite loading states
+      set({ loading: false });
     }
   },
 
   fetchTestById: async (testId) => {
-    set({ loading: true, error: null });
-    try {
-      // Fetch test
-      const { data: testData, error: testError } = await supabase
-        .from('test')
-        .select('*')
-        .eq('id', testId)
-        .single();
+    // GUARD CLAUSE: Validate testId parameter
+    if (!testId || typeof testId !== 'string' && typeof testId !== 'number') {
+      const errorMessage = `Invalid testId: ${testId}. Expected a valid string or number.`;
+      console.error('[fetchTestById] Validation Error:', errorMessage);
+      set({ 
+        error: errorMessage, 
+        loadingTest: false, 
+        currentTest: null 
+      });
+      throw new Error(errorMessage);
+    }
 
-      if (testError) throw testError;
+    // Clear previous test data when fetching a new one
+    // Use separate loadingTest flag to avoid interfering with fetchTests
+    set({ loadingTest: true, error: null, currentTest: null });
+
+    // Timeout mechanism: 30 seconds max
+    const timeoutMs = 30000;
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs);
+    });
+
+    try {
+      // Fetch test with timeout
+      const testQueryPromise = supabase
+        .from("test")
+        .select("*")
+        .eq("id", testId)
+        .maybeSingle();
+
+      const { data: testData, error: testError } = await Promise.race([
+        testQueryPromise,
+        timeoutPromise
+      ]);
+
+      // Explicit error check immediately after query
+      if (testError) {
+        console.error('[fetchTestById] Supabase Error (test table):', {
+          table: 'test',
+          testId,
+          error: testError.message,
+          code: testError.code,
+          details: testError.details,
+          hint: testError.hint
+        });
+        
+        // Check for RLS policy denial
+        if (testError.code === 'PGRST116' || testError.message?.includes('permission') || testError.message?.includes('policy')) {
+          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'test' table. Error: ${testError.message}`;
+          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
+          throw new Error(rlsError);
+        }
+        
+        throw testError;
+      }
+
+      // Handle case where test doesn't exist
+      if (!testData) {
+        const errorMessage = `Test with ID ${testId} not found in 'test' table. Verify the ID exists and RLS policies allow access.`;
+        console.error('[fetchTestById] No Data Found:', {
+          table: 'test',
+          testId,
+          message: errorMessage
+        });
+        set({ error: errorMessage, loadingTest: false, currentTest: null });
+        throw new Error(errorMessage);
+      }
 
       // Fetch parts for this test - sorted by part_number ascending
-      const { data: partsData, error: partsError } = await supabase
-        .from('part')
-        .select('*')
-        .eq('test_id', testId)
-        .order('part_number', { ascending: true });
+      const partsQueryPromise = supabase
+        .from("part")
+        .select("*")
+        .eq("test_id", testId)
+        .order("part_number", { ascending: true });
 
-      if (partsError) throw partsError;
+      const { data: partsData, error: partsError } = await Promise.race([
+        partsQueryPromise,
+        timeoutPromise
+      ]);
 
+      if (partsError) {
+        console.error('[fetchTestById] Supabase Error (part table):', {
+          table: 'part',
+          testId,
+          error: partsError.message,
+          code: partsError.code,
+          details: partsError.details,
+          hint: partsError.hint
+        });
+        
+        if (partsError.code === 'PGRST116' || partsError.message?.includes('permission') || partsError.message?.includes('policy')) {
+          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'part' table. Error: ${partsError.message}`;
+          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
+          throw new Error(rlsError);
+        }
+        
+        throw partsError;
+      }
+
+      // Handle case where no parts exist (valid scenario)
       if (!partsData || partsData.length === 0) {
+        console.warn('[fetchTestById] No parts found for test:', testId);
         const completeTest = {
           ...testData,
-          parts: []
+          parts: [],
         };
-        set({ 
+        set({
           currentTest: completeTest,
-          loading: false 
+          loadingTest: false,
+          error: null
         });
         return completeTest;
       }
 
-      const partIds = partsData.map(p => p.id);
+      const partIds = partsData.map((p) => p.id);
+
+      // Guard clause: Ensure we have valid part IDs
+      if (!partIds || partIds.length === 0) {
+        console.warn('[fetchTestById] No valid part IDs extracted');
+        const completeTest = {
+          ...testData,
+          parts: [],
+        };
+        set({
+          currentTest: completeTest,
+          loadingTest: false,
+          error: null
+        });
+        return completeTest;
+      }
 
       // Fetch question groups (from 'question' table) for all parts
       // These represent question groups with type, instruction, question_range
-      const { data: questionGroupsData, error: questionGroupsError } = await supabase
-        .from('question')
-        .select('*')
-        .in('part_id', partIds);
+      const questionGroupsQueryPromise = supabase
+        .from("question")
+        .select("*")
+        .in("part_id", partIds);
 
-      if (questionGroupsError) throw questionGroupsError;
+      const { data: questionGroupsData, error: questionGroupsError } = await Promise.race([
+        questionGroupsQueryPromise,
+        timeoutPromise
+      ]);
+
+      if (questionGroupsError) {
+        console.error('[fetchTestById] Supabase Error (question table):', {
+          table: 'question',
+          partIds,
+          error: questionGroupsError.message,
+          code: questionGroupsError.code,
+          details: questionGroupsError.details,
+          hint: questionGroupsError.hint
+        });
+        
+        if (questionGroupsError.code === 'PGRST116' || questionGroupsError.message?.includes('permission') || questionGroupsError.message?.includes('policy')) {
+          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'question' table. Error: ${questionGroupsError.message}`;
+          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
+          throw new Error(rlsError);
+        }
+        
+        throw questionGroupsError;
+      }
 
       // Fetch individual questions (from 'questions' table) for all question groups
       // These are the actual questions with question_number, question_text, correct_answer
-      const questionGroupIds = questionGroupsData.map(qg => qg.id);
-      
+      const questionGroupIds = (questionGroupsData || []).map((qg) => qg.id).filter(Boolean);
+
       let individualQuestionsData = [];
       if (questionGroupIds.length > 0) {
-        const { data: questionsData, error: questionsError } = await supabase
-          .from('questions')
-          .select('*')
-          .in('question_id', questionGroupIds)
-          .order('question_number', { ascending: true });
+        const questionsQueryPromise = supabase
+          .from("questions")
+          .select("*")
+          .in("question_id", questionGroupIds)
+          .order("question_number", { ascending: true });
 
-        if (questionsError) throw questionsError;
+        const { data: questionsData, error: questionsError } = await Promise.race([
+          questionsQueryPromise,
+          timeoutPromise
+        ]);
+
+        if (questionsError) {
+          console.error('[fetchTestById] Supabase Error (questions table):', {
+            table: 'questions',
+            questionGroupIds,
+            error: questionsError.message,
+            code: questionsError.code,
+            details: questionsError.details,
+            hint: questionsError.hint
+          });
+          
+          if (questionsError.code === 'PGRST116' || questionsError.message?.includes('permission') || questionsError.message?.includes('policy')) {
+            const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'questions' table. Error: ${questionsError.message}`;
+            console.error('[fetchTestById] RLS Policy Issue:', rlsError);
+            throw new Error(rlsError);
+          }
+          
+          throw questionsError;
+        }
         individualQuestionsData = questionsData || [];
       }
 
       // Fetch options from the options table for this test
-      const { data: optionsData, error: optionsError } = await supabase
-        .from('options')
-        .select('*')
-        .eq('test_id', testId)
-        .order('letter', { ascending: true });
+      const optionsQueryPromise = supabase
+        .from("options")
+        .select("*")
+        .eq("test_id", testId);
 
-      if (optionsError) throw optionsError;
+      const { data: optionsData, error: optionsError } = await Promise.race([
+        optionsQueryPromise,
+        timeoutPromise
+      ]);
+
+      if (optionsError) {
+        console.error('[fetchTestById] Supabase Error (options table):', {
+          table: 'options',
+          testId,
+          error: optionsError.message,
+          code: optionsError.code,
+          details: optionsError.details,
+          hint: optionsError.hint
+        });
+        
+        if (optionsError.code === 'PGRST116' || optionsError.message?.includes('permission') || optionsError.message?.includes('policy')) {
+          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'options' table. Error: ${optionsError.message}`;
+          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
+          throw new Error(rlsError);
+        }
+        
+        throw optionsError;
+      }
       const allOptions = optionsData || [];
 
-      
+      // Helper function to generate letter from index (A, B, C, D, etc.)
+      const getLetterFromIndex = (index) => {
+        return String.fromCharCode(65 + index); // 65 is 'A' in ASCII
+      };
+
       // Structure the data: Parts -> Question Groups -> Individual Questions
-      const partsWithQuestionGroups = partsData.map(part => {
+      const partsWithQuestionGroups = partsData.map((part) => {
         // Get question groups for this part
         const partQuestionGroups = questionGroupsData
-          .filter(qg => qg.part_id === part.id)
-          .map(questionGroup => {
+          .filter((qg) => qg.part_id === part.id)
+          .map((questionGroup) => {
+            const groupType = (questionGroup.type || "").toLowerCase();
+            const isMultipleChoice =
+              groupType.includes("multiple") || groupType.includes("choice");
+            const isTableType = groupType.includes("table");
+
+            // For table type: use questions table for question_text and correct_answer
+            // Options are matched by question_group_id (question_id) AND question_number
+            if (isTableType) {
+              // Get questions from questions table for this question group
+              // Nest options within each question where:
+              // - option.question_id === question.question_id (both refer to question group id)
+              // - option.question_number === question.question_number (identifies specific question)
+              const groupQuestionsFromTable = individualQuestionsData
+                .filter((iq) => iq.question_id === questionGroup.id)
+                .map((individualQuestion) => {
+                  const questionId = individualQuestion.id;
+                  const questionNumber = individualQuestion.question_number;
+
+                  // Get options for this specific question
+                  // Match on both question_group_id (question_id) AND question_number
+                  const questionOptions = allOptions
+                    .filter((opt) => {
+                      // Match options where:
+                      // 1. option.question_id matches the question group id (question.question_id)
+                      // 2. option.question_number matches the question's question_number
+                      return (
+                        opt.question_id === questionGroup.id &&
+                        opt.question_number === questionNumber
+                      );
+                    })
+                    .map((opt, optIndex) => {
+                      // Calculate letter index based on all options for this question, sorted
+                      return {
+                        id: opt.id,
+                        option_text: opt.option_text,
+                        letter: opt.letter || getLetterFromIndex(optIndex), // Use letter if available, otherwise generate
+                        is_correct: opt.is_correct || false,
+                        correct_answer: opt.correct_answer || "",
+                        question_id: opt.question_id,
+                      };
+                    })
+                    .sort((a, b) => {
+                      // Sort by letter if available, otherwise by option_text, then by id
+                      if (a.letter && b.letter) {
+                        return a.letter.localeCompare(b.letter);
+                      }
+                      if (a.option_text && b.option_text) {
+                        return a.option_text.localeCompare(b.option_text);
+                      }
+                      return (a.id || 0) - (b.id || 0);
+                    })
+                    .map((opt, sortedIndex) => ({
+                      ...opt,
+                      // Ensure letter is set after sorting
+                      letter: opt.letter || getLetterFromIndex(sortedIndex),
+                    }));
+
+                  return {
+                    id:
+                      questionId ||
+                      `q-${questionGroup.id}-${individualQuestion.question_number}`,
+                    question_id: questionGroup.id,
+                    question_number: individualQuestion.question_number,
+                    question_text:
+                      individualQuestion.question_text ||
+                      `Question ${individualQuestion.question_number}`,
+                    correct_answer: individualQuestion.correct_answer || "",
+                    options: questionOptions, // Nested options array per question (option.question_id === question.id)
+                  };
+                })
+                .sort((a, b) => {
+                  const aNum = a.question_number ?? 0;
+                  const bNum = b.question_number ?? 0;
+                  return aNum - bNum;
+                });
+
+              // For table type, we still provide group-level options for column headers
+              // These are collected from all unique options across all questions
+              const allUniqueOptions = new Map();
+              groupQuestionsFromTable.forEach((q) => {
+                if (q.options && Array.isArray(q.options)) {
+                  q.options.forEach((opt) => {
+                    const optText = opt.option_text || "";
+                    if (optText && !allUniqueOptions.has(optText)) {
+                      allUniqueOptions.set(optText, opt);
+                    }
+                  });
+                }
+              });
+
+              const groupLevelOptions = Array.from(
+                allUniqueOptions.values()
+              ).sort((a, b) => {
+                if (a.letter && b.letter) {
+                  return a.letter.localeCompare(b.letter);
+                }
+                return (a.id || 0) - (b.id || 0);
+              });
+
+              return {
+                ...questionGroup,
+                questions: groupQuestionsFromTable,
+                options: groupLevelOptions, // All unique options for column headers
+              };
+            }
+
+            // For multiple_choice: create questions from options table (keep existing logic)
+            if (isMultipleChoice) {
+              // Get all options for this question group
+              const groupOptions = allOptions
+                .filter((opt) => opt.question_id === questionGroup.id)
+                .map((opt, index) => ({
+                  id: opt.id,
+                  option_text: opt.option_text,
+                  letter: getLetterFromIndex(index), // Generate letter based on order
+                  is_correct: opt.is_correct,
+                  question_id: opt.question_id,
+                  question_number: opt.question_number,
+                }));
+
+              // Group options by question_number to create questions
+              const optionsByQuestionNumber = {};
+              groupOptions.forEach((opt) => {
+                const qNum = opt.question_number;
+                if (qNum !== null && qNum !== undefined) {
+                  if (!optionsByQuestionNumber[qNum]) {
+                    optionsByQuestionNumber[qNum] = [];
+                  }
+                  optionsByQuestionNumber[qNum].push(opt);
+                }
+              });
+
+              // Create questions from options (for multiple_choice, questions come from options table)
+              const groupQuestions = Object.keys(optionsByQuestionNumber)
+                .map((qNum) => {
+                  const qNumInt = parseInt(qNum, 10);
+                  const questionOptions = optionsByQuestionNumber[qNum].map(
+                    (opt, index) => ({
+                      ...opt,
+                      letter: getLetterFromIndex(index), // Regenerate letters for each question's options
+                    })
+                  );
+
+                  // Find correct answer for this question (option with is_correct = true)
+                  const correctOption = questionOptions.find(
+                    (opt) => opt.is_correct === true
+                  );
+                  const correctAnswer = correctOption
+                    ? correctOption.option_text
+                    : "";
+
+                  return {
+                    id: `q-${questionGroup.id}-${qNum}`,
+                    question_id: questionGroup.id,
+                    question_number: qNumInt,
+                    question_text:
+                      questionGroup.question_text || `Question ${qNum}`,
+                    options: questionOptions,
+                    correct_answer: correctAnswer, // Store correct answer for easy access
+                  };
+                })
+                .sort((a, b) => {
+                  const aNum = a.question_number ?? 0;
+                  const bNum = b.question_number ?? 0;
+                  return aNum - bNum;
+                });
+
+              // For multiple_choice: each question has its own options (no group-level)
+              return {
+                ...questionGroup,
+                questions: groupQuestions,
+                options: [], // No group-level options for multiple_choice
+              };
+            }
+
+            // For other question types: use the existing logic with questions table
             // Get individual questions for this question group
-            
             const groupQuestions = individualQuestionsData
-              .filter(iq => iq.question_id === questionGroup.id)
-              .map(individualQuestion => {
+              .filter((iq) => iq.question_id === questionGroup.id)
+              .map((individualQuestion) => {
                 // Get options for this specific question (matching question_id and question_number)
                 const questionOptions = allOptions
-                  .filter(opt => 
-                    opt.question_id === questionGroup.id && 
-                    opt.question_number === individualQuestion.question_number
+                  .filter(
+                    (opt) =>
+                      opt.question_id === questionGroup.id &&
+                      opt.question_number === individualQuestion.question_number
                   )
                   .sort((a, b) => {
-                    // Sort by letter (A, B, C, D, etc.)
-                    return (a.letter || '').localeCompare(b.letter || '');
+                    // Sort by letter if available, otherwise by id
+                    if (a.letter && b.letter) {
+                      return a.letter.localeCompare(b.letter);
+                    }
+                    return (a.id || 0) - (b.id || 0);
                   })
-                  .map(opt => ({
+                  .map((opt, index) => ({
                     id: opt.id,
                     option_text: opt.option_text,
-                    letter: opt.letter,
+                    letter: opt.letter || getLetterFromIndex(index), // Use letter if available, otherwise generate
                     is_correct: opt.is_correct,
                     question_id: opt.question_id,
-                    question_number: opt.question_number
+                    question_number: opt.question_number,
                   }));
 
                 return {
                   ...individualQuestion,
-                  options: questionOptions
+                  options: questionOptions,
                 };
               })
               .sort((a, b) => {
@@ -172,61 +610,42 @@ export const useTestStore = create((set, get) => ({
                 const bNum = b.question_number ?? 0;
                 return aNum - bNum;
               });
-              
+
             // Get group-level options (where question_number is null)
             // These are options that apply to the entire question group
             let groupLevelOptions = allOptions
-              .filter(opt => 
-                opt.question_id === questionGroup.id && 
-                opt.question_number === null
+              .filter(
+                (opt) =>
+                  opt.question_id === questionGroup.id &&
+                  opt.question_number === null
               )
               .sort((a, b) => {
-                // Sort by letter (A, B, C, D, etc.)
-                return (a.letter || '').localeCompare(b.letter || '');
+                // Sort by letter if available, otherwise by id
+                if (a.letter && b.letter) {
+                  return a.letter.localeCompare(b.letter);
+                }
+                return (a.id || 0) - (b.id || 0);
               })
-              .map(opt => ({
+              .map((opt, index) => ({
                 id: opt.id,
                 option_text: opt.option_text,
-                letter: opt.letter,
+                letter: opt.letter || getLetterFromIndex(index), // Use letter if available, otherwise generate
                 is_correct: opt.is_correct,
                 question_id: opt.question_id,
-                question_number: opt.question_number
+                question_number: opt.question_number,
               }));
-
-            // For table type questions: if group-level options are empty,
-            // collect unique options from all questions in the group
-            // (since table questions share the same options across all questions)
-            const isTableType = (questionGroup.type || '').toLowerCase().includes('table');
-            if (isTableType && groupLevelOptions.length === 0 && groupQuestions.length > 0) {
-              // Get options from the first question (all questions have the same options)
-              const firstQuestionOptions = groupQuestions[0]?.options || [];
-              if (firstQuestionOptions.length > 0) {
-                // Use a Map to ensure uniqueness by letter
-                const uniqueOptionsMap = new Map();
-                firstQuestionOptions.forEach(opt => {
-                  const letter = opt.letter || '';
-                  if (letter && !uniqueOptionsMap.has(letter)) {
-                    uniqueOptionsMap.set(letter, {
-                      id: opt.id || `group-opt-${letter}`,
-                      option_text: opt.option_text || letter,
-                      letter: letter,
-                      is_correct: false, // Group-level options are wrong answers for table type
-                      question_id: questionGroup.id,
-                      question_number: null
-                    });
-                  }
-                });
-                groupLevelOptions = Array.from(uniqueOptionsMap.values()).sort((a, b) => {
-                  return (a.letter || '').localeCompare(b.letter || '');
-                });
-              }
-            }
 
             return {
               ...questionGroup,
               questions: groupQuestions,
-              options: groupLevelOptions // Add group-level options to question group
+              options: groupLevelOptions, // Add group-level options to question group
             };
+
+            // return {
+            //   ...questionGroup,
+            //   questions: groupQuestions,
+            //   options: groupLevelOptions // Add group-level options to question group
+            // };
           })
           // Sort question groups by their first child's question_number
           .sort((a, b) => {
@@ -240,35 +659,71 @@ export const useTestStore = create((set, get) => ({
           questionGroups: partQuestionGroups,
           // Flatten all individual questions for easy access, sorted by question_number
           questions: partQuestionGroups
-            .flatMap(qg => qg.questions)
+            .flatMap((qg) => qg.questions)
             .sort((a, b) => {
               const aNum = a.question_number ?? 0;
               const bNum = b.question_number ?? 0;
               return aNum - bNum;
-            })
+            }),
         };
       });
 
       const completeTest = {
         ...testData,
-        parts: partsWithQuestionGroups
+        parts: partsWithQuestionGroups,
       };
 
-      set({ 
+      set({
         currentTest: completeTest,
-        loading: false 
+        loading: false,
+        loadingTest: false,
+        error: null, // Clear any previous errors on success
+      });
+
+      console.log('[fetchTestById] Success:', {
+        testId,
+        partsCount: partsWithQuestionGroups.length,
+        questionGroupsCount: partsWithQuestionGroups.reduce((sum, p) => sum + (p.questionGroups?.length || 0), 0)
       });
 
       return completeTest;
     } catch (error) {
-        if (error.name === 'AbortError') {
-          set({ loading: false });
-          return;
-        }
+      // Handle AbortError (cancelled requests)
+      if (error.name === "AbortError") {
+        console.warn('[fetchTestById] Request aborted:', testId);
+        set({ loadingTest: false, loading: false });
+        return null;
+      }
 
-        console.error('Error fetching test by ID:', error);
-        set({ error: error.message, loading: false });
-        throw error;
+      // Handle timeout errors
+      if (error.message?.includes('timeout')) {
+        console.error('[fetchTestById] Network Timeout:', {
+          testId,
+          error: error.message,
+          suggestion: 'Check network connection or increase timeout duration'
+        });
+      } else {
+        // Log comprehensive error details
+        console.error('[fetchTestById] Error fetching test by ID:', {
+          testId,
+          errorName: error.name,
+          errorMessage: error.message,
+          errorStack: error.stack,
+          errorCode: error.code,
+          suggestion: 'Verify test ID exists, check RLS policies, and ensure Supabase connection is active'
+        });
+      }
+
+      // Set error state - loading will be set to false in finally block
+      set({ 
+        error: error.message || 'Failed to fetch test. Please check your connection and try again.',
+        currentTest: null
+      });
+      
+      throw error;
+    } finally {
+      // CRUCIAL: Always set loading to false to prevent infinite loading states
+      set({ loadingTest: false, loading: false });
     }
   },
 
@@ -306,4 +761,17 @@ export const useTestStore = create((set, get) => ({
     set({ test_completed: {} });
   },
 
+  // Reset the store state (useful for debugging or when switching contexts)
+  resetStore: () => {
+    set({
+      test_reading: [],
+      test_listening: [],
+      currentTest: null,
+      loading: false,
+      loadingTest: false,
+      error: null,
+      loaded: false,
+      test_completed: {},
+    });
+  },
 }));

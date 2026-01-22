@@ -1,34 +1,60 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
-import { Image } from "lucide-react";
+import { LuBookOpen } from "react-icons/lu";
+
 const LandingNavbar = () => {
   return (
-    <div className="w-full h-16 bg-white shadow-md">
-      <div className="container mx-auto px-4 h-full flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to="/">
-            <Image src="/logo.png" alt="logo" width={100} height={50} />
-          </Link>
+    <nav className="w-full h-16 bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#4A90E2] rounded-full flex items-center justify-center">
+            <LuBookOpen className="text-white size-5" />
+          </div>
+          <span className="text-xl font-black text-gray-900 tracking-tight">IELTS SIM</span>
+        </Link>
+
+        {/* Center Links */}
+        <div className="hidden md:flex items-center gap-8">
+          <a
+            href="#why-choose"
+            className=" text-gray-700 hover:text-[#4A90E2] transition-colors"
+          >
+            Why choose us?
+          </a>
+          <a
+            href="#our-impact"
+            className=" font-medium text-gray-700 hover:text-[#4A90E2] transition-colors"
+          >
+            Our Impact
+          </a>
+          <a
+            href="#stories"
+            className="text-gray-700 hover:text-[#4A90E2] transition-colors"
+          >
+            Stories
+          </a>
         </div>
-        <div className="flex items-center gap-4">
-          <Link to="/pricing">Pricing</Link>
-          <Link to="/resources">Resources</Link>
-        </div>
-        <div className="flex items-center gap-4">
+
+        {/* Right Buttons */}
+        <div className="flex items-center gap-3">
           <Link to="/login">
-            <Button variant="outline" className="cursor-pointer">
+            <Button
+              variant="ghost"
+              className="text-sm font-medium text-gray-700 hover:text-[#4A90E2] hover:bg-transparent"
+            >
               Login
             </Button>
           </Link>
-          <Link to="/signup" >
-            <Button variant="default" className="cursor-pointer">
-              Sing Up
+          <Link to="/signup">
+            <Button className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white font-medium px-6 py-2 rounded-md shadow-sm">
+              Get Started
             </Button>
           </Link>
         </div>
       </div>
-    </div>
+    </nav>
   );
 };
 

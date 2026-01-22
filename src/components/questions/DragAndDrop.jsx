@@ -1,5 +1,8 @@
 import React from "react";
 import { useDrag, useDrop } from "react-dnd";
+import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import parse from "html-react-parser"; // HTML strukturasini saqlash uchun
+import { useAppearance } from "@/contexts/AppearanceContext";
 
 const ItemType = {
   WORD: "word",
@@ -23,9 +26,9 @@ const DraggableWord = ({ word, isUsed }) => {
       ref={drag}
       className={`
         px-4 py-2 rounded-md text-sm font-medium transition-all
-        ${isUsed 
-          ? 'bg-gray-200 text-gray-400 line-through cursor-not-allowed' 
-          : 'bg-blue-100 text-blue-900 hover:bg-blue-200 cursor-move shadow-sm'
+        ${isUsed
+          ? 'bg-gray-600 text-gray-300 line-through cursor-not-allowed'
+          : 'bg-blue-100 text-blue-900 hover:bg-blue-200 cursor-move shadow-sm border border-blue-200'
         }
         ${isDragging ? 'opacity-50 border-2 border-blue-400' : ''}
       `}
@@ -38,7 +41,7 @@ const DraggableWord = ({ word, isUsed }) => {
 /**
  * DropZone - Matn ichidagi tushirish maydoni
  */
-const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 'test', reviewData = {}, showCorrectAnswers = true }) => {
+const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => { } }) => {
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: ItemType.WORD,
     drop: (item) => onDrop(questionId, item.word),
@@ -49,44 +52,52 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
   }), [questionId]);
 
   const isReviewMode = mode === 'review';
-  const review = reviewData[questionId] || {};
+  // Try to find review data with type conversion (handle string/number mismatch)
+  const review = reviewData[questionId] ||
+    reviewData[String(questionId)] ||
+    reviewData[Number(questionId)] ||
+    {};
   const isCorrect = review.isCorrect;
   const correctAnswer = review.correctAnswer || '';
-  // In review mode, show red if answer is wrong (regardless of whether answer exists)
   const showWrong = isReviewMode && review.hasOwnProperty('isCorrect') && !isCorrect;
   const showCorrect = isReviewMode && isCorrect;
-  
+  const isBookmarked = bookmarks.has(questionId) || bookmarks.has(questionNumber);
+
   return (
     <span
       ref={isReviewMode ? null : drop}
       onClick={() => {
-        if (!isReviewMode && answer) {
-          onClear(questionId);
-        }
+        if (!isReviewMode && answer) onClear(questionId);
       }}
       className={`
-        inline-flex items-center justify-center min-w-[100px] h-8 px-2 mx-1
-        border-b-2 transition-all align-middle relative
+        inline-flex items-center justify-center min-w-[120px] text-sm h-7 px-2 mx-1
+        border-2 transition-all align-middle relative group rounded
         ${isReviewMode ? 'cursor-default' : 'cursor-pointer'}
         ${isOver && canDrop && !isReviewMode ? 'bg-green-100 border-green-500' : ''}
-        ${showCorrect ? 'border-green-500 bg-green-50 text-green-700 font-bold' : ''}
-        ${showWrong ? 'border-red-500 bg-red-50 text-red-600 font-bold' : ''}
-        ${answer && !showCorrect && !showWrong ? 'border-blue-500 text-blue-900 font-bold' : ''}
-        ${!answer ? 'border-gray-400' : ''}
+        ${showCorrect ? 'border-green-500 bg-green-50 text-green-700 font-semibold border-solid' : ''}
+        ${showWrong ? 'border-red-400 bg-red-50 text-red-500 font-semibold border-solid' : ''}
+        ${!answer && !isReviewMode ? 'border-gray-400 border-dashed' : 'border-solid'}
+        ${!answer && isReviewMode ? 'border-gray-200 bg-gray-50' : ''}
       `}
-      style={{ borderStyle: answer ? 'solid' : 'dashed' }}
       title={questionNumber ? `Question ${questionNumber}` : undefined}
     >
-      {answer || (questionNumber ? `[${questionNumber}]` : "____")}
-      {showCorrect && (
-        <span className="ml-1 text-[10px] bg-green-500 text-white px-1 py-0.5 rounded-sm">
-          Correct
-        </span>
-      )}
-      
+      <span className="truncate max-w-[150px]">
+        {answer && answer.trim() !== '' ? `[${questionNumber}] ${answer}` : `[ ${questionNumber} ]`}
+      </span>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleBookmark(questionId);
+        }}
+        className={`ml-1 transition-all ${isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+      >
+        {isBookmarked ? <FaBookmark className="w-3 h-3 text-red-500" /> : <FaRegBookmark className="w-3 h-3 text-gray-400" />}
+      </button>
+
       {showWrong && correctAnswer && showCorrectAnswers && (
-        <span className="absolute -top-2 left-0 text-xs text-green-600 font-medium whitespace-nowrap">
-           {correctAnswer}
+        <span className="absolute -top-5 left-0 text-[10px] text-green-600 font-bold bg-white px-1 shadow-sm rounded border border-green-200 whitespace-nowrap z-10">
+          {correctAnswer}
         </span>
       )}
     </span>
@@ -96,77 +107,27 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
 /**
  * Asosiy DragAndDrop Komponenti
  */
-const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInteraction, mode = 'test', reviewData = {}, showCorrectAnswers = true }) => {
-  
-  const getContentString = (content) => {
-    if (typeof content === 'string') return content;
-    if (typeof content === 'number') return String(content);
-    return '';
-  };
+const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInteraction, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => { } }) => {
 
-  const groupContent = getContentString(question.question_text || question.content || "");
-  
-  // Filter questions to only include those with valid question_numbers (for mapping to placeholders)
-  // and create a sorted list for placeholder mapping
-  const validQuestionsForPlaceholders = React.useMemo(() => {
-    if (!groupQuestions || groupQuestions.length === 0) return [];
-    
-    return groupQuestions
-      .filter(q => q.question_number != null) // Exclude questions with null question_number
-      .sort((a, b) => {
-        const aNum = a.question_number ?? 0;
-        const bNum = b.question_number ?? 0;
-        return aNum - bNum;
-      });
+  const questionText = question.question_text || question.content || "";
+  let currentBlankIndex = 0;
+
+  // Faqat raqami bor savollarni tartiblab olish
+  const validQuestions = React.useMemo(() => {
+    if (!groupQuestions) return [];
+    return [...groupQuestions]
+      .filter(q => q.question_number != null)
+      .sort((a, b) => (a.question_number ?? 0) - (b.question_number ?? 0));
   }, [groupQuestions]);
 
-  // Word bank: all questions' question_text values (including null question_number ones)
+  // So'zlar banki (shuffled)
   const wordBank = React.useMemo(() => {
-    if (!groupQuestions || groupQuestions.length === 0) return [];
-    
+    if (!groupQuestions) return [];
     const words = groupQuestions
-      .map(q => getContentString(q.question_text))
-      .filter(word => word && word.trim() !== '');
-    
-    const shuffled = [...words];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    
-    return shuffled;
+      .map(q => q.question_text)
+      .filter(w => w && typeof w === 'string' && w.trim() !== '');
+    return [...words].sort(() => Math.random() - 0.5);
   }, [groupQuestions]);
-
-  // Regex: 3 ta va undan ko'p tag chiziqchalarni topadi (masalan: ___, ______)
-  const placeholderRegex = /_{3,}/g;
-  const matches = [...groupContent.matchAll(placeholderRegex)];
-  
-  const parts = [];
-  let lastIndex = 0;
-
-  matches.forEach((match, index) => {
-    const beforeMatch = groupContent.substring(lastIndex, match.index);
-    if (beforeMatch) parts.push({ type: 'text', content: beforeMatch });
-
-    // Map placeholders to questions sequentially based on their sorted question_number order
-    // This ensures questions appear in numerical order (18, 19, 20, 21, etc.)
-    const targetQuestion = validQuestionsForPlaceholders[index];
-
-    if (targetQuestion) {
-      // Use question_number as the key if available, otherwise fall back to id
-      const answerKey = targetQuestion.question_number ?? targetQuestion.id;
-      parts.push({
-        type: 'dropzone',
-        questionId: answerKey,
-        questionNumber: targetQuestion.question_number,
-      });
-    }
-    lastIndex = match.index + match[0].length;
-  });
-
-  if (lastIndex < groupContent.length) {
-    parts.push({ type: 'text', content: groupContent.substring(lastIndex) });
-  }
 
   const handleDrop = (qId, word) => {
     onInteraction?.();
@@ -179,42 +140,81 @@ const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInte
   };
 
   const isWordUsed = (word) => {
-    return Object.values(answers).some(answer => 
-      answer && answer.toString().trim() === word.trim()
-    );
+    return Object.values(answers).some(a => a && a.toString().trim() === word.trim());
   };
 
+  // HTML ichidagi ___ ni DropZone ga almashtirish
+  const options = {
+    replace: (domNode) => {
+      if (domNode.type === 'text' && domNode.data.includes('___')) {
+        const segments = domNode.data.split(/_{3,}/g);
+        return (
+          <>
+            {segments.map((segment, i) => (
+              <React.Fragment key={i}>
+                {segment}
+                {i < segments.length - 1 && currentBlankIndex < validQuestions.length ? (
+                  (() => {
+                    const target = validQuestions[currentBlankIndex++];
+                    // Use question_number as primary key (consistent with calculateTestScore)
+                    const questionKey = target.question_number || target.id;
+                    return (
+                      <DropZone
+                        questionId={questionKey}
+                        questionNumber={target.question_number}
+                        answer={answers[questionKey]}
+                        onDrop={handleDrop}
+                        onClear={handleClear}
+                        mode={mode}
+                        reviewData={reviewData}
+                        showCorrectAnswers={showCorrectAnswers}
+                        bookmarks={bookmarks}
+                        toggleBookmark={toggleBookmark}
+                      />
+                    );
+                  })()
+                ) : null}
+              </React.Fragment>
+            ))}
+          </>
+        );
+      }
+    }
+  };
+
+  const appearance = useAppearance();
+  const themeColors = appearance.themeColors;
+
+
   return (
-    <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-      <div className="text-gray-800 leading-10 text-lg mb-8">
-        {parts.map((part, idx) => (
-          part.type === 'text' 
-            ? <span key={idx}>{part.content}</span>
-            : <DropZone 
-                key={idx}
-                questionId={part.questionId}
-                questionNumber={part.questionNumber}
-                answer={answers[part.questionId]}
-                onDrop={handleDrop}
-                onClear={handleClear}
-                mode={mode}
-                reviewData={reviewData}
-                showCorrectAnswers={showCorrectAnswers}
-              />
-        ))}
+    <div className="p-6 rounded-xl shadow-sm border border-gray-100" style={{ backgroundColor: themeColors.background }}>
+      {/* Bu yerda 'prose' va list stillari qo'shildi */}
+      <div 
+        className="prose prose-slate max-w-none 
+    [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:mb-4
+    [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:mb-4
+    [&_li]:pl-1 [&_li]:mb-1
+    text-gray-800 leading-9" 
+        data-selectable="true"
+        style={{ color: themeColors.text }}
+      >
+        {parse(questionText, options)}
       </div>
 
+
       {wordBank.length > 0 && mode !== 'review' && (
-        <div className="pt-6 border-t border-gray-100">
-          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-4 tracking-wider">Tanlov uchun so'zlar:</h4>
+        <div className="pt-6 border-t border-red-700">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Word Bank:</p>
           <div className="flex flex-wrap gap-3">
-            {wordBank.map((word, idx) => (
-              <DraggableWord 
-                key={idx} 
-                word={word} 
-                isUsed={isWordUsed(word)}
-              />
-            ))}
+            {wordBank.map((word, idx) => {
+              return (
+                <DraggableWord
+                  key={idx}
+                  word={word}
+                  isUsed={isWordUsed(word)}
+                />
+              );
+            })}
           </div>
         </div>
       )}

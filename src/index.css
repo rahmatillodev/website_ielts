@@ -1,5 +1,4 @@
 /* Google Fonts'dan Poppins fontini yuklash */
-@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -17,6 +16,20 @@
 }
 @custom-variant dark (&:is(.dark *));
 
+html {
+  scroll-behavior: smooth;
+  font-family: 'Poppins', sans-serif;
+}
+
+button {
+  cursor: pointer;
+}
+input {
+  outline: none;
+}
+textarea {
+  outline: none;
+}
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

@@ -33,12 +33,12 @@ const LogoutModal = ({ children, onConfirm }) => {
         </AlertDialogHeader>
         
         <AlertDialogFooter className="flex gap-3 sm:justify-center pt-4">
-          <AlertDialogCancel className="flex-1 rounded-xl font-bold border-gray-100 hover:bg-gray-50 h-12">
+          <AlertDialogCancel className="flex-1 rounded-xl font-semibold border-gray-100 hover:bg-gray-50 h-12">
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm}
-            className="flex-1 rounded-xl font-bold bg-red-500 hover:bg-red-600 text-white border-none h-12"
+            className="flex-1 rounded-xl font-semibold bg-red-500 hover:bg-red-600 text-white border-none h-12"
           >
             Yes, Log out
           </AlertDialogAction>

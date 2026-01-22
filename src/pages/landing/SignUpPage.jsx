@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { GraduationCap, Mail, Lock, User, Flame, ChevronLeft } from 'lucide-react'
+import { GraduationCap, Mail, Lock, User, ChevronLeft, BookOpen, Headphones, PenTool, ArrowRight } from 'lucide-react'
 import { toast } from "react-toastify"
 
 // Public Sign Up page
@@ -34,16 +34,17 @@ function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-white justify-center items-center">
       {/* Left Panel - Blue Background */}
-      <div className="hidden lg:flex lg:w-2/5 text-white flex-col justify-between p-12 bg-primary" >
+      <div className="hidden lg:flex lg:w-2/5 text-white flex-col justify-between p-12 bg-primary min-h-screen" >
         <div>
-          <div 
-            className="flex items-center justify-center mb-5 w-10 h-10 cursor-pointer rounded-full hover:bg-white/80 bg-white/90 transition duration-300"
+          <button
             onClick={() => navigate("/")}
-            >
-            <ChevronLeft className="text-gray-600"/>
-          </div>
+            className="flex items-center gap-2 mb-5 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-300 group"
+          >
+            <ChevronLeft className="w-4 h-4 text-white group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium text-white">Back to Home</span>
+          </button>
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
             <GraduationCap className="w-8 h-8" />
@@ -51,7 +52,7 @@ function SignUpPage() {
           </div>
 
           {/* Headline */}
-          <h2 className="text-4xl font-bold mb-6">
+          <h2 className="text-4xl font-semibold mb-6">
             Achieve your dream band score.
           </h2>
 
@@ -61,32 +62,53 @@ function SignUpPage() {
           </p>
         </div>
 
-        {/* Streak Card */}
+        {/* Features Card */}
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 max-w-sm">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm text-white/70 mb-1">CURRENT STREAK</p>
-              <p className="text-3xl font-bold mb-2">12 Days</p>
-              <p className="text-sm text-white/80">Keep it up! You're on a roll.</p>
+          <p className="text-sm text-white/70 mb-4 font-medium">WHAT'S INCLUDED</p>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 rounded-lg p-2.5">
+                <BookOpen className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Reading Practice</p>
+                <p className="text-xs text-white/70">Full-length simulations</p>
+              </div>
             </div>
-            <div className="bg-white rounded-full p-2">
-              <Flame className="w-6 h-6 text-orange-500" />
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 rounded-lg p-2.5">
+                <Headphones className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Listening Practice</p>
+                <p className="text-xs text-white/70">Audio-based exercises</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 rounded-lg p-2.5">
+                <PenTool className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Writing Practice</p>
+                <p className="text-xs text-white/70">Task 1 & 2 simulations</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Right Panel - White Background */}
-      <div className="w-full lg:w-3/5 p-8 bg-white">
-        <div
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-black/80 hover:bg-black/90 transition duration-300 lg:hidden cursor-pointer"
+      <div className="w-full lg:w-3/5 p-8 bg-white min-h-screen flex flex-col justify-center items-center">
+        <button
           onClick={() => navigate("/")}
+          className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-300 lg:hidden group"
         >
-          <ChevronLeft className="text-white"/>
-        </div>
+          <ChevronLeft className="w-4 h-4 text-gray-700 group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm font-medium text-gray-700">Back</span>
+        </button>
         <div className="w-full flex items-center justify-center mt-5">
           <div className="w-full max-w-md">
-            <h1 className="text-3xl font-bold mb-2">Create an account</h1>
+            <h1 className="text-3xl font-semibold mb-2">Create an account</h1>
             <p className="text-gray-600 mb-8">Please enter your details to create an account.</p>
 
             <form onSubmit={handleSignUp} className="space-y-6">
@@ -161,20 +183,27 @@ function SignUpPage() {
             </form>
 
             {/* Links */}
-            <div className="mt-6 space-y-4 text-center">
-              <Link to="/forgot-password" className="block text-sm text-gray-600 hover:text-primary">
-                Forgot Password?
-              </Link>
-              <p className="text-sm text-gray-600">
-                Already have an account?{' '}
-                <Link to="/login" className="text-primary hover:underline font-medium">
-                  Log In
+            <div className="mt-6 space-y-4">
+              {/* Login CTA */}
+              <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                <p className="text-sm text-gray-700 text-center mb-3">
+                  Already have an account?
+                </p>
+                <Link to="/login">
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    className="w-full border-primary/30 text-primary hover:bg-primary hover:text-white transition-all duration-300 group"
+                  >
+                    Sign In
+                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </Button>
                 </Link>
-              </p>
+              </div>
             </div>
 
             {/* Legal Text */}
-            <p className="mt-8 text-xs text-gray-500 text-center">
+            {/* <p className="mt-8 text-xs text-gray-500 text-center">
               By signing up, you agree to our{' '}
               <Link to="/terms" className="text-primary underline hover:no-underline">
                 Terms of Service
@@ -184,7 +213,7 @@ function SignUpPage() {
                 Privacy Policy
               </Link>
               .
-            </p>
+            </p> */}
           </div>
         </div>
       </div>
