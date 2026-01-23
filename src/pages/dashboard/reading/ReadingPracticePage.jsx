@@ -24,13 +24,6 @@ const ReadingPracticePageContent = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { currentTest, fetchTestById, loadingTest: LoadingTest, error } = useTestStore();
-  
-  
-  
-  
-
-
-
   const { authUser } = useAuthStore();
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const { isSidebarOpen } = useAnnotation();
