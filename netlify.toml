@@ -2,22 +2,11 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  # Netlify skaneriga ushbu kalitlarni o'tkazib yuborishni aytadi
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_ANON_KEY,VITE_SUPABASE_URL"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# Production muhiti (main branch uchun)
-[context.production.environment]
-  VITE_SUPABASE_URL = "https://oqzluzzctiirxxhxsboc.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "sb_publishable_9fi8PkGAWeqrpVjOJLyX4Q_EaAZKQ4B"
-
-# Maxsus branch uchun (develop branchi uchun)
-[context.develop.environment]
-  VITE_SUPABASE_URL = "https://miyoovimtupziuehtcxi.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "sb_publishable_7tYoyf8nDNyC9uOyAyMFwA_smS-SExR"
-
-# Pull Requestlar (Deploy Previews) uchun ham Dev bazani ulab qo'yamiz
-[context.deploy-preview.environment]
-  VITE_SUPABASE_URL = "https://miyoovimtupziuehtcxi.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "sb_publishable_7tYoyf8nDNyC9uOyAyMFwA_smS-SExR"
