@@ -1,5 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import {
   FaFacebookF,
   FaTelegramPlane,
@@ -13,7 +12,7 @@ const LandingFooter = () => {
     <footer className="bg-white border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-4 py-16">
         {/* Top */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           
           {/* Brand */}
           <div>
@@ -61,44 +60,20 @@ const LandingFooter = () => {
             </div>
           </div>
 
-          {/* Courses */}
-          <div>
+          {/* Useful Links */}
+          <div className="md:justify-self-center">
             <h3 className="text-sm font-semibold text-gray-900 mb-4">
-              Courses
+              Useful Links
             </h3>
             <ul className="space-y-3 text-sm text-gray-500">
-              <li><Link to="#" className="hover:text-blue-600">IELTS Academic</Link></li>
-              <li><Link to="#" className="hover:text-blue-600">IELTS General</Link></li>
-              <li><Link to="#" className="hover:text-blue-600">Writing Intensive</Link></li>
-              <li><Link to="#" className="hover:text-blue-600">Speaking Booster</Link></li>
+              <li><a href="#why-choose" className="hover:text-blue-600">Why choose us?</a></li>
+              <li><a href="#our-impact" className="hover:text-blue-600">Our Impact</a></li>
+              <li><a href="#stories" className="hover:text-blue-600">Stories</a></li>
             </ul>
           </div>
 
-          {/* Resources */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">
-              Resources
-            </h3>
-            <ul className="space-y-3 text-sm text-gray-500">
-              <li><Link to="#" className="hover:text-blue-600">Free Mock Tests</Link></li>
-              <li><Link to="#" className="hover:text-blue-600">Study Guides</Link></li>
-              <li><Link to="#" className="hover:text-blue-600">Vocabulary Lists</Link></li>
-              <li><Link to="#" className="hover:text-blue-600">Success Stories</Link></li>
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">
-              Company
-            </h3>
-            <ul className="space-y-3 text-sm text-gray-500">
-              <li><Link to="#" className="hover:text-blue-600">About Us</Link></li>
-              <li><Link to="#" className="hover:text-blue-600">Careers</Link></li>
-              <li><Link to="#" className="hover:text-blue-600">Contact</Link></li>
-              <li><Link to="#" className="hover:text-blue-600">Privacy Policy</Link></li>
-            </ul>
-          </div>
+          {/* Empty space for balance */}
+          <div></div>
         </div>
 
         {/* Bottom */}

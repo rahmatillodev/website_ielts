@@ -1,5 +1,14 @@
 import React from "react";
-import { MdAutoAwesome, MdBolt, MdFlag, MdLock, MdQuiz, MdStar, MdTimer, MdCheckCircle } from "react-icons/md";
+import { MdLock, MdQuiz, MdStar, MdTimer, MdCheckCircle } from "react-icons/md";
+
+// Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
+const SignalBars = ({ level = 1 }) => (
+  <span className="inline-flex items-end gap-[2px] h-[10px]">
+    <span className={`w-0.5 shrink-0 rounded-sm ${level >= 1 ? "bg-gray-600" : "bg-gray-300"}`} style={{ height: 4 }} />
+    <span className={`w-0.5 shrink-0 rounded-sm ${level >= 2 ? "bg-gray-600" : "bg-gray-300"}`} style={{ height: 7 }} />
+    <span className={`w-0.5 shrink-0 rounded-sm ${level >= 3 ? "bg-gray-600" : "bg-gray-300"}`} style={{ height: 10 }} />
+  </span>
+);
 
 const CardLocked = ({
   title,
@@ -76,48 +85,28 @@ const CardLocked = ({
               {title}
             </h6>
 
-            <p className="text-xs md:text-sm text-gray-500 font-medium mt-1 flex items-center gap-2 flex-wrap">
-              {(() => {
-                let diffIcon = null;
-                let diffColor = "";
-                if (difficulty?.toLowerCase() === "easy") {
-                  diffIcon = <MdBolt className="text-green-400 text-[16px]" title="Easy" />;
-                  diffColor = "text-green-500";
-                } else if (difficulty?.toLowerCase() === "medium") {
-                  diffIcon = <MdFlag className="text-yellow-500 text-[16px]" title="Medium" />;
-                  diffColor = "text-yellow-500";
-                } else if (difficulty?.toLowerCase() === "hard") {
-                  diffIcon = <MdAutoAwesome className="text-red-500 text-[16px]" title="Hard" />;
-                  diffColor = "text-red-400";
-                }
-                return (
-                  <>
-                    <span className={`flex items-center gap-1 font-medium ${diffColor}`}>
-                      {diffIcon}
-                      Difficulty: {difficulty}
-                    </span>
-                    {isCompleted && (
-                      <span className="ml-1 text-xs text-gray-400 font-normal">
-                        • Completed on {completedDate}
-                      </span>
-                    )}
-                  </>
-                );
-              })()}
-            </p>
+            {isCompleted && (
+              <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
+                Completed on {completedDate}
+              </p>
+            )}
 
-            <div className="flex gap-2 md:gap-4 text-gray-500 mt-3 md:mt-4 flex-wrap">
-              <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
-                <MdTimer className="text-xs md:text-sm" /> {duration} min
+            <div className="flex gap-2 md:gap-3 text-gray-500 mt-2 md:mt-3 flex-wrap items-center">
+              <span className="flex items-baseline gap-1.5 text-[9px] md:text-[10px] font-medium leading-none">
+                <SignalBars level={difficulty?.toLowerCase() === "hard" ? 3 : difficulty?.toLowerCase() === "medium" ? 2 : 1} />
+                <span className="text-gray-600">{difficulty || "—"}</span>
+              </span>
+              <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
+                <MdTimer className="text-[10px] md:text-xs" /> {duration} min
               </span>
               {isCompleted ? (
-                <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
-                  <MdQuiz className="text-xs md:text-sm" /> {correct_answers || 0}/{total_questions || question_quantity || 0} Correct
+                <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
+                  <MdQuiz className="text-[10px] md:text-xs" /> {correct_answers || 0}/{total_questions || question_quantity || 0} Correct
                 </span>
               ) : (
-                question_quantity && (
-                  <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
-                    <MdQuiz className="text-xs md:text-sm" /> {question_quantity} {question_quantity < 2 ? "question" : "questions"}
+                question_quantity != null && (
+                  <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
+                    <MdQuiz className="text-[10px] md:text-xs" /> {question_quantity} {question_quantity === 1 ? "question" : "questions"}
                   </span>
                 )
               )}
@@ -164,48 +153,28 @@ const CardLocked = ({
             )}
           </div>
 
-          <p className="text-xs md:text-sm text-gray-500 font-medium mt-1 flex items-center gap-2 flex-wrap">
-            {(() => {
-              let diffIcon = null;
-              let diffColor = "";
-              if (difficulty?.toLowerCase() === "easy") {
-                diffIcon = <MdBolt className="text-green-400 text-[16px]" title="Easy" />;
-                diffColor = "text-green-500";
-              } else if (difficulty?.toLowerCase() === "medium") {
-                diffIcon = <MdFlag className="text-yellow-500 text-[16px]" title="Medium" />;
-                diffColor = "text-yellow-500";
-              } else if (difficulty?.toLowerCase() === "hard") {
-                diffIcon = <MdAutoAwesome className="text-red-500 text-[16px]" title="Hard" />;
-                diffColor = "text-red-400";
-              }
-              return (
-                <>
-                  <span className={`flex items-center gap-1 font-medium ${diffColor}`}>
-                    {diffIcon}
-                    Difficulty: {difficulty}
-                  </span>
-                  {isCompleted && (
-                    <span className="ml-1 text-xs text-gray-400 font-normal">
-                      • Completed on {completedDate}
-                    </span>
-                  )}
-                </>
-              );
-            })()}
-          </p>
+          {isCompleted && (
+            <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
+              Completed on {completedDate}
+            </p>
+          )}
 
-          <div className="flex gap-2 md:gap-4 text-gray-500 mt-3 md:mt-4 flex-wrap">
-            <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
-              <MdTimer className="text-xs md:text-sm" /> {duration} min
+          <div className="flex gap-2 md:gap-3 text-gray-500 mt-2 md:mt-3 flex-wrap items-center">
+            <span className="flex items-baseline gap-1.5 text-[9px] md:text-[10px] font-medium leading-none">
+              <SignalBars level={difficulty?.toLowerCase() === "hard" ? 3 : difficulty?.toLowerCase() === "medium" ? 2 : 1} />
+              <span className="text-gray-600">{difficulty || "—"}</span>
+            </span>
+            <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
+              <MdTimer className="text-[10px] md:text-xs" /> {duration} min
             </span>
             {isCompleted ? (
-              <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
-                <MdQuiz className="text-xs md:text-sm" /> {correct_answers || 0}/{total_questions || question_quantity || 0} Correct
+              <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
+                <MdQuiz className="text-[10px] md:text-xs" /> {correct_answers || 0}/{total_questions || question_quantity || 0} Correct
               </span>
             ) : (
-              question_quantity && (
-                <span className="flex items-center gap-1 text-[10px] md:text-xs font-black pl-2 bg-gray-100 rounded-full px-2 md:px-3 py-1 md:py-1.5">
-                  <MdQuiz className="text-xs md:text-sm" /> {question_quantity} {question_quantity < 2 ? "question" : "questions"}
+              question_quantity != null && (
+                <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
+                  <MdQuiz className="text-[10px] md:text-xs" /> {question_quantity} {question_quantity === 1 ? "question" : "questions"}
                 </span>
               )
             )}

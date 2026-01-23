@@ -931,8 +931,10 @@ const ReadingPracticePageContent = () => {
               const groupType = (questionGroup.type || '').toLowerCase();
               const isFillInTheBlanks = groupType === 'fill_in_blanks';
               const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
-              const isTable = groupType.includes('table');
+              const isTableCompletion = groupType === 'table_completion';
+              const isTable = groupType.includes('table') && !isTableCompletion;
               const isMap = groupType.includes('map');
+              const isMatchingInformation = groupType.includes('matching_information');
               
               return (
                 <div key={questionGroup.id || groupIdx} className="space-y-6">
@@ -944,7 +946,7 @@ const ReadingPracticePageContent = () => {
                     >
                       Questions {questionRange}
                     </h3>
-                    {questionGroup.instruction && (
+                    {questionGroup.instruction && questionGroup.type !== 'matching_information' && (
                         <p 
                           className="text-sm leading-relaxed"
                           data-selectable="true"
@@ -957,8 +959,8 @@ const ReadingPracticePageContent = () => {
                       )}
                   </div>
                 
-                  {/* For Fill-in-the-Blanks, Drag-and-Drop, Table, and Map: Render as a single group with group-level options */}
-                  {(isFillInTheBlanks || isDragAndDrop || isTable || isMap) ? (
+                  {/* For Fill-in-the-Blanks, Drag-and-Drop, Table Completion, Table, Map, and Matching Information: Render as a single group with group-level options */}
+                  {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation) ? (
                     <div
                       ref={(el) => {
                         // Set ref for all questions in the group for scrolling

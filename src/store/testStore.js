@@ -400,7 +400,85 @@ export const useTestStore = create((set, get) => ({
             const groupType = (questionGroup.type || "").toLowerCase();
             const isMultipleChoice =
               groupType.includes("multiple") || groupType.includes("choice");
-            const isTableType = groupType.includes("table");
+            const isTableCompletion = groupType === "table_completion";
+            const isTableType = groupType.includes("table") && !isTableCompletion;
+
+            // For table_completion: parse HTML table with ___ placeholders (similar to fill_in_blanks)
+            if (isTableCompletion) {
+              // Get questions from questions table for this question group
+              // These represent answers for each ___ placeholder
+              const groupQuestions = individualQuestionsData
+                .filter((iq) => iq.question_id === questionGroup.id)
+                .map((individualQuestion) => {
+                  return {
+                    id: individualQuestion.id || `q-${questionGroup.id}-${individualQuestion.question_number}`,
+                    question_id: questionGroup.id,
+                    question_number: individualQuestion.question_number,
+                    question_text: individualQuestion.question_text || "",
+                    correct_answer: individualQuestion.correct_answer || "",
+                  };
+                })
+                .sort((a, b) => {
+                  const aNum = a.question_number ?? 0;
+                  const bNum = b.question_number ?? 0;
+                  return aNum - bNum;
+                });
+
+              // Parse HTML table from question_text to extract structure
+              const questionText = questionGroup.question_text || "";
+              let columnHeaders = [];
+              let parsedTableData = null;
+
+              if (questionText) {
+                try {
+                  // Use DOMParser to parse HTML table
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(questionText, "text/html");
+                  const table = doc.querySelector("table");
+
+                  if (table) {
+                    // Extract column headers from thead
+                    const thead = table.querySelector("thead");
+                    if (thead) {
+                      const headerRow = thead.querySelector("tr");
+                      if (headerRow) {
+                        const thElements = headerRow.querySelectorAll("th");
+                        columnHeaders = Array.from(thElements).map((th) => {
+                          // Get text content, handling nested elements
+                          return th.textContent?.trim() || "";
+                        });
+                      }
+                    }
+
+                    // Extract rows from tbody
+                    const tbody = table.querySelector("tbody");
+                    if (tbody) {
+                      const rows = tbody.querySelectorAll("tr");
+                      parsedTableData = {
+                        columnHeaders,
+                        rows: Array.from(rows).map((row) => {
+                          const cells = row.querySelectorAll("td");
+                          return Array.from(cells).map((td) => {
+                            // Get innerHTML to preserve ___ placeholders
+                            return td.innerHTML?.trim() || "";
+                          });
+                        }),
+                      };
+                    }
+                  }
+                } catch (error) {
+                  console.error("[fetchTestById] Error parsing table_completion HTML:", error);
+                }
+              }
+
+              return {
+                ...questionGroup,
+                questions: groupQuestions,
+                options: [], // No options for table_completion
+                column_headers: columnHeaders,
+                parsed_table_data: parsedTableData, // Store parsed structure for component use
+              };
+            }
 
             // For table type: use questions table for question_text and correct_answer
             // Options are matched by question_group_id (question_id) AND question_number

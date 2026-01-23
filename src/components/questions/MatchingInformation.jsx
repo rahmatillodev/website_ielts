@@ -1,0 +1,338 @@
+import React, { useMemo } from "react";
+import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import { useAppearance } from "@/contexts/AppearanceContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+/**
+ * MatchingInformation - Renders matching_information question type
+ * 
+ * Data Structure:
+ * - Main Question (question group) contains instruction with JSON: { "original": "...", "answer_options": [...] }
+ * - Multiple questions (statements) that need to be matched to answer options
+ * - Each question has correct_answer stored as text (not letter)
+ * 
+ * Format:
+ * - Instructions text (from instruction.original)
+ * - Answer options list in a grey box (A. Option1, B. Option2, etc.)
+ * - Each question with a dropdown selector
+ * - Answers stored as text (e.g., "McKeachie"), not letter (e.g., "B")
+ */
+const MatchingInformation = ({ 
+  question: _question, 
+  groupQuestions = [], 
+  answers = {}, 
+  onAnswerChange, 
+  options = [], 
+  mode = 'test', 
+  reviewData = {}, 
+  showCorrectAnswers = true, 
+  bookmarks = new Set(), 
+  toggleBookmark = () => {} 
+}) => {
+  const appearance = useAppearance();
+  const themeColors = appearance.themeColors;
+  const isReviewMode = mode === 'review';
+
+  // Parse instruction JSON to extract answer_options
+  const { instructionText, answerOptions } = useMemo(() => {
+    let instructionText = '';
+    let answerOptions = [];
+
+    try {
+      // Try to parse instruction as JSON
+      const instruction = _question?.instruction || '';
+      if (instruction) {
+        try {
+          const parsed = JSON.parse(instruction);
+          if (parsed && typeof parsed === 'object') {
+            instructionText = parsed.original || instruction;
+            answerOptions = parsed.answer_options || [];
+          } else {
+            instructionText = instruction;
+          }
+        } catch (e) {
+          // If not JSON, use instruction as-is
+          instructionText = instruction;
+        }
+      }
+
+      // Fallback: Extract answer options from options table
+      if (answerOptions.length === 0 && options && options.length > 0) {
+        const optionsMap = new Map();
+        options.forEach(opt => {
+          const optText = opt.option_text || '';
+          // Parse format: "A Nilson", "B McKeachie", etc.
+          const match = optText.match(/^([A-Z])[.\s]\s*(.+)$/);
+          if (match) {
+            const letter = match[1];
+            const text = match[2].trim();
+            if (!optionsMap.has(letter)) {
+              optionsMap.set(letter, text);
+            }
+          }
+        });
+        
+        // Sort by letter and extract texts
+        const sortedEntries = Array.from(optionsMap.entries()).sort((a, b) => 
+          a[0].localeCompare(b[0])
+        );
+        answerOptions = sortedEntries.map(([_, text]) => text);
+      }
+    } catch (error) {
+      console.error('[MatchingInformation] Error parsing instruction:', error);
+      instructionText = _question?.instruction || '';
+    }
+
+    return { instructionText, answerOptions };
+  }, [_question?.instruction, options]);
+
+  // Sort questions by question_number
+  const sortedQuestions = useMemo(() => {
+    if (!groupQuestions || groupQuestions.length === 0) {
+      return [];
+    }
+    return [...groupQuestions].sort((a, b) => {
+      const aNum = a.question_number ?? 0;
+      const bNum = b.question_number ?? 0;
+      return aNum - bNum;
+    });
+  }, [groupQuestions]);
+
+  // Get correct answer for a question
+  const getCorrectAnswerForQuestion = (question) => {
+    if (question && question.correct_answer) {
+      return question.correct_answer;
+    }
+    return '';
+  };
+
+  // Get review info for a question
+  const getQuestionReview = (questionNumber) => {
+    return reviewData[questionNumber] || {};
+  };
+
+  // Handle answer selection
+  const handleAnswerChange = (questionNumber, answerText) => {
+    if (mode !== 'review') {
+      // Store answer as text (not letter)
+      onAnswerChange(questionNumber, answerText);
+    }
+  };
+
+  // Get selected answer for a question
+  const getSelectedAnswer = (questionNumber) => {
+    const review = reviewData[questionNumber] || {};
+    return review.userAnswer || answers[questionNumber] || '';
+  };
+
+  // Render component
+  if (sortedQuestions.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-6 mb-6">
+      {/* Instructions */}
+      {instructionText && (
+        <div 
+          className="text-sm leading-relaxed"
+          data-selectable="true"
+          style={{ color: themeColors.text }}
+        >
+          {instructionText}
+        </div>
+      )}
+
+      {/* Answer Options Box */}
+      {answerOptions.length > 0 && (
+        <div 
+          className="rounded-lg p-4 mb-6"
+          style={{ 
+            backgroundColor: themeColors.background === '#f2f2f2' ? '#f5f5f5' : 
+                           themeColors.background === '#000000' ? '#1a1a1a' : 
+                           themeColors.background === '#1a2632' ? '#2a3a4a' : '#f5f5f5',
+            borderColor: themeColors.border,
+            borderWidth: '1px',
+            borderStyle: 'solid'
+          }}
+        >
+          <h3 
+            className="font-bold mb-3"
+            style={{ color: themeColors.text }}
+          >
+            List of Researchers
+          </h3>
+          <div className="space-y-2">
+            {answerOptions.map((optionText, idx) => {
+              const letter = String.fromCharCode(65 + idx); // A, B, C, D...
+              return (
+                <div 
+                  key={idx}
+                  className="flex items-start gap-2"
+                  style={{ color: themeColors.text }}
+                >
+                  <span className="font-medium">{letter}.</span>
+                  <span>{optionText}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Questions with Dropdowns */}
+      <div className="space-y-4">
+        {sortedQuestions.map((q) => {
+          const qNumber = q.question_number || q.id;
+          const questionText = q.question_text || q.text || '';
+          const review = getQuestionReview(qNumber);
+          const isCorrect = review.isCorrect;
+          const correctAnswer = review.correctAnswer || getCorrectAnswerForQuestion(q);
+          const selectedAnswer = getSelectedAnswer(qNumber);
+          const showWrong = isReviewMode && !isCorrect;
+          const showCorrect = isReviewMode && isCorrect;
+          const isBookmarked = bookmarks.has(qNumber);
+
+          return (
+            <div
+              key={q.id || qNumber}
+              className={`p-4 rounded-lg border transition-colors group ${
+                showWrong ? 'bg-red-50 border-red-500' : 
+                showCorrect ? 'bg-green-50 border-green-500' : 
+                'border-gray-200'
+              } ${showWrong || showCorrect ? 'border-2' : ''}`}
+              style={{ 
+                backgroundColor: showWrong ? 'rgba(254, 242, 242, 0.5)' : 
+                              showCorrect ? 'rgba(240, 253, 244, 0.5)' : 
+                              themeColors.background,
+                borderColor: showWrong ? '#ef4444' : 
+                           showCorrect ? '#22c55e' : 
+                           themeColors.border
+              }}
+            >
+              <div className="flex items-start gap-3 justify-between w-full">
+                <div className="flex justify-between align-middle w-full">
+                  <div className="flex items-center gap-2">
+                    <span 
+                      className="font-medium"
+                      style={{ color: themeColors.text }}
+                    >
+                      {qNumber}.
+                    </span>
+                    <span 
+                      data-selectable="true"
+                      style={{ color: themeColors.text }}
+                    >
+                      {questionText}
+                    </span>
+                    {showCorrect && (
+                      <span className="text-xs text-green-700 font-medium ml-2">
+                        Correct
+                      </span>
+                    )}
+                    {showWrong && correctAnswer && showCorrectAnswers && (
+                      <span className="text-xs text-green-600 font-medium ml-2">
+                        Correct: {correctAnswer}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Dropdown Selector */}
+                  <div className="">
+                    <Select
+                      value={selectedAnswer || undefined}
+                      onValueChange={(value) => handleAnswerChange(qNumber, value)}
+                      disabled={mode === 'review'}
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          "min-w-[100px]",
+                          selectedAnswer && !isReviewMode && "border-gray-400 border-2",
+                          showWrong && "border-red-500 border-2",
+                          showCorrect && "border-green-500 border-2"
+                        )}
+                        style={{
+                          backgroundColor: themeColors.background,
+                          color: themeColors.text,
+                          borderColor: selectedAnswer && !isReviewMode ? '#dce1e5' : 
+                                     showWrong ? '#ef4444' : 
+                                     showCorrect ? '#22c55e' : 
+                                     themeColors.border
+                        }}
+                        aria-label={`Select answer for question ${qNumber}`}
+                      >
+                        <SelectValue placeholder={qNumber.toString()} />
+                      </SelectTrigger>
+                      <SelectContent
+                        style={{
+                          backgroundColor: themeColors.background === '#f2f2f2' ? '#ffffff' : 
+                                         themeColors.background === '#000000' ? '#1a1a1a' : 
+                                         themeColors.background === '#1a2632' ? '#2a3a4a' : 
+                                         '#ffffff',
+                          color: themeColors.text
+                        }}
+                      >
+                        {answerOptions.map((optionText, idx) => {
+                          const letter = String.fromCharCode(65 + idx);
+                          const isSelected = selectedAnswer === optionText;
+                          const isCorrectOption = isReviewMode && 
+                            optionText.toLowerCase() === (correctAnswer || '').toLowerCase().trim();
+                          
+                          return (
+                            <SelectItem
+                              key={idx}
+                              value={optionText}
+                              className={cn(
+                                isSelected && showCorrect && "bg-green-50",
+                                isSelected && showWrong && "bg-red-50"
+                              )}
+                              style={{
+                                backgroundColor: isSelected && showCorrect ? 'rgba(220, 252, 231, 0.5)' : 
+                                              isSelected && showWrong ? 'rgba(254, 226, 226, 0.5)' : 
+                                              'transparent',
+                                color: themeColors.text
+                              }}
+                            >
+                              {letter}. {optionText}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Bookmark Icon */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleBookmark(qNumber);
+                  }}
+                  className={`ml-2 transition-all shrink-0 ${
+                    isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
+                  title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
+                >
+                  {isBookmarked ? (
+                    <FaBookmark className="w-4 h-4 text-red-500" />
+                  ) : (
+                    <FaRegBookmark className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                  )}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+export default MatchingInformation;
+

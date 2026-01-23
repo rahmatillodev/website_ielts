@@ -91,12 +91,12 @@ const DashboardSidebar = ({ onNavigate }) => {
   const checkActive = (link) => pathname === link;
 
   return (
-    <aside className={`flex flex-col h-screen sticky top-0 bg-white border-r border-gray-100 font-sans overflow-hidden transition-all duration-300 ${
+    <aside className={`flex flex-col h-screen sticky top-0 bg-white border-0 md:border-r border-gray-100 font-sans overflow-hidden transition-all duration-300 ${
       isCollapsed ? "w-[80px] 2xl:w-[90px]" : "w-[280px] 2xl:w-[320px]"
     }`}>
 
       {/* Logo qismi - balandlik qisqardi */}
-      <div className={`h-20 2xl:h-24 shrink-0 flex items-center px-4 2xl:px-6 ${
+      <div className={`h-20 2xl:h-24 shrink-0 hidden md:flex items-center px-4 2xl:px-6 ${
         isCollapsed ? "justify-center" : "justify-between"
       }`}>
         {!isCollapsed ? (

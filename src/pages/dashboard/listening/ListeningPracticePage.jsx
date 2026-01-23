@@ -917,7 +917,8 @@ const ListeningPracticePageContent = () => {
                 const groupType = (questionGroup.type || '').toLowerCase();
                 const isFillInTheBlanks = groupType === 'fill_in_blanks';
                 const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
-                const isTable = groupType.includes('table');
+                const isTableCompletion = groupType === 'table_completion';
+                const isTable = groupType.includes('table') && !isTableCompletion;
                 const isMap = groupType.includes('map');
 
                 return (
@@ -945,7 +946,7 @@ const ListeningPracticePageContent = () => {
                       )}
                     </div>
 
-                    {(isFillInTheBlanks || isDragAndDrop || isTable || isMap) ? (
+                    {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap) ? (
                       <div
                         ref={(el) => {
                           // Set ref for all questions in the group for scrolling

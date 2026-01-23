@@ -4,9 +4,11 @@ import YesNoNotGiven from "./YesNoNotGiven";
 import MultipleChoice from "./MultipleChoice";
 import FillInTheBlank from "./FillInTheBlank";
 import MatchingHeadings from "./MatchingHeadings";
+import MatchingInformation from "./MatchingInformation";
 import CompletionGapFill from "./CompletionGapFill";
 import DragAndDrop from "./DragAndDrop";
 import Table from "./Table";
+import TableCompletion from "./TableCompletion";
 
 import TypeMap from "./TypeMap";
 
@@ -129,6 +131,24 @@ const QuestionRenderer = ({
     );
   }
 
+  // Matching Information - must be checked before generic matching
+  if (normalizedType.includes('matching_information')) {
+    return (
+      <MatchingInformation
+        question={question}
+        groupQuestions={groupQuestions}
+        answers={answers}
+        onAnswerChange={onAnswerChange}
+        options={question.options || []}
+        mode={mode}
+        reviewData={reviewData}
+        showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
+      />
+    );
+  }
+
   // Matching Headings
   if (
     normalizedType.includes('matching') ||
@@ -158,6 +178,24 @@ const QuestionRenderer = ({
         answers={answers}
         onAnswerChange={onAnswerChange}
         options={question.options || []}
+        mode={mode}
+        reviewData={reviewData}
+        showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
+      />
+    );
+  }
+
+  // Table Completion - HTML table with ___ placeholders (gap-fill in table format)
+  if (normalizedType.includes('table_completion')) {
+    return (
+      <TableCompletion
+        question={question}
+        groupQuestions={groupQuestions}
+        answers={answers}
+        onAnswerChange={onAnswerChange}
+        onInteraction={onInteraction}
         mode={mode}
         reviewData={reviewData}
         showCorrectAnswers={showCorrectAnswers}
