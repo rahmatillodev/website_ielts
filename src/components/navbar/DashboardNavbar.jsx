@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LuUser, LuSettings, LuLogOut, LuChevronDown } from "react-icons/lu";
+import { LuUser, LuSettings, LuLogOut } from "react-icons/lu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,7 +54,6 @@ const DashboardNavbar = () => {
   return (
     <nav className="w-full h-20 bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="h-full px-8 flex items-center justify-end gap-6">
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-1.5 pr-3 rounded-2xl transition-all group">
