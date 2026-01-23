@@ -527,7 +527,7 @@ const ListeningPracticePageContent = () => {
       }
 
       // Submit even if answers object is empty - submitTestAttempt handles this
-      const result = await submitTestAttempt(id, answers, currentTest, timeTaken);
+      const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'listening');
 
       if (result.success) {
         setLatestAttemptId(result.attemptId);

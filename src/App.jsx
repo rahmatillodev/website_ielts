@@ -57,17 +57,11 @@ function App() {
   return (
     <DndProvider backend={HTML5Backend}>
       <Routes>
-        <Route
+
+        {/* <Route
           path="/"
           element={user ? <Navigate to="/dashboard" replace /> : <LandingPage />}
-        />
-        {/* Public routes */}
-        <Route element={<PublicLayout />}>
-
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/login" element={<LoginPage />} />
-        </Route>
+        /> */}
         <Route
           path="/pricing"
           element={
@@ -76,39 +70,46 @@ function App() {
             </PricingRoute>
           }
         />
+        {!user ?
+          <Route element={<PublicLayout />}>
 
-        {/* Protected routes */}
-        <Route element={<DashboardLayout />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/reading" element={<ReadingPage />} />
-          <Route path="/listening" element={<ListeningPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/writing" element={<WritingPage />} />
-          <Route path="/speaking" element={<SpeakingPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/mock-tests" element={<MockTestsPage />} />
-          <Route path="/writing-practice" element={<OwnWritingPage />} />
-          <Route
-            path="/pricing"
-            element={
-              <PricingRoute>
-                <PricingPage />
-              </PricingRoute>
-            }
-          />
-          <Route
-            path="/reading-practice/:id"
-            element={<ReadingPracticePage />}
-          />
-          <Route
-            path="/listening-practice/:id"
-            element={<ListeningPracticePage />}
-          />
-          <Route path="/reading-result/:id" element={<ReadingResultPage />} />
-          <Route path="/listening-result/:id" element={<ListeningResultPage />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/login" element={<LoginPage />} />
+          </Route>
 
-        </Route>
+          :
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/reading" element={<ReadingPage />} />
+            <Route path="/listening" element={<ListeningPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/writing" element={<WritingPage />} />
+            <Route path="/speaking" element={<SpeakingPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/mock-tests" element={<MockTestsPage />} />
+            <Route path="/writing-practice" element={<OwnWritingPage />} />
+            <Route
+              path="/pricing"
+              element={
+                <PricingRoute>
+                  <PricingPage />
+                </PricingRoute>
+              }
+            />
+            <Route
+              path="/reading-practice/:id"
+              element={<ReadingPracticePage />}
+            />
+            <Route
+              path="/listening-practice/:id"
+              element={<ListeningPracticePage />}
+            />
+            <Route path="/reading-result/:id" element={<ReadingResultPage />} />
+            <Route path="/listening-result/:id" element={<ListeningResultPage />} />
 
+          </Route>
+        }
         <Route
           path="*"
           element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/" replace />}
@@ -118,7 +119,7 @@ function App() {
       <ToastContainer duration={2000} />
       <NetworkModal isOpen={!useNetworkStatus()} />
       {!isPracticePage && <div className='fixed_bottom_right_container'>
-       
+
       </div>}
     </DndProvider>
   );

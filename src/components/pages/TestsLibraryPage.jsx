@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 // import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { LibraryShimmer } from "@/components/ui/shimmer";
 import CardLocked from "../cards/CardLocked";
 import CardOpen from "../cards/CardOpen";
+import { motion } from "framer-motion";
 
 const TestsLibraryPage = ({
   title,
@@ -23,9 +25,35 @@ const TestsLibraryPage = ({
   const [activeTab, setActiveTab] = useState("All Tests");
   const [searchQuery, setSearchQuery] = useState("");
   const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
+  const [isRefreshing, setIsRefreshing] = useState(false); // Track refresh state for button clicks
   const itemsPerLoad = 9; // Items to load per scroll
   const scrollContainerRef = useRef(null);
   const isLoadingMoreRef = useRef(false);
+
+  // Animation variants for card container
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: 0.4,
+        ease: "easeOut",
+      },
+    },
+  };
 
   const userProfile = useAuthStore((state) => state.userProfile);
   const location = useLocation();
@@ -43,7 +71,7 @@ const TestsLibraryPage = ({
     // This handles the case when navigating back from practice pages where data was cleared
     const shouldForceRefresh = !loaded || allTests.length === 0;
     
-    if (!loading) {
+    if (!loading && !isRefreshing) {
       if (shouldForceRefresh) {
         // Force refresh to bypass cache and ensure fresh data
         fetchTests(true);
@@ -54,6 +82,13 @@ const TestsLibraryPage = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, loaded, allTests.length, loading, fetchTests]); // Re-run when route changes or data state changes
+
+  // Reset refreshing state when loading completes
+  useEffect(() => {
+    if (!loading && isRefreshing) {
+      setIsRefreshing(false);
+    }
+  }, [loading, isRefreshing]);
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(allTests) || allTests.length === 0) {
@@ -134,12 +169,27 @@ const TestsLibraryPage = ({
   }, [activeTab, searchQuery]);
 
   const handleFilterChange = (tab) => {
-    setActiveTab(tab);
+    if (tab !== activeTab) {
+      setActiveTab(tab);
+      // Show shimmer briefly when changing filters if we have data
+      if (allTests.length > 0 && !loading) {
+        setIsRefreshing(true);
+        // Reset after a short delay to show shimmer effect
+        setTimeout(() => {
+          setIsRefreshing(false);
+        }, 300);
+      }
+    }
   };
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
+
+  // Show shimmer while loading or refreshing
+  if (loading || isRefreshing) {
+    return <LibraryShimmer isGridView={isGridView} count={displayedItems} />;
+  }
 
   return (
     <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
@@ -208,42 +258,46 @@ const TestsLibraryPage = ({
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto pb-4 -mx-3 md:-mx-8 px-3 md:px-8"
         >
-          {loading ? (
-            <div className="flex flex-1 items-center justify-center min-h-[300px]">
-              <div className="py-20 text-center text-gray-400 font-semibold w-full">
-                Loading tests...
-              </div>
-            </div>
-          ) : currentItems.length > 0 ? (
+          {currentItems.length > 0 ? (
             <>
-              <div
+              <motion.div
                 className={
                   isGridView
                     ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16"
                     : "flex flex-col gap-1 mb-16"
                 }
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                key={`${activeTab}-${searchQuery}-${isGridView}`}
               >
-                {currentItems.map((test) => {
+                {currentItems.map((test, index) => {
                   const subscriptionStatus = userProfile?.subscription_status ?? "free";
                   const canAccess =
                     subscriptionStatus === "premium" || !test.is_premium;
 
-                  return canAccess ? (
-                    <CardOpen
+                  return (
+                    <motion.div
                       key={test.id}
-                      {...test}
-                      isGridView={isGridView}
-                      testType={testType}
-                    />
-                  ) : (
-                    <CardLocked
-                      key={test.id}
-                      {...test}
-                      isGridView={isGridView}
-                    />
+                      variants={itemVariants}
+                      layout
+                    >
+                      {canAccess ? (
+                        <CardOpen
+                          {...test}
+                          isGridView={isGridView}
+                          testType={testType}
+                        />
+                      ) : (
+                        <CardLocked
+                          {...test}
+                          isGridView={isGridView}
+                        />
+                      )}
+                    </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
               
               {/* Loading indicator when loading more */}
               {hasMoreItems && (

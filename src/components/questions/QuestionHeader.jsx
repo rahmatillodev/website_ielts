@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import AppearanceSettingsModal from '@/components/modal/AppearanceSettingsModal'
+import ConfirmModal from '@/components/modal/ConfirmModal'
 import { useAppearance } from '@/contexts/AppearanceContext'
 import { useAnnotation } from '@/contexts/AnnotationContext'
 
@@ -35,6 +36,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const toggleFullscreen = async () => {
     try {
@@ -70,6 +72,11 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
   const navigate = useNavigate()
 
   const handleBackClick = () => {
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmExit = () => {
+    setIsConfirmModalOpen(false);
     if (onBack) {
       onBack();
     }
@@ -140,7 +147,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
               disabled={isStarted || hasInteracted}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              Start
+              { isStarted ? "Pause" : "Start"}
             </button>
           </div>
           <p 
@@ -153,15 +160,6 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
       )}
 
       <div className="flex items-center gap-4">
-
-          {/* {status === 'reviewing' && onRetake && (
-            <button
-              onClick={onRetake}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium"
-            >
-              Redo Test
-            </button>
-          )} */}
         <div className="flex items-center gap-2">
           <button
             onClick={toggleFullscreen}
@@ -219,6 +217,15 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
       <AppearanceSettingsModal 
         isOpen={isSettingsModalOpen} 
         onClose={() => setIsSettingsModalOpen(false)} 
+      />
+
+      {/* Confirm Exit Modal */}
+      <ConfirmModal 
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmExit}
+        title="Exit Test"
+        description="Are you sure you want to exit? Your progress may be lost."
       />
     </header>
   )

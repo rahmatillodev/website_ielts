@@ -1,5 +1,6 @@
 import React from "react";
 import { MdLock, MdQuiz, MdStar, MdTimer, MdCheckCircle } from "react-icons/md";
+import { motion } from "framer-motion";
 
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
@@ -37,6 +38,18 @@ const CardLocked = ({
   const completedDate = date ? formatDate(date) : '';
   const cardStatus = is_premium ? "Premium" : "Free";
 
+  // Animation variants for hover effect
+  const cardVariants = {
+    hover: {
+      scale: 1.02,
+      y: -4,
+      transition: {
+        duration: 0.2,
+        ease: "easeOut",
+      },
+    },
+  };
+
   // Container classes with green border for completed tests
   const containerClass = isGridView
     ? `bg-white border border-t-4 ${isCompleted ? 'border-t-green-500' : 'border-t-yellow-500'} rounded-2xl md:rounded-[32px] p-4 md:p-7 shadow-sm hover:shadow-xl transition-all flex flex-col relative h-full`
@@ -45,7 +58,11 @@ const CardLocked = ({
   if (isGridView) {
     // Grid View
     return (
-      <div className={containerClass}>
+      <motion.div
+        className={containerClass}
+        variants={cardVariants}
+        whileHover="hover"
+      >
         {/* Premium/Free Badge */}
         <div className={`${isCompleted ? 'absolute top-3 md:top-5 right-20 md:right-30 z-10' : 'absolute top-3 md:top-5 right-3 md:right-5 z-10'}`}>
           <span className={`px-2 md:px-2.5 py-0.5 md:py-1 text-[9px] md:text-[10px] font-black uppercase rounded-md md:rounded-lg tracking-widest border flex items-center gap-1 ${is_premium
@@ -119,12 +136,16 @@ const CardLocked = ({
             Unlock Test
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   } else {
     // List View
     return (
-      <div className={containerClass}>
+      <motion.div
+        className={containerClass}
+        variants={cardVariants}
+        whileHover="hover"
+      >
         {/* Icon */}
         <div className={`size-10 md:size-14 rounded-xl md:rounded-2xl ${isCompleted
             ? 'bg-green-50 text-green-500'
@@ -194,7 +215,7 @@ const CardLocked = ({
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
     );
   }
 };

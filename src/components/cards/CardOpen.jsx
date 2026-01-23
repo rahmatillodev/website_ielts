@@ -7,6 +7,7 @@ import { clearListeningPracticeData } from "@/store/LocalStorage/listeningStorag
 import { checkTestCompleted } from "@/lib/testAttempts";
 import { IoBookOutline } from "react-icons/io5";
 import { useTestStore } from "@/store/testStore";
+import { motion } from "framer-motion";
 
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
@@ -129,10 +130,26 @@ const ReadingCardOpen = ({
     ? `bg-white border border-t-4 ${hasCompleted ? 'border-t-green-500' : 'border-t-blue-500'} rounded-2xl md:rounded-[32px] p-4 md:p-7 shadow-none hover:shadow-sm flex flex-col relative h-full`
     : `bg-white border border-l-4 ${hasCompleted ? 'border-l-green-500' : 'border-l-blue-500'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-none hover:shadow-sm flex items-center gap-3 md:gap-4 mb-4 relative`;
 
+  // Animation variants for hover effect
+  const cardVariants = {
+    hover: {
+      scale: 1.02,
+      y: -4,
+      transition: {
+        duration: 0.2,
+        ease: "easeOut",
+      },
+    },
+  };
+
   if (isGridView) {
     // Grid View
     return (
-      <div className={containerClass}>
+      <motion.div
+        className={containerClass}
+        variants={cardVariants}
+        whileHover="hover"
+      >
         {/* Premium/Free Badge */}
         {
           <div className={`${hasCompleted ? 'absolute top-3 md:top-5 right-20 md:right-30 z-10' : 'absolute top-3 md:top-5 right-3 md:right-5 z-10'}`}>
@@ -231,12 +248,16 @@ const ReadingCardOpen = ({
             Start Practice <HiOutlinePlay className="text-sm md:text-base" />
           </button>
         )}
-      </div>
+      </motion.div>
     );
   } else {
     // List View
     return (
-      <div className={containerClass}>
+      <motion.div
+        className={containerClass}
+        variants={cardVariants}
+        whileHover="hover"
+      >
         {/* Icon */}
         <div className={`size-10 md:size-14 rounded-xl md:rounded-2xl ${hasCompleted
           ? 'bg-green-50 text-green-500'
@@ -328,7 +349,7 @@ const ReadingCardOpen = ({
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
     );
   }
 };
