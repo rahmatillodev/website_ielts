@@ -9,13 +9,12 @@ import {
 } from "react-icons/lu";
 import { FaChartSimple } from "react-icons/fa6";
 import { Button } from "../ui/button";
-import { GraduationCap } from "lucide-react"; 
 import { useAuthStore } from "@/store/authStore";
 import LogoutModal from "../modal/LogoutModal";
 import { toast } from "react-toastify";
 import { TfiWrite } from "react-icons/tfi";
 import { RiSpeakLine } from "react-icons/ri";
-
+import LogoDesign from "@/components/LogoDesign"
 const SidebarItem = ({ icon: Icon, label, link, isActive }) => (
   <Link
     to={link}
@@ -52,20 +51,14 @@ const DashboardSidebar = () => {
   const checkActive = (link) => pathname === link;
 
   return (
-    // Balandlikni ekranga moslash va scrollni boshqarish
     <aside className="flex flex-col w-[320px] h-screen sticky top-0 bg-white border-r border-gray-100 font-sans overflow-hidden">
-      
-      {/* Logo qismi (Fiksirlangan balandlik) */}
-      <div className="h-24 shrink-0 flex items-center px-6">
-        <div className="flex items-center gap-3">
-          <div className="size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
-            <GraduationCap className="text-[#4A90E2] size-7" />
-          </div>
-          <span className="text-xl font-black text-[#1E293B] tracking-tight">
-            IELTS Sim
-          </span>
-        </div>
+      {/* Logo section */}
+      <div className="h-16 shrink-0 flex items-center px-6">
+        <Link to="/dashboard">
+          <LogoDesign />
+        </Link>
       </div>
+
 
       {/* Navigatsiya qismi (Scroll bo'ladigan qism) */}
       <nav className="flex-1 overflow-y-auto py-2 scrollbar-hide space-y-1">

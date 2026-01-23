@@ -5929,18 +5929,12 @@ index 0000000..1b99aa9
 +
 +  const checkActive = (link) => pathname === link;
 +
-+  return (
-+    <aside className="flex flex-col w-[280px] h-screen bg-white border-r border-gray-100 font-sans">
-+      <div className="h-24 flex items-center px-6 mb-2">
-+        <div className="flex items-center gap-3">
-+          <div className="size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
-+            <GraduationCap className="text-[#4A90E2] size-7" />
-+          </div>
-+          <span className="text-xl font-black text-[#1E293B] tracking-tight">
-+            IELTS Sim
-+          </span>
-+        </div>
-+      </div>
++  import LogoDesign from "@/components/LogoDesign";
+
+<div className="h-24 shrink-0 flex items-center px-6">
+  <LogoDesign />
+</div>
+
 +
 +      <nav className="flex-1 space-y-1">
 +        <SidebarItem

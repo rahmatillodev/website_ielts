@@ -328,7 +328,7 @@ const LandingPage = () => {
             variants={fadeInUp}
             className="text-center text-[10px] sm:text-xs font-semibold tracking-widest text-blue-500 uppercase mb-3 sm:mb-4"
           >
-            Why choose IELTS SIM?
+            Why choose IeltScore?
           </motion.p>
 
           <motion.h2 
@@ -486,7 +486,7 @@ const LandingPage = () => {
                 </div>
               </div>
               <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
-                "The analytics provided by IELTS SIM were eye-opening. I finally understood why my Writing score was stuck at 6.0 and managed to push it to 7.5 in just 3 weeks."
+                "The analytics provided by IeltScore were eye-opening. I finally understood why my Writing score was stuck at 6.0 and managed to push it to 7.5 in just 3 weeks."
               </p>
               <div className="flex items-center gap-2 text-green-600">
                 <motion.span 
@@ -641,7 +641,7 @@ const LandingPage = () => {
                 </div>
               </div>
               <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
-                "The analytics provided by IELTS SIM were eye-opening. I finally understood why my Writing score was stuck at 6.0 and managed to push it to 7.5 in just 3 weeks."
+                "The analytics provided by IeltScore were eye-opening. I finally understood why my Writing score was stuck at 6.0 and managed to push it to 7.5 in just 3 weeks."
               </p>
               <div className="flex items-center gap-2 text-green-600">
                 <motion.span 
@@ -690,7 +690,7 @@ const LandingPage = () => {
             variants={fadeInUp}
             className="text-blue-100 text-xs sm:text-sm mb-6 sm:mb-8 max-w-2xl mx-auto px-2"
           >
-            Join 1,000+ students who turned IELTS stress into confidence with IELTS SIM
+            Join 1,000+ students who turned IELTS stress into confidence with IeltScore
           </motion.p>
           <motion.div variants={fadeInUp}>
             <Button
