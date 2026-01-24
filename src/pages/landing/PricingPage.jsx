@@ -9,6 +9,7 @@ import {
 import { FaChartSimple } from "react-icons/fa6";
 import { FiSend } from "react-icons/fi";
 import { useSettingsStore } from "@/store/systemStore";
+import { useAuthStore } from "@/store/authStore";
 
 /* ================= Feature Item ================= */
 const FeatureItem = ({ icon: Icon, title, description, disabled = false }) => (
@@ -49,7 +50,6 @@ const PricingPage = () => {
 
   const settings = useSettingsStore((state) => state.settings);
   const userProfile = useAuthStore((state) => state.userProfile);
-
   const calculateDiscount = () => {
     if (!settings?.premium_monthly_cost || !settings?.premium_old_price) {
       return 0;
