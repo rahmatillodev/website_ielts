@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FaArrowLeft, FaExpand, FaBars, FaEdit, FaCompress, FaBell } from 'react-icons/fa'
+import { FaArrowLeft, FaExpand, FaBars, FaEdit, FaCompress } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -8,7 +8,7 @@ import ConfirmModal from '@/components/modal/ConfirmModal'
 import { useAppearance } from '@/contexts/AppearanceContext'
 import { useAnnotation } from '@/contexts/AnnotationContext'
 
-const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, handleStart, onBack, showCorrectAnswers, onToggleShowCorrect, status }) => {
+const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, handleStart, onBack, showCorrectAnswers, onToggleShowCorrect, status, type }) => {
   // Try to use appearance context, but don't fail if not available (for backward compatibility)
   let themeColors = { text: '#000000', background: '#ffffff', border: '#e5e7eb' };
   let theme = 'light';
@@ -80,7 +80,11 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
     if (onBack) {
       onBack();
     }
-    navigate("/dashboard");
+      if (type === "reading") {
+        navigate("/reading");
+      } else {
+        navigate("/listening");
+      }
   };
   return (
     <header 
@@ -104,7 +108,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             className="text-xl font-semibold"
             style={{ color: themeColors.text }}
           >
-            IELTS | {currentTest?.type.charAt(0).toUpperCase() + currentTest?.type.slice(1)}
+            IELTS | {type}
           </span>
           <span 
             className="text-sm"

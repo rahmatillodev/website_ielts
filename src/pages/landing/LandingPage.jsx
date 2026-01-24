@@ -190,7 +190,7 @@ const LandingPage = () => {
             >
               <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
               <span className="text-[10px] sm:text-xs font-semibold text-blue-600 uppercase whitespace-nowrap">
-                NEW: AI SPEAKING MOCK TESTS
+                NEW: AI Evaluated Mock Tests
               </span>
             </motion.div>
 
@@ -205,12 +205,12 @@ const LandingPage = () => {
 
             <motion.p 
               variants={fadeInUp}
-              className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-xl mx-auto lg:mx-0"
+              className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-xl mx-auto lg:mx-0 mb-2"
             >
               Personalized practice, ruthless feedback, and full-length mock
               tests designed to push you to Band 8.0+.
             </motion.p>
-
+            {/* /// add link to sign up */}
             <motion.div variants={fadeInUp}>
               <Button
                 size="lg"
@@ -414,7 +414,7 @@ const LandingPage = () => {
               </motion.div>
               <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-gray-900">AI Evaluation</h3>
               <p className="text-xs sm:text-sm text-gray-500 leading-relaxed mb-3 sm:mb-4">
-                Honest feedback. Zero sugarcoating. Get instant, detailed Writing & Speaking scores based on official IELTS criteria.
+                Honest feedback. Zero sugarcoating. Get instant, detailed scores based on official IELTS criteria.
               </p>
             </motion.div>
 
@@ -440,8 +440,7 @@ const LandingPage = () => {
       </AnimatedSection>
 
       {/* ================= OUR IMPACT ================= */}
-      <AnimatedSection id="our-impact" className="relative py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-[#0A3D4A] to-[#0D5266] overflow-hidden">
-        {/* Blur элемент - за "10+" (вторая колонка) */}
+      {/* <AnimatedSection id="our-impact" className="relative py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-[#0A3D4A] to-[#0D5266] overflow-hidden">
         <div 
           className="absolute top-1/2 left-[37.5%] md:left-[37.5%] w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2"
           style={{
@@ -486,7 +485,7 @@ const LandingPage = () => {
             ))}
           </motion.div>
         </div>
-      </AnimatedSection>
+      </AnimatedSection> */}
 
       {/* ================= SUCCESS STORIES ================= */}
       <AnimatedSection id="stories" className="bg-white flex items-center py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
@@ -614,7 +613,7 @@ const LandingPage = () => {
           </motion.h2>
           <motion.p 
             variants={fadeInUp}
-            className="text-blue-100 text-xs sm:text-sm mb-6 sm:mb-8 max-w-2xl mx-auto px-2"
+            className="text-blue-100 text-xs sm:text-sm mb-6 sm:mb-8 max-w-2xl mx-auto px-2 text-center"
           >
             Join 1,000+ students who turned IELTS stress into confidence with IELTS SIM
           </motion.p>

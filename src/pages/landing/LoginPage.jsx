@@ -61,7 +61,7 @@ function LoginPage() {
         </div>
 
         {/* Features Card */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 max-w-sm">
+        <div className="bg-gradient-to-br from-white/15 to-white/5 shadow-lg shadow-primary/30 backdrop-blur-sm rounded-lg p-6 max-w-sm">
           <p className="text-sm text-white/70 mb-4 font-medium">WHAT'S INCLUDED</p>
           <div className="space-y-4">
             <div className="flex items-center gap-3">

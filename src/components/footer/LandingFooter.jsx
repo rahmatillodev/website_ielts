@@ -12,7 +12,7 @@ const LandingFooter = () => {
     <footer className="bg-white border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-4 py-16">
         {/* Top */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center justify-between">
           
           {/* Brand */}
           <div>
@@ -20,12 +20,12 @@ const LandingFooter = () => {
               <div className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center">
                 <HiAcademicCap size={20} />
               </div>
-              <h2 className="text-xl font-semibold text-gray-900">IELTS SIM</h2>
+              <h2 className="text-xl font-semibold text-gray-900">IELTSCORE - Know where you stand before test day</h2>
             </div>
 
-            <p className="text-sm text-gray-500 max-w-xs">
-              The world’s most advanced IELTS preparation platform. Empowering
-              students to achieve their dreams.
+            <p className="text-sm text-gray-500">
+              Computer-based IELTS practise that mirrors the real exam experience - from question types to timing, 
+              no more guessing what to expect.
             </p>
 
             {/* Social icons */}
@@ -61,10 +61,11 @@ const LandingFooter = () => {
           </div>
 
           {/* Useful Links */}
-          <div className="md:justify-self-center">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">
+          <div className="md:justify-self-center flex flex-col items-end w-full">
+            <a className="text-sm font-semibold text-gray-900 mb-4 mr-7">
+              {/* /// add link to sign up */}
               Useful Links
-            </h3>
+            </a>
             <ul className="space-y-3 text-sm text-gray-500">
               <li><a href="#why-choose" className="hover:text-blue-600">Why choose us?</a></li>
               <li><a href="#our-impact" className="hover:text-blue-600">Our Impact</a></li>
@@ -73,7 +74,6 @@ const LandingFooter = () => {
           </div>
 
           {/* Empty space for balance */}
-          <div></div>
         </div>
 
         {/* Bottom */}

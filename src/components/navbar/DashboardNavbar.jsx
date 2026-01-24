@@ -106,7 +106,7 @@ const DashboardNavbar = ({ onMenuClick }) => {
               </DropdownMenuItem>
               
               <DropdownMenuItem className="rounded-xl focus:bg-gray-50 cursor-pointer outline-none">
-                <Link to="/billing" className="flex items-center gap-4 px-3 py-2.5 w-full">
+                <Link to="/pricing" className="flex items-center gap-4 px-3 py-2.5 w-full">
                   <LuCreditCard className="w-5 h-5 text-gray-400" />
                   <span className="text-[14px] font-semibold text-gray-700">Billing & Plan</span>
                 </Link>

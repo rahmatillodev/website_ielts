@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import { MdHeadset, MdTimer, MdQuiz, MdCheckCircle, MdStar } from "react-icons/md";
 import { HiOutlinePlay } from "react-icons/hi2";
 import { useNavigate } from "react-router-dom";
 import { clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
 import { clearListeningPracticeData } from "@/store/LocalStorage/listeningStorage";
-import { checkTestCompleted } from "@/lib/testAttempts";
 import { IoBookOutline } from "react-icons/io5";
-import { useTestStore } from "@/store/testStore";
+import { useDashboardStore } from "@/store/dashboardStore";
 import { motion } from "framer-motion";
 
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
@@ -18,13 +17,14 @@ const SignalBars = ({ level = 1 }) => (
   </span>
 );
 
-const ReadingCardOpen = ({
+const CardOpen = ({
   id,
   title,
   difficulty,
   duration,
   question_quantity,
   isCompleted,
+  created_at,
   date,
   isGridView,
   link,
@@ -32,50 +32,24 @@ const ReadingCardOpen = ({
   testType = 'reading', // 'reading' or 'listening'
 }) => {
   const navigate = useNavigate();
-  const [hasCompleted, setHasCompleted] = useState(false);
-  const [attemptData, setAttemptData] = useState(null);
 
-  // Get test completion state from store
-  // const test_completed = useTestStore((state) => state.test_completed);
-  const setTestCompleted = useTestStore((state) => state.setTestCompleted);
-  const getTestCompleted = useTestStore((state) => state.getTestCompleted);
+  // Get completion status from dashboardStore (no API call needed)
+  const completionData = useDashboardStore((state) => state.getCompletion(id));
 
-  useEffect(() => {
-    const checkCompleted = async () => {
-      if (!id) return;
+  const hasCompleted = useMemo(() => {
+    return completionData?.isCompleted || false;
+  }, [completionData]);
 
-      // First check if we have cached completion data in store
-      const cachedData = getTestCompleted(id);
-      if (cachedData) {
-        setHasCompleted(cachedData.isCompleted);
-        setAttemptData(cachedData.attempt);
-        return;
-      }
-
-      // If not in store, fetch from API
-      const result = await checkTestCompleted(id);
-      if (result.success) {
-        // Cache the result in store
-        setTestCompleted(id, {
-          isCompleted: result.isCompleted,
-          attempt: result.attempt,
-        });
-
-        // Update local state
-        setHasCompleted(result.isCompleted);
-        setAttemptData(result.attempt);
-      }
-    };
-
-    checkCompleted();
-  }, [id, setTestCompleted, getTestCompleted]);
+  const attemptData = useMemo(() => {
+    return completionData?.attempt || null;
+  }, [completionData]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return `${months[date.getMonth()]} ${date.getDate()}`;
+      return `${months[date.getMonth()]} ${date.getDate()} ${date.getHours()}:${date.getMinutes()}`;
     } catch {
       return dateString;
     }
@@ -95,7 +69,6 @@ const ReadingCardOpen = ({
       ? `/listening-practice/${id}`
       : (link || `/reading-practice/${id}`);
     navigate(practiceLink);
-    console.log(practiceLink);
   };
 
   const handleRetake = () => {
@@ -119,6 +92,7 @@ const ReadingCardOpen = ({
     navigate(practiceLink);
   };
   const cardStatus = is_premium ? "Premium" : "Free";
+  const createdDate = created_at ? formatDate(created_at) : '';
   const completedDate = attemptData?.completed_at ? formatDate(attemptData.completed_at) : (date ? formatDate(date) : '');
 
   const score = attemptData?.score || null;
@@ -127,17 +101,16 @@ const ReadingCardOpen = ({
 
   // Container classes with green border for completed tests
   const containerClass = isGridView
-    ? `bg-white border border-t-4 ${hasCompleted ? 'border-t-green-500' : 'border-t-blue-500'} rounded-2xl md:rounded-[32px] p-4 md:p-7 shadow-none hover:shadow-sm flex flex-col relative h-full`
-    : `bg-white border border-l-4 ${hasCompleted ? 'border-l-green-500' : 'border-l-blue-500'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-none hover:shadow-sm flex items-center gap-3 md:gap-4 mb-4 relative`;
+    ? `bg-white border ${hasCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-blue-500'} rounded-2xl md:rounded-[32px] p-4 md:p-7 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
+    : `bg-white border border-l-4 ${hasCompleted ? 'border-l-green-500' : is_premium ? 'border-l-amber-400' : 'border-l-blue-500'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 mb-4 relative`;
 
   // Animation variants for hover effect
   const cardVariants = {
     hover: {
-      scale: 1.02,
-      y: -4,
+      scale: 1.005,
       transition: {
-        duration: 0.2,
-        ease: "easeOut",
+        duration: 0.5,
+        ease: "ease",
       },
     },
   };
@@ -152,22 +125,22 @@ const ReadingCardOpen = ({
       >
         {/* Premium/Free Badge */}
         {
-          <div className={`${hasCompleted ? 'absolute top-3 md:top-5 right-20 md:right-30 z-10' : 'absolute top-3 md:top-5 right-3 md:right-5 z-10'}`}>
-            <span className={`px-2 md:px-2.5 py-0.5 md:py-1 text-[9px] md:text-[10px] font-black uppercase rounded-md md:rounded-lg tracking-widest border flex items-center gap-1 ${is_premium
-              ? "bg-amber-50 text-amber-600 border-amber-100"
-              : "bg-green-50 text-green-600 border-green-100"
+          <div className={`${'absolute top-3 md:top-5 right-3 md:right-7 z-10'}`}>
+            <span className={`px-2.5 md:px-3 py-1 md:py-1 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 ${is_premium
+              ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
+              : "bg-green-500 text-white border-0 shadow-md"
               }`}>
-              {is_premium && <MdStar className="text-xs" />} {cardStatus}
+              {is_premium && <MdStar className="text-xs md:text-sm" />} {cardStatus}
             </span>
           </div>
         }
 
         {/* Score Badge for Completed */}
         {hasCompleted && (
-          <div className="absolute top-3 md:top-5 right-3 md:right-5 z-10">
-            <div className="bg-white border border-gray-200 rounded-full px-2 md:px-3 py-1 md:py-1.5 flex items-center gap-1 md:gap-1.5 shadow-sm">
-              <span className="text-[10px] md:text-xs text-gray-500 font-semibold">Score</span>
-              <span className="text-sm md:text-base font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
+          <div className="absolute top-12 md:top-16 right-3 md:right-5 z-10">
+            <div className="bg-white border border-gray-200 w-12 md:w-18 h-12 md:h-18 rounded-full p-2 md:p-4 flex items-center justify-center flex-col shadow-sm">
+              <p className="text-[10px] md:text-xs text-gray-500 font-semibold">Score</p>
+              <p className="text-sm md:text-xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</p>
             </div>
           </div>
         )}
@@ -176,7 +149,9 @@ const ReadingCardOpen = ({
           {/* Icon */}
           <div className={`size-12 md:size-16 mb-4 md:mb-6 rounded-xl md:rounded-2xl ${hasCompleted
             ? 'bg-green-50 text-green-500'
-            : 'bg-blue-50 text-blue-400'
+            : is_premium
+              ? 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-500'
+              : 'bg-blue-50 text-blue-500'
             } flex items-center justify-center shrink-0`}>
             {hasCompleted ? (
               <MdCheckCircle className="text-2xl md:text-3xl" />
@@ -198,6 +173,12 @@ const ReadingCardOpen = ({
             {hasCompleted && (
               <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
                 Completed on {completedDate}
+              </p>
+            )}
+
+            {createdDate && !hasCompleted && (
+              <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
+                Created on {createdDate}
               </p>
             )}
 
@@ -281,11 +262,11 @@ const ReadingCardOpen = ({
               {title}
             </h3>
 
-            <span className={`ml-2 md:ml-4 px-2 md:px-2.5 py-0.5 md:py-1 text-[9px] md:text-[10px] font-black uppercase rounded-md md:rounded-lg tracking-widest border flex items-center gap-1 shrink-0 ${is_premium
-              ? "bg-amber-50 text-amber-600 border-amber-100"
-              : "bg-green-50 text-green-600 border-green-100"
+            <span className={`ml-2 md:ml-4 px-2.5 md:px-3 py-1 md:py-1 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 shrink-0 ${is_premium
+              ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
+              : "bg-green-500 text-white border-0 shadow-md"
               }`}>
-              {is_premium && <MdStar className="text-xs" />} {cardStatus}
+              {is_premium && <MdStar className="text-xs md:text-sm" />} {cardStatus}
             </span>
 
           </div>
@@ -354,4 +335,4 @@ const ReadingCardOpen = ({
   }
 };
 
-export default React.memo(ReadingCardOpen);
+export default React.memo(CardOpen);

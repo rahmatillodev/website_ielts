@@ -12,7 +12,7 @@ export const useSettingsStore = create((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('system_settings')
-        .select('*')
+        .select('*') // Settings table typically needs all columns, acceptable to use *
         .single();
       
       if (error) throw error;

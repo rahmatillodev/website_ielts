@@ -12,12 +12,7 @@ export const useAuthStore = create(
       userProfile: null,
       loading: false,
       error: null,
-      isInitialized: false,
-      // User attempts data
-      attempts: [],
-      scores: { listening: null, reading: null, average: null },
-      attemptsLoading: false,
-      lastFetched: null, 
+      isInitialized: false, 
 
 
       initializeSession: async () => {
@@ -42,7 +37,9 @@ export const useAuthStore = create(
               await get().fetchUserProfile(session.user.id)
             } else if (event === 'SIGNED_OUT') {
               set({ authUser: null, userProfile: null, error: null })
-              get().clearAttempts()
+              // Clear dashboard data on sign out
+              const { useDashboardStore } = await import('@/store/dashboardStore')
+              useDashboardStore.getState().clearDashboardData()
             }
           })
 
@@ -93,12 +90,14 @@ export const useAuthStore = create(
       fetchUserProfile: async (userId) => {
         const { data, error } = await supabase
           .from('users')
-          .select('*')
+          .select('*') // Use * to get all available columns (Supabase will only return what exists)
           .eq('id', userId)
           .single()
 
         if (!error) {
           set({ userProfile: data })
+        } else {
+          console.warn('[authStore] Error fetching user profile:', error)
         }
       },
 
@@ -150,147 +149,17 @@ export const useAuthStore = create(
 
       // Chiqish (Sign Out)
       signOut: async () => {
-        set({ loading: true })
-        await supabase.auth.signOut()
-        get().clearAttempts()
+        set({ loading: true, error: null })
+        const { error } = await supabase.auth.signOut()
+        if (error) {
+          set({ error: error.message, loading: false })
+          return { success: false, error: error.message }
+        }
         set({ authUser: null, userProfile: null, loading: false })
+        return { success: true }
       },
 
       clearError: () => set({ error: null }),
-
-      // Fetch user attempts with smart caching
-      fetchUserAttempts: async (forceRefresh = false) => {
-        const state = get();
-        const userId = state.authUser?.id;
-        
-        if (!userId) {
-          set({ attempts: [], scores: { listening: null, reading: null, average: null }, attemptsLoading: false });
-          return;
-        }
-
-        // Check if we should fetch based on caching rules
-        const now = Date.now();
-        const lastFetched = state.lastFetched;
-        const cacheTimeout = 5 * 60 * 1000; // 5 minutes in milliseconds
-        
-        const shouldFetch = 
-          forceRefresh || 
-          state.attempts.length === 0 || 
-          !lastFetched || 
-          (now - lastFetched) > cacheTimeout;
-
-        if (!shouldFetch && !state.attemptsLoading) {
-          // Return cached data
-          return {
-            attempts: state.attempts,
-            scores: state.scores,
-          };
-        }
-
-        // Prevent concurrent fetches
-        if (state.attemptsLoading) {
-          return {
-            attempts: state.attempts,
-            scores: state.scores,
-          };
-        }
-
-        try {
-          set({ attemptsLoading: true });
-
-          // Fetch attempts
-          const { data: attemptsData, error: attemptsError } = await supabase
-            .from('user_attempts')
-            .select('id, test_id, score, time_taken, total_questions, created_at, completed_at')
-            .eq('user_id', userId)
-            .order('completed_at', { ascending: false });
-
-          if (attemptsError) {
-            console.error('Error fetching attempts:', attemptsError);
-            set({ 
-              attempts: [], 
-              attemptsLoading: false,
-              scores: { listening: null, reading: null, average: null }
-            });
-            return { attempts: [], scores: { listening: null, reading: null, average: null } };
-          }
-
-          const attempts = Array.isArray(attemptsData) ? attemptsData : [];
-
-          // Fetch test types for all unique test_ids
-          const testIds = [...new Set(attempts.map(a => a.test_id).filter(Boolean))];
-          const testTypesMap = {};
-
-          if (testIds.length > 0) {
-            const { data: testsData, error: testsError } = await supabase
-              .from('test')
-              .select('id, type')
-              .in('id', testIds);
-
-            if (!testsError && testsData) {
-              testsData.forEach(test => {
-                testTypesMap[test.id] = test.type;
-              });
-            }
-          }
-
-          // Add test type to each attempt
-          const attemptsWithType = attempts.map(attempt => ({
-            ...attempt,
-            testType: testTypesMap[attempt.test_id] || null,
-          }));
-
-          // Calculate latest scores for listening and reading
-          const listeningAttempts = attemptsWithType.filter(
-            (a) => a.testType === 'listening'
-          );
-          const readingAttempts = attemptsWithType.filter(
-            (a) => a.testType === 'reading'
-          );
-
-          // Get latest scores
-          const lastListening = listeningAttempts[0]?.score;
-          const lastReading = readingAttempts[0]?.score;
-
-          // Calculate average from available scores
-          const latestScores = [lastListening, lastReading].filter(s => s !== null && s !== undefined);
-          const averageScore = latestScores.length > 0
-            ? latestScores.reduce((a, b) => a + b, 0) / latestScores.length
-            : null;
-
-          const scores = {
-            listening: lastListening ?? null,
-            reading: lastReading ?? null,
-            average: averageScore ? Number(averageScore.toFixed(1)) : null,
-          };
-
-          set({
-            attempts: attemptsWithType,
-            scores,
-            attemptsLoading: false,
-            lastFetched: now,
-          });
-
-          return { attempts: attemptsWithType, scores };
-        } catch (error) {
-          console.error('Error in fetchUserAttempts:', error);
-          set({ 
-            attempts: [], 
-            attemptsLoading: false,
-            scores: { listening: null, reading: null, average: null }
-          });
-          return { attempts: [], scores: { listening: null, reading: null, average: null } };
-        }
-      },
-
-      // Clear attempts data (useful on logout)
-      clearAttempts: () => {
-        set({ 
-          attempts: [], 
-          scores: { listening: null, reading: null, average: null },
-          lastFetched: null 
-        });
-      },
     }),
     {
       name: 'auth-storage', // localStorage dagi kalit nomi
@@ -298,9 +167,6 @@ export const useAuthStore = create(
       partialize: (state) => ({ 
         authUser: state.authUser, 
         userProfile: state.userProfile,
-        attempts: state.attempts,
-        scores: state.scores,
-        lastFetched: state.lastFetched,
       }), // Faqat kerakli qismlarni localStoragega saqlaymiz (loading saqlanmaydi)
     }
   )

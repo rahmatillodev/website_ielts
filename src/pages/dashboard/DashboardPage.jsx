@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
+import { useDashboardStore } from '@/store/dashboardStore';
 import DashboardShimmer from '@/components/shimmer/DashboardShimmer';
 import {
   LuHeadphones,
@@ -55,7 +56,7 @@ const CircularProgress = ({ progress, size = 80, strokeWidth = 8 }) => {
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-lg sm:text-xl font-black text-gray-900">
+        <span className="text-lg sm:text-xl font-bold text-gray-900">
           {Math.round(progress)}%
         </span>
       </div>
@@ -66,17 +67,17 @@ const CircularProgress = ({ progress, size = 80, strokeWidth = 8 }) => {
 // Custom hook to fetch and share user attempts data
 const useUserAttempts = () => {
   const authUser = useAuthStore((state) => state.authUser);
-  const attempts = useAuthStore((state) => state.attempts);
-  const scores = useAuthStore((state) => state.scores);
-  const loading = useAuthStore((state) => state.attemptsLoading);
-  const fetchUserAttempts = useAuthStore((state) => state.fetchUserAttempts);
+  const attempts = useDashboardStore((state) => state.attempts);
+  const scores = useDashboardStore((state) => state.scores);
+  const loading = useDashboardStore((state) => state.loading);
+  const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
 
   // Trigger fetch only once on mount (with smart caching in store)
   useEffect(() => {
     if (authUser?.id) {
-      fetchUserAttempts(false); // false = don't force refresh, use cache if valid
+      fetchDashboardData(authUser.id, false); // false = don't force refresh, use cache if valid
     }
-  }, [authUser?.id, fetchUserAttempts]);
+  }, [authUser?.id, fetchDashboardData]);
 
   return { attempts, loading, scores };
 };
@@ -454,8 +455,17 @@ const DashboardPage = () => {
     (s, r) => s + (Number(r.time_taken) || 0),
     0
   );
-  const studyTimeHours = Math.round((studyTimeSeconds / 3600) * 10) / 10;
-  const studyTimeMinutes = Math.round((studyTimeSeconds % 3600) / 60);
+  const studyTimeDisplay = useMemo(() => {
+    if (!studyTimeSeconds) return '0m';
+    const totalMinutes = Math.round(studyTimeSeconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  }, [studyTimeSeconds]);
 
   // Format last session time
   const lastSessionTime = useMemo(() => {
@@ -563,7 +573,7 @@ const DashboardPage = () => {
         transition={{ duration: 0.5 }}
         className="mb-4 sm:mb-6"
       >
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
           Welcome {firstName} 👋
         </h1>
         <p className="text-sm sm:text-base font-medium text-gray-600 mt-1">
@@ -572,7 +582,7 @@ const DashboardPage = () => {
       </motion.div>
 
       {/* Responsive grid layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr] gap-4 sm:gap-5 md:gap-6 lg:items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-2  xl:grid-cols-[2fr_1fr_1fr] gap-4 sm:gap-5 md:gap-6 lg:items-stretch">
         {/* Left Column: My Progress */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -583,7 +593,7 @@ const DashboardPage = () => {
           <div className="bg-white rounded-3xl shadow-md border border-gray-200 overflow-hidden flex flex-col w-full h-full hover:shadow-lg transition-shadow duration-300">
             <div className="p-5 sm:p-6 md:p-8 flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h2 className="text-base sm:text-lg md:text-xl font-black text-gray-900">
+                <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">
                   My Progress
                 </h2>
                 <motion.span
@@ -624,20 +634,22 @@ const DashboardPage = () => {
                           : 'bg-gray-50 border-gray-200'
                         }`}
                     >
-                      <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+                      <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
                         <span
                           className={`text-xs sm:text-sm font-bold ${isActive ? 'text-gray-700' : 'text-gray-400'
                             }`}
                         >
                           {label}
                         </span>
-                        <Icon
-                          className={`size-5 sm:size-6 md:size-7 lg:size-8 shrink-0 ${iconColor} ${isActive ? 'opacity-100' : 'opacity-50'
-                            }`}
-                        />
+                        <div className="flex items-end h-full">
+                          <Icon
+                            className={`size-7 sm:size-8 md:size-9 lg:size-14 shrink-0 ${iconColor} ${isActive ? 'opacity-100' : 'opacity-50'
+                              }`}
+                          />
+                        </div>
                       </div>
                       <p
-                        className={`text-xl sm:text-2xl md:text-3xl font-black ${isActive ? 'text-gray-900' : 'text-gray-400'
+                        className={`text-xl sm:text-2xl md:text-3xl font-bold ${isActive ? 'text-gray-900' : 'text-gray-400'
                           }`}
                       >
                         {value}
@@ -646,20 +658,23 @@ const DashboardPage = () => {
                   )
                 )}
               </div>
-            </div>
+              </div>
+
+        
 
             {/* Your Score footer */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="bg-gradient-to-r from-blue-50 via-blue-100/50 to-blue-50 px-5 sm:px-6 md:px-8 pt-4 sm:pt-5 md:pt-6 pb-4 sm:pb-5 md:pb-7 flex items-center justify-start w-full mt-auto border-t border-blue-100"
+              className="bg-gradient-to-r from-blue-50 via-blue-100/50 to-blue-50 px-5 sm:px-6 md:px-8 pt-4 sm:pt-5 md:pt-6 
+              pb-4 sm:pb-5 md:pb-7 flex items-center justify-start w-11/12 mx-auto mt-auto border-blue-100 rounded-2xl mb-6"
             >
               <div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
                   Average Band Score
                 </p>
-                <p className="text-lg sm:text-xl md:text-2xl font-black text-gray-900">
+                <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
                   {scores.average ? `Band ${scores.average.toFixed(1)}` : '0.0'}
                 </p>
               </div>
@@ -691,7 +706,7 @@ const DashboardPage = () => {
               <p className="text-xs sm:text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide">
                 Tests Completed
               </p>
-              <p className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-2">
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 leading-tight mb-2">
                 {testsCompleted}
               </p>
               <p className="text-[10px] sm:text-xs font-medium text-gray-500">
@@ -722,10 +737,8 @@ const DashboardPage = () => {
               <p className="text-xs sm:text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide">
                 Study Time
               </p>
-              <p className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-2">
-                {studyTimeHours >= 1
-                  ? `${studyTimeHours} hrs`
-                  : `${studyTimeMinutes} min`}
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 leading-tight mb-2">
+                {studyTimeDisplay}
               </p>
               <p className="text-[10px] sm:text-xs font-medium text-gray-500">
                 Last session: {lastSessionTime}

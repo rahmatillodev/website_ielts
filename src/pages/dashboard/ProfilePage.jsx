@@ -124,7 +124,7 @@ const ProfilePage = () => {
     firstName: firstName || "Not provided",
     tg_username: tg_username || "Not provided",
     email: email || "No email linked",
-    phone_number: "No phone number", // Phone not in database schema
+    phone_number:   "No phone number", // Phone not in database schema
     supportTelegram: "@UmarovRahmatillo", // Static support info
     supportEmail: "test@mail.ru", // Static support info
   };
@@ -301,7 +301,7 @@ const ProfilePage = () => {
                 </Label>
                 <Input
                   defaultValue={firstName}
-                  placeholder="have not name"
+                  placeholder="have don't name"
                   className="bg-gray-50/50 border-gray-100 cursor-default rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
@@ -312,7 +312,7 @@ const ProfilePage = () => {
                 </Label>
                 <Input
                   defaultValue={tg_username}
-                  placeholder="have not telegram username"
+                  placeholder="have don't telegram username"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
@@ -324,7 +324,7 @@ const ProfilePage = () => {
                 <Input
                   defaultValue={email}
                   type="email"
-                  placeholder="have not email"
+                  placeholder="have don't email"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
@@ -335,7 +335,7 @@ const ProfilePage = () => {
                 </Label>
                 <Input
                   defaultValue={phone_number}
-                  placeholder="have not phone number"
+                  placeholder="have don't phone number"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
@@ -383,7 +383,7 @@ const ProfilePage = () => {
               >
                 <Link to={settings?.telegram_admin_username} target="_blank">
                   <p className="text-sm font-semibold text-gray-400 leading-none">
-                    {displayData.supportTelegram}
+                    {settings.telegram_admin_username}
                   </p>
                 </Link>
                 <LiaExternalLinkAltSolid
@@ -404,7 +404,7 @@ const ProfilePage = () => {
               >
                 <Link to={settings?.support_link} target="_blank">
                   <p className="text-sm font-semibold text-gray-400">
-                    {displayData.supportEmail}{" "}
+                    {settings.support_link}{" "}
                   </p>
                 </Link>
                 <LiaExternalLinkAltSolid

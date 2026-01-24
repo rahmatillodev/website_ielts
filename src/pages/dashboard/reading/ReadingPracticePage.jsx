@@ -807,6 +807,7 @@ const ReadingPracticePageContent = () => {
         onToggleShowCorrect={(checked) => setShowCorrectAnswers(checked)}
         status={status}
         onRetake={handleRetakeTest}
+        type="Reading"
       />
 
       {/* Main Content - Universal Container for all selectable content */}
