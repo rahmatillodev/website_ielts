@@ -32,13 +32,13 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title = "Exit Test", descrip
             onClick={onClose}
             className="flex-1 rounded-xl font-semibold border-gray-100 hover:bg-gray-50 h-12"
           >
-            Cancel
+            Stay
           </AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm}
-            className="flex-1 rounded-xl font-semibold bg-red-500 hover:bg-red-600 text-white border-none h-12"
+            className="flex-1 rounded-xl font-semibold bg-blue-500 hover:bg-blue-600 text-white border-none h-12"
           >
-            Yes, Exit
+            Yes, Leave
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

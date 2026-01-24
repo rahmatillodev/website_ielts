@@ -9,6 +9,7 @@ import {
 import { FaChartSimple } from "react-icons/fa6";
 import { FiSend } from "react-icons/fi";
 import { useSettingsStore } from "@/store/systemStore";
+import { useAuthStore } from "@/store/authStore";
 
 /* ================= Feature Item ================= */
 const FeatureItem = ({ icon: Icon, title, description, disabled = false }) => (
@@ -36,7 +37,7 @@ const FeatureItem = ({ icon: Icon, title, description, disabled = false }) => (
   </div>
 );
 
-const LandingPricing = () => {
+const PricingPage = () => {
 
   const [pricing, setPricing] = useState({
     monthly_cost: 49000,
@@ -48,6 +49,7 @@ const LandingPricing = () => {
 
 
   const settings = useSettingsStore((state) => state.settings);
+  const userProfile = useAuthStore((state) => state.userProfile);
 
   const calculateDiscount = () => {
     if (!settings?.premium_monthly_cost || !settings?.premium_old_price) {
@@ -178,7 +180,7 @@ const LandingPricing = () => {
                   Account Status
                 </span>
                 <span className="px-2 py-1 bg-gray-200 text-[10px] font-black rounded">
-                  ● FREE
+                  ● {userProfile?.subscription_status === "premium" ? "PREMIUM" : "FREE"}
                 </span>
               </div>
 
@@ -260,4 +262,4 @@ const LandingPricing = () => {
   );
 };
 
-export default LandingPricing;
+export default PricingPage;

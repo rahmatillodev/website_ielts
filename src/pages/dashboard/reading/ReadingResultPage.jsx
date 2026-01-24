@@ -235,8 +235,8 @@ const ReadingResultPage = () => {
       <div className="min-h-screen bg-gray-50/50 p-8 font-sans flex items-center justify-center">
         <div className="text-center">
           <div className="text-gray-500 mb-4">No results found</div>
-          <Link to="/dashboard">
-            <Button variant="outline">Back to Dashboard</Button>
+          <Link to="/reading">
+            <Button variant="outline">Back to Reading</Button>
           </Link>
         </div>
       </div>
@@ -248,11 +248,11 @@ const ReadingResultPage = () => {
       <div className="max-w-5xl mx-auto">
         {/* Back Link */}
         <Link
-          to="/dashboard"
+          to="/reading"
           className="flex max-w-max items-center gap-2 text-blue-500 font-semibold text-sm mb-6 cursor-pointer uppercase tracking-wider hover:text-blue-600 transition-colors"
         >
           <FaArrowLeft size={14} />
-          <span>Back to Dashboard</span>
+          <span>Back to Reading</span>
         </Link>
 
         {/* Header Section */}

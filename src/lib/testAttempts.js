@@ -141,7 +141,7 @@ export const fetchLatestAttempt = async (userId, testId) => {
     // Fetch latest attempt
     const { data: attemptData, error: attemptError } = await supabase
       .from('user_attempts')
-      .select('*')
+      .select('id, user_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
       .eq('user_id', authenticatedUserId)
       .eq('test_id', testId)
       .order('completed_at', { ascending: false })
@@ -194,7 +194,7 @@ export const checkTestCompleted = async (testId) => {
 
     const { data, error } = await supabase
       .from('user_attempts')
-      .select('*')
+      .select('id, test_id, score, completed_at, correct_answers, total_questions')
       .eq('user_id', authenticatedUserId)
       .eq('test_id', testId)
       .order('completed_at', { ascending: false })

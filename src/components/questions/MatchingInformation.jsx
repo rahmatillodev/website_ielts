@@ -52,7 +52,18 @@ const MatchingInformation = ({
           const parsed = JSON.parse(instruction);
           if (parsed && typeof parsed === 'object') {
             instructionText = parsed.original || instruction;
-            answerOptions = parsed.answer_options || [];
+            const rawOptions = parsed.answer_options || [];
+            // Ensure answerOptions is always an array of strings
+            // Handle both string arrays and object arrays with {letter, text} structure
+            answerOptions = rawOptions.map(opt => {
+              if (typeof opt === 'string') {
+                return opt;
+              } else if (typeof opt === 'object' && opt !== null) {
+                // Extract text from object (e.g., {letter: 'A', text: 'Nilson'})
+                return opt.text || opt.option_text || String(opt);
+              }
+              return String(opt);
+            }).filter(Boolean);
           } else {
             instructionText = instruction;
           }

@@ -65,9 +65,9 @@ function App() {
         <Route
           path="/pricing"
           element={
-            <PricingRoute>
+            // <PricingRoute>
               <PricingPage />
-            </PricingRoute>
+            // </PricingRoute>
           }
         />
         {!user ?
