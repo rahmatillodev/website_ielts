@@ -5,7 +5,7 @@ import LogoDesign from "../LogoDesign";
 
 const LandingNavbar = () => {
   return (
-    <nav className="w-full h-16 bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <nav className="w-full h-16 bg-white border-b border-gray-200 fixed top-0 z-50 shadow-sm">
       <div className=" mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-around">
         {/* Logo */}
         <a href="#home" className="flex items-center gap-3">
@@ -20,12 +20,12 @@ const LandingNavbar = () => {
           >
             Why choose us?
           </a>
-          <a
+          {/* <a
             href="#our-impact"
             className="font-medium text-gray-700 hover:text-[#4A90E2] transition-colors"
           >
             Our Impact
-          </a>
+          </a> */}
           <a
             href="#stories"
             className="font-medium text-gray-700 hover:text-[#4A90E2] transition-colors"

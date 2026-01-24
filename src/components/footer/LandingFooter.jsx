@@ -20,8 +20,8 @@ const LandingFooter = () => {
             <div className="flex items-center gap-2 mb-4">
              
               <LogoDesign />
-              <h2 className="text-xl font-semibold text-gray-900"> - Know where you stand before test day</h2>
             </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-3"> Know where you stand before test day</h2>
 
             <p className="text-sm text-gray-500">
               Computer-based IELTS practise that mirrors the real exam experience - from question types to timing, 
@@ -51,12 +51,12 @@ const LandingFooter = () => {
                 <FaInstagram size={14} />
               </a>
 
-              <a
+              {/* <a
                 href="#"
                 className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-600 transition"
               >
                 <FaLinkedinIn size={14} />
-              </a>
+              </a> */}
             </div>
           </div>
 
@@ -68,7 +68,7 @@ const LandingFooter = () => {
               Useful Links
             </li>
               <li><a href="#why-choose" className="hover:text-blue-600">Why choose us?</a></li>
-              <li><a href="#our-impact" className="hover:text-blue-600">Our Impact</a></li>
+              {/* <li><a href="#our-impact" className="hover:text-blue-600">Our Impact</a></li> */}
               <li><a href="#stories" className="hover:text-blue-600">Stories</a></li>
             </ul>
           </div>
@@ -78,7 +78,7 @@ const LandingFooter = () => {
 
         {/* Bottom */}
         <div className="border-t border-gray-200 mt-14 pt-6 text-center text-sm text-gray-400">
-          © 2025 IELTSCORE. All rights reserved.
+          © 2026 IELTSCORE. All rights reserved.
         </div>
       </div>
     </footer>

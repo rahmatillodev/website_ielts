@@ -9,6 +9,7 @@ import {
 import { FaChartSimple } from "react-icons/fa6";
 import { FiSend } from "react-icons/fi";
 import { useSettingsStore } from "@/store/systemStore";
+import { useAuthStore } from "@/store/authStore";
 
 /* ================= Feature Item ================= */
 const FeatureItem = ({ icon: Icon, title, description, disabled = false }) => (

@@ -61,7 +61,7 @@ function SignUpPage() {
 
           {/* LOGO (yangilangan, yumaloq, oq rangda) */}
           <div className="mb-12">
-            <LogoDesign className="text-white [&_*]:text-white" />
+          <LogoDesign className="w-fit text-white" iconColor="text-[#1990e6]" color="white" />
           </div>
 
           {/* Headline */}

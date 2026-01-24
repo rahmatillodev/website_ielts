@@ -208,7 +208,7 @@ const LandingPage = () => {
 
             <motion.p 
               variants={fadeInUp}
-              className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-xl mx-auto lg:mx-0 mb-2"
+              className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-xl mx-auto lg:mx-0 mb-6"
             >
               Personalized practice, ruthless feedback, and full-length mock
               tests designed to push you to Band 8.0+.
@@ -228,7 +228,7 @@ const LandingPage = () => {
             {/* Social Proof */}
             <motion.div 
               variants={fadeIn}
-              className="flex items-center justify-center lg:justify-start gap-2 pt-4"
+              className="flex items-center justify-center lg:justify-start gap-2"
             >
               <div className="flex -space-x-2">
                 {[
@@ -262,9 +262,7 @@ const LandingPage = () => {
             <div className="flex items-start justify-between mb-4 sm:mb-6 xl:mb-8">
               <div>
                 <h3 className="text-lg sm:text-xl xl:text-2xl 2xl:text-3xl font-semibold text-gray-900">My Progress</h3>
-                <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base text-gray-500 mt-1">
-                  Last updated: Today, 10:30 AM
-                </p>
+                
               </div>
               <motion.span 
                 initial={{ scale: 0 }}

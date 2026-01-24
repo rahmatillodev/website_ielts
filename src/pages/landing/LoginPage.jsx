@@ -57,10 +57,10 @@ function LoginPage() {
             </span>
           </button>
 
-         {/* LOGO */}
-<div className="mb-12">
-  <LogoDesign className="text-white [&_*]:text-white" />
-</div>
+          {/* LOGO */}
+          <div className="mb-12">
+            <LogoDesign className="w-fit text-white" iconColor="text-[#1990e6]" color="white" />
+          </div>
 
 
           {/* Headline */}
