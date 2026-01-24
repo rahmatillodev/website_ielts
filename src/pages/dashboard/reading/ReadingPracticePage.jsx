@@ -25,13 +25,6 @@ const ReadingPracticePageContent = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { currentTest, fetchTestById, loadingTest: LoadingTest, error } = useTestStore();
-  
-  
-  
-  
-
-
-
   const { authUser } = useAuthStore();
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();

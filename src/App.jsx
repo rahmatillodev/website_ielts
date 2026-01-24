@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -30,6 +30,7 @@ import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
 import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
 import MockTestsPage from "./pages/dashboard/MockTestsPage";
 import "./App.css";
+import FeedbackModal from "./components/modal/FeedbackModal";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -39,6 +40,7 @@ function App() {
   const user = useAuthStore((state) => state.authUser);
   const { fetchSettings } = useSettingsStore()
   const { fetchTests } = useTestStore();
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
 
   const location = useLocation();
 
@@ -54,12 +56,6 @@ function App() {
   useEffect(() => {
     fetchTests();
   }, [fetchTests])
-
-  useEffect(() => {
-    if (user?.id) {
-      validateSessionAgainstDatabase();
-    }
-  }, [location.pathname, user?.id, validateSessionAgainstDatabase]);
 
   const isPracticePage = location.pathname.includes("/reading-practice") || location.pathname.includes("/listening-practice") || location.pathname.includes("/writing-practice") || location.pathname.includes("/speaking-practice");
 
@@ -127,6 +123,7 @@ function App() {
       </Routes>
       <ToastContainer duration={2000} />
       <NetworkModal isOpen={!useNetworkStatus()} />
+      <FeedbackModal isOpen={feedbackOpen} setFeedbackOpen={setFeedbackOpen} />
       {!isPracticePage && <div className='fixed_bottom_right_container'>
 
       </div>}

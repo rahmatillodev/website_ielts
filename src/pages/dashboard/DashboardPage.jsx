@@ -582,7 +582,7 @@ const DashboardPage = () => {
       </motion.div>
 
       {/* Responsive grid layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2  xl:grid-cols-[2fr_1fr_1fr] gap-4 sm:gap-5 md:gap-6 lg:items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-2  xl:grid-cols-[4fr_2fr_3fr] gap-4 sm:gap-5 md:gap-6 lg:items-stretch">
         {/* Left Column: My Progress */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
