@@ -102,11 +102,11 @@ export const useTestStore = create((set, get) => ({
         error: null, // Clear any previous errors
       });
 
-      console.log('[fetchTests] Success:', {
-        totalTests: tests.length,
-        readingTests: filtered_data_reading.length,
-        listeningTests: filtered_data_listening.length
-      });
+      // console.log('[fetchTests] Success:', {
+      //   totalTests: tests.length,
+      //   readingTests: filtered_data_reading.length,
+      //   listeningTests: filtered_data_listening.length
+      // });
 
       return {
         test_reading: filtered_data_reading,

@@ -1,21 +1,36 @@
 import { create } from 'zustand';
 import supabase from '@/lib/supabase';
+import { useAuthStore } from './authStore';
 
 export const useFeedbacksStore = create((set, get) => ({
-  feedbacks: [],
-  loading: false,
-  error: null,
+    feedbacks: [],
+    loading: false,
+    error: null,
+    
+    addFeedback: async (feedbackData) => {
+      const userProfile = useAuthStore.getState().userProfile;
+    const userId = userProfile?.id;
 
-  // Add new feedback
-  addFeedback: async (feedbackData) => {
+    // Agar foydalanuvchi profilini topa olmasa
+    if (!userId) {
+      return { success: false, error: "You must be logged in to submit feedback." };
+    }
+
+    if (!feedbackData?.message?.trim()) {
+      return { success: false, error: "Xabar bo'sh bo'lishi mumkin emas." };
+    }
+  
     set({ loading: true, error: null });
     try {
       const { data, error } = await supabase
         .from('feedbacks')
-        .insert([feedbackData])
+        .insert({ 
+          message: feedbackData.message.trim(), // faqat kerakli ustunni oling
+          user_id: userId
+        })
         .select()
         .single();
-
+  
       if (error) throw error;
 
       set({ feedbacks: [data, ...get().feedbacks], loading: false });
@@ -27,29 +42,6 @@ export const useFeedbacksStore = create((set, get) => ({
   },
 
   // Get feedback list (optionally scoped to user)
-  getFeedbacks: async (userId) => {
-    set({ loading: true, error: null });
-    try {
-      let query = supabase
-        .from('feedbacks')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      set({ feedbacks: Array.isArray(data) ? data : [], loading: false });
-      return data || [];
-    } catch (error) {
-      set({ error: error.message, loading: false });
-      return [];
-    }
-  },
 
   clearError: () => set({ error: null }),
 }));

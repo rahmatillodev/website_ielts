@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { HiOutlineCamera } from 'react-icons/hi2';
+import { toast } from 'react-toastify';
 import { useAuthStore } from '@/store/authStore';
 
 const ProfileModal = ({ open, onOpenChange }) => {
@@ -88,9 +89,10 @@ const ProfileModal = ({ open, onOpenChange }) => {
       if (uploadResult.success) {
         avatarUrl = uploadResult.url;
       } else {
-        toast.error(uploadResult.error);
+        toast.error('Error uploading image. Please try again later.');
+        setLoading(false);
+        return;
       }
-
     }
     
     const result = await updateUserProfile({

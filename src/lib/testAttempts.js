@@ -411,10 +411,8 @@ const listeningBands = [
 const calculateBandScore = (correctCount, totalQuestions, type) => {
   if (totalQuestions === 0) return 0.0;
 
-  // 1. Ballarni 40 talik sistemaga o'tkazamiz (Normalization)
   const normalizedScore = Math.round((correctCount / totalQuestions) * 40);
 
-  // 2. Standart IELTS shkalasi (Academic Reading/Listening o'rtachasi)
   if (type === 'reading') {
     return readingBands.find(band => normalizedScore >= band.min)?.band || 0.0;
   } else if (type === 'listening') {

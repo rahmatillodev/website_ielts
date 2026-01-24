@@ -11,6 +11,7 @@ import { LibraryShimmer } from "@/components/ui/shimmer";
 import CardLocked from "../cards/CardLocked";
 import CardOpen from "../cards/CardOpen";
 import { motion } from "framer-motion";
+import { FileQuestion } from "lucide-react";
 
 const TestsLibraryPage = ({
   title,
@@ -210,7 +211,7 @@ const TestsLibraryPage = ({
     // Function to check and load more if needed
     let checkCount = 0;
     const maxChecks = 10; // Prevent infinite loops
-    
+
     const checkAndLoadMore = () => {
       if (isLoadingMoreRef.current || checkCount >= maxChecks) return;
       checkCount++;
@@ -225,17 +226,17 @@ const TestsLibraryPage = ({
           if (scrollHeight <= clientHeight && currentHasMore) {
             isLoadingMoreRef.current = true;
             const newValue = Math.min(prev + itemsPerLoad, filteredData.length);
-            
+
             // After loading, check again if more is needed
             setTimeout(() => {
               isLoadingMoreRef.current = false;
               // Recursively check if viewport still isn't filled
               setTimeout(checkAndLoadMore, 200);
             }, 300);
-            
+
             return newValue;
           }
-          
+
           return prev;
         });
       });
@@ -265,8 +266,22 @@ const TestsLibraryPage = ({
   };
 
   // Show shimmer while loading or refreshing
-  if (loading || isRefreshing) {
+  if (isRefreshing) {
     return <LibraryShimmer isGridView={isGridView} count={displayedItems} />;
+  }
+
+
+
+  if (allTests.length > 0 && filteredData.length === 0) {
+    return (
+      <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
+        <div className="flex flex-1 items-center justify-center min-h-[300px]">
+          <div className="py-20 text-center text-gray-400 font-semibold w-full">
+            No results match your search.
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -337,6 +352,28 @@ const TestsLibraryPage = ({
       </div>
 
       {/* Scrollable Cards Container */}
+      {allTests.length === 0 && (
+        <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
+          <div className="flex flex-1 items-center justify-center min-h-[300px]">
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="flex flex-col items-center text-center gap-2 py-16"
+            >
+              {/* <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 text-gray-400">
+              <FileQuestion className="w-6 h-6" />
+            </div> */}
+              <div className="text-gray-700 font-semibold text-base md:text-lg">
+                We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
+              </div>
+              <div className="text-gray-400 text-sm md:text-base">
+                Please check back later or try again soon.
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      )}
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto pb-4 -mx-3 md:-mx-8 px-3 md:px-8 pt-4"
@@ -355,10 +392,7 @@ const TestsLibraryPage = ({
               key={`${activeTab}-${searchQuery}-${isGridView}`}
             >
               {currentItems
-                .sort((a, b) => {
-                  // is_premium: false (0) bo'lganlar birinchi, true (1) bo'lganlar keyin keladi
-                  return (a.is_premium === b.is_premium) ? 0 : a.is_premium ? 1 : -1;
-                })
+                
                 .map((test, index) => {
                   const subscriptionStatus = userProfile?.subscription_status ?? "free";
                   const canAccess = subscriptionStatus === "premium" || !test.is_premium;
@@ -395,10 +429,6 @@ const TestsLibraryPage = ({
               </div>
             )}
           </>
-        ) : !loading && allTests.length > 0 ? (
-          <div className="flex flex-1 items-center justify-center min-h-[300px]">
-            <div className="py-20 text-center text-gray-400 font-semibold w-full">Hech narsa topilmadi...</div>
-          </div>
         ) : null}
       </div>
     </div>

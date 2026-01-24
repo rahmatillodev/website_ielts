@@ -6,6 +6,7 @@ import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import PrecticeFooter from "@/components/questions/PrecticeFooter";
 import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData } from "@/store/LocalStorage/listeningStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
+import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const ListeningPracticePageContent = () => {
   const navigate = useNavigate();
   const { currentTest, fetchTestById, loadingTest: loading } = useTestStore();
   const { authUser } = useAuthStore();
+  const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();
   // Status: 'taking', 'completed', 'reviewing'
   const [status, setStatus] = useState('taking');
@@ -35,6 +37,7 @@ const ListeningPracticePageContent = () => {
   const [isStarted, setIsStarted] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 // Initialize modal state based on URL mode parameter
 const [showInitialModal, setShowInitialModal] = useState(() => {
   const mode = new URLSearchParams(window.location.search).get('mode');
@@ -521,10 +524,14 @@ const [startTime, setStartTime] = useState(null);
   };
 
   const handleSubmitTest = async () => {
+    if (isSubmitting) {
+      return { success: false, error: 'Submission already in progress' };
+    }
     if (!authUser || !id || !currentTest) {
       return { success: false, error: 'Missing required information' };
     }
 
+    setIsSubmitting(true);
     try {
       // Calculate time taken from startTime
       let timeTaken = 0;
@@ -542,6 +549,9 @@ const [startTime, setStartTime] = useState(null);
         if (id) {
           clearListeningPracticeData(id);
         }
+        if (authUser?.id) {
+          await fetchDashboardData(authUser.id, true);
+        }
         // Return success to allow modal to navigate
         return { success: true };
       } else {
@@ -551,6 +561,8 @@ const [startTime, setStartTime] = useState(null);
     } catch (error) {
       console.error('Error submitting test:', error);
       return { success: false, error: error.message };
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1121,10 +1133,12 @@ const [startTime, setStartTime] = useState(null);
         resultLink={`/listening-result/${id}`}
         getAllQuestions={getAllQuestions}
         bookmarks={bookmarks}
+        isSubmitting={isSubmitting}
       />
 
       {/* Finish Modal */}
-      <FinishModal
+        <FinishModal
+          loading={isSubmitting}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         link={`/listening-result/${id}`}

@@ -327,7 +327,7 @@ const ReadingResultPage = () => {
               </span>
             </div>
             <div className="text-sm font-semibold text-gray-500">
-              {stats.percentage >= 85 ? 'Top 15%' : stats.percentage >= 75 ? 'Top 25%' : stats.percentage >= 65 ? 'Top 35%' : stats.percentage >= 55 ? 'Top 45%' : 'Top 50%'} of test takers
+              {stats.percentage}%
             </div>
           </div>
 
@@ -378,7 +378,7 @@ const ReadingResultPage = () => {
                   </span>
                 </span>
                 <span className="text-slate-500">
-                  Answered{" "}
+                  Questions{" "}
                   <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full ml-1">
                     {stats.totalQuestions}
                   </span>
@@ -488,7 +488,7 @@ const ReadingResultPage = () => {
         </div>
 
         <footer className="mt-12 py-8 text-center text-slate-400 text-sm">
-          <p>© 2023 IELTS Pro. All rights reserved.</p>
+          <p>© 2026 IELTSCORE. All rights reserved.</p>
         </footer>
       </div>
     </div>

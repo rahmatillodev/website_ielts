@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { clearReadingPracticeData, loadReadingPracticeData, saveReadingResultData } from "@/store/LocalStorage/readingStorage";
 
-export default function FinishModal({ isOpen, onClose, link, testId, onSubmit }) {
+export default function FinishModal({ isOpen, onClose, link, testId, onSubmit,loading = false }) {
   const navigate = useNavigate();
   
   const handleSubmit = async () => {
@@ -74,7 +74,7 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit })
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button onClick={handleSubmit}>Submit</Button>
+          <Button onClick={handleSubmit} disabled={loading}>{loading ? 'Submitting...' : 'Submit'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
