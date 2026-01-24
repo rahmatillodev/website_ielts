@@ -77,7 +77,7 @@ const SimplePdfTemplate = ({ tasks, timer }) => {
         <header style={styles.header}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <span style={{ fontSize: '24px' }}>📘</span>
-            <span style={styles.title}>IELTS Sim</span>
+            <span style={styles.title}>IELTSCORE</span>
           </div>
           <div style={{ textAlign: 'right', fontSize: '12px', color: '#666' }}>
             <div>Phone: (123) 456-7890</div>

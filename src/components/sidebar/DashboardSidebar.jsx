@@ -106,7 +106,7 @@ const DashboardSidebar = ({ onNavigate }) => {
                 <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
               </div>
               <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
-                IELTS Sim
+                IELTSCORE
               </span>
               <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-semibold">Beta</span>
             </div>

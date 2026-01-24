@@ -21,7 +21,7 @@ const PdfTemplate = ({ tasks, timer }) => {
             }}>📘</span>
           </div>
           <span className="pdf-title" style={{ color: '#2563eb' }}>
-            IELTS Sim
+            IELTSCORE
           </span>
         </div>
 
