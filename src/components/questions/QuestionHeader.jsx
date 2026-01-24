@@ -80,7 +80,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
     if (onBack) {
       onBack();
     }
-      if (type === "reading") {
+      if (type == "Reading") {
         navigate("/reading");
       } else {
         navigate("/listening");

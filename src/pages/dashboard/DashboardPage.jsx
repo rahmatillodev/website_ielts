@@ -582,7 +582,7 @@ const DashboardPage = () => {
       </motion.div>
 
       {/* Responsive grid layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2  xl:grid-cols-[2fr_1fr_1fr] gap-4 sm:gap-5 md:gap-6 lg:items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-2  xl:grid-cols-[4fr_2fr_3fr] gap-4 sm:gap-5 md:gap-6 lg:items-stretch">
         {/* Left Column: My Progress */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -590,91 +590,69 @@ const DashboardPage = () => {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="md:col-span-2 lg:col-span-1 h-full flex"
         >
-          <div className="bg-white rounded-3xl shadow-md border border-gray-200 overflow-hidden flex flex-col w-full h-full hover:shadow-lg transition-shadow duration-300">
-            <div className="p-5 sm:p-6 md:p-8 flex-1 flex flex-col">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">
-                  My Progress
-                </h2>
-                <motion.span
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                  className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 text-xs font-bold rounded-lg border border-green-200"
+          <div className="bg-white/95 backdrop-blur rounded-2xl sm:rounded-3xl shadow-[0_25px_60px_rgba(15,23,42,0.12)] p-4 sm:p-6 xl:p-8 2xl:p-10 
+            max-w-md xl:max-w-lg 2xl:max-w-2xl w-full mx-auto lg:mx-0 hover:shadow-[0_30px_70px_rgba(15,23,42,0.18)] transition-shadow duration-300 border border-white/60"
+          >
+            <div className="flex items-start justify-between mb-4 sm:mb-6 xl:mb-8">
+              <div>
+                <h3 className="text-lg sm:text-xl xl:text-2xl 2xl:text-3xl font-semibold text-gray-900">My Progress</h3>
+              </div>
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.6, type: "spring" }}
+                className="px-2 sm:px-3 xl:px-4 py-1 xl:py-1.5 text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold rounded-full bg-green-100 text-green-600 whitespace-nowrap"
+              >
+                Active Session
+              </motion.span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6 xl:mb-8">
+              {SCORES.map((s, index) => {
+                const isDisabled = !s.isActive;
+                return (
+                <motion.div 
+                  key={s.label} 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2 + index * 0.1, duration: 0.4 }}
+                  whileHover={isDisabled ? undefined : { scale: 1.05 }}
+                  className={`rounded-2xl sm:rounded-3xl p-3.5 border shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition-all ${
+                    isDisabled
+                      ? "bg-gray-50 border-gray-200 opacity-70 cursor-not-allowed"
+                      : "bg-linear-to-br from-white via-[#F7FBFF] to-[#ECF4FF] border-white/70 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12)] cursor-pointer"
+                  }`}
                 >
-                  Active
-                </motion.span>
-              </div>
+                  <div className="flex items-center gap-2 sm:gap-2.5 xl:gap-3 mb-2 sm:mb-2.5 xl:mb-3">
+                    <span className="w-8 h-8 sm:w-9 sm:h-9 xl:w-10 xl:h-10 2xl:w-12 2xl:h-12 rounded-xl sm:rounded-2xl bg-white/80 shadow-[0_6px_16px_rgba(15,23,42,0.08)] flex items-center justify-center">
+                      <s.icon className={`${s.iconColor} text-base sm:text-lg xl:text-xl 2xl:text-2xl`} />
+                    </span>
+                    <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase tracking-wide">{s.label}</p>
+                  </div>
+                  <p
+                    className={`font-semibold ${
+                      isDisabled
+                        ? "text-sm sm:text-base xl:text-lg text-gray-400 leading-snug"
+                        : "text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl text-gray-900"
+                    }`}
+                  >
+                    {s.value}
+                  </p>
+                </motion.div>
+              )})}
+            </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6 flex-1 mt-3 sm:mt-4 md:mt-6">
-                {SCORES.map(
-                  (
-                    {
-                      label,
-                      value,
-                      icon: Icon,
-                      iconColor,
-                      bgColor,
-                      borderColor,
-                      isActive,
-                    },
-                    index
-                  ) => (
-                    <motion.div
-                      key={label}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: 0.2 + index * 0.1 }}
-                      whileHover={{ scale: 1.02, y: -2 }}
-                      className={`p-4 sm:p-5 md:p-6 lg:p-7 border-2 rounded-2xl transition-all duration-300 ${isActive
-                          ? `${bgColor} ${borderColor} shadow-sm hover:shadow-md`
-                          : 'bg-gray-50 border-gray-200'
-                        }`}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
-                        <span
-                          className={`text-xs sm:text-sm font-bold ${isActive ? 'text-gray-700' : 'text-gray-400'
-                            }`}
-                        >
-                          {label}
-                        </span>
-                        <div className="flex items-end h-full">
-                          <Icon
-                            className={`size-7 sm:size-8 md:size-9 lg:size-14 shrink-0 ${iconColor} ${isActive ? 'opacity-100' : 'opacity-50'
-                              }`}
-                          />
-                        </div>
-                      </div>
-                      <p
-                        className={`text-xl sm:text-2xl md:text-3xl font-bold ${isActive ? 'text-gray-900' : 'text-gray-400'
-                          }`}
-                      >
-                        {value}
-                      </p>
-                    </motion.div>
-                  )
-                )}
-              </div>
-              </div>
-
-        
-
-            {/* Your Score footer */}
-            <motion.div
+            <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="bg-gradient-to-r from-blue-50 via-blue-100/50 to-blue-50 px-5 sm:px-6 md:px-8 pt-4 sm:pt-5 md:pt-6 
-              pb-4 sm:pb-5 md:pb-7 flex items-center justify-start w-11/12 mx-auto mt-auto border-blue-100 rounded-2xl mb-6"
+              transition={{ delay: 0.8 }}
+              className="bg-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 xl:p-6 2xl:p-8 flex items-center justify-between"
             >
               <div>
-                <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                  Average Band Score
+                <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase">
+                  Average Score
                 </p>
-                <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
+                <p className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-semibold">
                   {scores.average ? `Band ${scores.average.toFixed(1)}` : '0.0'}
                 </p>
               </div>

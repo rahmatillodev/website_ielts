@@ -8,6 +8,7 @@ import PrecticeFooter from "@/components/questions/PrecticeFooter";
 import QuestionHeader from "@/components/questions/QuestionHeader";
 import { saveReadingPracticeData, loadReadingPracticeData, clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
+import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
 import FinishModal from "@/components/modal/FinishModal";
 import { convertDurationToSeconds } from "@/utils/testDuration";
@@ -24,14 +25,8 @@ const ReadingPracticePageContent = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { currentTest, fetchTestById, loadingTest: LoadingTest, error } = useTestStore();
-  
-  
-  
-  
-
-
-
   const { authUser } = useAuthStore();
+  const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const { isSidebarOpen } = useAnnotation();
   
@@ -43,6 +38,7 @@ const ReadingPracticePageContent = () => {
   const [isStarted, setIsStarted] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false); // Track if user has interacted
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [startTime, setStartTime] = useState(null); // Track when test started for elapsed time
 
   const [answers, setAnswers] = useState({});
@@ -540,10 +536,14 @@ const ReadingPracticePageContent = () => {
 
   // Handler for submitting test
   const handleSubmitTest = async () => {
+    if (isSubmitting) {
+      return { success: false, error: 'Submission already in progress' };
+    }
     if (!authUser || !id || !currentTest) {
       return { success: false, error: 'Missing required information' };
     }
 
+    setIsSubmitting(true);
     try {
       // Calculate time taken from startTime
       let timeTaken = 0;
@@ -561,6 +561,9 @@ const ReadingPracticePageContent = () => {
         if (id) {
           clearReadingPracticeData(id);
         }
+        if (authUser?.id) {
+          await fetchDashboardData(authUser.id, true);
+        }
         // Return success to allow modal to navigate
         return { success: true };
       } else {
@@ -570,6 +573,8 @@ const ReadingPracticePageContent = () => {
     } catch (error) {
       console.error('Error submitting test:', error);
       return { success: false, error: error.message };
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1146,11 +1151,13 @@ const ReadingPracticePageContent = () => {
         onRetake={handleRetakeTest}
         getAllQuestions={getAllQuestions}
         bookmarks={bookmarks}
+        isSubmitting={isSubmitting}
       />
 
       {/* Finish Modal */}
       <FinishModal
         isOpen={isModalOpen}
+        loading={isSubmitting}
         onClose={() => setIsModalOpen(false)}
         link={`/reading-result/${id}`}
         testId={id}

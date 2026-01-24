@@ -7,13 +7,12 @@ import {
   LuSettings,
   LuStar,
   LuLogOut,
-  LuTestTube,
   LuChevronLeft,
   LuChevronRight,
+  LuX,
 } from "react-icons/lu";
 import { FaChartSimple } from "react-icons/fa6";
 import { Button } from "../ui/button";
-import { GraduationCap } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import LogoutModal from "../modal/LogoutModal";
 import { toast } from "react-toastify";
@@ -21,262 +20,189 @@ import { TfiWrite } from "react-icons/tfi";
 import { RiSpeakLine } from "react-icons/ri";
 import { IoDocumentAttachOutline } from "react-icons/io5";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
+import LogoDesign from "@/components/LogoDesign";
 
+/* ================= SIDEBAR ITEM ================= */
 const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapsed }) => {
-  const content = (
+  const item = (
     <Link
       to={link}
       onClick={onNavigate}
-      className={`flex items-center gap-3 px-4 py-2.5 2xl:py-3 text-sm font-medium rounded-xl cursor-pointer transition-all duration-200
-        ${isActive
-          ? "bg-[#EBF5FF] text-[#4A90E2]"
-          : "text-[#64748B] hover:text-gray-900 hover:bg-gray-50"
+      className={`flex items-center gap-4 px-5 py-3 text-[15px] font-semibold rounded-xl transition-all
+        ${
+          isActive
+            ? "bg-[#EBF5FF] text-[#1990e6]"
+            : "text-[#475569] hover:bg-gray-50"
         }
-        ${isCollapsed ? "mx-2 justify-center" : "mx-3"}
-      `}
+        ${isCollapsed ? "mx-5 w-12 h-12 justify-center px-0 gap-0" : "mx-3"}`}
     >
-      <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 shrink-0 ${isActive ? "text-[#4A90E2]" : "text-[#64748B]"}`} />
+      <Icon className="w-5 h-5 shrink-0" />
       {!isCollapsed && <span className="truncate">{label}</span>}
     </Link>
   );
 
-  if (isCollapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {content}
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {label}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return content;
+  return isCollapsed ? (
+    <Tooltip>
+      <TooltipTrigger asChild>{item}</TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  ) : (
+    item
+  );
 };
 
+/* ================= SIDEBAR ================= */
 const DashboardSidebar = ({ onNavigate }) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const authUser = useAuthStore((state) => state.authUser);
-  const userProfile = useAuthStore((state) => state.userProfile);
-  const signOut = useAuthStore((state) => state.signOut);
+  const userProfile = useAuthStore((s) => s.userProfile);
+  const signOut = useAuthStore((s) => s.signOut);
 
-  // Load collapsed state from localStorage, default to false
+  const [isMobile, setIsMobile] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebarCollapsed");
     return saved ? JSON.parse(saved) : false;
   });
 
-  // Save collapsed state to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem("sidebarCollapsed", JSON.stringify(isCollapsed));
-  }, [isCollapsed]);
+    const mediaQuery = window.matchMedia("(max-width: 1024px)");
+    const handleMediaChange = (event) => {
+      const mobile = event.matches;
+      setIsMobile(mobile);
+      if (mobile) {
+        setIsCollapsed(false);
+      } else {
+        const saved = localStorage.getItem("sidebarCollapsed");
+        setIsCollapsed(saved ? JSON.parse(saved) : false);
+      }
+    };
 
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+    handleMediaChange(mediaQuery);
+    mediaQuery.addEventListener("change", handleMediaChange);
+
+    return () => mediaQuery.removeEventListener("change", handleMediaChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) {
+      localStorage.setItem("sidebarCollapsed", JSON.stringify(isCollapsed));
+    }
+  }, [isCollapsed, isMobile]);
 
   const handleLogout = async () => {
-    const result = await signOut();
-    if (result.success) {
+    const res = await signOut();
+    if (res.success) {
       toast.success("Logged out successfully");
       navigate("/login");
     } else {
-      toast.error(result.error);
+      toast.error(res.error);
     }
   };
 
   const checkActive = (link) => pathname === link;
 
   return (
-    <aside className={`flex flex-col h-screen sticky top-0 bg-white border-0 md:border-r border-gray-100 font-sans overflow-hidden transition-all duration-300 ${
-      isCollapsed ? "w-[80px] 2xl:w-[90px]" : "w-[280px] 2xl:w-[320px]"
-    }`}>
+    <aside
+      className={`relative flex flex-col h-screen sticky top-0 bg-white  border-gray-100 transition-all duration-300
+      ${isCollapsed ? "w-[84px]" : "w-[300px]"}`}
+    >
+      {/* ===== HEADER (BUG-FREE) ===== */}
+      <div className="relative h-20 flex items-center justify-center px-4 shrink-0">
+        {/* LOGO — ALWAYS CENTERED */}
+        <div className="flex items-center justify-center w-full pr-8">
+          <Link to="/dashboard" className="flex items-center">
+            <LogoDesign className={isCollapsed ? "[&>span]:hidden ml-6" : ""} />
+          </Link>
+          {!isCollapsed && (
+            <span className="ml-2 text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">
+              Beta
+            </span>
+          )}
+        </div>
 
-      {/* Logo qismi - balandlik qisqardi */}
-      <div className={`h-20 2xl:h-24 shrink-0 hidden md:flex items-center px-4 2xl:px-6 ${
-        isCollapsed ? "justify-center" : "justify-between"
-      }`}>
-        {!isCollapsed ? (
-          <>
-            <div className="flex items-center gap-3">
-              <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
-                <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
-              </div>
-              <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
-                IELTSCORE
-              </span>
-              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-semibold">Beta</span>
-            </div>
-            <button
-              onClick={toggleSidebar}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors duration-200 shrink-0"
-              aria-label="Collapse sidebar"
-            >
-              <LuChevronLeft className="w-4 h-4 text-[#64748B]" />
-            </button>
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-2 w-full">
-            <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
-              <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
-            </div>
-            <button
-              onClick={toggleSidebar}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors duration-200 shrink-0"
-              aria-label="Expand sidebar"
-            >
-              <LuChevronRight className="w-4 h-4 text-[#64748B]" />
-            </button>
-          </div>
+        {/* TOGGLE — ALWAYS ON BORDER CENTER (DESKTOP) */}
+        {!isMobile && (
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2
+            bg-white border border-gray-200 rounded-full p-1.5 shadow-sm hover:bg-gray-50 z-10"
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? (
+              <LuChevronRight className="w-4 h-4 text-gray-500" />
+            ) : (
+              <LuChevronLeft className="w-4 h-4 text-gray-500" />
+            )}
+          </button>
         )}
+
+        {/* CLOSE BUTTON (MOBILE) */}
+        {/* {isMobile && onNavigate && (
+          <button
+            type="button"
+            onClick={onNavigate}
+            className="absolute top-1/2 -translate-y-1/2 right-3
+            bg-white border border-gray-200 rounded-full p-1.5 shadow-sm hover:bg-gray-50 z-10"
+            aria-label="Close sidebar"
+          >
+            <LuX className="w-4 h-4 text-gray-500" />
+          </button> */}
+        {/* )} */}
       </div>
 
-      {/* Navigatsiya - paddinglar qisqardi */}
-      <nav className="flex-1 overflow-y-auto py-1 2xl:py-2 scrollbar-hide space-y-0.5 2xl:space-y-1">
-        <SidebarItem
-          icon={LuLayoutDashboard}
-          label="Dashboard"
-          link="/dashboard"
-          isActive={checkActive("/dashboard")}
-          onNavigate={onNavigate}
-          isCollapsed={isCollapsed}
-        />
+      {/* ===== NAV (SCROLLBAR REMOVED) ===== */}
+      <nav className="flex-1 overflow-hidden py-2 space-y-1">
+        <SidebarItem icon={LuLayoutDashboard} label="Dashboard" link="/dashboard" isActive={checkActive("/dashboard")} isCollapsed={isCollapsed} />
 
         {!isCollapsed && (
-          <div className="mt-0 2xl:mt-2 px-4 2xl:px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-2">
+          <div className="px-8 mt-3 mb-1 text-[11px] font-black text-[#94A3B8] uppercase tracking-wider">
             Practice
           </div>
         )}
-        <SidebarItem
-          icon={LuBookOpen}
-          label="Reading Practice"
-          link="/reading"
-          isActive={pathname.startsWith("/reading")}
-          onNavigate={onNavigate}
-          isCollapsed={isCollapsed}
-        />
-        <SidebarItem
-          icon={LuHeadphones}
-          label="Listening Practice"
-          link="/listening"
-          isActive={checkActive("/listening")}
-          onNavigate={onNavigate}
-          isCollapsed={isCollapsed}
-        />
-        <SidebarItem
-          icon={TfiWrite}
-          label="Writing Practice"
-          link="/writing"
-          isActive={checkActive("/writing")}
-          onNavigate={onNavigate}
-          isCollapsed={isCollapsed}
-        />
-        <SidebarItem
-          icon={RiSpeakLine}
-          label="Speaking Practice"
-          link="/speaking"
-          isActive={checkActive("/speaking")}
-          onNavigate={onNavigate}
-          isCollapsed={isCollapsed}
-        />
+
+        <SidebarItem icon={LuBookOpen} label="Reading Practice" link="/reading" isActive={pathname.startsWith("/reading")} isCollapsed={isCollapsed} />
+        <SidebarItem icon={LuHeadphones} label="Listening Practice" link="/listening" isActive={checkActive("/listening")} isCollapsed={isCollapsed} />
+        <SidebarItem icon={TfiWrite} label="Writing Practice" link="/writing" isActive={checkActive("/writing")} isCollapsed={isCollapsed} />
+        <SidebarItem icon={RiSpeakLine} label="Speaking Practice" link="/speaking" isActive={checkActive("/speaking")} isCollapsed={isCollapsed} />
 
         {!isCollapsed && (
-          <div className="mt-2 2xl:mt-4 px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-2">
+          <div className="px-8 mt-4 mb-1 text-[11px] font-black text-[#94A3B8] uppercase tracking-wider">
             Tests & Analytics
           </div>
         )}
-        <SidebarItem
-          icon={IoDocumentAttachOutline}
-          label="Mock Tests"
-          link="/mock-tests"
-          isActive={checkActive("/mock-tests")}
-          onNavigate={onNavigate}
-          isCollapsed={isCollapsed}
-        />
-        <SidebarItem
-          icon={FaChartSimple}
-          label="Analytics"
-          link="/analytics"
-          isActive={checkActive("/analytics")}
-          onNavigate={onNavigate}
-          isCollapsed={isCollapsed}
-        />
+
+        <SidebarItem icon={IoDocumentAttachOutline} label="Mock Tests" link="/mock-tests" isActive={checkActive("/mock-tests")} isCollapsed={isCollapsed} />
+        <SidebarItem icon={FaChartSimple} label="Analytics" link="/analytics" isActive={checkActive("/analytics")} isCollapsed={isCollapsed} />
 
         {!isCollapsed && (
-          <div className="mt-2 2xl:mt-4 px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px] mb-2">
+          <div className="px-8 mt-2 mb-1 text-[11px] font-black text-[#94A3B8] uppercase tracking-wider">
             Account
           </div>
         )}
-        <SidebarItem
-          icon={LuSettings}
-          label="Profile Settings"
-          link="/profile"
-          isActive={checkActive("/profile")}
-          onNavigate={onNavigate}
-          isCollapsed={isCollapsed}
-        />
+
+        <SidebarItem icon={LuSettings} label="Profile Settings" link="/profile" isActive={checkActive("/profile")} isCollapsed={isCollapsed} />
       </nav>
 
-      {/* Pastki qism - ixchamroq dizayn */}
-      <div className="p-3 2xl:p-4 border-t border-gray-50 bg-white shrink-0 space-y-2 2xl:space-y-3">
+      {/* ===== FOOTER ===== */}
+      <div className="p-4 border-t border-gray-50 shrink-0">
         {userProfile?.subscription_status !== "premium" && !isCollapsed && (
-          <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100  sm:block">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-2 bg-white/20 rounded-xl text-white">
-                <LuStar size={20} fill="currentColor" />
-              </div>
-              <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black text-white uppercase tracking-wider">
-                Free Plan
-              </span>
-            </div>
-            <div className="text-[17px] font-black text-white mb-1">Upgrade to Pro</div>
-            <p className="text-[12px] text-white/80 font-medium leading-tight mb-5">
+          <div className="p-5 bg-[#4B8EE3] rounded-[24px] text-white shadow-lg mb-3">
+            <div className="font-black mb-1">Upgrade to Pro</div>
+            <p className="text-sm opacity-90 mb-4">
               Unlock unlimited tests and AI scoring.
             </p>
             <Link to="/pricing">
-              <Button className="w-full bg-white hover:bg-blue-50 text-[#4B8EE3] font-semibold py-5 rounded-xl border-none shadow-sm active:scale-[0.98] transition-all text-[13px]">
+              <Button className="w-full bg-white text-[#4B8EE3] font-semibold">
                 View Plans
               </Button>
             </Link>
           </div>
         )}
 
-        {userProfile?.subscription_status !== "premium" && isCollapsed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                to="/pricing"
-                className="flex items-center justify-center p-3 bg-[#4B8EE3] rounded-xl hover:bg-[#3a7bc8] transition-colors"
-              >
-                <LuStar size={20} className="text-white" fill="currentColor" />
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              Upgrade to Pro
-            </TooltipContent>
-          </Tooltip>
-        )}
-
         <LogoutModal onConfirm={handleLogout}>
-          {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button className="flex items-center justify-center p-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95]">
-                  <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Log out
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
-              <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" /> Log out
-            </button>
-          )}
+          <button className="flex items-center gap-3 px-5 py-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl">
+            <LuLogOut className="w-4 h-4" /> {!isCollapsed && "Log out"}
+          </button>
         </LogoutModal>
       </div>
     </aside>

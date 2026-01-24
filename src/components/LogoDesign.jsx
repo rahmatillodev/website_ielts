@@ -8,7 +8,6 @@ const LogoDesign = ({
   textSize = "text-2xl",
   color = "#1990e6",
   iconColor = "text-white",
-  backgroundColor = "#1990e6"
 }) => {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
@@ -22,7 +21,7 @@ const LogoDesign = ({
         <span className="font-black" style={{ color: color }}>ielt</span>
         <span className="font-bold" style={{ color: color }}>s</span>
         <span className="font-semibold" style={{ color: color }}>core</span>
-        <div className={`w-1 h-1 inline-block ml-0.5 ${color}`}></div>
+        <div className={`w-1 h-1 inline-block ml-0.5`} style={{ backgroundColor: color }}></div>
       </span>
     </div>
   );

@@ -2,11 +2,13 @@ import { useLocation } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import DashboardNavbar from '@/components/navbar/DashboardNavbar';
 import DashboardSidebar from '@/components/sidebar/DashboardSidebar';
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import RotationModal, { DISMISS_KEY } from '@/components/modal/RotationModal'
 import { useSmallScreen } from '@/hooks/useSmallScreen'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Outlet } from 'react-router-dom'
+
+const FEEDBACK_MODAL_SHOWN_KEY = "feedback_modal_shown"
 
 const DashboardLayout = () => {
   const { pathname } = useLocation()
@@ -14,6 +16,7 @@ const DashboardLayout = () => {
   const [showModal, setShowModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  
   useEffect(() => {
     // Check if modal was previously dismissed
     const wasDismissed = localStorage.getItem(DISMISS_KEY) === "true"

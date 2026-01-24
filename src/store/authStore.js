@@ -16,38 +16,34 @@ export const useAuthStore = create(
 
 
       initializeSession: async () => {
-        if (get().isInitialized) return; 
-
+        // initialized bo'lsa ham sessiyani tekshirish kerak bo'lishi mumkin
         try {
-          set({ loading: true, error: null })
-          
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-          
-          if (sessionError) throw sessionError
-
+          set({ loading: true });
+          const { data: { session } } = await supabase.auth.getSession();
+      
           if (session?.user) {
-            set({ authUser: session.user })
-            await get().fetchUserProfile(session.user.id)
+            set({ authUser: session.user });
+            // Diqqat: Har doim bazadan tekshiramiz
+            await get().fetchUserProfile(session.user.id);
+          } else {
+            set({ authUser: null, userProfile: null });
           }
-
-          // Auth holati o'zgarishini kuzatish (Login/Logout)
+      
+          // Auth o'zgarishini kuzatish
           supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
-              set({ authUser: session.user })
-              await get().fetchUserProfile(session.user.id)
+              set({ authUser: session.user });
+              await get().fetchUserProfile(session.user.id);
             } else if (event === 'SIGNED_OUT') {
-              set({ authUser: null, userProfile: null, error: null })
-              // Clear dashboard data on sign out
-              const { useDashboardStore } = await import('@/store/dashboardStore')
-              useDashboardStore.getState().clearDashboardData()
+              set({ authUser: null, userProfile: null });
             }
-          })
-
-          set({ isInitialized: true })
+          });
+      
+          set({ isInitialized: true });
         } catch (error) {
-          set({ error: error.message })
+          set({ error: error.message });
         } finally {
-          set({ loading: false })
+          set({ loading: false });
         }
       },
 
@@ -90,14 +86,38 @@ export const useAuthStore = create(
       fetchUserProfile: async (userId) => {
         const { data, error } = await supabase
           .from('users')
-          .select('*') // Use * to get all available columns (Supabase will only return what exists)
+          .select('*')
           .eq('id', userId)
-          .single()
+          .maybeSingle(); // Xato bermay null qaytaradi
+      
+        if (error || !data) {
+          console.error("User profile missing in Database. Logging out...");
+          await get().forceSignOutToLogin('Unauthorized: Profile not found.');
+          return;
+        }
+      
+        set({ userProfile: data });
+      },
 
-        if (!error) {
-          set({ userProfile: data })
-        } else {
-          console.warn('[authStore] Error fetching user profile:', error)
+      // Sessiya bor bo'lsa ham DB'da user borligini tekshirish
+      validateSessionAgainstDatabase: async () => {
+        const authUser = get().authUser;
+        if (!authUser?.id) return false;
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', authUser.id)
+            .maybeSingle();
+
+          if (error || !data) {
+            await get().forceSignOutToLogin('Unauthorized: Profile not found.');
+            return false;
+          }
+          return true;
+        } catch (error) {
+          set({ error: error.message });
+          return false;
         }
       },
 
@@ -150,13 +170,39 @@ export const useAuthStore = create(
       // Chiqish (Sign Out)
       signOut: async () => {
         set({ loading: true, error: null })
-        const { error } = await supabase.auth.signOut()
-        if (error) {
-          set({ error: error.message, loading: false })
-          return { success: false, error: error.message }
+        try {
+          const { error } = await supabase.auth.signOut()
+          if (error) {
+            set({ error: error.message })
+            return { success: false, error: error.message }
+          }
+          set({ authUser: null, userProfile: null })
+          return { success: true }
+        } catch (error) {
+          const message = error?.message || 'Failed to log out. Please try again.'
+          set({ error: message })
+          return { success: false, error: message }
+        } finally {
+          set({ loading: false })
         }
-        set({ authUser: null, userProfile: null, loading: false })
-        return { success: true }
+      },
+
+      // Xavfsizlik uchun logout va login sahifasiga yo'naltirish
+      forceSignOutToLogin: async (reason) => {
+        set({ loading: true, error: reason || null })
+        try {
+          await supabase.auth.signOut()
+        } catch (error) {
+          const message = error?.message || reason || 'Failed to log out.'
+          set({ error: message })
+        } finally {
+          set({ authUser: null, userProfile: null, loading: false })
+          if (typeof window !== 'undefined') {
+            if (window.location.pathname !== '/') {
+              window.location.assign('/')
+            }
+          }
+        }
       },
 
       clearError: () => set({ error: null }),
