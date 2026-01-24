@@ -79,12 +79,16 @@ const DashboardSidebar = ({ onNavigate }) => {
   };
 
   const handleLogout = async () => {
-    const result = await signOut();
-    if (result.success) {
-      toast.success("Logged out successfully");
-      navigate("/login");
-    } else {
-      toast.error(result.error);
+    try {
+      const result = await signOut();
+      if (result?.success) {
+        toast.success("Logged out successfully");
+        navigate("/");
+        return;
+      }
+      toast.error(result?.error || "Failed to log out. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Failed to log out. Please try again.");
     }
   };
 

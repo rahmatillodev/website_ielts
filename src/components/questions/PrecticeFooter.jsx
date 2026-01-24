@@ -2,7 +2,7 @@ import React from 'react'
 import { FaCheck, FaChevronLeft, FaChevronRight, FaBookmark } from 'react-icons/fa';
 import { useAppearance } from '@/contexts/AppearanceContext';
 
-const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set() }) => {
+const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false }) => {
   // Try to use appearance context, but don't fail if not available
   const appearance = useAppearance();
   const themeColors = appearance.themeColors;
@@ -129,7 +129,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
     <footer
       className="border-t border-gray-300 px-6 h-20 z-50"
       style={{
-        backgroundColor: themeColors.background      }}
+        backgroundColor: themeColors.backgroundColor }}
     >
       <div className="flex items-center justify-between h-full ">
 
@@ -315,8 +315,10 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
         <div className="flex items-center gap-1 shrink-0">
           {status === 'taking' && (
             <button
-              className="flex items-center gap-1 transition-colors hover:opacity-80 p-2"
+              disabled={isSubmitting}
+              className="flex items-center gap-1 transition-colors hover:opacity-80 p-2 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => {
+                if (isSubmitting) return;
                 if (onFinish) {
                   onFinish();
                 }
@@ -324,7 +326,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
               title="Finish"
             >
               <div className="rounded-sm flex items-center justify-center text-sm bg-black text-white gap-2 p-2" >
-                <FaCheck className="w-4 h-4"  /> Submit
+                <FaCheck className="w-4 h-4"  /> {isSubmitting ? 'Submitting...' : 'Submit'}
               </div>
             </button>
           )}

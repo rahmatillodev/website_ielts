@@ -33,6 +33,9 @@ import "./App.css";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
+  const validateSessionAgainstDatabase = useAuthStore(
+    (state) => state.validateSessionAgainstDatabase
+  );
   const user = useAuthStore((state) => state.authUser);
   const { fetchSettings } = useSettingsStore()
   const { fetchTests } = useTestStore();
@@ -51,6 +54,12 @@ function App() {
   useEffect(() => {
     fetchTests();
   }, [fetchTests])
+
+  useEffect(() => {
+    if (user?.id) {
+      validateSessionAgainstDatabase();
+    }
+  }, [location.pathname, user?.id, validateSessionAgainstDatabase]);
 
   const isPracticePage = location.pathname.includes("/reading-practice") || location.pathname.includes("/listening-practice") || location.pathname.includes("/writing-practice") || location.pathname.includes("/speaking-practice");
 

@@ -128,7 +128,6 @@ const ProfilePage = () => {
     e.preventDefault();
     setLoading(true);
     const result = await addFeedback({
-      user_id: userProfile?.id,
       message: message,
     });
     if (result.success) {
