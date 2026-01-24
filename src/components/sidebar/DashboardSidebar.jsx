@@ -34,7 +34,7 @@ const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapse
             ? "bg-[#EBF5FF] text-[#1990e6]"
             : "text-[#475569] hover:bg-gray-50"
         }
-        ${isCollapsed ? "mx-2 w-12 h-12 justify-center px-0 gap-0" : "mx-3"}`}
+        ${isCollapsed ? "mx-5 w-12 h-12 justify-center px-0 gap-0" : "mx-3"}`}
     >
       <Icon className="w-5 h-5 shrink-0" />
       {!isCollapsed && <span className="truncate">{label}</span>}
@@ -111,7 +111,7 @@ const DashboardSidebar = ({ onNavigate }) => {
         {/* LOGO — ALWAYS CENTERED */}
         <div className="flex items-center justify-center w-full pr-8">
           <Link to="/dashboard" className="flex items-center">
-            <LogoDesign className={isCollapsed ? "[&>span]:hidden" : ""} />
+            <LogoDesign className={isCollapsed ? "[&>span]:hidden ml-6" : ""} />
           </Link>
           {!isCollapsed && (
             <span className="ml-2 text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">
