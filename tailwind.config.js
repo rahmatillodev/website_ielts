@@ -6,6 +6,7 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,jsx}",
+    "!./src/components/pdf/**/*"
   ],
   
   theme: {
@@ -160,6 +161,19 @@ export default {
         'md': 'calc(0.625rem - 2px)',   // 8px
         'lg': '0.625rem',                // 10px
         'xl': 'calc(0.625rem + 4px)',   // 14px
+      },
+      
+      // Animation keyframes
+      keyframes: {
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+      },
+      
+      // Animation utilities
+      animation: {
+        shimmer: 'shimmer 2s infinite',
       },
     },
   },

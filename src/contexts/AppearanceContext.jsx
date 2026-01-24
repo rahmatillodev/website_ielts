@@ -6,18 +6,21 @@ const AppearanceContext = createContext(null);
 const themes = {
   light: {
     text: '#000000',
-    background: '#ffffff',
-    border: '#e5e7eb', // gray-200
+    background: '#f2f2f2',
+    border: '#dce1e5', // gray-300
+    backgroundColor: '#f5f5f5',
   },
   dark: {
     text: '#ffffff',
     background: '#000000',
     border: '#374151', // gray-700
+    backgroundColor: '#1a2632',
   },
   'high-contrast': {
     text: '#ffff00', // yellow
     background: '#000000',
     border: '#ffff00',
+    backgroundColor: '#1a2632',
   },
 };
 

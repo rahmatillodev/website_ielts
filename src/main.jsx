@@ -9,3 +9,6 @@ createRoot(document.getElementById('root')).render(
     <App />
   </BrowserRouter>
 )
+
+// run this project with development environment variable npm run dev
+// run this project with production environment variable npm run build   npm run preview

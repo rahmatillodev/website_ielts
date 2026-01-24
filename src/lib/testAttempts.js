@@ -10,7 +10,7 @@ const getUserIdFromLocalStorage = () => {
   try {
     const authStore = localStorage.getItem('auth-storage');
     if (authStore) {
-        
+
       const parsed = JSON.parse(authStore);
       return parsed?.state?.authUser?.id || null;
     }
@@ -20,7 +20,7 @@ const getUserIdFromLocalStorage = () => {
   }
 };
 
-export const submitTestAttempt = async (testId, answers, currentTest, timeTaken = null) => {
+export const submitTestAttempt = async (testId, answers, currentTest, timeTaken = null, type) => {
   try {
     // Get user id from localStorage
     const authenticatedUserId = getUserIdFromLocalStorage();
@@ -32,12 +32,11 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
     const { correctCount, totalQuestions, answerResults } = calculateTestScore(answers, currentTest);
 
     // Calculate band score (IELTS 0-9 scale based on percentage)
-    const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
-    const bandScore = calculateBandScore(percentage);
+    const bandScore = calculateBandScore(correctCount, totalQuestions, type);
 
     // Calculate time_taken if not provided (fallback to 0)
-    const timeTakenSeconds = timeTaken !== null && timeTaken !== undefined 
-      ? Math.max(0, Math.floor(timeTaken)) 
+    const timeTakenSeconds = timeTaken !== null && timeTaken !== undefined
+      ? Math.max(0, Math.floor(timeTaken))
       : 0;
 
     // 1. Create user_attempt record
@@ -142,7 +141,7 @@ export const fetchLatestAttempt = async (userId, testId) => {
     // Fetch latest attempt
     const { data: attemptData, error: attemptError } = await supabase
       .from('user_attempts')
-      .select('*')
+      .select('id, user_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
       .eq('user_id', authenticatedUserId)
       .eq('test_id', testId)
       .order('completed_at', { ascending: false })
@@ -195,7 +194,7 @@ export const checkTestCompleted = async (testId) => {
 
     const { data, error } = await supabase
       .from('user_attempts')
-      .select('*')
+      .select('id, test_id, score, completed_at, correct_answers, total_questions')
       .eq('user_id', authenticatedUserId)
       .eq('test_id', testId)
       .order('completed_at', { ascending: false })
@@ -243,12 +242,12 @@ const calculateTestScore = (answers, currentTest) => {
         const groupQuestions = questionGroup.questions || [];
         const groupType = (questionGroup.type || '').toLowerCase();
         const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
-        
+
         // For drag and drop, only process questions with question_number (exclude word bank entries)
-        const validQuestions = isDragAndDrop 
+        const validQuestions = isDragAndDrop
           ? groupQuestions.filter(q => q.question_number != null)
           : groupQuestions;
-        
+
         validQuestions.forEach((question) => {
           // Use question_number as primary key (consistent with DragAndDrop component)
           const questionKey = question.question_number;
@@ -368,25 +367,61 @@ const normalizeAnswer = (answer) => {
   return answer.toString().trim().toLowerCase();
 };
 
+const readingBands = [
+  { min: 39, band: 9 },
+  { min: 37, band: 8.5 },
+  { min: 35, band: 8 },
+  { min: 33, band: 7.5 },
+  { min: 30, band: 7 },
+  { min: 27, band: 6.5 },
+  { min: 23, band: 6 },
+  { min: 19, band: 5.5 },
+  { min: 15, band: 5 },
+  { min: 13, band: 4.5 },
+  { min: 10, band: 4 },
+  { min: 9, band: 3.5 },
+  { min: 7, band: 3 },
+  { min: 5, band: 2.5 },
+  { min: 3, band: 2 },
+  { min: 2, band: 1.5 },
+  { min: 1, band: 1 },
+  { min: 0, band: 0 },
+];
 
-const calculateBandScore = (percentage) => {
-  // IELTS Reading/Listening scoring table (approximate)
-  if (percentage >= 95) return 9.0;
-  if (percentage >= 88) return 8.5;
-  if (percentage >= 82) return 8.0;
-  if (percentage >= 75) return 7.5;
-  if (percentage >= 68) return 7.0;
-  if (percentage >= 60) return 6.5;
-  if (percentage >= 52) return 6.0;
-  if (percentage >= 43) return 5.5;
-  if (percentage >= 35) return 5.0;
-  if (percentage >= 26) return 4.5;
-  if (percentage >= 18) return 4.0;
-  if (percentage >= 12) return 3.5;
-  if (percentage >= 7) return 3.0;
-  if (percentage >= 3) return 2.5;
-  if (percentage >= 1) return 2.0;
-  return 1.5;
+const listeningBands = [
+  { min: 39, band: 9 },
+  { min: 37, band: 8.5 },
+  { min: 35, band: 8 },
+  { min: 33, band: 7.5 },
+  { min: 30, band: 7 },
+  { min: 26, band: 6.5 },
+  { min: 23, band: 6 },
+  { min: 18, band: 5.5 },
+  { min: 16, band: 5 },
+  { min: 13, band: 4.5 },
+  { min: 10, band: 4 },
+  { min: 9, band: 3.5 },
+  { min: 7, band: 3 },
+  { min: 5, band: 2.5 },
+  { min: 3, band: 2 },
+  { min: 2, band: 1.5 },
+  { min: 1, band: 1 },
+  { min: 0, band: 0 },
+];
+const calculateBandScore = (correctCount, totalQuestions, type) => {
+  if (totalQuestions === 0) return 0.0;
+
+  // 1. Ballarni 40 talik sistemaga o'tkazamiz (Normalization)
+  const normalizedScore = Math.round((correctCount / totalQuestions) * 40);
+
+  // 2. Standart IELTS shkalasi (Academic Reading/Listening o'rtachasi)
+  if (type === 'reading') {
+    return readingBands.find(band => normalizedScore >= band.min)?.band || 0.0;
+  } else if (type === 'listening') {
+    return listeningBands.find(band => normalizedScore >= band.min)?.band || 0.0;
+  }
+
+  throw new Error('Invalid test type');
 };
 
 /**

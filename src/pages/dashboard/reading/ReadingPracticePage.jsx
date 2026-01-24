@@ -130,10 +130,11 @@ const ReadingPracticePageContent = () => {
     loadTestData();
     
     // Cleanup: Clear currentTest when component unmounts and prevent state updates
+    // Also clear test list data to force refetch when navigating back
     return () => {
       isMounted = false;
       const { clearCurrentTest } = useTestStore.getState();
-      clearCurrentTest();
+      clearCurrentTest(true); // Clear test list data to force refetch
     };
   }, [id, fetchTestById]);
 
@@ -551,7 +552,7 @@ const ReadingPracticePageContent = () => {
       }
       
       // Submit even if answers object is empty - submitTestAttempt handles this
-      const result = await submitTestAttempt(id, answers, currentTest, timeTaken);
+      const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'reading');
       
       if (result.success) {
         setLatestAttemptId(result.attemptId);
@@ -778,7 +779,7 @@ const ReadingPracticePageContent = () => {
     <div 
       className="flex flex-col h-screen"
       style={{ 
-        backgroundColor: themeColors.background,
+        backgroundColor: themeColors.backgroundColor,
         color: themeColors.text,
         fontSize: `${baseFontSize}rem`,
         transition: 'font-size 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out'
@@ -806,6 +807,7 @@ const ReadingPracticePageContent = () => {
         onToggleShowCorrect={(checked) => setShowCorrectAnswers(checked)}
         status={status}
         onRetake={handleRetakeTest}
+        type="Reading"
       />
 
       {/* Main Content - Universal Container for all selectable content */}
@@ -839,7 +841,7 @@ const ReadingPracticePageContent = () => {
           >
             {/* Sub-Header Bar */}
             <div 
-              className="border-b px-6 py-3"
+              className="border px-6 py-3 m-4 rounded-md"
               style={{ 
                 backgroundColor: theme === 'light' ? '#f3f4f6' : themeColors.background,
                 borderColor: themeColors.border
@@ -930,8 +932,10 @@ const ReadingPracticePageContent = () => {
               const groupType = (questionGroup.type || '').toLowerCase();
               const isFillInTheBlanks = groupType === 'fill_in_blanks';
               const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
-              const isTable = groupType.includes('table');
+              const isTableCompletion = groupType === 'table_completion';
+              const isTable = groupType.includes('table') && !isTableCompletion;
               const isMap = groupType.includes('map');
+              const isMatchingInformation = groupType.includes('matching_information');
               
               return (
                 <div key={questionGroup.id || groupIdx} className="space-y-6">
@@ -943,7 +947,7 @@ const ReadingPracticePageContent = () => {
                     >
                       Questions {questionRange}
                     </h3>
-                    {questionGroup.instruction && (
+                    {questionGroup.instruction && questionGroup.type !== 'matching_information' && (
                         <p 
                           className="text-sm leading-relaxed"
                           data-selectable="true"
@@ -956,8 +960,8 @@ const ReadingPracticePageContent = () => {
                       )}
                   </div>
                 
-                  {/* For Fill-in-the-Blanks, Drag-and-Drop, Table, and Map: Render as a single group with group-level options */}
-                  {(isFillInTheBlanks || isDragAndDrop || isTable || isMap) ? (
+                  {/* For Fill-in-the-Blanks, Drag-and-Drop, Table Completion, Table, Map, and Matching Information: Render as a single group with group-level options */}
+                  {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation) ? (
                     <div
                       ref={(el) => {
                         // Set ref for all questions in the group for scrolling

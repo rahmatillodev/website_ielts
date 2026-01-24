@@ -1,0 +1,36 @@
+.fixed_bottom_right_container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 155px;
+  height: 40px;
+  color: #2c2b34;
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  /* border-width: 1px 0px 0px 1px;
+  border-radius: 10px 0px 0px 0px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255,255,255,0.50); */
+  z-index: 9999;
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.7));
+}
+
+.fixed_bottom_right_container::after {
+  content: " AhsanLabs";
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c2b34;
+  position: absolute;
+  right: 0;
+}
+
+.fixed_bottom_right_container::before {
+  font-style: italic;
+  content: "powered by ";
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c2b34;
+  position: absolute;
+}

@@ -35,8 +35,12 @@ const ListeningPracticePageContent = () => {
   const [isStarted, setIsStarted] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showInitialModal, setShowInitialModal] = useState(true);
-  const [startTime, setStartTime] = useState(null);
+// Initialize modal state based on URL mode parameter
+const [showInitialModal, setShowInitialModal] = useState(() => {
+  const mode = new URLSearchParams(window.location.search).get('mode');
+  return mode !== 'review' && mode !== 'retake'; // Don't show modal in review or retake mode
+});
+const [startTime, setStartTime] = useState(null);
 
   const [answers, setAnswers] = useState({});
   const [reviewData, setReviewData] = useState({});
@@ -46,7 +50,9 @@ const ListeningPracticePageContent = () => {
 
   // Audio player state
   const [playbackRate, setPlaybackRate] = useState(1.0);
-  const [volume, setVolume] = useState(1.0);
+  const [volume, setVolume] = useState(0.7);
+
+
 
   const questionRefs = useRef({});
   const questionsContainerRef = useRef(null);
@@ -55,7 +61,7 @@ const ListeningPracticePageContent = () => {
   const [leftWidth, setLeftWidth] = useState(50);
   const containerRef = useRef(null);
   const isResizing = useRef(false);
-  
+
   // Annotation system
   const { addHighlight, addNote } = useAnnotation();
   const selectableContentRef = useRef(null);
@@ -86,7 +92,7 @@ const ListeningPracticePageContent = () => {
       try {
         // Fetch test data
         await fetchTestById(id);
-        
+
         // Only update state if component is still mounted
         if (!isMounted) return;
 
@@ -134,10 +140,11 @@ const ListeningPracticePageContent = () => {
     loadTestData();
 
     // Cleanup: Clear currentTest when component unmounts and prevent state updates
+    // Also clear test list data to force refetch when navigating back
     return () => {
       isMounted = false;
       const { clearCurrentTest } = useTestStore.getState();
-      clearCurrentTest();
+      clearCurrentTest(true); // Clear test list data to force refetch
     };
   }, [id, fetchTestById]);
 
@@ -526,7 +533,7 @@ const ListeningPracticePageContent = () => {
       }
 
       // Submit even if answers object is empty - submitTestAttempt handles this
-      const result = await submitTestAttempt(id, answers, currentTest, timeTaken);
+      const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'listening');
 
       if (result.success) {
         setLatestAttemptId(result.attemptId);
@@ -601,8 +608,7 @@ const ListeningPracticePageContent = () => {
     setCurrentPart(1);
     setLatestAttemptId(null);
     setShowInitialModal(true);
-    setPlaybackRate(1.0);
-    setVolume(1.0);
+    // Keep persisted audio settings (don't reset to loud defaults)
 
     clearListeningPracticeData(id);
   };
@@ -640,10 +646,6 @@ const ListeningPracticePageContent = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, authUser, id, currentTest]);
 
-  // Update QuestionHeader to support listening navigation
-  // const handleBackClick = () => {
-  //   handleBack();
-  // };
 
   // Annotation handlers - now support sectionType and testType
   const handleHighlight = useCallback((range, text, partId, sectionType = 'passage', testType = 'listening') => {
@@ -664,11 +666,11 @@ const ListeningPracticePageContent = () => {
         element = element.parentElement;
       }
     }
-    
+
     if (!container) return;
-    
+
     const offsets = getTextOffsets(container, range);
-    
+
     // Apply highlight to DOM
     const highlightId = addHighlight({
       text,
@@ -680,10 +682,10 @@ const ListeningPracticePageContent = () => {
       testType,
       range: range.cloneRange(),
     });
-    
+
     // Apply visual highlight
     applyHighlight(range, highlightId);
-    
+
     // Clear selection
     window.getSelection().removeAllRanges();
   }, [addHighlight]);
@@ -706,11 +708,11 @@ const ListeningPracticePageContent = () => {
         element = element.parentElement;
       }
     }
-    
+
     if (!container) return;
-    
+
     const offsets = getTextOffsets(container, range);
-    
+
     // Apply note to DOM
     const noteId = addNote({
       text,
@@ -723,10 +725,10 @@ const ListeningPracticePageContent = () => {
       testType,
       range: range.cloneRange(),
     });
-    
+
     // Apply visual note
     applyNote(range, noteId);
-    
+
     // Clear selection
     window.getSelection().removeAllRanges();
   }, [addNote]);
@@ -735,9 +737,9 @@ const ListeningPracticePageContent = () => {
   const baseFontSize = fontSizeValue.base / 16; // Convert px to rem
 
   return (
-    <div 
+    <div
       className="flex flex-col h-screen"
-      style={{ 
+      style={{
         backgroundColor: themeColors.background,
         color: themeColors.text,
         fontSize: `${baseFontSize}rem`,
@@ -752,10 +754,12 @@ const ListeningPracticePageContent = () => {
         onNote={handleNote}
         testType="listening"
       />
-      
-      {/* Initial Modal - only show on first visit, not in review/retake mode */}
 
-      <Dialog open={showInitialModal && !hasInteracted && status === 'taking'} onOpenChange={() => { }}>
+      {/* Initial Modal - only show on first visit, not in review/retake mode */}
+      <Dialog
+        open={status === 'taking' && showInitialModal && !hasInteracted && searchParams.get('mode') !== 'review' && searchParams.get('mode') !== 'retake'}
+        onOpenChange={() => { }}
+      >
         <DialogContent className="sm:max-w-[500px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Listening Test Instructions</DialogTitle>
@@ -792,306 +796,308 @@ const ListeningPracticePageContent = () => {
         onToggleShowCorrect={(checked) => setShowCorrectAnswers(checked)}
         status={status}
         onRetake={handleRetakeTest}
+        type="Listening"
       />
 
       {/* Main Content - Universal Container for all selectable content */}
-      <div 
-        className="flex flex-1 overflow-hidden p-3 transition-all duration-300" 
+      <div
+        className="flex flex-1 overflow-hidden p-3 transition-all duration-300"
         ref={containerRef}
         style={{
-          maxWidth:'100%',
+          maxWidth: '100%',
         }}
       >
         <div ref={universalContentRef} className="flex flex-1 overflow-hidden w-full">
-        {/* Left Panel - Transcript (only in review mode) */}
-        {status === 'reviewing' && currentPartData ? (
-          <div
-            className="border rounded-2xl overflow-y-auto"
-            data-part-id={currentPart}
-            data-section="passage"
-            data-section-type="passage"
-            style={{ 
-              width: `${leftWidth}%`,
-              backgroundColor: themeColors.background,
-              borderColor: themeColors.border,
-              transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
-            }}
-          >
-            <div 
-              className="border-b px-6 py-3"
-              style={{ 
-                backgroundColor: theme === 'light' ? '#f3f4f6' : themeColors.background,
-                borderColor: themeColors.border
+          {/* Left Panel - Transcript (only in review mode) */}
+          {status === 'reviewing' && currentPartData ? (
+            <div
+              className="border rounded-2xl overflow-y-auto"
+              data-part-id={currentPart}
+              data-section="passage"
+              data-section-type="passage"
+              style={{
+                width: `${leftWidth}%`,
+                backgroundColor: themeColors.background,
+                borderColor: themeColors.border,
+                transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
               }}
             >
-              <h2 
-                className="text-lg font-semibold"
-                style={{ color: themeColors.text }}
+              <div
+                className="border-b px-6 py-3"
+                style={{
+                  backgroundColor: theme === 'light' ? '#f3f4f6' : themeColors.background,
+                  borderColor: themeColors.border
+                }}
               >
-                Part {currentPart}: Transcript
-              </h2>
-            </div>
-            <div className="p-6">
-              <h2 
-                className="text-2xl font-semibold mb-6"
-                style={{ color: themeColors.text }}
-              >
-                {currentPartData?.title || `Part ${currentPart}`}
-              </h2>
-              <div className="prose prose-sm max-w-none relative">
-                <div 
-                  ref={selectableContentRef}
-                  data-selectable="true"
-                  className="leading-relaxed whitespace-pre-line space-y-4 relative"
+                <h2
+                  className="text-lg font-semibold"
                   style={{ color: themeColors.text }}
                 >
-                  {currentPartData?.content ? (
-                    currentPartData.content.split('\n').map((paragraph, idx) =>
-                      paragraph.trim() ? (
-                        <p key={idx} className="mb-4" data-selectable="true">{paragraph}</p>
-                      ) : null
-                    )
-                  ) : null}
+                  Part {currentPart}: Transcript
+                </h2>
+              </div>
+              <div className="p-6">
+                <h2
+                  className="text-2xl font-semibold mb-6"
+                  style={{ color: themeColors.text }}
+                >
+                  {currentPartData?.title || `Part ${currentPart}`}
+                </h2>
+                <div className="prose prose-sm max-w-none relative">
+                  <div
+                    ref={selectableContentRef}
+                    data-selectable="true"
+                    className="leading-relaxed whitespace-pre-line space-y-4 relative"
+                    style={{ color: themeColors.text }}
+                  >
+                    {currentPartData?.content ? (
+                      currentPartData.content.split('\n').map((paragraph, idx) =>
+                        paragraph.trim() ? (
+                          <p key={idx} className="mb-4" data-selectable="true">{paragraph}</p>
+                        ) : null
+                      )
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div 
-            className="border rounded-2xl"
-            style={{ 
-              backgroundColor: themeColors.background,
-              borderColor: themeColors.border
-            }}
-          />
-        )}
-
-        {/* Resizer - only show in review mode when left panel is visible */}
-        {status === 'reviewing' && (
-          <div className="px-4">
+          ) : (
             <div
-              onMouseDown={startResize}
-              className="w-0.5 cursor-col-resize bg-gray-600 h-full flex justify-center items-center relative"
-              title="Drag to resize"
-            >
-              <div className="w-6 h-6 rounded-2xl bg-white flex items-center justify-center absolute border-2">
-                <LuChevronsLeftRight />
+              className="border rounded-2xl"
+              style={{
+                backgroundColor: themeColors.background,
+                borderColor: themeColors.border
+              }}
+            />
+          )}
+
+          {/* Resizer - only show in review mode when left panel is visible */}
+          {status === 'reviewing' && (
+            <div className="px-4">
+              <div
+                onMouseDown={startResize}
+                className="w-0.5 cursor-col-resize bg-gray-600 h-full flex justify-center items-center relative"
+                title="Drag to resize"
+              >
+                <div className="w-6 h-6 rounded-2xl flex items-center justify-center absolute border-2" style={{ borderColor: themeColors.border, backgroundColor: themeColors.background }}>
+                  <LuChevronsLeftRight />
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Right Panel - Audio Player + Questions */}
-        {questionGroups && questionGroups.length > 0 ? (
-          <div
-            ref={questionsContainerRef}
-            className="space-y-8 overflow-y-auto border rounded-2xl"
-            data-part-id={currentPart}
-            data-section="questions"
-            data-section-type="questions"
-            style={{ 
-              width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%',
-              backgroundColor: themeColors.background,
-              borderColor: themeColors.border,
-              transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
-            }}
-          >
-            {/* Sticky Audio Player - only in review mode */}
-            {audioUrl && status === 'reviewing' && (
-              <AudioPlayer
-                audioUrl={audioUrl}
-                isTestMode={false}
-                playbackRate={playbackRate}
-                onPlaybackRateChange={setPlaybackRate}
-                volume={volume}
-                onVolumeChange={setVolume}
-              />
-            )}
+          {/* Right Panel - Audio Player + Questions */}
+          {questionGroups && questionGroups.length > 0 ? (
+            <div
+              ref={questionsContainerRef}
+              className="space-y-8 overflow-y-auto border rounded-2xl"
+              data-part-id={currentPart}
+              data-section="questions"
+              data-section-type="questions"
+              style={{
+                width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%',
+                backgroundColor: themeColors.background,
+                borderColor: themeColors.border,
+                transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
+              }}
+            >
+              {/* Sticky Audio Player - only in review mode */}
+              {audioUrl && status === 'reviewing' && (
+                <AudioPlayer
+                  audioUrl={audioUrl}
+                  isTestMode={false}
+                  playbackRate={playbackRate}
+                  onPlaybackRateChange={setPlaybackRate}
+                  volume={volume}
+                  onVolumeChange={setVolume}
+                />
+              )}
 
-            {/* Questions */}
-            <div className="p-6 space-y-8">
-              {questionGroups.map((questionGroup, groupIdx) => {
-                const questionRange = getQuestionRange(questionGroup);
-                const groupQuestions = questionGroup.questions || [];
-                const groupType = (questionGroup.type || '').toLowerCase();
-                const isFillInTheBlanks = groupType === 'fill_in_blanks';
-                const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
-                const isTable = groupType.includes('table');
-                const isMap = groupType.includes('map');
+              {/* Questions */}
+              <div className="p-6 space-y-8">
+                {questionGroups.map((questionGroup, groupIdx) => {
+                  const questionRange = getQuestionRange(questionGroup);
+                  const groupQuestions = questionGroup.questions || [];
+                  const groupType = (questionGroup.type || '').toLowerCase();
+                  const isFillInTheBlanks = groupType === 'fill_in_blanks';
+                  const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
+                  const isTableCompletion = groupType === 'table_completion';
+                  const isTable = groupType.includes('table') && !isTableCompletion;
+                  const isMap = groupType.includes('map');
 
-                return (
-                  <div key={questionGroup.id || groupIdx} className={`space-y-6 ${status === 'reviewing' ? 'w-full' : 'w-6/12'}`}>
-                    <div className="space-y-3">
-                      <h3 
-                        className="text-lg font-semibold"
-                        data-selectable="true"
-                        data-part-id={currentPart}
-                        data-section-type="questions"
-                        style={{ color: themeColors.text }}
-                      >
-                        Questions {questionRange}
-                      </h3>
-                      {questionGroup.instruction && (
-                        <p 
-                          className="text-sm leading-relaxed"
+                  return (
+                    <div key={questionGroup.id || groupIdx} className={`space-y-6 ${status === 'reviewing' ? 'w-full' : 'w-6/12'}`}>
+                      <div className="space-y-3">
+                        <h3
+                          className="text-lg font-semibold"
                           data-selectable="true"
                           data-part-id={currentPart}
                           data-section-type="questions"
                           style={{ color: themeColors.text }}
                         >
-                          {questionGroup.instruction}
-                        </p>
-                      )}
-                    </div>
+                          Questions {questionRange}
+                        </h3>
+                        {questionGroup.instruction && (
+                          <p
+                            className="text-sm leading-relaxed"
+                            data-selectable="true"
+                            data-part-id={currentPart}
+                            data-section-type="questions"
+                            style={{ color: themeColors.text }}
+                          >
+                            {questionGroup.instruction}
+                          </p>
+                        )}
+                      </div>
 
-                    {(isFillInTheBlanks || isDragAndDrop || isTable || isMap) ? (
-                      <div
-                        ref={(el) => {
-                          // Set ref for all questions in the group for scrolling
-                          if (el && groupQuestions.length > 0) {
-                            groupQuestions
-                              .filter(q => q.question_number != null)
-                              .forEach(q => {
-                                if (q.question_number) {
-                                  questionRefs.current[q.question_number] = el;
-                                }
-                              });
-                          }
-                        }}
-                        data-question-number={groupQuestions
-                          .filter(q => q.question_number != null)
+                      {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap) ? (
+                        <div
+                          ref={(el) => {
+                            // Set ref for all questions in the group for scrolling
+                            if (el && groupQuestions.length > 0) {
+                              groupQuestions
+                                .filter(q => q.question_number != null)
+                                .forEach(q => {
+                                  if (q.question_number) {
+                                    questionRefs.current[q.question_number] = el;
+                                  }
+                                });
+                            }
+                          }}
+                          data-question-number={groupQuestions
+                            .filter(q => q.question_number != null)
+                            .sort((a, b) => {
+                              const aNum = a.question_number ?? 0;
+                              const bNum = b.question_number ?? 0;
+                              return aNum - bNum;
+                            })[0]?.question_number}
+                          className="p-4"
+                        >
+                          <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
+                            <QuestionRenderer
+                              question={{
+                                ...questionGroup,
+                                type: questionGroup.type,
+                                instruction: questionGroup.instruction,
+                                question_text: questionGroup.question_text,
+                                options: questionGroup.options || []
+                              }}
+                              groupQuestions={groupQuestions}
+                              answers={answers}
+                              onAnswerChange={handleAnswerChange}
+                              onInteraction={handleInputInteraction}
+                              mode={status === 'reviewing' ? 'review' : 'test'}
+                              reviewData={status === 'reviewing' ? (showCorrectAnswers ? reviewData : Object.keys(reviewData).reduce((acc, key) => {
+                                acc[key] = {
+                                  userAnswer: reviewData[key].userAnswer,
+                                  isCorrect: reviewData[key].isCorrect,
+                                  correctAnswer: ''
+                                };
+                                return acc;
+                              }, {})) : {}}
+                              showCorrectAnswers={showCorrectAnswers}
+                              bookmarks={bookmarks}
+                              toggleBookmark={toggleBookmark}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        [...groupQuestions]
                           .sort((a, b) => {
                             const aNum = a.question_number ?? 0;
                             const bNum = b.question_number ?? 0;
                             return aNum - bNum;
-                          })[0]?.question_number}
-                        className="p-4"
-                      >
-                        <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
-                          <QuestionRenderer
-                            question={{
-                              ...questionGroup,
-                              type: questionGroup.type,
-                              instruction: questionGroup.instruction,
-                              question_text: questionGroup.question_text,
-                              options: questionGroup.options || []
-                            }}
-                            groupQuestions={groupQuestions}
-                            answers={answers}
-                            onAnswerChange={handleAnswerChange}
-                            onInteraction={handleInputInteraction}
-                            mode={status === 'reviewing' ? 'review' : 'test'}
-                            reviewData={status === 'reviewing' ? (showCorrectAnswers ? reviewData : Object.keys(reviewData).reduce((acc, key) => {
-                              acc[key] = {
-                                userAnswer: reviewData[key].userAnswer,
-                                isCorrect: reviewData[key].isCorrect,
-                                correctAnswer: ''
-                              };
-                              return acc;
-                            }, {})) : {}}
-                            showCorrectAnswers={showCorrectAnswers}
-                            bookmarks={bookmarks}
-                            toggleBookmark={toggleBookmark}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      [...groupQuestions]
-                        .sort((a, b) => {
-                          const aNum = a.question_number ?? 0;
-                          const bNum = b.question_number ?? 0;
-                          return aNum - bNum;
-                        })
-                        .map((question) => {
-                          const questionNumber = question.question_number;
-                          if (!questionNumber) return null;
+                          })
+                          .map((question) => {
+                            const questionNumber = question.question_number;
+                            if (!questionNumber) return null;
 
-                          const questionText = question.question_text || question.text || '';
+                            const questionText = question.question_text || question.text || '';
 
-                          return (
-                            <div
-                              key={question.id || questionNumber}
-                              ref={(el) => {
-                                if (el) questionRefs.current[questionNumber] = el;
-                              }}
-                              data-question-number={questionNumber}
-                              className="p-4"
-                            >
-                              {question.image_url && (
-                                <div className="mb-4">
-                                  <img
-                                    src={question.image_url}
-                                    alt={`Question ${questionNumber} image`}
-                                    className="w-full max-w-full h-auto"
+                            return (
+                              <div
+                                key={question.id || questionNumber}
+                                ref={(el) => {
+                                  if (el) questionRefs.current[questionNumber] = el;
+                                }}
+                                data-question-number={questionNumber}
+                                className="p-4"
+                              >
+                                {question.image_url && (
+                                  <div className="mb-4">
+                                    <img
+                                      src={question.image_url}
+                                      alt={`Question ${questionNumber} image`}
+                                      className="w-full max-w-full h-auto"
+                                    />
+                                  </div>
+                                )}
+
+                                <p
+                                  className="font-medium mb-3 w-11/12"
+                                  data-selectable="true"
+                                  data-part-id={currentPart}
+                                  data-section-type="questions"
+                                  style={{ color: themeColors.text }}
+                                >
+                                  {questionNumber}. {questionText}
+                                </p>
+
+                                <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
+                                  <QuestionRenderer
+                                    question={{
+                                      ...question,
+                                      type: questionGroup.type,
+                                      instruction: questionGroup.instruction,
+                                      options: (groupType.includes('drag') || groupType.includes('summary') || groupType.includes('table') || groupType.includes('map'))
+                                        ? (questionGroup.options || [])
+                                        : (question.options || questionGroup.options || [])
+                                    }}
+                                    groupQuestions={
+                                      (groupType.includes('drag') ||
+                                        groupType.includes('summary') ||
+                                        groupType.includes('table') ||
+                                        groupType.includes('map'))
+                                        ? groupQuestions
+                                        : undefined
+                                    }
+                                    answer={answers[questionNumber]}
+                                    answers={answers}
+                                    onAnswerChange={handleAnswerChange}
+                                    onInteraction={handleInputInteraction}
+                                    mode={status === 'reviewing' ? 'review' : 'test'}
+                                    reviewData={status === 'reviewing' ? (showCorrectAnswers ? reviewData : Object.keys(reviewData).reduce((acc, key) => {
+                                      acc[key] = {
+                                        userAnswer: reviewData[key].userAnswer,
+                                        isCorrect: reviewData[key].isCorrect,
+                                        correctAnswer: ''
+                                      };
+                                      return acc;
+                                    }, {})) : {}}
+                                    showCorrectAnswers={showCorrectAnswers}
+                                    bookmarks={bookmarks}
+                                    toggleBookmark={toggleBookmark}
                                   />
                                 </div>
-                              )}
-
-                              <p 
-                                className="font-medium mb-3 w-11/12"
-                                data-selectable="true"
-                                data-part-id={currentPart}
-                                data-section-type="questions"
-                                style={{ color: themeColors.text }}
-                              >
-                                {questionNumber}. {questionText}
-                              </p>
-
-                              <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
-                                <QuestionRenderer
-                                  question={{
-                                    ...question,
-                                    type: questionGroup.type,
-                                    instruction: questionGroup.instruction,
-                                    options: (groupType.includes('drag') || groupType.includes('summary') || groupType.includes('table') || groupType.includes('map'))
-                                      ? (questionGroup.options || [])
-                                      : (question.options || questionGroup.options || [])
-                                  }}
-                                  groupQuestions={
-                                    (groupType.includes('drag') ||
-                                      groupType.includes('summary') ||
-                                      groupType.includes('table') ||
-                                      groupType.includes('map'))
-                                      ? groupQuestions
-                                      : undefined
-                                  }
-                                  answer={answers[questionNumber]}
-                                  answers={answers}
-                                  onAnswerChange={handleAnswerChange}
-                                  onInteraction={handleInputInteraction}
-                                  mode={status === 'reviewing' ? 'review' : 'test'}
-                                  reviewData={status === 'reviewing' ? (showCorrectAnswers ? reviewData : Object.keys(reviewData).reduce((acc, key) => {
-                                    acc[key] = {
-                                      userAnswer: reviewData[key].userAnswer,
-                                      isCorrect: reviewData[key].isCorrect,
-                                      correctAnswer: ''
-                                    };
-                                    return acc;
-                                  }, {})) : {}}
-                                  showCorrectAnswers={showCorrectAnswers}
-                                  bookmarks={bookmarks}
-                                  toggleBookmark={toggleBookmark}
-                                />
                               </div>
-                            </div>
-                          );
-                        })
-                    )}
-                  </div>
-                );
-              })}
+                            );
+                          })
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div
-            className="space-y-8 overflow-y-auto p-6 border rounded-2xl border-gray-300 bg-white dark:bg-gray-800 flex items-center justify-center"
-            style={{ width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%' }}
-          >
-            <div className="text-gray-500">
-              {loading ? "Loading questions..." : "No questions available"}
+          ) : (
+            <div
+              className="space-y-8 overflow-y-auto p-6 border rounded-2xl border-gray-300  dark:bg-gray-800 flex items-center justify-center"
+              style={{ width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%', backgroundColor: themeColors.background, color: themeColors.text }}
+            >
+              <div className="text-gray-500">
+                {loading ? "Loading questions..." : "No questions available"}
+              </div>
             </div>
-          </div>
-        )}
+          )}
         </div>
       </div>
 
@@ -1127,7 +1133,7 @@ const ListeningPracticePageContent = () => {
       />
 
       {/* Note Sidebar */}
-      
+
       <NoteSidebar />
     </div>
   );

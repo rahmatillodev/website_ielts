@@ -1,37 +1,34 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
-import { LuBookOpen } from "react-icons/lu";
+import LogoDesign from "../LogoDesign";
 
 const LandingNavbar = () => {
   return (
-    <nav className="w-full h-16 bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+    <nav className="w-full h-16 bg-white border-b border-gray-200 fixed top-0 z-50 shadow-sm">
+      <div className=" mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-around">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#4A90E2] rounded-full flex items-center justify-center">
-            <LuBookOpen className="text-white size-5" />
-          </div>
-          <span className="text-xl font-black text-gray-900 tracking-tight">IELTS SIM</span>
-        </Link>
+        <a href="#home" className="flex items-center gap-3">
+         <LogoDesign />
+        </a>
 
         {/* Center Links */}
         <div className="hidden md:flex items-center gap-8">
           <a
             href="#why-choose"
-            className=" text-gray-700 hover:text-[#4A90E2] transition-colors"
+            className="font-medium text-gray-700 hover:text-[#4A90E2] transition-colors"
           >
             Why choose us?
           </a>
-          <a
+          {/* <a
             href="#our-impact"
-            className=" font-medium text-gray-700 hover:text-[#4A90E2] transition-colors"
+            className="font-medium text-gray-700 hover:text-[#4A90E2] transition-colors"
           >
             Our Impact
-          </a>
+          </a> */}
           <a
             href="#stories"
-            className="text-gray-700 hover:text-[#4A90E2] transition-colors"
+            className="font-medium text-gray-700 hover:text-[#4A90E2] transition-colors"
           >
             Stories
           </a>
@@ -48,7 +45,7 @@ const LandingNavbar = () => {
             </Button>
           </Link>
           <Link to="/signup">
-            <Button className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white font-medium px-6 py-2 rounded-md shadow-sm">
+            <Button className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white font-medium px-6 py-2 rounded-full shadow-[0_4px_20px_rgba(74,144,226,0.4)]">
               Get Started
             </Button>
           </Link>

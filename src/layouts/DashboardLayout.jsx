@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import DashboardNavbar from '@/components/navbar/DashboardNavbar';
 import DashboardSidebar from '@/components/sidebar/DashboardSidebar';
@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react'
 import RotationModal, { DISMISS_KEY } from '@/components/modal/RotationModal'
 import { useSmallScreen } from '@/hooks/useSmallScreen'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Outlet } from 'react-router-dom'
 
 const DashboardLayout = () => {
   const { pathname } = useLocation()
@@ -25,7 +26,7 @@ const DashboardLayout = () => {
     }
   }, [isSmallScreen])
 
-  const hideNavOn = ["/reading-practice", "/reading-result", "/listening-practice", "/listening-result", "/pricing"]
+  const hideNavOn = ["/reading-practice", "/reading-result", "/listening-practice", "/listening-result", "/pricing", "/writing-practice"]
   const isHide = hideNavOn.some((p) => pathname.startsWith(p))
 
   const handleDismiss = () => {

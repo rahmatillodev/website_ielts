@@ -126,12 +126,10 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
   // };
 
   return (
-    <footer 
-      className="border-t px-6 h-20 z-50"
-      style={{ 
-        backgroundColor: themeColors.background,
-        borderColor: themeColors.border
-      }}
+    <footer
+      className="border-t border-gray-300 px-6 h-20 z-50"
+      style={{
+        backgroundColor: themeColors.background      }}
     >
       <div className="flex items-center justify-between h-full ">
 
@@ -147,24 +145,24 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
               const isActive = currentPart === partNumber;
 
               return (
-                <div 
-                  key={part.id} 
-                  className="flex flex-col items-center w-full h-full"
-                  style={isActive ? { 
-                    backgroundColor: themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)' 
+                <div
+                  key={part.id}
+                  className="flex flex-col items-center w-full h-full "
+                  style={isActive ? {
+                    backgroundColor: themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)'
                   } : {}}
                 >
                   {isActive ? (
                     // Active part: Show Part label and question numbers
                     <div>
-                      <div 
+                      <div
                         className="font-semibold text-md text-center"
                         style={{ color: themeColors.text }}
                       >
                         Part {partNumber}
                       </div>
                       {partQuestions.length > 0 && (
-                        <div className="flex flex-col gap-1 w-full items-center">
+                        <div className="flex flex-col  w-full items-center">
                           {/* Progress bars above question buttons */}
                           <div className="flex items-center gap-x-1 overflow-x-auto max-w-full">
                             {[...partQuestions]
@@ -255,7 +253,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                     </div>
                   ) : (
                     // Inactive part: Show Part label and progress
-                    <div 
+                    <div
                       className='w-full h-20 flex items-center justify-center gap-2 cursor-pointer rounded transition-colors'
                       style={{
                         backgroundColor: 'transparent'
@@ -275,7 +273,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                         Part {partNumber}
                       </div>
                       {totalQuestions > 0 && (
-                        <span 
+                        <span
                           className="text-sm"
                           style={{ color: themeColors.text, opacity: 0.7 }}
                         >
@@ -325,8 +323,8 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
               }}
               title="Finish"
             >
-              <div className="rounded bg-black text-white dark:text-white flex items-center justify-center p-2 text-sm gap-2">
-                <FaCheck className="w-4 h-4 text-white dark:text-white" /> Submit
+              <div className="rounded-sm flex items-center justify-center text-sm bg-black text-white gap-2 p-2" >
+                <FaCheck className="w-4 h-4"  /> Submit
               </div>
             </button>
           )}
@@ -338,7 +336,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
           >
             Redo Test
           </button>
-        )}  
+        )}
       </div>
 
     </footer>

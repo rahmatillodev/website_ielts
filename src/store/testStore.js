@@ -12,15 +12,15 @@ export const useTestStore = create((set, get) => ({
   // test_completed: Map of testId -> { isCompleted, attempt }
   test_completed: {},
 
-  fetchTests: async () => {
+  fetchTests: async (forceRefresh = false) => {
     const currentState = get();
     
     // Allow refetch if data is empty even if loaded is true
     const hasData = (currentState.test_reading?.length > 0 || currentState.test_listening?.length > 0);
     
-    // Return early only if already loaded with data AND not currently loading
-    // This prevents race conditions while allowing refetch when data is empty
-    if (currentState.loaded && hasData && !currentState.loading) {
+    // Return early only if already loaded with data AND not currently loading AND not forcing refresh
+    // This prevents race conditions while allowing refetch when data is empty or when forceRefresh is true
+    if (currentState.loaded && hasData && !currentState.loading && !forceRefresh) {
       return {
         test_reading: currentState.test_reading || [],
         test_listening: currentState.test_listening || [],
@@ -29,9 +29,9 @@ export const useTestStore = create((set, get) => ({
     }
 
     // If loading is stuck, reset it after a reasonable timeout check
-    // But proceed with fetch if we don't have data
-    if (currentState.loading && hasData) {
-      // If we're loading but have data, return current data
+    // But proceed with fetch if we don't have data or if forcing refresh
+    if (currentState.loading && hasData && !forceRefresh) {
+      // If we're loading but have data and not forcing refresh, return current data
       return {
         test_reading: currentState.test_reading || [],
         test_listening: currentState.test_listening || [],
@@ -50,7 +50,7 @@ export const useTestStore = create((set, get) => ({
     try {
       const testsQueryPromise = supabase
         .from("test")
-        .select("*")
+        .select("id, title, type, difficulty, duration, question_quantity, is_premium, is_active, created_at")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
@@ -178,213 +178,216 @@ export const useTestStore = create((set, get) => ({
     });
 
     try {
-      // Fetch test with timeout
-      const testQueryPromise = supabase
-        .from("test")
-        .select("*")
-        .eq("id", testId)
-        .maybeSingle();
-
-      const { data: testData, error: testError } = await Promise.race([
-        testQueryPromise,
-        timeoutPromise
-      ]);
-
-      // Explicit error check immediately after query
-      if (testError) {
-        console.error('[fetchTestById] Supabase Error (test table):', {
-          table: 'test',
-          testId,
-          error: testError.message,
-          code: testError.code,
-          details: testError.details,
-          hint: testError.hint
-        });
-        
-        // Check for RLS policy denial
-        if (testError.code === 'PGRST116' || testError.message?.includes('permission') || testError.message?.includes('policy')) {
-          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'test' table. Error: ${testError.message}`;
-          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
-          throw new Error(rlsError);
-        }
-        
-        throw testError;
-      }
-
-      // Handle case where test doesn't exist
-      if (!testData) {
-        const errorMessage = `Test with ID ${testId} not found in 'test' table. Verify the ID exists and RLS policies allow access.`;
-        console.error('[fetchTestById] No Data Found:', {
-          table: 'test',
-          testId,
-          message: errorMessage
-        });
-        set({ error: errorMessage, loadingTest: false, currentTest: null });
-        throw new Error(errorMessage);
-      }
-
-      // Fetch parts for this test - sorted by part_number ascending
-      const partsQueryPromise = supabase
-        .from("part")
-        .select("*")
-        .eq("test_id", testId)
-        .order("part_number", { ascending: true });
-
-      const { data: partsData, error: partsError } = await Promise.race([
-        partsQueryPromise,
-        timeoutPromise
-      ]);
-
-      if (partsError) {
-        console.error('[fetchTestById] Supabase Error (part table):', {
-          table: 'part',
-          testId,
-          error: partsError.message,
-          code: partsError.code,
-          details: partsError.details,
-          hint: partsError.hint
-        });
-        
-        if (partsError.code === 'PGRST116' || partsError.message?.includes('permission') || partsError.message?.includes('policy')) {
-          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'part' table. Error: ${partsError.message}`;
-          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
-          throw new Error(rlsError);
-        }
-        
-        throw partsError;
-      }
-
-      // Handle case where no parts exist (valid scenario)
-      if (!partsData || partsData.length === 0) {
-        console.warn('[fetchTestById] No parts found for test:', testId);
-        const completeTest = {
-          ...testData,
-          parts: [],
-        };
-        set({
-          currentTest: completeTest,
-          loadingTest: false,
-          error: null
-        });
-        return completeTest;
-      }
-
-      const partIds = partsData.map((p) => p.id);
-
-      // Guard clause: Ensure we have valid part IDs
-      if (!partIds || partIds.length === 0) {
-        console.warn('[fetchTestById] No valid part IDs extracted');
-        const completeTest = {
-          ...testData,
-          parts: [],
-        };
-        set({
-          currentTest: completeTest,
-          loadingTest: false,
-          error: null
-        });
-        return completeTest;
-      }
-
-      // Fetch question groups (from 'question' table) for all parts
-      // These represent question groups with type, instruction, question_range
-      const questionGroupsQueryPromise = supabase
-        .from("question")
-        .select("*")
-        .in("part_id", partIds);
-
-      const { data: questionGroupsData, error: questionGroupsError } = await Promise.race([
-        questionGroupsQueryPromise,
-        timeoutPromise
-      ]);
-
-      if (questionGroupsError) {
-        console.error('[fetchTestById] Supabase Error (question table):', {
-          table: 'question',
-          partIds,
-          error: questionGroupsError.message,
-          code: questionGroupsError.code,
-          details: questionGroupsError.details,
-          hint: questionGroupsError.hint
-        });
-        
-        if (questionGroupsError.code === 'PGRST116' || questionGroupsError.message?.includes('permission') || questionGroupsError.message?.includes('policy')) {
-          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'question' table. Error: ${questionGroupsError.message}`;
-          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
-          throw new Error(rlsError);
-        }
-        
-        throw questionGroupsError;
-      }
-
-      // Fetch individual questions (from 'questions' table) for all question groups
-      // These are the actual questions with question_number, question_text, correct_answer
-      const questionGroupIds = (questionGroupsData || []).map((qg) => qg.id).filter(Boolean);
-
-      let individualQuestionsData = [];
-      if (questionGroupIds.length > 0) {
-        const questionsQueryPromise = supabase
-          .from("questions")
-          .select("*")
-          .in("question_id", questionGroupIds)
-          .order("question_number", { ascending: true });
-
-        const { data: questionsData, error: questionsError } = await Promise.race([
-          questionsQueryPromise,
+      // Try nested select first (requires proper foreign key relations in Supabase)
+      // If this fails, fall back to parallel queries
+      let testData, partsData, questionGroupsData, individualQuestionsData, allOptions;
+      
+      try {
+        // Attempt nested select - single query with all relations
+        const { data: nestedData, error: nestedError } = await Promise.race([
+          supabase
+            .from("test")
+            .select(`
+              *,
+              parts:part(
+                *,
+                questionGroups:question(
+                  *,
+                  questions:questions(*),
+                  options:options(*)
+                )
+              ),
+              options:options(*)
+            `)
+            .eq("id", testId)
+            .single(),
           timeoutPromise
         ]);
 
-        if (questionsError) {
-          console.error('[fetchTestById] Supabase Error (questions table):', {
-            table: 'questions',
-            questionGroupIds,
-            error: questionsError.message,
-            code: questionsError.code,
-            details: questionsError.details,
-            hint: questionsError.hint
+        if (!nestedError && nestedData) {
+          // Successfully got nested data - extract and structure it
+          testData = {
+            id: nestedData.id,
+            title: nestedData.title,
+            type: nestedData.type,
+            difficulty: nestedData.difficulty,
+            duration: nestedData.duration,
+            question_quantity: nestedData.question_quantity,
+            is_premium: nestedData.is_premium,
+            is_active: nestedData.is_active,
+            created_at: nestedData.created_at,
+          };
+          
+          partsData = (nestedData.parts || []).map(part => ({
+            ...part,
+            questionGroups: part.questionGroups || []
+          }));
+          
+          // Flatten question groups and questions
+          questionGroupsData = [];
+          individualQuestionsData = [];
+          partsData.forEach(part => {
+            if (part.questionGroups) {
+              part.questionGroups.forEach(qg => {
+                questionGroupsData.push(qg);
+                if (qg.questions) {
+                  individualQuestionsData.push(...qg.questions);
+                }
+              });
+            }
           });
           
-          if (questionsError.code === 'PGRST116' || questionsError.message?.includes('permission') || questionsError.message?.includes('policy')) {
-            const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'questions' table. Error: ${questionsError.message}`;
-            console.error('[fetchTestById] RLS Policy Issue:', rlsError);
-            throw new Error(rlsError);
+          // Collect all options from nested structure
+          allOptions = nestedData.options || [];
+          partsData.forEach(part => {
+            if (part.questionGroups) {
+              part.questionGroups.forEach(qg => {
+                if (qg.options) {
+                  allOptions.push(...qg.options);
+                }
+              });
+            }
+          });
+        } else {
+          throw nestedError || new Error('Nested query returned no data');
+        }
+      } catch (nestedErr) {
+        // Fallback to parallel queries with specific columns
+        console.warn('[fetchTestById] Nested select failed, using parallel queries:', nestedErr?.message);
+        
+        // Parallel fetch: test, parts, and options (options doesn't depend on parts)
+        const [testResult, partsResult, optionsResult] = await Promise.all([
+          Promise.race([
+            supabase
+              .from("test")
+              .select("id, title, type, difficulty, duration, question_quantity, is_premium, is_active, created_at")
+              .eq("id", testId)
+              .maybeSingle(),
+            timeoutPromise
+          ]),
+          Promise.race([
+            supabase
+              .from("part")
+              .select("id, test_id, part_number, title, content, image_url, listening_url")
+              .eq("test_id", testId)
+              .order("part_number", { ascending: true }),
+            timeoutPromise
+          ]),
+          Promise.race([
+            supabase
+              .from("options")
+              .select("id, test_id, question_id, question_number, option_text, letter, is_correct, correct_answer")
+              .eq("test_id", testId),
+            timeoutPromise
+          ])
+        ]);
+
+        const { data: testDataResult, error: testError } = testResult;
+        const { data: partsDataResult, error: partsError } = partsResult;
+        const { data: optionsDataResult, error: optionsError } = optionsResult;
+
+        if (testError) {
+          console.error('[fetchTestById] Supabase Error (test table):', {
+            table: 'test',
+            testId,
+            error: testError.message,
+            code: testError.code,
+          });
+          if (testError.code === 'PGRST116' || testError.message?.includes('permission') || testError.message?.includes('policy')) {
+            throw new Error(`RLS Policy Denial: Check Row Level Security policies for 'test' table. Error: ${testError.message}`);
           }
-          
-          throw questionsError;
+          throw testError;
         }
-        individualQuestionsData = questionsData || [];
-      }
 
-      // Fetch options from the options table for this test
-      const optionsQueryPromise = supabase
-        .from("options")
-        .select("*")
-        .eq("test_id", testId);
-
-      const { data: optionsData, error: optionsError } = await Promise.race([
-        optionsQueryPromise,
-        timeoutPromise
-      ]);
-
-      if (optionsError) {
-        console.error('[fetchTestById] Supabase Error (options table):', {
-          table: 'options',
-          testId,
-          error: optionsError.message,
-          code: optionsError.code,
-          details: optionsError.details,
-          hint: optionsError.hint
-        });
-        
-        if (optionsError.code === 'PGRST116' || optionsError.message?.includes('permission') || optionsError.message?.includes('policy')) {
-          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'options' table. Error: ${optionsError.message}`;
-          console.error('[fetchTestById] RLS Policy Issue:', rlsError);
-          throw new Error(rlsError);
+        if (!testDataResult) {
+          const errorMessage = `Test with ID ${testId} not found in 'test' table. Verify the ID exists and RLS policies allow access.`;
+          set({ error: errorMessage, loadingTest: false, currentTest: null });
+          throw new Error(errorMessage);
         }
-        
-        throw optionsError;
+
+        testData = testDataResult;
+        partsData = partsDataResult || [];
+        allOptions = optionsDataResult || [];
+
+        if (partsError) {
+          console.error('[fetchTestById] Supabase Error (part table):', partsError);
+          if (partsError.code === 'PGRST116') {
+            throw new Error(`RLS Policy Denial: Check Row Level Security policies for 'part' table. Error: ${partsError.message}`);
+          }
+          throw partsError;
+        }
+
+        if (optionsError) {
+          console.error('[fetchTestById] Supabase Error (options table):', optionsError);
+          if (optionsError.code === 'PGRST116') {
+            throw new Error(`RLS Policy Denial: Check Row Level Security policies for 'options' table. Error: ${optionsError.message}`);
+          }
+          throw optionsError;
+        }
+
+        // Handle case where no parts exist
+        if (!partsData || partsData.length === 0) {
+          console.warn('[fetchTestById] No parts found for test:', testId);
+          const completeTest = { ...testData, parts: [] };
+          set({ currentTest: completeTest, loadingTest: false, error: null });
+          return completeTest;
+        }
+
+        const partIds = partsData.map((p) => p.id);
+        if (!partIds || partIds.length === 0) {
+          const completeTest = { ...testData, parts: [] };
+          set({ currentTest: completeTest, loadingTest: false, error: null });
+          return completeTest;
+        }
+
+        // Parallel fetch: question groups and questions (questions depends on question groups)
+        const [questionGroupsResult, questionsResult] = await Promise.all([
+          Promise.race([
+            supabase
+              .from("question")
+              .select("id, part_id, type, instruction, question_text, question_range")
+              .in("part_id", partIds),
+            timeoutPromise
+          ]),
+          // We'll fetch questions after we have question group IDs
+          Promise.resolve({ data: [], error: null })
+        ]);
+
+        const { data: questionGroupsDataResult, error: questionGroupsError } = questionGroupsResult;
+
+        if (questionGroupsError) {
+          console.error('[fetchTestById] Supabase Error (question table):', questionGroupsError);
+          if (questionGroupsError.code === 'PGRST116') {
+            throw new Error(`RLS Policy Denial: Check Row Level Security policies for 'question' table. Error: ${questionGroupsError.message}`);
+          }
+          throw questionGroupsError;
+        }
+
+        questionGroupsData = questionGroupsDataResult || [];
+        const questionGroupIds = questionGroupsData.map((qg) => qg.id).filter(Boolean);
+
+        if (questionGroupIds.length > 0) {
+          const { data: questionsDataResult, error: questionsError } = await Promise.race([
+            supabase
+              .from("questions")
+              .select("id, question_id, question_number, question_text, correct_answer, image_url")
+              .in("question_id", questionGroupIds)
+              .order("question_number", { ascending: true }),
+            timeoutPromise
+          ]);
+
+          if (questionsError) {
+            console.error('[fetchTestById] Supabase Error (questions table):', questionsError);
+            if (questionsError.code === 'PGRST116') {
+              throw new Error(`RLS Policy Denial: Check Row Level Security policies for 'questions' table. Error: ${questionsError.message}`);
+            }
+            throw questionsError;
+          }
+          individualQuestionsData = questionsDataResult || [];
+        } else {
+          individualQuestionsData = [];
+        }
       }
-      const allOptions = optionsData || [];
 
       // Helper function to generate letter from index (A, B, C, D, etc.)
       const getLetterFromIndex = (index) => {
@@ -400,7 +403,85 @@ export const useTestStore = create((set, get) => ({
             const groupType = (questionGroup.type || "").toLowerCase();
             const isMultipleChoice =
               groupType.includes("multiple") || groupType.includes("choice");
-            const isTableType = groupType.includes("table");
+            const isTableCompletion = groupType === "table_completion";
+            const isTableType = groupType.includes("table") && !isTableCompletion;
+
+            // For table_completion: parse HTML table with ___ placeholders (similar to fill_in_blanks)
+            if (isTableCompletion) {
+              // Get questions from questions table for this question group
+              // These represent answers for each ___ placeholder
+              const groupQuestions = individualQuestionsData
+                .filter((iq) => iq.question_id === questionGroup.id)
+                .map((individualQuestion) => {
+                  return {
+                    id: individualQuestion.id || `q-${questionGroup.id}-${individualQuestion.question_number}`,
+                    question_id: questionGroup.id,
+                    question_number: individualQuestion.question_number,
+                    question_text: individualQuestion.question_text || "",
+                    correct_answer: individualQuestion.correct_answer || "",
+                  };
+                })
+                .sort((a, b) => {
+                  const aNum = a.question_number ?? 0;
+                  const bNum = b.question_number ?? 0;
+                  return aNum - bNum;
+                });
+
+              // Parse HTML table from question_text to extract structure
+              const questionText = questionGroup.question_text || "";
+              let columnHeaders = [];
+              let parsedTableData = null;
+
+              if (questionText) {
+                try {
+                  // Use DOMParser to parse HTML table
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(questionText, "text/html");
+                  const table = doc.querySelector("table");
+
+                  if (table) {
+                    // Extract column headers from thead
+                    const thead = table.querySelector("thead");
+                    if (thead) {
+                      const headerRow = thead.querySelector("tr");
+                      if (headerRow) {
+                        const thElements = headerRow.querySelectorAll("th");
+                        columnHeaders = Array.from(thElements).map((th) => {
+                          // Get text content, handling nested elements
+                          return th.textContent?.trim() || "";
+                        });
+                      }
+                    }
+
+                    // Extract rows from tbody
+                    const tbody = table.querySelector("tbody");
+                    if (tbody) {
+                      const rows = tbody.querySelectorAll("tr");
+                      parsedTableData = {
+                        columnHeaders,
+                        rows: Array.from(rows).map((row) => {
+                          const cells = row.querySelectorAll("td");
+                          return Array.from(cells).map((td) => {
+                            // Get innerHTML to preserve ___ placeholders
+                            return td.innerHTML?.trim() || "";
+                          });
+                        }),
+                      };
+                    }
+                  }
+                } catch (error) {
+                  console.error("[fetchTestById] Error parsing table_completion HTML:", error);
+                }
+              }
+
+              return {
+                ...questionGroup,
+                questions: groupQuestions,
+                options: [], // No options for table_completion
+                column_headers: columnHeaders,
+                parsed_table_data: parsedTableData, // Store parsed structure for component use
+              };
+            }
 
             // For table type: use questions table for question_text and correct_answer
             // Options are matched by question_group_id (question_id) AND question_number
@@ -727,8 +808,18 @@ export const useTestStore = create((set, get) => ({
     }
   },
 
-  clearCurrentTest: () => {
-    set({ currentTest: null });
+  clearCurrentTest: (clearTestList = false) => {
+    if (clearTestList) {
+      // Clear both currentTest and test list data to force refetch
+      set({ 
+        currentTest: null,
+        test_reading: [],
+        test_listening: [],
+        loaded: false
+      });
+    } else {
+      set({ currentTest: null });
+    }
   },
 
   // Set test completion status for a specific test

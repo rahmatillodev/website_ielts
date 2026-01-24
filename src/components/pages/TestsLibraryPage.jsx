@@ -1,13 +1,16 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { FaSearch } from "react-icons/fa";
-import { IoGridOutline, IoListOutline, IoChevronBack, IoChevronForward } from "react-icons/io5";
+import { IoGridOutline, IoListOutline } from "react-icons/io5";
 import { Input } from "@/components/ui/input";
-import PremiumBanner from "@/components/badges/PremiumBanner";
-import { useTestStore } from "@/store/testStore";
+// import PremiumBanner from "@/components/badges/PremiumBanner";
+// import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { LibraryShimmer } from "@/components/ui/shimmer";
 import CardLocked from "../cards/CardLocked";
 import CardOpen from "../cards/CardOpen";
+import { motion } from "framer-motion";
 
 const TestsLibraryPage = ({
   title,
@@ -18,25 +21,87 @@ const TestsLibraryPage = ({
   loaded,
   fetchTests,
 }) => {
-  const [isGridView, setIsGridView] = useState(true);
+  // Load view preference from localStorage, default to list view (false)
+  const getInitialViewState = () => {
+    try {
+      const savedView = localStorage.getItem(`testsLibraryView`);
+      if (savedView !== null) {
+        return savedView === "grid";
+      }
+    } catch (error) {
+      console.error("Error reading from localStorage:", error);
+    }
+    return false; // Default to list view
+  };
+
+  const [isGridView, setIsGridView] = useState(getInitialViewState);
   const [activeTab, setActiveTab] = useState("All Tests");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 9;
+  const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
+  const [isRefreshing, setIsRefreshing] = useState(false); // Track refresh state for button clicks
+  const itemsPerLoad = 9; // Items to load per scroll
+  const scrollContainerRef = useRef(null);
+  const isLoadingMoreRef = useRef(false);
+
+  // Animation variants for card container
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: 0.4,
+        ease: "easeOut",
+      },
+    },
+  };
 
   const userProfile = useAuthStore((state) => state.userProfile);
+  const location = useLocation();
 
   // Ensure allTests is always an array
   const allTests = Array.isArray(testData) ? testData : [];
 
-  // Ensure tests are fetched when component mounts
+  // Ensure tests are fetched when component mounts or route changes
+  // Force refresh if data was cleared (when navigating back from practice page)
   useEffect(() => {
-    // Fetch if not loaded, or if loaded but no data (allows refetch on empty data)
-    const shouldFetch = (!loaded || (loaded && allTests.length === 0)) && !loading && fetchTests;
-    if (shouldFetch) {
-      fetchTests();
+    if (!fetchTests) return;
+
+    // Always fetch when route changes to this page (navigating back from practice page)
+    // If not loaded or no data, fetch with forceRefresh to ensure fresh data
+    // This handles the case when navigating back from practice pages where data was cleared
+    const shouldForceRefresh = !loaded || allTests.length === 0;
+
+    if (!loading && !isRefreshing) {
+      if (shouldForceRefresh) {
+        // Force refresh to bypass cache and ensure fresh data
+        fetchTests(true);
+      } else if (!loaded) {
+        // Normal fetch if not loaded
+        fetchTests();
+      }
     }
-  }, [loaded, loading, fetchTests, allTests.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, loaded, allTests.length, loading, fetchTests]); // Re-run when route changes or data state changes
+
+  // Reset refreshing state when loading completes
+  useEffect(() => {
+    if (!loading && isRefreshing) {
+      setIsRefreshing(false);
+    }
+  }, [loading, isRefreshing]);
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(allTests) || allTests.length === 0) {
@@ -64,169 +129,277 @@ const TestsLibraryPage = ({
   const handleViewChange = (value) => {
     if (value === "grid") {
       setIsGridView(true);
+      try {
+        localStorage.setItem(`testsLibraryView_${testType}`, "grid");
+      } catch (error) {
+        console.error("Error saving to localStorage:", error);
+      }
     } else if (value === "list") {
       setIsGridView(false);
+      try {
+        localStorage.setItem(`testsLibraryView_${testType}`, "list");
+      } catch (error) {
+        console.error("Error saving to localStorage:", error);
+      }
     }
   };
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentItems = filteredData.slice(startIndex, startIndex + itemsPerPage);
+  // Lazy loading: Get items to display
+  const currentItems = useMemo(() => {
+    return filteredData.slice(0, displayedItems);
+  }, [filteredData, displayedItems]);
+
+  // Check if there are more items to load
+  const hasMoreItems = displayedItems < filteredData.length;
+
+  // Handle scroll for lazy loading
+  const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container || isLoadingMoreRef.current) return;
+
+    // Check hasMoreItems dynamically to avoid stale closures
+    const currentHasMore = displayedItems < filteredData.length;
+    if (!currentHasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    // Load more when user is 200px from bottom
+    const threshold = 200;
+
+    if (scrollHeight - scrollTop - clientHeight < threshold) {
+      isLoadingMoreRef.current = true;
+      setDisplayedItems((prev) => {
+        const newValue = Math.min(prev + itemsPerLoad, filteredData.length);
+        // Reset loading flag after state update
+        setTimeout(() => {
+          isLoadingMoreRef.current = false;
+        }, 300);
+        return newValue;
+      });
+    }
+  }, [displayedItems, filteredData.length, itemsPerLoad]);
+
+  // Attach scroll listener
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => {
+        container.removeEventListener('scroll', handleScroll);
+      };
+    }
+  }, [handleScroll]);
+
+  // Reset displayed items when filtered data changes (filters/search)
+  useEffect(() => {
+    setDisplayedItems(9);
+    isLoadingMoreRef.current = false; // Reset loading flag when filters change
+    // Scroll to top when filter/search changes
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [activeTab, searchQuery]);
+
+  // Check if we need to load more items initially or after filter changes
+  // This handles cases where initial content doesn't fill the viewport
+  useEffect(() => {
+    if (loading || isRefreshing || filteredData.length === 0) return;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // Function to check and load more if needed
+    let checkCount = 0;
+    const maxChecks = 10; // Prevent infinite loops
+    
+    const checkAndLoadMore = () => {
+      if (isLoadingMoreRef.current || checkCount >= maxChecks) return;
+      checkCount++;
+
+      requestAnimationFrame(() => {
+        const { scrollHeight, clientHeight } = container;
+        // Use functional update to get latest displayedItems
+        setDisplayedItems((prev) => {
+          const currentHasMore = prev < filteredData.length;
+
+          // If content doesn't fill viewport and there are more items, load more
+          if (scrollHeight <= clientHeight && currentHasMore) {
+            isLoadingMoreRef.current = true;
+            const newValue = Math.min(prev + itemsPerLoad, filteredData.length);
+            
+            // After loading, check again if more is needed
+            setTimeout(() => {
+              isLoadingMoreRef.current = false;
+              // Recursively check if viewport still isn't filled
+              setTimeout(checkAndLoadMore, 200);
+            }, 300);
+            
+            return newValue;
+          }
+          
+          return prev;
+        });
+      });
+    };
+
+    // Initial check after a delay to ensure DOM has rendered
+    const timeoutId = setTimeout(checkAndLoadMore, 300);
+    return () => clearTimeout(timeoutId);
+  }, [filteredData.length, loading, isRefreshing, itemsPerLoad]);
 
   const handleFilterChange = (tab) => {
-    setActiveTab(tab);
-    setCurrentPage(1);
+    if (tab !== activeTab) {
+      setActiveTab(tab);
+      // Show shimmer briefly when changing filters if we have data
+      if (allTests.length > 0 && !loading) {
+        setIsRefreshing(true);
+        // Reset after a short delay to show shimmer effect
+        setTimeout(() => {
+          setIsRefreshing(false);
+        }, 300);
+      }
+    }
   };
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
-    setCurrentPage(1);
   };
 
+  // Show shimmer while loading or refreshing
+  if (loading || isRefreshing) {
+    return <LibraryShimmer isGridView={isGridView} count={displayedItems} />;
+  }
+
   return (
-    <div className="flex flex-col max-w-screen-2xl mx-auto bg-gray-50 h-full pb-4 px-3 md:px-4">
-      <div className="flex-1 flex flex-col py-3 md:py-4">
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">{title}</h1>
-          <p className="text-sm md:text-base text-gray-500 font-medium tracking-tight">
-            {description}
-          </p>
+    <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-6 md:mt-8 gap-4">
-            {/* Tabs */}
-            <div className="flex gap-1.5 md:gap-2 bg-gray-100/80 p-1 md:p-1.5 rounded-xl md:rounded-2xl border border-gray-200 w-full md:w-auto overflow-x-auto">
-              {["All Tests", "free", "premium"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => handleFilterChange(tab)}
-                  className={`px-4 md:px-6 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold transition-all whitespace-nowrap ${activeTab === tab
-                    ? "bg-black text-white shadow-lg"
-                    : "text-gray-500 hover:bg-white hover:text-gray-900"
-                    }`}
-                >
-                  {tab === "All Tests" ? tab : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-            </div>
+      <div className="bg-gray-50 pt-4 pb-4 md:pb-6 shrink-0">
+        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">{title}</h1>
+        <p className="text-sm md:text-base text-gray-500 font-medium tracking-tight w-full md:w-8/12">
+          {description}
+        </p>
 
-            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
-              {/* Search */}
-              <div className="relative flex-1 md:w-80">
-                <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm md:text-base" />
-                <Input
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  className="pl-10 md:pl-12 bg-white border-gray-200 rounded-xl md:rounded-2xl h-10 md:h-12 shadow-sm focus:ring-2 focus:ring-blue-100 transition-all text-sm md:text-base"
-                  placeholder="Search by title..."
-                />
-              </div>
-              <ToggleGroup
-                type="single"
-                value={isGridView ? "grid" : "list"}
-                onValueChange={handleViewChange}
-                className="flex items-center bg-gray-100/80 p-0.5 md:p-1 rounded-lg md:rounded-xl border border-gray-200 shrink-0"
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 md:mt-4 gap-4">
+          <div className="flex gap-1.5 md:gap-2 bg-gray-100/80 p-1 md:p-1.5 rounded-xl md:rounded-2xl border border-gray-200 w-full md:w-auto overflow-x-auto">
+            {["All Tests", "free", "premium"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => handleFilterChange(tab)}
+                className={`px-4 md:px-6 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold transition-all whitespace-nowrap ${activeTab === tab ? "bg-black text-white shadow-lg" : "text-gray-500 hover:bg-white hover:text-gray-900"
+                  }`}
               >
-                <ToggleGroupItem
-                  value="list"
-                  aria-label="List view"
-                  className="p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all duration-200 data-[state=on]:bg-white data-[state=on]:text-black data-[state=on]:shadow-md data-[state=off]:text-gray-400 hover:text-gray-600"
-                >
-                  <IoListOutline size={20} className="md:w-6 md:h-6" />
-                </ToggleGroupItem>
+                {tab === "All Tests" ? tab : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
 
-                <ToggleGroupItem
-                  value="grid"
-                  aria-label="Grid view"
-                  className="p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all duration-200 data-[state=on]:bg-white data-[state=on]:text-black data-[state=on]:shadow-md data-[state=off]:text-gray-400 hover:text-gray-600"
-                >
-                  <IoGridOutline size={20} className="md:w-6 md:h-6" />
-                </ToggleGroupItem>
-              </ToggleGroup>
+
+          <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
+            {/* Search */}
+            <div className="relative flex-1 md:w-80">
+              <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm md:text-base" />
+              <Input
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="pl-10 md:pl-12 bg-white border-gray-200 rounded-xl md:rounded-2xl h-10 md:h-12 shadow-sm focus:ring-2 focus:ring-blue-100 transition-all text-sm md:text-base"
+                placeholder="Search by title..."
+              />
             </div>
+            <ToggleGroup
+              type="single"
+              value={isGridView ? "grid" : "list"}
+              onValueChange={handleViewChange}
+              className="flex items-center bg-gray-100/80 p-1 rounded-xl border border-gray-200 shrink-0 gap-1" // gap-1 qo'shsangiz orasi ochiladi va radius ko'rinadi
+            >
+              <ToggleGroupItem
+                value="list"
+                aria-label="List view"
+                className="flex items-center justify-center p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all duration-200 
+               data-[state=on]:bg-white data-[state=on]:text-black data-[state=on]:shadow-sm
+               data-[state=off]:text-gray-400 hover:text-gray-600 
+               [&:not(:first-child)]:rounded-lg [&:not(:last-child)]:rounded-lg" // Radix default radiusni bekor qilish
+              >
+                <IoListOutline size={20} className="md:w-6 md:h-6" />
+              </ToggleGroupItem>
+
+              <ToggleGroupItem
+                value="grid"
+                aria-label="Grid view"
+                className="flex items-center justify-center p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all duration-200 
+               data-[state=on]:bg-white data-[state=on]:text-black data-[state=on]:shadow-sm
+               data-[state=off]:text-gray-400 hover:text-gray-600
+               [&:not(:first-child)]:rounded-lg [&:not(:last-child)]:rounded-lg" // Radix default radiusni bekor qilish
+              >
+                <IoGridOutline size={20} className="md:w-6 md:h-6" />
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
+      </div>
 
-        {loading  ? (
-          <div className="flex flex-1 items-center justify-center min-h-[300px]">
-            <div className="py-20 text-center text-gray-400 font-semibold w-full">
-              Loading tests...
-            </div>
-          </div>
-        ) : currentItems.length > 0 ? (
-          <div
-            className={
-              isGridView
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8"
-                : "flex flex-col gap-1"
-            }
-          >
-            {currentItems.map((test) => {
-              const subscriptionStatus = userProfile?.subscription_status ?? "free";
-              const canAccess =
-                subscriptionStatus === "premium" || !test.is_premium;
+      {/* Scrollable Cards Container */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto pb-4 -mx-3 md:-mx-8 px-3 md:px-8 pt-4"
+      >
+        {currentItems.length > 0 ? (
+          <>
+            <motion.div
+              className={
+                isGridView
+                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16"
+                  : "flex flex-col gap-1 mb-16"
+              }
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              key={`${activeTab}-${searchQuery}-${isGridView}`}
+            >
+              {currentItems
+                .sort((a, b) => {
+                  // is_premium: false (0) bo'lganlar birinchi, true (1) bo'lganlar keyin keladi
+                  return (a.is_premium === b.is_premium) ? 0 : a.is_premium ? 1 : -1;
+                })
+                .map((test, index) => {
+                  const subscriptionStatus = userProfile?.subscription_status ?? "free";
+                  const canAccess = subscriptionStatus === "premium" || !test.is_premium;
 
-              return canAccess ? (
-                <CardOpen
-                  key={test.id}
-                  {...test}
-                  isGridView={isGridView}
-                  testType={testType}
-                />
-              ) : (
-                <CardLocked
-                  key={test.id}
-                  {...test}
-                  isGridView={isGridView}
-                />
-              );
-            })}
-          </div>
+                  return (
+                    <motion.div
+                      key={test.id}
+                      variants={itemVariants}
+                      layout
+                    >
+                      {canAccess ? (
+                        <CardOpen
+                          {...test}
+                          isGridView={isGridView}
+                          testType={testType}
+                        />
+                      ) : (
+                        <CardLocked
+                          {...test}
+                          isGridView={isGridView}
+                        />
+                      )}
+                    </motion.div>
+                  );
+                })}
+            </motion.div>
+
+            {/* Loading indicator when loading more */}
+            {hasMoreItems && (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-sm text-gray-400 font-medium">
+                  Loading more...
+                </div>
+              </div>
+            )}
+          </>
         ) : !loading && allTests.length > 0 ? (
           <div className="flex flex-1 items-center justify-center min-h-[300px]">
             <div className="py-20 text-center text-gray-400 font-semibold w-full">Hech narsa topilmadi...</div>
           </div>
         ) : null}
-
-        {/* Pagination - show if we have items to paginate */}
-        {currentItems.length > 0 && totalPages > 1 && !(loading && allTests.length === 0) && (
-          <div className="flex justify-center md:justify-end items-center mt-8 md:mt-12 gap-2 md:mr-8 overflow-x-auto pb-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 md:p-3 rounded-lg md:rounded-xl border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all shrink-0"
-            >
-              <IoChevronBack size={18} className="md:w-5 md:h-5" />
-            </button>
-
-            <div className="flex gap-1.5 md:gap-2">
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 h-9 md:w-11 md:h-11 rounded-lg md:rounded-xl font-semibold text-sm md:text-base transition-all shrink-0 ${currentPage === i + 1
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-200"
-                    : "bg-white border text-gray-600 hover:bg-gray-50"
-                    }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 md:p-3 rounded-lg md:rounded-xl border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all shrink-0"
-            >
-              <IoChevronForward size={18} className="md:w-5 md:h-5" />
-            </button>
-          </div>
-        )}
-      </div>
-      {/* Always pinned to the bottom */}
-      <div className="mt-16">
-        <PremiumBanner />
       </div>
     </div>
   );

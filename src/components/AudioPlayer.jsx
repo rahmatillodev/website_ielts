@@ -1,14 +1,16 @@
 
 import { useRef, useState, useEffect } from "react";
 import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
-
+import { useAppearance } from "@/contexts/AppearanceContext";
 
 const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded }) => {
+    const { themeColors } = useAppearance();
     const audioRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
+    const [playError, setPlayError] = useState(null);
 
     // Update audio source when URL changes
     useEffect(() => {
@@ -22,33 +24,9 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
         }
     }, [audioUrl]);
 
-    // Auto-play when audio is loaded (only in review mode)
-    useEffect(() => {
-        const audio = audioRef.current;
-        if (!audio || !audioUrl || isTestMode) return;
-
-        const handleCanPlay = async () => {
-            try {
-                await audio.play();
-                setIsPlaying(true);
-            } catch (error) {
-                // Browser autoplay policy may prevent auto-play
-                // Silently fail - user can manually start playback
-                console.log('Auto-play prevented by browser policy');
-            }
-        };
-
-        audio.addEventListener('canplay', handleCanPlay);
-        
-        // Also try to play if audio is already ready
-        if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or higher
-            handleCanPlay();
-        }
-
-        return () => {
-            audio.removeEventListener('canplay', handleCanPlay);
-        };
-    }, [audioUrl, isTestMode]);
+    // NOTE: We intentionally do NOT auto-play in review mode.
+    // Autoplay is often blocked by browsers and can also start at full volume,
+    // which feels like a "notification" to users.
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -104,13 +82,25 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
             if (isPlaying) {
                 audioRef.current?.pause();
             } else {
-                audioRef.current?.play();
+                setPlayError(null);
+                const p = audioRef.current?.play();
+                if (p && typeof p.catch === 'function') {
+                    p.catch(() => {
+                        setPlayError('Tap Play to start the audio (your browser blocked autoplay).');
+                    });
+                }
             }
             setIsPlaying(!isPlaying);
         } else {
             // In test mode, only allow play (no pause)
             if (!isPlaying) {
-                audioRef.current?.play();
+                setPlayError(null);
+                const p = audioRef.current?.play();
+                if (p && typeof p.catch === 'function') {
+                    p.catch(() => {
+                        setPlayError('Tap Play to start the audio.');
+                    });
+                }
                 setIsPlaying(true);
             }
         }
@@ -141,9 +131,14 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
     if (!audioUrl) return null;
 
     return (
-        <div className="sticky top-2 z-10 bg-white border border-gray-200 p-4 shadow-sm w-7/12 mx-auto rounded-2xl">
+        <div className="sticky top-2 z-10 border border-gray-200 p-4 shadow-sm w-7/12 mx-auto rounded-2xl" style={{ backgroundColor: themeColors.background, borderColor: themeColors.border }}>
             <audio ref={audioRef} src={audioUrl} />
             <div className="space-y-3">
+                {playError && (
+                    <div className="text-xs text-gray-600">
+                        {playError}
+                    </div>
+                )}
                 {/* Main Controls */}
                 <div className="flex items-center gap-4">
                     <button
@@ -151,11 +146,11 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
                         disabled={isTestMode && isPlaying}
                         className={`p-3 rounded-full transition-colors ${isTestMode && isPlaying
                                 ? "bg-gray-300 cursor-not-allowed"
-                                : "bg-blue-600 hover:bg-blue-700 text-white"
+                                    : "bg-blue-600 hover:bg-blue-700 text-white"
                             }`}
                         title={isTestMode && isPlaying ? "Cannot pause during test" : isPlaying ? "Pause" : "Play"}
                     >
-                        {isPlaying ? <FaPause size={16} /> : <FaPlay size={16} />}
+                        {isPlaying ? <FaPause size={16} style={{ color: themeColors.text }} /> : <FaPlay size={16} style={{ color: themeColors.text }} />}
                     </button>
 
                     {/* Progress Bar */}

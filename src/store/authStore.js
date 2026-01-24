@@ -37,6 +37,9 @@ export const useAuthStore = create(
               await get().fetchUserProfile(session.user.id)
             } else if (event === 'SIGNED_OUT') {
               set({ authUser: null, userProfile: null, error: null })
+              // Clear dashboard data on sign out
+              const { useDashboardStore } = await import('@/store/dashboardStore')
+              useDashboardStore.getState().clearDashboardData()
             }
           })
 
@@ -87,12 +90,14 @@ export const useAuthStore = create(
       fetchUserProfile: async (userId) => {
         const { data, error } = await supabase
           .from('users')
-          .select('*')
+          .select('*') // Use * to get all available columns (Supabase will only return what exists)
           .eq('id', userId)
           .single()
 
         if (!error) {
           set({ userProfile: data })
+        } else {
+          console.warn('[authStore] Error fetching user profile:', error)
         }
       },
 
@@ -144,9 +149,14 @@ export const useAuthStore = create(
 
       // Chiqish (Sign Out)
       signOut: async () => {
-        set({ loading: true })
-        await supabase.auth.signOut()
+        set({ loading: true, error: null })
+        const { error } = await supabase.auth.signOut()
+        if (error) {
+          set({ error: error.message, loading: false })
+          return { success: false, error: error.message }
+        }
         set({ authUser: null, userProfile: null, loading: false })
+        return { success: true }
       },
 
       clearError: () => set({ error: null }),
@@ -156,7 +166,7 @@ export const useAuthStore = create(
       storage: createJSONStorage(() => localStorage), // Ma'lumotni qayerga saqlash
       partialize: (state) => ({ 
         authUser: state.authUser, 
-        userProfile: state.userProfile 
+        userProfile: state.userProfile,
       }), // Faqat kerakli qismlarni localStoragega saqlaymiz (loading saqlanmaydi)
     }
   )
