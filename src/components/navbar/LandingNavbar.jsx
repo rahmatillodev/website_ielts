@@ -10,6 +10,9 @@ const LandingNavbar = () => {
         {/* Logo */}
         <a href="#home" className="flex items-center gap-3">
          <LogoDesign />
+         <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">
+              Beta
+            </span>
         </a>
 
         {/* Center Links */}

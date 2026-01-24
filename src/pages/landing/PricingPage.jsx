@@ -50,7 +50,6 @@ const PricingPage = () => {
 
   const settings = useSettingsStore((state) => state.settings);
   const userProfile = useAuthStore((state) => state.userProfile);
-
   const calculateDiscount = () => {
     if (!settings?.premium_monthly_cost || !settings?.premium_old_price) {
       return 0;
