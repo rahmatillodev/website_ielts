@@ -73,7 +73,7 @@ const MatchingInformation = ({
         }
       }
 
-      // Fallback: Extract answer options from options table
+      // Fallback 1: Extract answer options from options table (group level)
       if (answerOptions.length === 0 && options && options.length > 0) {
         const optionsMap = new Map();
         options.forEach(opt => {
@@ -95,13 +95,41 @@ const MatchingInformation = ({
         );
         answerOptions = sortedEntries.map(([_, text]) => text);
       }
+
+      // Fallback 2: Extract answer options from questions' options arrays
+      if (answerOptions.length === 0 && groupQuestions && groupQuestions.length > 0) {
+        const optionsMap = new Map();
+        // Use the first question's options (all questions should have the same options)
+        const firstQuestion = groupQuestions[0];
+        if (firstQuestion?.options && Array.isArray(firstQuestion.options)) {
+          firstQuestion.options.forEach(opt => {
+            const optText = opt.option_text || '';
+            // Parse format: "A uogsidyg", "B yuf678f", etc.
+            const match = optText.match(/^([A-Z])[.\s]\s*(.+)$/);
+            if (match) {
+              const letter = match[1];
+              const text = match[2].trim();
+              // Only add unique letters (first occurrence)
+              if (!optionsMap.has(letter)) {
+                optionsMap.set(letter, text);
+              }
+            }
+          });
+          
+          // Sort by letter and extract texts
+          const sortedEntries = Array.from(optionsMap.entries()).sort((a, b) => 
+            a[0].localeCompare(b[0])
+          );
+          answerOptions = sortedEntries.map(([_, text]) => text);
+        }
+      }
     } catch (error) {
       console.error('[MatchingInformation] Error parsing instruction:', error);
       instructionText = _question?.instruction || '';
     }
 
     return { instructionText, answerOptions };
-  }, [_question?.instruction, options]);
+  }, [_question?.instruction, options, groupQuestions]);
 
   // Sort questions by question_number
   const sortedQuestions = useMemo(() => {
@@ -142,6 +170,14 @@ const MatchingInformation = ({
     return review.userAnswer || answers[questionNumber] || '';
   };
 
+  // Calculate question range for heading
+  const questionRange = useMemo(() => {
+    if (sortedQuestions.length === 0) return '';
+    const first = sortedQuestions[0]?.question_number ?? 0;
+    const last = sortedQuestions[sortedQuestions.length - 1]?.question_number ?? 0;
+    return first === last ? `${first}` : `${first}-${last}`;
+  }, [sortedQuestions]);
+
   // Render component
   if (sortedQuestions.length === 0) {
     return null;
@@ -149,6 +185,16 @@ const MatchingInformation = ({
 
   return (
     <div className="space-y-6 mb-6">
+      {/* Question Range Heading */}
+      {/* {questionRange && (
+        <h2 
+          className="text-lg font-semibold"
+          style={{ color: themeColors.text }}
+        >
+          Questions {questionRange}
+        </h2>
+      )} */}
+
       {/* Instructions */}
       {instructionText && (
         <div 
@@ -163,12 +209,14 @@ const MatchingInformation = ({
       {/* Answer Options Box */}
       {answerOptions.length > 0 && (
         <div 
-          className="rounded-lg p-4 mb-6"
+          className="rounded-lg p-4 mb-6 border"
           style={{ 
             backgroundColor: themeColors.background === '#f2f2f2' ? '#f5f5f5' : 
                            themeColors.background === '#000000' ? '#1a1a1a' : 
                            themeColors.background === '#1a2632' ? '#2a3a4a' : '#f5f5f5',
-            borderColor: themeColors.border,
+            borderColor: themeColors.background === '#f2f2f2' ? '#d1d5db' : 
+                        themeColors.background === '#000000' ? '#374151' : 
+                        themeColors.background === '#1a2632' ? '#4b5563' : '#d1d5db',
             borderWidth: '1px',
             borderStyle: 'solid'
           }}
@@ -213,49 +261,43 @@ const MatchingInformation = ({
           return (
             <div
               key={q.id || qNumber}
-              className={`p-4 rounded-lg border transition-colors group ${
-                showWrong ? 'bg-red-50 border-red-500' : 
-                showCorrect ? 'bg-green-50 border-green-500' : 
-                'border-gray-200'
-              } ${showWrong || showCorrect ? 'border-2' : ''}`}
-              style={{ 
-                backgroundColor: showWrong ? 'rgba(254, 242, 242, 0.5)' : 
-                              showCorrect ? 'rgba(240, 253, 244, 0.5)' : 
-                              themeColors.background,
-                borderColor: showWrong ? '#ef4444' : 
-                           showCorrect ? '#22c55e' : 
-                           themeColors.border
+              className={`flex items-start gap-3 justify-between group ${
+                showWrong ? 'p-4 rounded-lg bg-red-50 border-2 border-red-500' : 
+                showCorrect ? 'p-4 rounded-lg bg-green-50 border-2 border-green-500' : 
+                ''
+              }`}
+              style={showWrong || showCorrect ? {} : {
+                backgroundColor: 'transparent'
               }}
             >
-              <div className="flex items-start gap-3 justify-between w-full">
-                <div className="flex justify-between align-middle w-full">
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className="font-medium"
-                      style={{ color: themeColors.text }}
-                    >
-                      {qNumber}.
-                    </span>
-                    <span 
-                      data-selectable="true"
-                      style={{ color: themeColors.text }}
-                    >
-                      {questionText}
-                    </span>
-                    {showCorrect && (
-                      <span className="text-xs text-green-700 font-medium ml-2">
-                        Correct
-                      </span>
-                    )}
-                    {showWrong && correctAnswer && showCorrectAnswers && (
-                      <span className="text-xs text-green-600 font-medium ml-2">
-                        Correct: {correctAnswer}
-                      </span>
-                    )}
-                  </div>
+              <div className="flex items-start gap-2 flex-1">
+                <span 
+                  className="font-medium"
+                  style={{ color: themeColors.text }}
+                >
+                  {qNumber}.
+                </span>
+                <span 
+                  data-selectable="true"
+                  className="flex-1"
+                  style={{ color: themeColors.text }}
+                >
+                  {questionText}
+                </span>
+                {showCorrect && (
+                  <span className="text-xs text-green-700 font-medium ml-2">
+                    Correct
+                  </span>
+                )}
+                {showWrong && correctAnswer && showCorrectAnswers && (
+                  <span className="text-xs text-green-600 font-medium ml-2">
+                    Correct: {correctAnswer}
+                  </span>
+                )}
+              </div>
 
-                  {/* Dropdown Selector */}
-                  <div className="">
+              {/* Dropdown Selector */}
+              <div className="flex items-center gap-2">
                     <Select
                       value={selectedAnswer || undefined}
                       onValueChange={(value) => handleAnswerChange(qNumber, value)}
@@ -317,26 +359,24 @@ const MatchingInformation = ({
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
 
-                {/* Bookmark Icon */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleBookmark(qNumber);
-                  }}
-                  className={`ml-2 transition-all shrink-0 ${
-                    isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                  }`}
-                  title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-                >
-                  {isBookmarked ? (
-                    <FaBookmark className="w-5 h-5 text-red-500" />
-                  ) : (
-                    <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                  )}
-                </button>
-              </div>
+                  {/* Bookmark Icon */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleBookmark(qNumber);
+                    }}
+                    className={`transition-all shrink-0 ${
+                      isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                    }`}
+                    title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
+                  >
+                    {isBookmarked ? (
+                      <FaBookmark className="w-5 h-5 text-red-500" />
+                    ) : (
+                      <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
+                    )}
+                  </button>
             </div>
           );
         })}

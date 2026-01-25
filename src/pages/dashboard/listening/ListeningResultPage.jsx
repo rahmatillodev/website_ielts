@@ -12,6 +12,7 @@ import { fetchLatestAttempt, deleteTestAttempts } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
 import { generateTestResultsPDF } from "@/utils/pdfExport";
 import ResultBanner from "@/components/badges/ResultBanner";
+import { useSettingsStore } from "@/store/systemStore";
 
 const ListeningResultPage = () => {
   const { id } = useParams();
@@ -23,7 +24,7 @@ const ListeningResultPage = () => {
   const [loading, setLoading] = useState(true);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-
+  const settings = useSettingsStore((state) => state.settings);
   // Use refs to track loaded state and prevent unnecessary re-fetches
   const lastLoadedIdRef = useRef(null);
   const isLoadingRef = useRef(false);
@@ -230,7 +231,8 @@ const ListeningResultPage = () => {
       formatDate,
       completedDate: attemptData?.completed_at || resultData?.completedAt,
       testType: 'Listening',
-      defaultTestTitle: 'Academic Listening Practice Test'
+      defaultTestTitle: 'Academic Listening Practice Test',
+      settings
     });
   }, [currentTest, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDate]);
 
