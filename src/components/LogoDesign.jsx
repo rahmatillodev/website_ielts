@@ -22,9 +22,8 @@ const LogoDesign = ({
       </div>
       <span className={`${textSize} font-sans tracking-tight leading-none flex items-end`}>
         <span className="font-semibold italic" style={{ color: color }}>ielt</span>
-        <span className="font-bold" style={{ color: color }}>s</span>
-        <span className="font-black" style={{ color: color }}>core</span>
-        <div className={`w-1 h-1 inline-block ml-0.5`} style={{ backgroundColor: color }}></div>
+        <span className="font-black" style={{ color: color }}>s</span>
+        <span className="font-black" style={{ color: color }}>core.</span>
       </span>
     </div>
   );

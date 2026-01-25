@@ -761,11 +761,11 @@ export const useTestStore = create((set, get) => ({
         error: null, // Clear any previous errors on success
       });
 
-      console.log('[fetchTestById] Success:', {
-        testId,
-        partsCount: partsWithQuestionGroups.length,
-        questionGroupsCount: partsWithQuestionGroups.reduce((sum, p) => sum + (p.questionGroups?.length || 0), 0)
-      });
+      // console.log('[fetchTestById] Success:', {
+      //   testId,
+      //   partsCount: partsWithQuestionGroups.length,
+      //   questionGroupsCount: partsWithQuestionGroups.reduce((sum, p) => sum + (p.questionGroups?.length || 0), 0)
+      // });
 
       return completeTest;
     } catch (error) {
