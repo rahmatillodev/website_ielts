@@ -64,10 +64,10 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit,lo
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Quiz Finished</DialogTitle>
+          <DialogTitle>Test Finished</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-gray-700 dark:text-gray-300">
-          You have completed the quiz! Your answers have been submitted
+          You have completed the test! Your answers have been submitted
           successfully.
         </p>
         <DialogFooter>

@@ -47,7 +47,7 @@ const DashboardLayout = () => {
         {/* Desktop Sidebar */}
         {!isHide && !isSmallScreen && (
           <aside className="sticky top-0 h-screen z-50">
-            <DashboardSidebar />
+            <DashboardSidebar  />
           </aside>
         )}
 

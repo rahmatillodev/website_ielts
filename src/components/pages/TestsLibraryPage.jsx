@@ -7,11 +7,9 @@ import { Input } from "@/components/ui/input";
 // import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { LibraryShimmer } from "@/components/ui/shimmer";
 import CardLocked from "../cards/CardLocked";
 import CardOpen from "../cards/CardOpen";
 import { motion } from "framer-motion";
-import { FileQuestion } from "lucide-react";
 
 const TestsLibraryPage = ({
   title,
@@ -21,6 +19,10 @@ const TestsLibraryPage = ({
   loading,
   loaded,
   fetchTests,
+  emptyStateMessage = "",
+  emptyFreeMessage = "",
+  emptyPremiumMessage = "",
+  emptySearchMessage = "",
 }) => {
   // Load view preference from localStorage, default to list view (false)
   const getInitialViewState = () => {
@@ -39,7 +41,6 @@ const TestsLibraryPage = ({
   const [activeTab, setActiveTab] = useState("All Tests");
   const [searchQuery, setSearchQuery] = useState("");
   const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
-  const [isRefreshing, setIsRefreshing] = useState(false); // Track refresh state for button clicks
   const itemsPerLoad = 9; // Items to load per scroll
   const scrollContainerRef = useRef(null);
   const isLoadingMoreRef = useRef(false);
@@ -80,29 +81,19 @@ const TestsLibraryPage = ({
   useEffect(() => {
     if (!fetchTests) return;
 
-    // Always fetch when route changes to this page (navigating back from practice page)
-    // If not loaded or no data, fetch with forceRefresh to ensure fresh data
-    // This handles the case when navigating back from practice pages where data was cleared
-    const shouldForceRefresh = !loaded || allTests.length === 0;
+    // Force fetch if data is empty, regardless of loading state
+    const hasData = allTests.length > 0;
+    const shouldForceRefresh = !loaded || !hasData;
 
-    if (!loading && !isRefreshing) {
-      if (shouldForceRefresh) {
-        // Force refresh to bypass cache and ensure fresh data
-        fetchTests(true);
-      } else if (!loaded) {
-        // Normal fetch if not loaded
-        fetchTests();
-      }
+    // Always fetch if no data, even if loading is true
+    if (shouldForceRefresh) {
+      fetchTests(true);
+    } else if (!loaded && !loading) {
+      // Normal fetch if not loaded and not currently loading
+      fetchTests();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, loaded, allTests.length, loading, fetchTests]); // Re-run when route changes or data state changes
-
-  // Reset refreshing state when loading completes
-  useEffect(() => {
-    if (!loading && isRefreshing) {
-      setIsRefreshing(false);
-    }
-  }, [loading, isRefreshing]);
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(allTests) || allTests.length === 0) {
@@ -203,7 +194,7 @@ const TestsLibraryPage = ({
   // Check if we need to load more items initially or after filter changes
   // This handles cases where initial content doesn't fill the viewport
   useEffect(() => {
-    if (loading || isRefreshing || filteredData.length === 0) return;
+    if (loading || filteredData.length === 0) return;
 
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -245,19 +236,11 @@ const TestsLibraryPage = ({
     // Initial check after a delay to ensure DOM has rendered
     const timeoutId = setTimeout(checkAndLoadMore, 300);
     return () => clearTimeout(timeoutId);
-  }, [filteredData.length, loading, isRefreshing, itemsPerLoad]);
+  }, [filteredData.length, loading, itemsPerLoad]);
 
   const handleFilterChange = (tab) => {
     if (tab !== activeTab) {
       setActiveTab(tab);
-      // Show shimmer briefly when changing filters if we have data
-      if (allTests.length > 0 && !loading) {
-        setIsRefreshing(true);
-        // Reset after a short delay to show shimmer effect
-        setTimeout(() => {
-          setIsRefreshing(false);
-        }, 300);
-      }
     }
   };
 
@@ -265,29 +248,10 @@ const TestsLibraryPage = ({
     setSearchQuery(e.target.value);
   };
 
-  // Show shimmer while loading or refreshing
-  if (isRefreshing) {
-    return <LibraryShimmer isGridView={isGridView} count={displayedItems} />;
-  }
-
-
-
-  if (allTests.length > 0 && filteredData.length === 0) {
-    return (
-      <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
-        <div className="flex flex-1 items-center justify-center min-h-[300px]">
-          <div className="py-20 text-center text-gray-400 font-semibold w-full">
-            No results match your search.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
-
-      <div className="bg-gray-50 pt-4 pb-4 md:pb-6 shrink-0">
+      {/* Sticky Header */}
+      <div className="bg-gray-50 pt-4 pb-2 md:pb-4 shrink-0 sticky top-0 z-10">
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">{title}</h1>
         <p className="text-sm md:text-base text-gray-500 font-medium tracking-tight w-full md:w-8/12">
           {description}
@@ -352,33 +316,60 @@ const TestsLibraryPage = ({
       </div>
 
       {/* Scrollable Cards Container */}
-      {allTests.length === 0 && (
-        <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
-          <div className="flex flex-1 items-center justify-center min-h-[300px]">
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="flex flex-col items-center text-center gap-2 py-16"
-            >
-              {/* <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 text-gray-400">
-              <FileQuestion className="w-6 h-6" />
-            </div> */}
-              <div className="text-gray-700 font-semibold text-base md:text-lg">
-                We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
-              </div>
-              <div className="text-gray-400 text-sm md:text-base">
-                Please check back later or try again soon.
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      )}
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto pb-4 -mx-3 md:-mx-8 px-3 md:px-8 pt-4"
       >
-        {currentItems.length > 0 ? (
+        {allTests.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center min-h-[300px]">
+            {emptyStateMessage ? (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="flex flex-col items-center text-center gap-2 py-16"
+              >
+                <div className="text-gray-700 font-semibold text-base md:text-lg whitespace-pre-line">
+                  {emptyStateMessage}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="flex flex-col items-center text-center gap-2 py-16"
+              >
+                <div className="text-gray-700 font-semibold text-base md:text-lg">
+                  We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
+                </div>
+                <div className="text-gray-400 text-sm md:text-base">
+                  Please check back later or try again soon.
+                </div>
+              </motion.div>
+            )}
+          </div>
+        ) : allTests.length > 0 && filteredData.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center min-h-[300px]">
+            <div className="py-20 text-center text-gray-400 font-semibold w-full whitespace-pre-line">
+              {searchQuery.trim() !== "" && emptySearchMessage ? (
+                emptySearchMessage
+              ) : activeTab === "free" && emptyFreeMessage ? (
+                emptyFreeMessage
+              ) : activeTab === "premium" && emptyPremiumMessage ? (
+                emptyPremiumMessage
+              ) : searchQuery.trim() !== "" ? (
+                "No results match your search."
+              ) : activeTab === "free" ? (
+                "No free tests available."
+              ) : activeTab === "premium" ? (
+                "No premium tests available."
+              ) : (
+                "No results found."
+              )}
+            </div>
+          </div>
+        ) : currentItems.length > 0 ? (
           <>
             <motion.div
               className={

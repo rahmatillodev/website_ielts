@@ -91,7 +91,7 @@ const TableCompletion = ({
           }`}
         >
           {isBookmarked ? (
-            <FaBookmark className="w-3 h-3 text-red-500" />
+            <FaBookmark className="w-5 h-5 text-red-500" />
           ) : (
             <FaRegBookmark className="w-3 h-3 text-gray-400" />
           )}

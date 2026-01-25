@@ -277,6 +277,12 @@ const CardOpen = ({
             </p>
           )}
 
+          {createdDate && !hasCompleted && (
+            <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
+              Created on {createdDate}
+            </p>
+          )}
+
           <div className="flex gap-2 md:gap-3 text-gray-500 mt-2 md:mt-3 flex-wrap items-center">
             <span className="flex items-baseline gap-1.5 text-[9px] md:text-[10px] font-medium leading-none">
               <SignalBars level={difficulty?.toLowerCase() === "hard" ? 3 : difficulty?.toLowerCase() === "medium" ? 2 : 1} />

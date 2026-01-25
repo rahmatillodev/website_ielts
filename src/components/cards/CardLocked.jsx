@@ -19,6 +19,7 @@ const CardLocked = ({
   duration,
   question_quantity,
   isCompleted,
+  created_at,
   date,
   difficulty,
   score,
@@ -37,6 +38,7 @@ const CardLocked = ({
   };
 
   const completedDate = date ? formatDate(date) : '';
+  const createdDate = created_at ? formatDate(created_at) : '';
   const cardStatus = is_premium ? "Premium" : "Free";
 
   // Animation variants for hover effect
@@ -107,6 +109,12 @@ const CardLocked = ({
             {isCompleted && (
               <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
                 Completed on {completedDate}
+              </p>
+            )}
+
+            {createdDate && !isCompleted && (
+              <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
+                Created on {createdDate}
               </p>
             )}
 
@@ -186,6 +194,12 @@ const CardLocked = ({
           {isCompleted && (
             <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
               Completed on {completedDate}
+            </p>
+          )}
+
+          {createdDate && !isCompleted && (
+            <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
+              Created on {createdDate}
             </p>
           )}
 

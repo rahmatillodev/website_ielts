@@ -3,7 +3,7 @@ import { useRef, useState, useEffect } from "react";
 import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 import { useAppearance } from "@/contexts/AppearanceContext";
 
-const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded }) => {
+const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded, autoPlay = false }) => {
     const { themeColors } = useAppearance();
     const audioRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -20,13 +20,61 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
         // Only update source if it's different
         if (audio.src !== audioUrl) {
             audio.src = audioUrl;
-            audio.load();
+            audio.load().catch((error) => {
+                console.error('[AudioPlayer] Error loading audio:', error);
+                setPlayError('Failed to load audio. Please check your connection.');
+            });
         }
     }, [audioUrl]);
 
     // NOTE: We intentionally do NOT auto-play in review mode.
     // Autoplay is often blocked by browsers and can also start at full volume,
     // which feels like a "notification" to users.
+    
+    // Handle autoPlay prop - trigger playback when requested (after user interaction)
+    useEffect(() => {
+        if (autoPlay && isTestMode && audioUrl && !isPlaying && audioRef.current) {
+            const audio = audioRef.current;
+            
+            const attemptPlay = () => {
+                setPlayError(null);
+                const playPromise = audio.play();
+                if (playPromise && typeof playPromise.catch === 'function') {
+                    playPromise
+                        .then(() => {
+                            setIsPlaying(true);
+                        })
+                        .catch((error) => {
+                            console.error('[AudioPlayer] Auto-play error:', error);
+                            setPlayError('Could not start audio automatically. Please click play manually.');
+                        });
+                } else {
+                    setIsPlaying(true);
+                }
+            };
+            
+            // If audio is already loaded, play immediately
+            if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
+                attemptPlay();
+            } else {
+                // Wait for audio to be ready
+                const handleCanPlay = () => {
+                    attemptPlay();
+                    audio.removeEventListener('canplay', handleCanPlay);
+                };
+                audio.addEventListener('canplay', handleCanPlay);
+                
+                // Also try to load if not already loading
+                if (audio.readyState === 0) { // HAVE_NOTHING
+                    audio.load();
+                }
+                
+                return () => {
+                    audio.removeEventListener('canplay', handleCanPlay);
+                };
+            }
+        }
+    }, [autoPlay, isTestMode, audioUrl, isPlaying]);
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -85,7 +133,8 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
                 setPlayError(null);
                 const p = audioRef.current?.play();
                 if (p && typeof p.catch === 'function') {
-                    p.catch(() => {
+                    p.catch((error) => {
+                        console.error('[AudioPlayer] Play error:', error);
                         setPlayError('Tap Play to start the audio (your browser blocked autoplay).');
                     });
                 }
@@ -95,16 +144,39 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
             // In test mode, only allow play (no pause)
             if (!isPlaying) {
                 setPlayError(null);
-                const p = audioRef.current?.play();
-                if (p && typeof p.catch === 'function') {
-                    p.catch(() => {
-                        setPlayError('Tap Play to start the audio.');
-                    });
+                const audio = audioRef.current;
+                if (!audio) {
+                    setPlayError('Audio not ready. Please wait a moment.');
+                    return;
                 }
-                setIsPlaying(true);
+                
+                // Ensure audio is loaded before playing
+                if (audio.readyState < 2) { // HAVE_CURRENT_DATA
+                    audio.load();
+                }
+                
+                const p = audio.play();
+                if (p && typeof p.catch === 'function') {
+                    p.catch((error) => {
+                        console.error('[AudioPlayer] Play error in test mode:', error);
+                        setPlayError('Tap Play to start the audio. Your browser may have blocked autoplay.');
+                    });
+                } else {
+                    setIsPlaying(true);
+                }
             }
         }
     };
+    
+    // Expose play method for external control (e.g., from modal)
+    useEffect(() => {
+        if (isTestMode && audioRef.current) {
+            // Store play method on audio element for external access
+            audioRef.current._playMethod = () => {
+                togglePlayPause();
+            };
+        }
+    }, [isTestMode]);
 
     const handleSeek = (e) => {
         if (!isTestMode && audioRef.current) {
