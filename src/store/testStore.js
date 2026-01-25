@@ -155,8 +155,10 @@ export const useTestStore = create((set, get) => ({
   },
 
   fetchTestById: async (testId) => {
+    console.log('[fetchTestById] Called with testId:', testId, 'Type:', typeof testId);
+    
     // GUARD CLAUSE: Validate testId parameter
-    if (!testId || typeof testId !== 'string' && typeof testId !== 'number') {
+    if (!testId || (typeof testId !== 'string' && typeof testId !== 'number')) {
       const errorMessage = `Invalid testId: ${testId}. Expected a valid string or number.`;
       console.error('[fetchTestById] Validation Error:', errorMessage);
       set({ 
@@ -169,6 +171,7 @@ export const useTestStore = create((set, get) => ({
 
     // Clear previous test data when fetching a new one
     // Use separate loadingTest flag to avoid interfering with fetchTests
+    console.log('[fetchTestById] Setting loadingTest to true and starting fetch...');
     set({ loadingTest: true, error: null, currentTest: null });
 
     // Timeout mechanism: 30 seconds max
@@ -804,6 +807,7 @@ export const useTestStore = create((set, get) => ({
       throw error;
     } finally {
       // CRUCIAL: Always set loading to false to prevent infinite loading states
+      console.log('[fetchTestById] Finally block: Resetting loadingTest to false');
       set({ loadingTest: false, loading: false });
     }
   },
@@ -815,10 +819,16 @@ export const useTestStore = create((set, get) => ({
         currentTest: null,
         test_reading: [],
         test_listening: [],
-        loaded: false
+        loaded: false,
+        loadingTest: false, // Reset loading state
+        error: null // Clear any errors
       });
     } else {
-      set({ currentTest: null });
+      set({ 
+        currentTest: null,
+        loadingTest: false, // Reset loading state when clearing current test
+        error: null // Clear any errors
+      });
     }
   },
 

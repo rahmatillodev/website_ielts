@@ -93,12 +93,12 @@ const TableCompletion = ({
           {isBookmarked ? (
             <FaBookmark className="w-5 h-5 text-red-500" />
           ) : (
-            <FaRegBookmark className="w-3 h-3 text-gray-400" />
+            <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
           )}
         </button>
-        {/* Show correct answer when wrong */}
+        {/* Correct Answer - Only for table_completion type, after bookmark */}
         {showWrong && correctAnswer && showCorrectAnswers && (
-          <span className="absolute -top-5 left-0 text-[10px] text-green-600 font-bold whitespace-nowrap">
+          <span className="ml-2 text-sm text-green-600 font-semibold whitespace-nowrap">
             {correctAnswer}
           </span>
         )}

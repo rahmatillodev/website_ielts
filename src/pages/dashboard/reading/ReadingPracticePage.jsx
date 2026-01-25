@@ -23,7 +23,7 @@ import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRen
 
 const ReadingPracticePageContent = () => {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { currentTest, fetchTestById, loadingTest: LoadingTest, error } = useTestStore();
   const { authUser } = useAuthStore();
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
@@ -66,9 +66,27 @@ const ReadingPracticePageContent = () => {
   const universalContentRef = useRef(null); // Universal container for all selectable content
 
   useEffect(() => {
+    console.log('[ReadingPracticePage] useEffect triggered', { id, idType: typeof id });
+    
+    // Safety check: Reset loadingTest if it's stuck from a previous state
+    const { loadingTest: currentLoadingTest, clearCurrentTest } = useTestStore.getState();
+    if (currentLoadingTest && !id) {
+      console.warn('[ReadingPracticePage] loadingTest is true but no ID, resetting...');
+      clearCurrentTest(false);
+    }
+    
     // GUARD CLAUSE: Validate id parameter
     if (!id || (typeof id !== 'string' && typeof id !== 'number')) {
-      console.error('[ReadingPracticePage] Invalid test ID:', id);
+      console.error('[ReadingPracticePage] Invalid test ID:', id, 'Type:', typeof id);
+      // Reset loading state if ID is invalid to prevent infinite loading
+      clearCurrentTest(false);
+      return;
+    }
+    
+    // Verify fetchTestById is a function
+    if (typeof fetchTestById !== 'function') {
+      console.error('[ReadingPracticePage] fetchTestById is not a function:', typeof fetchTestById);
+      clearCurrentTest(false);
       return;
     }
 
@@ -76,9 +94,12 @@ const ReadingPracticePageContent = () => {
     let isMounted = true;
 
     const loadTestData = async () => {
+      console.log('[ReadingPracticePage] loadTestData called with id:', id);
       try {
         // Fetch test data
+        console.log('[ReadingPracticePage] Calling fetchTestById...');
         await fetchTestById(id);
+        console.log('[ReadingPracticePage] fetchTestById completed');
         
         // Only update state if component is still mounted
         if (!isMounted) return;
@@ -121,12 +142,14 @@ const ReadingPracticePageContent = () => {
         if (isMounted) {
           console.error('[ReadingPracticePage] Error loading test data:', {
             testId: id,
-            error: error.message
+            error: error.message,
+            errorStack: error.stack
           });
         }
       }
     };
 
+    console.log('[ReadingPracticePage] Starting loadTestData...');
     loadTestData();
     
     // Cleanup: Clear currentTest when component unmounts and prevent state updates
@@ -630,10 +653,20 @@ const ReadingPracticePageContent = () => {
   const handleRetakeTest = () => {
     if (!id) return;
     
+    // Remove review mode from URL
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete('mode');
+    const newUrl = newSearchParams.toString() 
+      ? `/reading-practice/${id}?${newSearchParams.toString()}`
+      : `/reading-practice/${id}`;
+    window.history.replaceState({}, '', newUrl);
+    setSearchParams(newSearchParams, { replace: true });
+    
     // Reset all state
     setAnswers({});
     setReviewData({});
     setStatus('taking');
+    setShowCorrectAnswers(false); // Hide the show correct answers toggle
     // Reset timeRemaining to test duration (will be set by useEffect when currentTest is available)
     setTimeRemaining(currentTest ? convertDurationToSeconds(currentTest.duration) : 60 * 60);
     setIsStarted(false);

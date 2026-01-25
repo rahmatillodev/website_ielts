@@ -77,11 +77,11 @@ const CompletionGapFill = ({
           onClick={(e) => { e.stopPropagation(); toggleBookmark(answerKey); }}
           className={`transition-all ${isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
         >
-          {isBookmarked ? <FaBookmark className="w-5 h-5 text-red-500" /> : <FaRegBookmark className="w-3 h-3 text-gray-400" />}
+          {isBookmarked ? <FaBookmark className="w-5 h-5 text-red-500" /> : <FaRegBookmark className="w-5 h-5 text-gray-400" />}
         </button>
-        {/* To'g'ri javobni ko'rsatish */}
+        {/* Correct Answer - Only for fill_in_blank type, after bookmark */}
         {showWrong && correctAnswer && showCorrectAnswers && (
-          <span className="absolute -top-5 left-0 text-[10px] text-green-600 font-bold whitespace-nowrap">
+          <span className="ml-0 mr-0.5 text-sm text-green-600 font-semibold whitespace-nowrap">
             {correctAnswer}
           </span>
         )}

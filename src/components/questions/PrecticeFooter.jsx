@@ -1,12 +1,14 @@
-import React from 'react'
-import { FaCheck, FaChevronLeft, FaChevronRight, FaBookmark } from 'react-icons/fa';
+import React, { useState } from 'react'
+import { FaCheck, FaChevronLeft, FaChevronRight, FaBookmark, FaRedo } from 'react-icons/fa';
 import { useSearchParams } from 'react-router-dom';
 import { useAppearance } from '@/contexts/AppearanceContext';
+import ConfirmModal from '@/components/modal/ConfirmModal';
 
 const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false }) => {
   // Immediately check URL for review mode to prevent flickering
   const [searchParams] = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
+  const [isRetakeModalOpen, setIsRetakeModalOpen] = useState(false);
   
   // Try to use appearance context, but don't fail if not available
   const appearance = useAppearance();
@@ -338,13 +340,32 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
         </div>
         {isReviewMode && onRetake && (
           <button
-            onClick={onRetake}
+            onClick={() => setIsRetakeModalOpen(true)}
             className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium"
           >
             Redo Test
           </button>
         )}
       </div>
+
+      {/* Retake Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isRetakeModalOpen}
+        onClose={() => setIsRetakeModalOpen(false)}
+        onConfirm={() => {
+          setIsRetakeModalOpen(false);
+          if (onRetake) {
+            onRetake();
+          }
+        }}
+        title="Start New Test Attempt"
+        description="Are you ready to start a fresh test? Your current review will be reset and you'll begin a new practice session."
+        cancelLabel="Cancel"
+        confirmLabel="Yes, Start Test"
+        icon={FaRedo}
+        iconBgColor="bg-blue-50"
+        iconColor="text-blue-500"
+      />
 
     </footer>
   )
