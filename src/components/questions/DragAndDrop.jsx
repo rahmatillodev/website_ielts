@@ -95,8 +95,9 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
         {isBookmarked ? <FaBookmark className="w-5 h-5 text-red-500" /> : <FaRegBookmark className="w-5 h-5 text-gray-400" />}
       </button>
 
+      {/* Correct Answer - Only for drag_and_drop type, after bookmark */}
       {showWrong && correctAnswer && showCorrectAnswers && (
-        <span className="absolute -top-5 left-0 text-[10px] text-green-600 font-bold bg-white px-1 shadow-sm rounded border border-green-200 whitespace-nowrap z-10">
+        <span className="ml-2 text-sm text-green-600 font-semibold whitespace-nowrap">
           {correctAnswer}
         </span>
       )}

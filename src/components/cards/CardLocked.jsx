@@ -177,12 +177,12 @@ const CardLocked = ({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <div className="flex items-start gap-2 mb-2 flex-wrap">
             <h3 className="text-base md:text-lg font-semibold text-gray-900 line-clamp-1 overflow-hidden text-ellipsis">
               {title}
             </h3>
             {!isCompleted && (
-              <span className={`ml-2 md:ml-4 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 shrink-0 ${is_premium
+              <span className={`ml-2 md:ml-4 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 shrink-0 self-start ${is_premium
                 ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
                 : "bg-green-500 text-white border-0 shadow-md"
                 }`}>

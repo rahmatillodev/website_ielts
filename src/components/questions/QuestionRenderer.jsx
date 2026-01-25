@@ -229,6 +229,9 @@ const QuestionRenderer = ({
       question={question}
       answer={answer}
       onAnswerChange={onAnswerChange}
+      mode={mode}
+      reviewData={reviewData}
+      showCorrectAnswers={showCorrectAnswers}
       bookmarks={bookmarks}
       toggleBookmark={toggleBookmark}
     />

@@ -25,7 +25,7 @@ import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRen
 
 const ListeningPracticePageContent = () => {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { currentTest, fetchTestById, loadingTest, error: testError } = useTestStore();
   const loading = loadingTest;
@@ -651,10 +651,20 @@ const [startTime, setStartTime] = useState(null);
 
   const handleRetakeTest = () => {
     if (!id) return;
+    
+    // Remove review mode from URL
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete('mode');
+    const newUrl = newSearchParams.toString() 
+      ? `/listening-practice/${id}?${newSearchParams.toString()}`
+      : `/listening-practice/${id}`;
+    window.history.replaceState({}, '', newUrl);
+    setSearchParams(newSearchParams, { replace: true });
 
     setAnswers({});
     setReviewData({});
     setStatus('taking');
+    setShowCorrectAnswers(false); // Hide the show correct answers toggle
     // Reset timeRemaining to test duration (will be set by useEffect when currentTest is available)
     setTimeRemaining(currentTest ? convertDurationToSeconds(currentTest.duration) : 60 * 60);
     setIsStarted(false);
