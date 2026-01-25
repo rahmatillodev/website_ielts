@@ -12,6 +12,7 @@ import { fetchLatestAttempt, deleteTestAttempts } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
 import { generateTestResultsPDF } from "@/utils/pdfExport";
 import ResultBanner from "@/components/badges/ResultBanner";
+import { useSettingsStore } from "@/store/systemStore";
 
 const ReadingResultPage = () => {
   const { id } = useParams();
@@ -29,7 +30,7 @@ const ReadingResultPage = () => {
   const isLoadingRef = useRef(false);
   const fetchTestByIdRef = useRef(fetchTestById);
   const authUserRef = useRef(authUser);
-
+  const settings = useSettingsStore((state) => state.settings);
   // Update refs when values change (but don't trigger re-fetch)
   useEffect(() => {
     fetchTestByIdRef.current = fetchTestById;
@@ -196,7 +197,8 @@ const ReadingResultPage = () => {
       formatDate,
       completedDate: attemptData?.completed_at || resultData?.completedAt,
       testType: 'Reading',
-      defaultTestTitle: 'Academic Reading Practice Test'
+      defaultTestTitle: 'Academic Reading Practice Test',
+      settings
     });
   }, [currentTest, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDate]);
 

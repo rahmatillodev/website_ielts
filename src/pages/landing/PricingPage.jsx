@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   LuArrowLeft,
   LuLayoutDashboard,
@@ -46,11 +46,11 @@ const PricingPage = () => {
     telegram_admin: "#",
   });
 
-
+  const [showCopySnackbar, setShowCopySnackbar] = useState(false);
+  const copySnackbarTimeoutRef = useRef(null);
 
   const settings = useSettingsStore((state) => state.settings);
   const userProfile = useAuthStore((state) => state.userProfile);
-
   const calculateDiscount = () => {
     if (!settings?.premium_monthly_cost || !settings?.premium_old_price) {
       return 0;
@@ -75,11 +75,24 @@ const PricingPage = () => {
     }
   }, [settings]);
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(
-      pricing.card_number.replace(/\s/g, "")
-    );
-  };
+  const copyToClipboard = useCallback(() => {
+    const text = pricing.card_number?.replace(/\s/g, "") || "";
+    if (!text || text === "—") return;
+    navigator.clipboard.writeText(text).then(() => {
+      if (copySnackbarTimeoutRef.current) clearTimeout(copySnackbarTimeoutRef.current);
+      setShowCopySnackbar(true);
+      copySnackbarTimeoutRef.current = setTimeout(() => {
+        setShowCopySnackbar(false);
+        copySnackbarTimeoutRef.current = null;
+      }, 2500);
+    });
+  }, [pricing.card_number]);
+
+  useEffect(() => {
+    return () => {
+      if (copySnackbarTimeoutRef.current) clearTimeout(copySnackbarTimeoutRef.current);
+    };
+  }, []);
 
   const handleTelegramRedirect = () => {
     window.open(pricing.telegram_admin, "_blank");
@@ -199,12 +212,25 @@ const PricingPage = () => {
                     <span className="text-[10px] sm:text-xs font-black uppercase text-gray-600">
                       Local Bank Card
                     </span>
-                    <button
-                      onClick={copyToClipboard}
-                      className="text-gray-600 hover:text-gray-900 transition-colors"
-                    >
-                      <LuCopy size={18} />
-                    </button>
+                    <div className="relative">
+                      <div
+                        role="status"
+                        aria-live="polite"
+                        className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium whitespace-nowrap shadow-lg transition-all duration-300 ${
+                          showCopySnackbar
+                            ? "opacity-100 translate-y-0"
+                            : "opacity-0 translate-y-2 pointer-events-none"
+                        }`}
+                      >
+                        Копирование успешно
+                      </div>
+                      <button
+                        onClick={copyToClipboard}
+                        className="text-gray-600 hover:text-gray-900 transition-colors"
+                      >
+                        <LuCopy size={18} />
+                      </button>
+                    </div>
                   </div>
 
                   <p className="font-mono tracking-widest text-base sm:text-lg lg:text-xl font-black text-gray-900 break-all">
