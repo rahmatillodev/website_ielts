@@ -14,10 +14,12 @@ import { generateWritingPDF } from '@/utils/exportOwnWritingPdf';
 import { AppearanceProvider, useAppearance } from '@/contexts/AppearanceContext';
 import AppearanceSettingsModal from '@/components/modal/AppearanceSettingsModal';
 import { toast } from "react-toastify";
+import { useSettingsStore } from '@/store/systemStore';
 
 const OwnWritingPageContent = () => {
   const navigate = useNavigate();
   const { theme, themeColors, fontSizeValue } = useAppearance();
+  const settings = useSettingsStore((state) => state.settings);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [activeTask, setActiveTask] = useState("task1"); // "task1" | "task2"
@@ -279,7 +281,7 @@ const OwnWritingPageContent = () => {
             className="flex items-center gap-2 cursor-pointer px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium"
             onClick={() => {
               setIsRunning(false);
-              generateWritingPDF(tasks, formatTime(elapsedTime));
+              generateWritingPDF(tasks, formatTime(elapsedTime), settings);
             }}
           >
             <FaDownload className="w-4 h-4" />

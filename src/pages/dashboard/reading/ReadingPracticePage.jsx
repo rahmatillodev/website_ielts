@@ -968,6 +968,13 @@ const ReadingPracticePageContent = () => {
                         </p>
                       )}
                   </div>
+                  {/* {questionGroup.type === 'matching_information' && (
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold" style={{ color: themeColors.text }}>
+                        Matching Information
+                      </h3>
+                    </div>
+                  )} */}
                 
                   {/* For Fill-in-the-Blanks, Drag-and-Drop, Table Completion, Table, Map, and Matching Information: Render as a single group with group-level options */}
                   {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation) ? (

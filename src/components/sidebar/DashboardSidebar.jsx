@@ -22,6 +22,7 @@ import { RiSpeakLine } from "react-icons/ri";
 import { IoDocumentAttachOutline } from "react-icons/io5";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { useSmallScreen } from "@/hooks/useSmallScreen";
+import LogoDesign from "../LogoDesign";
 
 const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapsed }) => {
   const content = (
@@ -108,12 +109,13 @@ const DashboardSidebar = ({ onNavigate }) => {
           {!isCollapsed ? (
             <>
               <div className="flex items-center gap-3">
-                <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
+                {/* <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
                   <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
                 </div>
                 <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
-                  IELTS Sim
-                </span>
+                  IELTSCORE
+                </span> */}
+                <LogoDesign/>
                 <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">
                   Beta
                 </span>

@@ -7,8 +7,28 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
   const questionText = question.question_text || question.text || '';
   const isBookmarked = bookmarks.has(questionNumber);
   
+  // Deduplicate options based on unique identifier (id, or combination of option_text and letter)
+  const deduplicatedOptions = React.useMemo(() => {
+    const seen = new Set();
+    const unique = [];
+    
+    for (const option of options) {
+      // Create a unique key: prefer id, otherwise use option_text + letter combination
+      const uniqueKey = option.id 
+        ? `id-${option.id}` 
+        : `text-${(option.option_text || option.text || '').toLowerCase().trim()}-letter-${(option.letter || '').toLowerCase()}`;
+      
+      if (!seen.has(uniqueKey)) {
+        seen.add(uniqueKey);
+        unique.push(option);
+      }
+    }
+    
+    return unique;
+  }, [options]);
+  
   // Sort options by letter (A, B, C, D, etc.)
-  const sortedOptions = sortOptionsByLetter(options);
+  const sortedOptions = sortOptionsByLetter(deduplicatedOptions);
   
   // Find correct answer from options (is_correct = true)
   const correctOption = sortedOptions.find(opt => opt.is_correct === true);
@@ -22,6 +42,7 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
   const userAnswer = review.userAnswer || answer;
   const showWrong = isReviewMode && !isCorrect;
   const showCorrect = isReviewMode && isCorrect;
+  
 
   // Table format rendering (like Figure 1)
   if (useTableFormat) {
@@ -33,11 +54,12 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
               <th className="px-4 py-3 text-left font-semibold text-gray-700">
                 {/* Empty header for question column */}
               </th>
-              {sortedOptions.map((option) => {
+              {sortedOptions.map((option, index) => {
                 const optionLetter = option.letter || '';
+                const uniqueKey = option.id || `option-${index}-${optionLetter}-${(option.option_text || '').substring(0, 10)}`;
                 return (
                   <th
-                    key={option.id || optionLetter}
+                    key={uniqueKey}
                     className="px-4 py-3 text-center font-semibold text-gray-700"
                   >
                     {optionLetter}
@@ -86,14 +108,15 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                 </button>
               </td>
               {/* Option Columns with Radio Buttons */}
-              {sortedOptions.map((option) => {
+              {sortedOptions.map((option, index) => {
                 const optionValue = getOptionValue(option);
                 const isSelected = isOptionSelected(option, answer || userAnswer);
                 const isCorrectOption = isReviewMode && optionValue.toLowerCase() === correctAnswer.toLowerCase().trim();
+                const uniqueKey = option.id || `option-${index}-${option.letter || ''}-${(option.option_text || '').substring(0, 10)}`;
                 
                 return (
                   <td
-                    key={option.id}
+                    key={uniqueKey}
                     className={`px-4 py-3 text-center ${
                       isSelected && showCorrect ? 'bg-green-100' : 
                       isSelected && showWrong ? 'bg-red-100' : 
@@ -148,16 +171,17 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
           <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
         )}
       </button>
-      {sortedOptions.map((option) => {
+      {sortedOptions.map((option, index) => {
         const displayText = getOptionDisplayText(option);
         const optionValue = getOptionValue(option); // Use option_text as value
         const isSelected = isOptionSelected(option, answer || userAnswer);
         // Compare by option_text (not letter)
         const isCorrectOption = isReviewMode && optionValue.toLowerCase() === correctAnswer.toLowerCase().trim();
+        const uniqueKey = option.id || `option-${index}-${option.letter || ''}-${(option.option_text || '').substring(0, 10)}`;
         
         return (
           <label
-            key={option.id}
+            key={uniqueKey}
             className={`flex gap-3 items-center p-2 rounded-md transition-all ${
               mode === 'review' ? 'cursor-default' : 'cursor-pointer'
             } ${
