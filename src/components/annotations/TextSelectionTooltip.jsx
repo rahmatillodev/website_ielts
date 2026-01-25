@@ -61,17 +61,33 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
   };
 
   useEffect(() => {
+    // Prevent text selection when clicking on highlights
+    const handleMouseDown = (e) => {
+      const clickedElement = e.target;
+      const markElement = clickedElement.closest('mark[data-highlight-id]');
+      const noteElement = clickedElement.closest('[data-note-id]');
+      
+      if (markElement || noteElement) {
+        // Prevent default text selection behavior
+        e.preventDefault();
+        // Don't stop propagation - we want the click to bubble up for tooltip positioning
+      }
+    };
+
     const handleMouseUp = (e) => {
       const selection = window.getSelection();
       const container = universalContentRef?.current;
       
-      // Check if clicking on an existing highlight
+      // Check if clicking on an existing highlight FIRST (before text selection)
       const clickedElement = e.target;
       const markElement = clickedElement.closest('mark[data-highlight-id]');
       const noteElement = clickedElement.closest('[data-note-id]');
       
       if (markElement) {
         // User clicked on existing highlight - show delete tooltip
+        e.preventDefault();
+        e.stopPropagation();
+        
         const highlightIdValue = markElement.getAttribute('data-highlight-id');
         const rect = markElement.getBoundingClientRect();
         const tooltipHeight = 50;
@@ -95,30 +111,56 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
         setSelectedRange(null);
         setTooltipPosition({ top, left });
         setShowTooltip(true);
-        window.getSelection().removeAllRanges();
+        
+        // Clear any text selection
+        if (selection.rangeCount > 0) {
+          selection.removeAllRanges();
+        }
         return;
       }
       
       if (noteElement) {
         // User clicked on existing note - open sidebar and focus note
+        e.preventDefault();
+        e.stopPropagation();
+        
         const noteIdValue = noteElement.getAttribute('data-note-id');
         if (openNoteSidebar && noteIdValue) {
           openNoteSidebar(noteIdValue);
         }
-        window.getSelection().removeAllRanges();
+        if (selection.rangeCount > 0) {
+          selection.removeAllRanges();
+        }
         setShowTooltip(false);
         return;
       }
 
-      // Regular text selection
+      // Regular text selection - only if not clicking on highlight/note
       if (!selection.rangeCount || selection.isCollapsed) {
-        setShowTooltip(false);
+        // If clicking outside, hide tooltip unless clicking on tooltip itself
+        if (!tooltipRef.current?.contains(clickedElement)) {
+          setShowTooltip(false);
+        }
         return;
       }
 
       const range = selection.getRangeAt(0);
       
       if (!container || !container.contains(range.commonAncestorContainer)) {
+        setShowTooltip(false);
+        return;
+      }
+
+      // Don't show tooltip if selection is inside a highlight or note
+      const selectedMark = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+        ? range.commonAncestorContainer.parentElement?.closest('mark[data-highlight-id]')
+        : range.commonAncestorContainer.closest('mark[data-highlight-id]');
+      
+      const selectedNote = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+        ? range.commonAncestorContainer.parentElement?.closest('[data-note-id]')
+        : range.commonAncestorContainer.closest('[data-note-id]');
+      
+      if (selectedMark || selectedNote) {
         setShowTooltip(false);
         return;
       }
@@ -171,22 +213,26 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
         return;
       }
       
-      const selection = window.getSelection();
-      if (selection.toString().trim() !== '') return;
-      
-      // Don't hide if clicking on a mark or note element
+      // Don't hide if clicking on a mark or note element (handled by mouseup)
       if (e.target.closest('mark[data-highlight-id]') || e.target.closest('[data-note-id]')) {
         return;
       }
       
-      setShowTooltip(false);
+      const selection = window.getSelection();
+      // Only hide if there's no text selection
+      if (!selection.rangeCount || selection.isCollapsed) {
+        setShowTooltip(false);
+      }
     };
 
-    document.addEventListener('mouseup', handleMouseUp);
+    // Use capture phase for click to handle it before other handlers
+    document.addEventListener('mousedown', handleMouseDown, true);
+    document.addEventListener('mouseup', handleMouseUp, true);
     document.addEventListener('click', handleClickOutside, true);
 
     return () => {
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousedown', handleMouseDown, true);
+      document.removeEventListener('mouseup', handleMouseUp, true);
       document.removeEventListener('click', handleClickOutside, true);
     };
   }, [universalContentRef, openNoteSidebar, defaultPartId]);
@@ -209,14 +255,26 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
     window.getSelection().removeAllRanges();
   };
 
-  const handleDeleteHighlight = () => {
+  const handleDeleteHighlight = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (highlightId && removeHighlight) {
       removeHighlight(highlightId);
+    } else {
+      console.warn('Cannot delete highlight: missing highlightId or removeHighlight function', { highlightId, removeHighlight });
     }
+    
     setShowTooltip(false);
     setIsExistingHighlight(false);
     setHighlightId(null);
-    window.getSelection().removeAllRanges();
+    setNoteId(null);
+    
+    // Clear any text selection
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      selection.removeAllRanges();
+    }
   };
 
   if (!showTooltip) return null;
@@ -301,7 +359,11 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
           <button 
             className="ielts-btn ielts-btn-delete" 
             onClick={handleDeleteHighlight}
-            onMouseDown={(e) => e.preventDefault()}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            type="button"
           >
             <FaTrash className="ielts-delete-icon" />
             <span>Delete Highlight</span>

@@ -123,25 +123,67 @@ export const useAuthStore = create(
 
       // Avatar yuklash
       uploadAvatar: async (file) => {
-        const userId = get().authUser?.id;
-        if (!userId) return { success: false, error: 'User not authenticated' };
+        try {
+          const userId = get().authUser?.id;
+          if (!userId) {
+            return { success: false, error: 'User not authenticated. Please log in again.' };
+          }
 
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${userId}-${Date.now()}.${fileExt}`;
+          // Validate file exists
+          if (!file) {
+            return { success: false, error: 'No file selected. Please choose an image.' };
+          }
 
-        const { error: uploadError } = await supabase.storage
-          .from('avatar-image')
-          .upload(fileName, file, { upsert: true });
+          // Validate file type
+          const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+          if (!validImageTypes.includes(file.type)) {
+            return { success: false, error: 'Invalid file format. Please select a JPEG, PNG, GIF, or WebP image.' };
+          }
 
-        if (uploadError) {
-          return { success: false, error: uploadError.message };
+          // Validate file size (5MB limit)
+          const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+          if (file.size > maxSizeInBytes) {
+            return { success: false, error: 'File size too large. Please select an image smaller than 5MB.' };
+          }
+
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${userId}-${Date.now()}.${fileExt}`;
+
+          // Upload file to storage
+          const { error: uploadError } = await supabase.storage
+            .from('avatar-image')
+            .upload(fileName, file, { upsert: true });
+
+          if (uploadError) {
+            // Provide user-friendly error messages
+            let errorMessage = 'Failed to upload image. ';
+            if (uploadError.message.includes('size')) {
+              errorMessage += 'File size is too large.';
+            } else if (uploadError.message.includes('format') || uploadError.message.includes('type')) {
+              errorMessage += 'Invalid file format.';
+            } else if (uploadError.message.includes('network') || uploadError.message.includes('timeout')) {
+              errorMessage += 'Network error. Please check your connection and try again.';
+            } else {
+              errorMessage += uploadError.message || 'Please try again later.';
+            }
+            return { success: false, error: errorMessage };
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatar-image')
+            .getPublicUrl(fileName);
+
+          if (!publicUrl) {
+            return { success: false, error: 'Failed to generate image URL. Please try again.' };
+          }
+
+          return { success: true, url: publicUrl };
+        } catch (error) {
+          // Catch any unexpected errors
+          const errorMessage = error?.message || 'An unexpected error occurred during upload. Please try again.';
+          return { success: false, error: errorMessage };
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatar-image')
-          .getPublicUrl(fileName);
-
-        return { success: true, url: publicUrl };
       },
 
       // Profilni yangilash

@@ -14,6 +14,10 @@ export const applyHighlight = (range, highlightId) => {
     mark.className = 'bg-yellow-300';
     mark.setAttribute('data-highlight-id', highlightId);
     mark.setAttribute('data-highlight', 'true');
+    mark.setAttribute('draggable', 'false');
+    mark.style.cursor = 'pointer';
+    mark.style.userSelect = 'none';
+    mark.style.webkitUserSelect = 'none';
     
     // Clone the range to avoid issues
     const clonedRange = range.cloneRange();

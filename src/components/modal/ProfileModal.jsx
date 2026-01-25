@@ -55,13 +55,43 @@ const ProfileModal = ({ open, onOpenChange }) => {
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    // Validate file type
+    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validImageTypes.includes(file.type)) {
+      toast.error('Invalid file format. Please select a JPEG, PNG, GIF, or WebP image.');
+      e.target.value = ''; // Reset file input
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSizeInBytes) {
+      toast.error('File size too large. Please select an image smaller than 5MB.');
+      e.target.value = ''; // Reset file input
+      return;
+    }
+
+    // If validation passes, set the file and create preview
+    try {
       setAvatarFile(file);
       const reader = new FileReader();
+      reader.onerror = () => {
+        toast.error('Error reading file. Please try selecting the image again.');
+        setAvatarFile(null);
+        setAvatarPreview(userProfile?.avatar_image || null);
+        e.target.value = ''; // Reset file input
+      };
       reader.onloadend = () => {
         setAvatarPreview(reader.result);
       };
       reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error('An unexpected error occurred while processing the image.');
+      setAvatarFile(null);
+      setAvatarPreview(userProfile?.avatar_image || null);
+      e.target.value = ''; // Reset file input
     }
   };
 
@@ -81,28 +111,40 @@ const ProfileModal = ({ open, onOpenChange }) => {
     e.preventDefault();
     setLoading(true);
     
-    let avatarUrl = userProfile?.avatar_image;
-    
-    // Upload avatar if new file selected
-    if (avatarFile) {
-      const uploadResult = await uploadAvatar(avatarFile);
-      if (uploadResult.success) {
+    try {
+      let avatarUrl = userProfile?.avatar_image;
+      
+      // Upload avatar if new file selected
+      if (avatarFile) {
+        const uploadResult = await uploadAvatar(avatarFile);
+        if (!uploadResult.success) {
+          const errorMessage = uploadResult.error || 'Failed to upload image. Please try again later.';
+          toast.error(errorMessage);
+          return;
+        }
         avatarUrl = uploadResult.url;
-      } else {
-        toast.error('Error uploading image. Please try again later.');
-        setLoading(false);
+      }
+      
+      // Update user profile
+      const result = await updateUserProfile({
+        ...formData,
+        avatar_image: avatarUrl,
+      });
+      
+      if (!result.success) {
+        const errorMessage = result.error || 'Failed to update profile. Please try again.';
+        toast.error(errorMessage);
         return;
       }
-    }
-    
-    const result = await updateUserProfile({
-      ...formData,
-      avatar_image: avatarUrl,
-    });
-    
-    setLoading(false);
-    if (result.success) {
+
+      // Success
+      toast.success('Profile updated successfully!');
       onOpenChange(false);
+    } catch (error) {
+      const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 

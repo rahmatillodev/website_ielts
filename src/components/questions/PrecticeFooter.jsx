@@ -1,8 +1,13 @@
 import React from 'react'
 import { FaCheck, FaChevronLeft, FaChevronRight, FaBookmark } from 'react-icons/fa';
+import { useSearchParams } from 'react-router-dom';
 import { useAppearance } from '@/contexts/AppearanceContext';
 
 const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false }) => {
+  // Immediately check URL for review mode to prevent flickering
+  const [searchParams] = useSearchParams();
+  const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
+  
   // Try to use appearance context, but don't fail if not available
   const appearance = useAppearance();
   const themeColors = appearance.themeColors;
@@ -313,7 +318,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
 
         {/* Right: Finish Button */}
         <div className="flex items-center gap-1 shrink-0">
-          {status === 'taking' && (
+          {!isReviewMode && (
             <button
               disabled={isSubmitting}
               className="flex items-center gap-1 transition-colors hover:opacity-80 p-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -331,7 +336,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
             </button>
           )}
         </div>
-        {status === 'reviewing' && onRetake && (
+        {isReviewMode && onRetake && (
           <button
             onClick={onRetake}
             className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium"

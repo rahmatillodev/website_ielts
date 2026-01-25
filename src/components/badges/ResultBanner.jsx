@@ -75,17 +75,17 @@ const ResultBanner = ({ score, testType = "Reading" }) => {
 
   return (
     <div
-      className={`${performance.bgColor} ${performance.borderColor} border-2 rounded-2xl p-6 sm:p-8 mb-8 shadow-lg`}
+      className={`${performance.bgColor} ${performance.borderColor} border-2 rounded-2xl p-4 sm:p-5 mb-6 shadow-lg`}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3">
         <div className={`${performance.iconColor} shrink-0`}>
-          <Icon className="text-4xl sm:text-5xl" />
+          <Icon className="text-3xl sm:text-4xl" />
         </div>
         <div className="flex-1">
-          <h2 className={`${performance.titleColor} text-2xl sm:text-3xl font-black mb-2`}>
+          <h2 className={`${performance.titleColor} text-xl sm:text-2xl font-black mb-1.5`}>
             {performance.title}
           </h2>
-          <p className={`${performance.messageColor} text-base sm:text-lg font-semibold leading-relaxed`}>
+          <p className={`${performance.messageColor} text-sm sm:text-base font-semibold leading-relaxed`}>
             {performance.message}
           </p>
         </div>

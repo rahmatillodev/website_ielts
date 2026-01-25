@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { FaArrowLeft, FaExpand, FaBars, FaEdit, FaCompress } from 'react-icons/fa'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import AppearanceSettingsModal from '@/components/modal/AppearanceSettingsModal'
@@ -9,6 +9,9 @@ import { useAppearance } from '@/contexts/AppearanceContext'
 import { useAnnotation } from '@/contexts/AnnotationContext'
 
 const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, handleStart, onBack, showCorrectAnswers, onToggleShowCorrect, status, type }) => {
+  // Immediately check URL for review mode to prevent flickering
+  const [searchParams] = useSearchParams();
+  const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
   // Try to use appearance context, but don't fail if not available (for backward compatibility)
   let themeColors = { text: '#000000', background: '#ffffff', border: '#e5e7eb' };
   let theme = 'light';
@@ -118,7 +121,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
           </span>
         </div>
         {/* Show Correct Answers Toggle - only in review mode */}
-        {status === 'reviewing' && (
+        {isReviewMode && (
           <div className="flex items-center gap-2 ml-4">
             <Label htmlFor="show-correct-answers" className="flex items-center gap-2 cursor-pointer">
               <span 
@@ -137,7 +140,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
         )}
       </div>
 
-      {status !== 'reviewing' && (
+      {!isReviewMode && (
         <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-1">
           <div className="flex items-center gap-2">
             <div 

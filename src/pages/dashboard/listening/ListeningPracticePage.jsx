@@ -10,6 +10,7 @@ import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { toast } from "react-toastify";
 
 import QuestionHeader from "@/components/questions/QuestionHeader";
 import FinishModal from "@/components/modal/FinishModal";
@@ -26,12 +27,18 @@ const ListeningPracticePageContent = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { currentTest, fetchTestById, loadingTest: loading } = useTestStore();
+  const { currentTest, fetchTestById, loadingTest, error: testError } = useTestStore();
+  const loading = loadingTest;
   const { authUser } = useAuthStore();
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();
+  const [fetchError, setFetchError] = useState(null);
   // Status: 'taking', 'completed', 'reviewing'
-  const [status, setStatus] = useState('taking');
+  // Initialize status immediately from URL to prevent flickering
+  const [status, setStatus] = useState(() => {
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    return mode === 'review' ? 'reviewing' : 'taking';
+  });
   const [currentPart, setCurrentPart] = useState(1);
   const [timeRemaining, setTimeRemaining] = useState(null); // Will be set from test duration
   const [isStarted, setIsStarted] = useState(false);
@@ -54,6 +61,7 @@ const [startTime, setStartTime] = useState(null);
   // Audio player state
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [volume, setVolume] = useState(0.7);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
 
 
 
@@ -81,15 +89,26 @@ const [startTime, setStartTime] = useState(null);
     return sortedParts[0]?.listening_url || null;
   }, [currentTest?.parts]);
 
+  // Show toast for store-level errors
+  useEffect(() => {
+    if (testError && !currentTest) {
+      toast.error(testError);
+      setFetchError(testError);
+    }
+  }, [testError, currentTest]);
+
   useEffect(() => {
     // GUARD CLAUSE: Validate id parameter
     if (!id || (typeof id !== 'string' && typeof id !== 'number')) {
       console.error('[ListeningPracticePage] Invalid test ID:', id);
+      setFetchError('Invalid test ID');
+      toast.error('Invalid test ID. Please try again.');
       return;
     }
 
     // Component lifecycle management: Track if component is mounted
     let isMounted = true;
+    setFetchError(null);
 
     const loadTestData = async () => {
       try {
@@ -98,6 +117,25 @@ const [startTime, setStartTime] = useState(null);
 
         // Only update state if component is still mounted
         if (!isMounted) return;
+
+        // Validate that test data was loaded
+        const state = useTestStore.getState();
+        if (!state.currentTest) {
+          throw new Error('Test data not found');
+        }
+
+        // Validate listening_url exists
+        const sortedParts = [...(state.currentTest.parts || [])].sort((a, b) => {
+          const aNum = a.part_number ?? 0;
+          const bNum = b.part_number ?? 0;
+          return aNum - bNum;
+        });
+        
+        const firstPart = sortedParts[0];
+        if (!firstPart?.listening_url) {
+          console.warn('[ListeningPracticePage] No listening_url found for test:', id);
+          toast.error('Audio file not available for this test. Please contact support.');
+        }
 
         // Load saved data from localStorage
         const savedData = loadListeningPracticeData(id);
@@ -130,12 +168,17 @@ const [startTime, setStartTime] = useState(null);
           }
         }
       } catch (error) {
-        // Only log if component is still mounted
+        // Only log and show error if component is still mounted
         if (isMounted) {
+          const errorMessage = error?.message || 'Failed to load test data. Please check your connection and try again.';
           console.error('[ListeningPracticePage] Error loading test data:', {
             testId: id,
-            error: error.message
+            error: errorMessage,
+            errorName: error?.name,
+            errorStack: error?.stack
           });
+          setFetchError(errorMessage);
+          toast.error(errorMessage);
         }
       }
     };
@@ -143,11 +186,11 @@ const [startTime, setStartTime] = useState(null);
     loadTestData();
 
     // Cleanup: Clear currentTest when component unmounts and prevent state updates
-    // Also clear test list data to force refetch when navigating back
+    // Only clear currentTest, not the test list data, to preserve data when navigating back
     return () => {
       isMounted = false;
       const { clearCurrentTest } = useTestStore.getState();
-      clearCurrentTest(true); // Clear test list data to force refetch
+      clearCurrentTest(false); // Only clear currentTest, preserve test list data
     };
   }, [id, fetchTestById]);
 
@@ -620,6 +663,7 @@ const [startTime, setStartTime] = useState(null);
     setCurrentPart(1);
     setLatestAttemptId(null);
     setShowInitialModal(true);
+    setShouldAutoPlay(false); // Reset autoplay flag
     // Keep persisted audio settings (don't reset to loud defaults)
 
     clearListeningPracticeData(id);
@@ -784,6 +828,8 @@ const [startTime, setStartTime] = useState(null);
               onClick={() => {
                 setShowInitialModal(false);
                 handleStart();
+                // Trigger audio playback after user interaction
+                setShouldAutoPlay(true);
               }}
               className="w-full"
             >
@@ -913,16 +959,29 @@ const [startTime, setStartTime] = useState(null);
                 transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
               }}
             >
-              {/* Sticky Audio Player - only in review mode */}
-              {audioUrl && status === 'reviewing' && (
-                <AudioPlayer
-                  audioUrl={audioUrl}
-                  isTestMode={false}
-                  playbackRate={playbackRate}
-                  onPlaybackRateChange={setPlaybackRate}
-                  volume={volume}
-                  onVolumeChange={setVolume}
-                />
+              {/* Sticky Audio Player - visible in review mode, hidden but functional in test mode */}
+              {audioUrl && (
+                <div className={status === 'taking' ? 'hidden' : ''}>
+                  <AudioPlayer
+                    audioUrl={audioUrl}
+                    isTestMode={status === 'taking'}
+                    playbackRate={playbackRate}
+                    onPlaybackRateChange={setPlaybackRate}
+                    volume={volume}
+                    onVolumeChange={setVolume}
+                    autoPlay={shouldAutoPlay && status === 'taking'}
+                    onAudioEnded={status === 'taking' ? () => {
+                      // Auto-submit when audio ends in test mode (if timer hasn't already)
+                      if (timeRemaining > 0 && status === 'taking') {
+                        handleSubmitTest().then((result) => {
+                          if (result.success) {
+                            navigate(`/listening-result/${id}`);
+                          }
+                        });
+                      }
+                    } : undefined}
+                  />
+                </div>
               )}
 
               {/* Questions */}
@@ -1106,7 +1165,7 @@ const [startTime, setStartTime] = useState(null);
               style={{ width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%', backgroundColor: themeColors.background, color: themeColors.text }}
             >
               <div className="text-gray-500">
-                {loading ? "Loading questions..." : "No questions available"}
+                {loading ? "Loading questions..." : fetchError ? `Error: ${fetchError}` : testError ? `Error: ${testError}` : "No questions available"}
               </div>
             </div>
           )}

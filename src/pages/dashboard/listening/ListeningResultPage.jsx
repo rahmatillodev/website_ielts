@@ -285,17 +285,17 @@ const ListeningResultPage = () => {
           to="/dashboard"
           className="flex max-w-max items-center gap-2 text-blue-500 font-semibold text-sm mb-6 cursor-pointer uppercase tracking-wider hover:text-blue-600 transition-colors"
         >
-          <FaArrowLeft size={14} />
+          <FaArrowLeft size={12} />
           <span>Back to Dashboard</span>
         </Link>
 
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-black text-gray-900 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2">
               Exam Results
             </h1>
-            <div className="flex flex-wrap items-center gap-2 text-slate-500 font-medium text-sm sm:text-base">
+            <div className="flex flex-wrap items-center gap-2 text-slate-500 font-medium text-xs sm:text-sm">
               <span>{currentTest?.title || "Academic Listening Practice Test"}</span>
               <span className="text-gray-400">•</span>
               <span>Completed on {formatDate(attemptData?.completed_at || resultData?.completedAt)}</span>
@@ -304,10 +304,10 @@ const ListeningResultPage = () => {
           <div className="flex gap-3">
             <Button
               variant="outline"
-              className="border-gray-200 text-gray-700 shadow-sm flex gap-2 h-11 px-4 sm:px-6"
+              className="border-gray-200 text-gray-700 shadow-sm flex gap-2 h-9 px-4 sm:px-6"
               onClick={downloadPDF}
             >
-              <IoPrint className="text-lg" /> <span className="hidden sm:inline">Print</span>
+              <IoPrint className="text-base" /> <span className="hidden sm:inline">Print</span>
             </Button>
           </div>
         </div>
@@ -315,24 +315,23 @@ const ListeningResultPage = () => {
         <hr className="border-gray-200 mb-10" />
 
         {/* Performance Banner */}
-        <ResultBanner score={stats.score} testType="Listening" />
 
         {/* Stats Cards - Redesigned */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
           {/* Overall Score Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-lg">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
             <div className="relative z-10">
-              <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest mb-4">
+              <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest mb-3">
                 Overall Band Score
               </h3>
-              <div className="flex items-baseline gap-1 mb-6">
-                <span className="text-5xl sm:text-6xl font-black text-blue-600">
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-4xl sm:text-5xl font-black text-blue-600">
                   {stats.score}
                 </span>
-                <span className="text-gray-500 font-semibold text-xl">/ 9.0</span>
+                <span className="text-gray-500 font-semibold text-lg">/ 9.0</span>
               </div>
               {/* Progress Bar */}
-              <div className="w-full bg-blue-200 h-3 rounded-full overflow-hidden">
+              <div className="w-full bg-blue-200 h-2.5 rounded-full overflow-hidden">
                 <div 
                   className="bg-blue-600 h-full rounded-full transition-all duration-500"
                   style={{ width: `${(parseFloat(stats.score) / 9.0) * 100}%` }}
@@ -341,23 +340,23 @@ const ListeningResultPage = () => {
             </div>
             {/* Background Checkmark Icon */}
             <div className="absolute -right-4 -top-4 text-blue-200/30">
-              <FaCheckCircle size={100} />
+              <FaCheckCircle size={80} />
             </div>
           </div>
 
           {/* Correct Answers Card */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-6 sm:p-8 shadow-lg">
-            <div className="flex justify-between items-start mb-4">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-4 sm:p-5 shadow-lg">
+            <div className="flex justify-between items-start mb-3">
               <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest">
                 Correct Answers
               </h3>
-              <FaCheckCircle className="text-green-600 text-xl sm:text-2xl" />
+              <FaCheckCircle className="text-green-600 text-lg sm:text-xl" />
             </div>
             <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-4xl sm:text-5xl font-black text-gray-800">
+              <span className="text-3xl sm:text-4xl font-black text-gray-800">
                 {stats.correctCount}
               </span>
-              <span className="text-gray-500 font-semibold text-xl">
+              <span className="text-gray-500 font-semibold text-lg">
                 / {stats.totalQuestions}
               </span>
             </div>
@@ -367,15 +366,15 @@ const ListeningResultPage = () => {
           </div>
 
           {/* Time Taken Card */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl p-6 sm:p-8 shadow-lg">
-            <div className="flex justify-between items-start mb-4">
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl p-4 sm:p-5 shadow-lg">
+            <div className="flex justify-between items-start mb-3">
               <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest">
                 Time Taken
               </h3>
-              <LuTimer className="text-purple-600 text-xl sm:text-2xl" />
+              <LuTimer className="text-purple-600 text-lg sm:text-xl" />
             </div>
             <div className="mb-2">
-              <span className="text-4xl sm:text-5xl font-black text-gray-800">
+              <span className="text-3xl sm:text-4xl font-black text-gray-800">
                 {stats.timeTaken}
               </span>
             </div>
@@ -384,6 +383,7 @@ const ListeningResultPage = () => {
             </div>
           </div>
         </div>
+        <ResultBanner score={stats.score} testType="Listening" />
 
         {/* Detailed Answer Review Section */}
         <div className="mt-12">

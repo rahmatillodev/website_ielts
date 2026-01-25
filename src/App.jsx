@@ -136,12 +136,17 @@ export default App;
 
 
 
-/// Profile Navbar Name and status completed
-/// sidebar ni sectionlarga bo'lish va add full mock test completed
-/// readingdagi question 2types 
-/// payement  pageda center bilan ishlash 
-/// beta tag and hello world completed
-///  refine ui shimmer qo'shsih , cardlardagi chipslar , animation for card and navigation animations
-/// only cards scroll bo'lsin va paginatin change lazy loading completed
-/// writing page da own writing qo'shish with headers another pages completed
-/// change color 
+/// pdf ni to'grilash high
+/// sidebarni ranglari  done
+/// resultni ishlatish kerak orqaga qaytganda high
+/// pendingni to'g'rilash kerak orqaga qaytganda high
+/// tab almashganlarda  done
+/// image upload qilish kerak bo'ladi userda  done
+/// admimnda contextlarni to'grilsh kerak high
+/// highlight delete qilish kerak  done
+/// listening resultni to'g'rilash kerak 
+/// bookmarkni kattalshtirish kerak va 
+/// reaview qilish patdi va redo qilish tekshirish 
+/// send telegram button qilish kerak 
+/// channel qo'shish kerak 
+

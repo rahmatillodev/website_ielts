@@ -17,7 +17,7 @@ const LogoDesign = ({
         <MdAutoStories className={iconColor} size={iconSize} />
       </div>
 
-      <span className={`${textSize} font-sans tracking-tight leading-none`}>
+      <span className={`${textSize} font-sans tracking-tight leading-none flex items-center gap-2`}>
         <span className="font-black" style={{ color: color }}>ielt</span>
         <span className="font-bold" style={{ color: color }}>s</span>
         <span className="font-semibold" style={{ color: color }}>core</span>

@@ -92,7 +92,7 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
         }}
         className={`ml-1 transition-all ${isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
       >
-        {isBookmarked ? <FaBookmark className="w-3 h-3 text-red-500" /> : <FaRegBookmark className="w-3 h-3 text-gray-400" />}
+        {isBookmarked ? <FaBookmark className="w-5 h-5 text-red-500" /> : <FaRegBookmark className="w-5 h-5 text-gray-400" />}
       </button>
 
       {showWrong && correctAnswer && showCorrectAnswers && (

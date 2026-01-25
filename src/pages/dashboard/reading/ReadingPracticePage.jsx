@@ -31,7 +31,11 @@ const ReadingPracticePageContent = () => {
   const { isSidebarOpen } = useAnnotation();
   
   // Status: 'taking', 'completed', 'reviewing'
-  const [status, setStatus] = useState('taking');
+  // Initialize status immediately from URL to prevent flickering
+  const [status, setStatus] = useState(() => {
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    return mode === 'review' ? 'reviewing' : 'taking';
+  });
   const [currentPart, setCurrentPart] = useState(1); // Now represents part_number
   const [currentPage, setCurrentPage] = useState(1);
   const [timeRemaining, setTimeRemaining] = useState(null); // Will be set from test duration
@@ -126,11 +130,11 @@ const ReadingPracticePageContent = () => {
     loadTestData();
     
     // Cleanup: Clear currentTest when component unmounts and prevent state updates
-    // Also clear test list data to force refetch when navigating back
+    // Only clear currentTest, not the test list data, to preserve data when navigating back
     return () => {
       isMounted = false;
       const { clearCurrentTest } = useTestStore.getState();
-      clearCurrentTest(true); // Clear test list data to force refetch
+      clearCurrentTest(false); // Only clear currentTest, preserve test list data
     };
   }, [id, fetchTestById]);
 
