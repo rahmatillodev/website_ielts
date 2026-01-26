@@ -4,7 +4,7 @@ import { LuChevronsLeftRight } from "react-icons/lu";
 import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import PrecticeFooter from "@/components/questions/PrecticeFooter";
-import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData } from "@/store/LocalStorage/listeningStorage";
+import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData, clearAudioPosition } from "@/store/LocalStorage/listeningStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
@@ -45,6 +45,7 @@ const ListeningPracticePageContent = () => {
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 // Initialize modal state based on URL mode parameter
 const [showInitialModal, setShowInitialModal] = useState(() => {
   const mode = new URLSearchParams(window.location.search).get('mode');
@@ -62,6 +63,7 @@ const [startTime, setStartTime] = useState(null);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [volume, setVolume] = useState(0.7);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const audioPlayerRef = useRef(null);
 
 
 
@@ -390,6 +392,7 @@ const [startTime, setStartTime] = useState(null);
 
   useEffect(() => {
     if (!isStarted && !hasInteracted) return;
+    if (isPaused) return; // Don't countdown when paused
     if (timeRemaining === null) return; // Wait for timeRemaining to be initialized
 
     if (!startTime) {
@@ -408,7 +411,7 @@ const [startTime, setStartTime] = useState(null);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isStarted, hasInteracted, startTime, timeRemaining]);
+  }, [isStarted, hasInteracted, isPaused, startTime, timeRemaining]);
 
   // Auto-submit when timer reaches zero
   useEffect(() => {
@@ -419,6 +422,13 @@ const [startTime, setStartTime] = useState(null);
       // Auto-submit the test when timer reaches zero
       const autoSubmit = async () => {
         try {
+          // Clear audio position before submitting
+          if (id) {
+            clearAudioPosition(id);
+            if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
+              audioPlayerRef.current.clearPosition();
+            }
+          }
           const result = await handleSubmitTest();
           // Only navigate if component is still mounted
           if (isMounted) {
@@ -546,6 +556,7 @@ const [startTime, setStartTime] = useState(null);
     const now = Date.now();
     setIsStarted(true);
     setHasInteracted(true);
+    setIsPaused(false);
     setStartTime(now);
 
     if (id) {
@@ -559,9 +570,30 @@ const [startTime, setStartTime] = useState(null);
     }
   };
 
+  const handlePause = () => {
+    if (isPaused) {
+      // Resume
+      setIsPaused(false);
+      setIsStarted(true);
+      // Resume audio if it exists
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.play();
+      }
+    } else {
+      // Pause
+      setIsPaused(true);
+      setIsStarted(false);
+      // Pause audio if it exists
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+      }
+    }
+  };
+
   const handleBack = () => {
     if (id) {
       clearListeningPracticeData(id);
+      clearAudioPosition(id);
     }
     navigate("/dashboard");
   };
@@ -588,9 +620,14 @@ const [startTime, setStartTime] = useState(null);
       if (result.success) {
         setLatestAttemptId(result.attemptId);
         setStatus('completed');
-        // Clear practice data after successful submission
+        // Clear practice data and audio position after successful submission
         if (id) {
           clearListeningPracticeData(id);
+          clearAudioPosition(id);
+          // Also clear via audio player ref if available
+          if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
+            audioPlayerRef.current.clearPosition();
+          }
         }
         if (authUser?.id) {
           await fetchDashboardData(authUser.id, true);
@@ -610,7 +647,17 @@ const [startTime, setStartTime] = useState(null);
   };
 
   const handleReviewTest = async () => {
-    if (!authUser || !id) return;
+    // Ensure all required data is available
+    if (!authUser || !id || !currentTest) {
+      console.warn('[handleReviewTest] Missing required data:', { authUser: !!authUser, id: !!id, currentTest: !!currentTest });
+      return;
+    }
+
+    // Prevent concurrent review fetches
+    if (status === 'reviewing') {
+      console.warn('[handleReviewTest] Already in review mode');
+      return;
+    }
 
     try {
       const result = await fetchLatestAttempt(authUser.id, id);
@@ -638,14 +685,16 @@ const [startTime, setStartTime] = useState(null);
         });
         setAnswers(answersObj);
       } else {
-        console.error('Failed to fetch attempt:', result.error);
-        alert('Failed to load review data. Please try again.');
+        console.error('[handleReviewTest] Failed to fetch attempt:', result.error);
+        setStatus('taking'); // Reset to taking mode on error
         setShowCorrectAnswers(false);
+        console.warn('Failed to load review data. Please try again.');
       }
     } catch (error) {
-      console.error('Error fetching attempt:', error);
-      alert('An error occurred while loading review data.');
+      console.error('[handleReviewTest] Error fetching attempt:', error);
+      setStatus('taking'); // Reset to taking mode on error
       setShowCorrectAnswers(false);
+      console.warn('An error occurred while loading review data.');
     }
   };
 
@@ -674,9 +723,15 @@ const [startTime, setStartTime] = useState(null);
     setLatestAttemptId(null);
     setShowInitialModal(true);
     setShouldAutoPlay(false); // Reset autoplay flag
+    setIsPaused(false); // Reset pause state
     // Keep persisted audio settings (don't reset to loud defaults)
 
     clearListeningPracticeData(id);
+    clearAudioPosition(id);
+    // Also clear via audio player ref if available
+    if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
+      audioPlayerRef.current.clearPosition();
+    }
   };
 
   const handleFinish = () => {
@@ -858,7 +913,9 @@ const [startTime, setStartTime] = useState(null);
         timeRemaining={timeRemaining}
         isStarted={isStarted}
         hasInteracted={hasInteracted}
+        isPaused={isPaused}
         handleStart={handleStart}
+        handlePause={handlePause}
         onBack={handleBack}
         showCorrectAnswers={showCorrectAnswers}
         onToggleShowCorrect={(checked) => setShowCorrectAnswers(checked)}
@@ -973,14 +1030,23 @@ const [startTime, setStartTime] = useState(null);
               {audioUrl && (
                 <div className={status === 'taking' ? 'hidden' : ''}>
                   <AudioPlayer
+                    ref={audioPlayerRef}
                     audioUrl={audioUrl}
                     isTestMode={status === 'taking'}
                     playbackRate={playbackRate}
                     onPlaybackRateChange={setPlaybackRate}
                     volume={volume}
                     onVolumeChange={setVolume}
-                    autoPlay={shouldAutoPlay && status === 'taking'}
+                    autoPlay={shouldAutoPlay && status === 'taking' && !isPaused}
+                    testId={id}
                     onAudioEnded={status === 'taking' ? () => {
+                      // Clear audio position when audio ends
+                      if (id) {
+                        clearAudioPosition(id);
+                        if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
+                          audioPlayerRef.current.clearPosition();
+                        }
+                      }
                       // Auto-submit when audio ends in test mode (if timer hasn't already)
                       if (timeRemaining > 0 && status === 'taking') {
                         handleSubmitTest().then((result) => {

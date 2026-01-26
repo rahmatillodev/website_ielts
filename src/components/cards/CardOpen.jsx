@@ -91,6 +91,7 @@ const CardOpen = ({
       : `/reading-practice/${id}?mode=review`;
     navigate(practiceLink);
   };
+  
   const cardStatus = is_premium ? "Premium" : "Free";
   const createdDate = created_at ? formatDate(created_at) : '';
   const completedDate = attemptData?.completed_at ? formatDate(attemptData.completed_at) : (date ? formatDate(date) : '');

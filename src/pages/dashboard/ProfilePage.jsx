@@ -444,7 +444,7 @@ const ProfilePage = () => {
                         ? `tel:${settings.phone_number}`
                         : "#"
                     }
-                    target="_blank"
+                    target={`${settings?.phone_number ? `tel:${settings.phone_number}` : "#"}`}
                     rel="noopener noreferrer"
                   >
                     <p className="text-sm font-semibold text-gray-400">

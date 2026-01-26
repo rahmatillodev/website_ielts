@@ -44,6 +44,7 @@ const ReadingPracticePageContent = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [startTime, setStartTime] = useState(null); // Track when test started for elapsed time
+  const [isPaused, setIsPaused] = useState(false);
 
   const [answers, setAnswers] = useState({});
   const [reviewData, setReviewData] = useState({}); // Stores review data: { [questionId]: { userAnswer, isCorrect, correctAnswer } }
@@ -371,6 +372,7 @@ const ReadingPracticePageContent = () => {
   // Smart Timer effect - starts when isStarted OR hasInteracted is true
   useEffect(() => {
     if (!isStarted && !hasInteracted) return;
+    if (isPaused) return; // Don't countdown when paused
     if (timeRemaining === null) return; // Wait for timeRemaining to be initialized
 
     // Set start time if not already set
@@ -390,7 +392,7 @@ const ReadingPracticePageContent = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isStarted, hasInteracted, startTime, timeRemaining]);
+  }, [isStarted, hasInteracted, isPaused, startTime, timeRemaining]);
 
   // Auto-submit when timer reaches zero
   useEffect(() => {
@@ -540,6 +542,7 @@ const ReadingPracticePageContent = () => {
     const now = Date.now();
     setIsStarted(true);
     setHasInteracted(true);
+    setIsPaused(false);
     setStartTime(now);
     
     // Save initial state when starting
@@ -551,6 +554,18 @@ const ReadingPracticePageContent = () => {
         startTime: now,
         bookmarks,
       });
+    }
+  };
+
+  const handlePause = () => {
+    if (isPaused) {
+      // Resume
+      setIsPaused(false);
+      setIsStarted(true);
+    } else {
+      // Pause
+      setIsPaused(true);
+      setIsStarted(false);
     }
   };
 
@@ -607,7 +622,17 @@ const ReadingPracticePageContent = () => {
 
   // Handler for reviewing test
   const handleReviewTest = async () => {
-    if (!authUser || !id) return;
+    // Ensure all required data is available
+    if (!authUser || !id || !currentTest) {
+      console.warn('[handleReviewTest] Missing required data:', { authUser: !!authUser, id: !!id, currentTest: !!currentTest });
+      return;
+    }
+
+    // Prevent concurrent review fetches
+    if (status === 'reviewing') {
+      console.warn('[handleReviewTest] Already in review mode');
+      return;
+    }
 
     try {
       const result = await fetchLatestAttempt(authUser.id, id);
@@ -636,16 +661,18 @@ const ReadingPracticePageContent = () => {
         });
         setAnswers(answersObj);
       } else {
-        console.error('Failed to fetch attempt:', result.error);
-        alert('Failed to load review data. Please try again.');
-        // If there's an error, turn off "Show Correct Answers"
+        console.error('[handleReviewTest] Failed to fetch attempt:', result.error);
+        // Better error handling - don't use alert, use console and set state
+        setStatus('taking'); // Reset to taking mode on error
         setShowCorrectAnswers(false);
+        // Optionally show toast notification instead of alert
+        console.warn('Failed to load review data. Please try again.');
       }
     } catch (error) {
-      console.error('Error fetching attempt:', error);
-      alert('An error occurred while LoadingTest review data.');
-      // If there's an error, turn off "Show Correct Answers"
+      console.error('[handleReviewTest] Error fetching attempt:', error);
+      setStatus('taking'); // Reset to taking mode on error
       setShowCorrectAnswers(false);
+      console.warn('An error occurred while loading review data.');
     }
   };
 
@@ -675,6 +702,7 @@ const ReadingPracticePageContent = () => {
     setCurrentPart(1);
     setCurrentPage(1);
     setLatestAttemptId(null);
+    setIsPaused(false); // Reset pause state
     
     // Clear localStorage
     clearReadingPracticeData(id);
@@ -843,7 +871,9 @@ const ReadingPracticePageContent = () => {
         timeRemaining={timeRemaining}
         isStarted={isStarted}
         hasInteracted={hasInteracted}
+        isPaused={isPaused}
         handleStart={handleStart}
+        handlePause={handlePause}
         onBack={handleBack}
         showCorrectAnswers={showCorrectAnswers}
         onToggleShowCorrect={(checked) => setShowCorrectAnswers(checked)}
@@ -885,7 +915,7 @@ const ReadingPracticePageContent = () => {
             <div 
               className="border px-6 py-3 m-4 rounded-md"
               style={{ 
-                backgroundColor: theme === 'light' ? '#f3f4f6' : themeColors.background,
+                backgroundColor: theme === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
                 borderColor: themeColors.border
               }}
             >
@@ -895,6 +925,7 @@ const ReadingPracticePageContent = () => {
               >
                 Part {currentPart}: Read the text and answer questions {getPartQuestionRange()}.
               </h2>
+              {/* {description} */}
             </div>
             
             <div className="p-6">
@@ -902,7 +933,7 @@ const ReadingPracticePageContent = () => {
                 className="text-2xl font-semibold mb-6"
                 style={{ color: themeColors.text }}
               >
-                {currentPartData?.title || `Part ${currentPart}`}
+                {currentPartData?.title}
               </h2>
               
               {/* Display part image if available with click to expand */}
@@ -926,9 +957,9 @@ const ReadingPracticePageContent = () => {
                   style={{ color: themeColors.text }}
                 >
                   {currentPartData?.content ? (
-                    currentPartData.content.split('\n').map((paragraph, idx) => 
+                    currentPartData.content.split('<br/>').map((paragraph, idx) => 
                       paragraph.trim() ? (
-                        <p key={idx} className="mb-4" data-selectable="true">{paragraph}</p>
+                        <p key={idx} className="mb-4 whitespace-pre-wrap" data-selectable="true">{paragraph}</p>
                       ) : null
                     )
                   ) : null}
@@ -944,8 +975,9 @@ const ReadingPracticePageContent = () => {
         <div className="px-4">
           <div
             onMouseDown={startResize}
-            className="w-0.5 cursor-col-resize bg-gray-600 dark:bg-gray-600 h-full flex justify-center items-center relative"
+            className="w-0.5 cursor-col-resize  dark:bg-gray-600 h-full flex justify-center items-center relative"
             title="Drag to resize"
+            style={{ backgroundColor: themeColors.border }}
           >
             <div className="w-6 h-6 rounded-2xl bg-white flex items-center justify-center absolute border-2" style={{ borderColor: themeColors.border, backgroundColor: themeColors.background }}>
               <LuChevronsLeftRight style={{ color: themeColors.text }} />
