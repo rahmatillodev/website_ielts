@@ -25,7 +25,7 @@ const ReadingPracticePageContent = () => {
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentTest, fetchTestById, loadingTest: LoadingTest, error } = useTestStore();
-  const { authUser } = useAuthStore();
+  const { authUser, userProfile } = useAuthStore();
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const { isSidebarOpen } = useAnnotation();
@@ -95,12 +95,29 @@ const ReadingPracticePageContent = () => {
     let isMounted = true;
 
     const loadTestData = async () => {
-      console.log('[ReadingPracticePage] loadTestData called with id:', id);
+      console.log('[ReadingPracticePage] loadTestData called with id:', id, 'idType:', typeof id);
       try {
-        // Fetch test data
-        console.log('[ReadingPracticePage] Calling fetchTestById...');
-        await fetchTestById(id);
-        console.log('[ReadingPracticePage] fetchTestById completed');
+        // Verify fetchTestById is available and is a function
+        if (typeof fetchTestById !== 'function') {
+          console.error('[ReadingPracticePage] fetchTestById is not a function:', typeof fetchTestById);
+          if (isMounted) {
+            const { clearCurrentTest } = useTestStore.getState();
+            clearCurrentTest(false);
+          }
+          return;
+        }
+        
+        // Detect review mode from URL
+        const isReviewMode = searchParams.get('mode') === 'review';
+        const includeCorrectAnswers = isReviewMode;
+        
+        // Get user subscription status
+        const userSubscriptionStatus = userProfile?.subscription_status || "free";
+        
+        // Fetch test data with correct parameters
+        console.log('[ReadingPracticePage] Calling fetchTestById with id:', id, { includeCorrectAnswers, userSubscriptionStatus });
+        const result = await fetchTestById(id, false, includeCorrectAnswers, userSubscriptionStatus);
+        console.log('[ReadingPracticePage] fetchTestById completed:', result ? 'Success' : 'No data');
         
         // Only update state if component is still mounted
         if (!isMounted) return;

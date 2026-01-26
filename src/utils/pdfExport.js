@@ -2,20 +2,6 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { addBrandHeader } from "./pdfHeader";
 
-/**
- * Generates and downloads a PDF report for IELTS test results
- * 
- * @param {Object} options - Configuration options for the PDF
- * @param {Object} options.test - The test object (must have a title property)
- * @param {Object} options.stats - Statistics object containing score, correctCount, totalQuestions, timeTaken
- * @param {Array} options.answerDisplayData - Array of answer items with questionNumber, yourAnswer, isCorrect, correctAnswer
- * @param {boolean} options.showCorrectAnswers - Whether to include correct answers column
- * @param {Function} options.formatDate - Function to format dates
- * @param {string|Date} options.completedDate - The completion date (can be timestamp string or Date)
- * @param {string} options.testType - Type of test (e.g., "Reading", "Listening") - used in title and filename
- * @param {string} [options.defaultTestTitle] - Default test title if test.title is not available
- * @returns {Promise<void>}
- */
 export const generateTestResultsPDF = async ({
   test,
   stats,
@@ -28,45 +14,74 @@ export const generateTestResultsPDF = async ({
   settings
 }) => {
   // Validation
-  if (!test || !stats || !answerDisplayData || !answerDisplayData.length) {
-    console.warn('Missing required data for PDF generation');
-    return;
-  }
+  if (!test || !stats || !answerDisplayData || !answerDisplayData.length) return;
 
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const primaryColor = [59, 130, 246]; // #3B82F6
+  const darkGray = [31, 41, 55]; // #1F2937
+  const lightGray = [243, 244, 246]; // #F3F4F6
+  const successColor = [34, 197, 94]; // #22C55E
+  const errorColor = [239, 68, 68]; // #EF4444
   
-  // Add brand header
   let yPos = await addBrandHeader(doc, pageWidth, testType, settings);
 
-  // Test Info
-  doc.setTextColor(0, 0, 0); // Reset to black
-  doc.setFontSize(12);
+  // Statistics section with improved design
+  yPos += 10;
+  
+  // Stats box background
+  const statsBoxHeight = 45;
+  doc.setFillColor(...lightGray);
+  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, statsBoxHeight, 3, 3, 'F');
+  
+  // Stats title
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(...primaryColor);
+  doc.text('Test Summary', margin + 10, yPos + 8);
+  
+  // Stats content
+  doc.setFontSize(9);
   doc.setFont(undefined, 'normal');
-  doc.text(`Test: ${test?.title || defaultTestTitle}`, margin, yPos);
-  yPos += 6;
-  doc.text(`Date: ${formatDate(completedDate)}`, margin, yPos);
-  yPos += 6;
-  doc.text(`Score: ${stats.score} / 9.0`, margin, yPos);
-  yPos += 6;
-  doc.text(`Correct Answers: ${stats.correctCount} / ${stats.totalQuestions}`, margin, yPos);
-  yPos += 6;
-  doc.text(`Time Taken: ${stats.timeTaken}`, margin, yPos);
-  yPos += 15;
+  doc.setTextColor(...darkGray);
+  
+  const statsLeftX = margin + 10;
+  const statsRightX = pageWidth / 2 + 10;
+  let statsY = yPos + 18;
+  
+  // Left column
+  doc.text(`Total Questions: ${stats.totalQuestions || answerDisplayData.length}`, statsLeftX, statsY);
+  statsY += 6;
+  doc.text(`Correct Answers: ${stats.correctCount || answerDisplayData.filter(a => a.isCorrect).length}`, statsLeftX, statsY);
+  statsY += 6;
+  doc.text(`Score: ${stats.score || 'N/A'}`, statsLeftX, statsY);
+  
+  // Right column
+  statsY = yPos + 18;
+  doc.text(`Percentage: ${stats.percentage || 0}%`, statsRightX, statsY);
+  statsY += 6;
+  if (stats.timeTaken) {
+    doc.text(`Time Taken: ${stats.timeTaken}`, statsRightX, statsY);
+    statsY += 6;
+  }
+  if (completedDate && formatDate) {
+    doc.text(`Completed: ${formatDate(completedDate)}`, statsRightX, statsY);
+  }
+  
+  yPos += statsBoxHeight + 15;
 
-  // Prepare table data
+  // Table data preparation
   const tableData = answerDisplayData.map((item) => {
     const row = [
       item.questionNumber.toString(),
-      item.isCorrect ? '' : '✗',
+      item.isCorrect ? 'Correct' : 'Incorrect',
       item.yourAnswer || 'N/A',
     ];
-    
     if (showCorrectAnswers) {
       row.push(item.isCorrect ? item.yourAnswer : (item.correctAnswer || 'N/A'));
     }
-    
     return row;
   });
 
@@ -74,25 +89,121 @@ export const generateTestResultsPDF = async ({
     ? ['#', 'Status', 'Your Answer', 'Correct Answer']
     : ['#', 'Status', 'Your Answer'];
 
-  // Add table
+  // Enhanced table design
   doc.autoTable({
     startY: yPos,
     head: [tableColumns],
     body: tableData,
     theme: 'striped',
-    headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [249, 250, 251] },
-    styles: { fontSize: 9, cellPadding: 3 },
-    columnStyles: {
-      0: { cellWidth: 20 },
-      1: { cellWidth: 30, halign: 'center' },
-      2: { cellWidth: showCorrectAnswers ? 60 : 120 },
-      ...(showCorrectAnswers && { 3: { cellWidth: 60 } }),
+    headStyles: { 
+      fillColor: primaryColor, 
+      textColor: 255, 
+      fontStyle: 'bold',
+      fontSize: 10,
+      cellPadding: 5
     },
+    bodyStyles: {
+      fontSize: 9,
+      cellPadding: 4,
+      valign: 'middle',
+      textColor: darkGray
+    },
+    alternateRowStyles: {
+      fillColor: [249, 250, 251] // Very light gray for stripes
+    },
+    styles: { 
+      fontSize: 9, 
+      cellPadding: 4, 
+      valign: 'middle',
+      lineColor: [229, 231, 235], // Border color
+      lineWidth: 0.1
+    },
+    columnStyles: {
+      0: { 
+        cellWidth: 20, 
+        halign: 'center',
+        fontStyle: 'bold'
+      },
+      1: { 
+        cellWidth: 30, 
+        halign: 'center', 
+        textColor: [255, 255, 255] // Hide text, show icon
+      },
+      2: { 
+        cellWidth: showCorrectAnswers ? 70 : 120,
+        halign: 'left'
+      },
+      ...(showCorrectAnswers && {
+        3: { 
+          cellWidth: 70,
+          halign: 'left'
+        }
+      })
+    },
+    
+    // Draw status icons
+    didDrawCell: (data) => {
+      if (data.column.index === 1 && data.section === 'body') {
+        const isCorrect = answerDisplayData[data.row.index].isCorrect;
+        const posX = data.cell.x + data.cell.width / 2;
+        const posY = data.cell.y + data.cell.height / 2 + 1;
+
+        if (isCorrect) {
+          // Green circle with checkmark
+          doc.setFillColor(...successColor);
+          doc.circle(posX, posY - 1, 4, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(8);
+          doc.setFont(undefined, 'bold');
+          // Use checkmark symbol that works across all PDF viewers
+          doc.text('✓', posX, posY + 0.5, { align: 'center' });
+        } else {
+          // Red circle with X
+          doc.setFillColor(...errorColor);
+          doc.circle(posX, posY - 1, 4, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(8);
+          doc.setFont(undefined, 'bold');
+          // Use X symbol that works across all PDF viewers
+          doc.text('✗', posX, posY + 0.5, { align: 'center' });
+        }
+        
+        // Reset text color for other cells
+        doc.setTextColor(...darkGray);
+        doc.setFont(undefined, 'normal');
+      }
+    },
+    
+    // Add page numbers
+    didDrawPage: (data) => {
+      doc.setFontSize(8);
+      doc.setTextColor(...darkGray);
+      doc.setFont(undefined, 'normal');
+      const pageNum = doc.internal.getNumberOfPages();
+      doc.text(
+        `Page ${data.pageNumber} of ${pageNum}`,
+        pageWidth - margin,
+        pageHeight - 10,
+        { align: 'right' }
+      );
+    }
   });
 
-  // Save PDF
-  const fileName = `IELTS_${testType}_Results_${test?.title?.replace(/\s+/g, '_') || 'Test'}_${new Date().toISOString().split('T')[0]}.pdf`;
+  // Footer with branding
+  const finalY = doc.lastAutoTable.finalY || yPos;
+  if (finalY < pageHeight - 30) {
+    doc.setFontSize(7);
+    doc.setTextColor(...darkGray);
+    doc.setFont(undefined, 'italic');
+    doc.text(
+      'Generated by EDUCATION CORP - IELTS Preparation Platform',
+      pageWidth / 2,
+      pageHeight - 15,
+      { align: 'center' }
+    );
+  }
+
+  // Save file
+  const fileName = `IELTS_${testType}_Results_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
 };
-

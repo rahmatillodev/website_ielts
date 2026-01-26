@@ -8,8 +8,6 @@ import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPra
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
 
 import QuestionHeader from "@/components/questions/QuestionHeader";
@@ -29,7 +27,7 @@ const ListeningPracticePageContent = () => {
   const navigate = useNavigate();
   const { currentTest, fetchTestById, loadingTest, error: testError } = useTestStore();
   const loading = loadingTest;
-  const { authUser } = useAuthStore();
+  const { authUser, userProfile } = useAuthStore();
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const [fetchError, setFetchError] = useState(null);
@@ -46,12 +44,7 @@ const ListeningPracticePageContent = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-// Initialize modal state based on URL mode parameter
-const [showInitialModal, setShowInitialModal] = useState(() => {
-  const mode = new URLSearchParams(window.location.search).get('mode');
-  return mode !== 'review' && mode !== 'retake'; // Don't show modal in review or retake mode
-});
-const [startTime, setStartTime] = useState(null);
+  const [startTime, setStartTime] = useState(null);
 
   const [answers, setAnswers] = useState({});
   const [reviewData, setReviewData] = useState({});
@@ -62,7 +55,7 @@ const [startTime, setStartTime] = useState(null);
   // Audio player state
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [volume, setVolume] = useState(0.7);
-  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(true); // Auto-play by default
   const audioPlayerRef = useRef(null);
 
 
@@ -113,9 +106,28 @@ const [startTime, setStartTime] = useState(null);
     setFetchError(null);
 
     const loadTestData = async () => {
+      console.log('[ListeningPracticePage] loadTestData called with id:', id, 'idType:', typeof id);
       try {
-        // Fetch test data
-        await fetchTestById(id);
+        // Verify fetchTestById is available and is a function
+        if (typeof fetchTestById !== 'function') {
+          console.error('[ListeningPracticePage] fetchTestById is not a function:', typeof fetchTestById);
+          if (isMounted) {
+            setFetchError('fetchTestById is not available');
+          }
+          return;
+        }
+        
+        // Detect review mode from URL
+        const isReviewMode = searchParams.get('mode') === 'review';
+        const includeCorrectAnswers = isReviewMode;
+        
+        // Get user subscription status
+        const userSubscriptionStatus = userProfile?.subscription_status || "free";
+        
+        // Fetch test data with correct parameters
+        console.log('[ListeningPracticePage] Calling fetchTestById with id:', id, { includeCorrectAnswers, userSubscriptionStatus });
+        const result = await fetchTestById(id, false, includeCorrectAnswers, userSubscriptionStatus);
+        console.log('[ListeningPracticePage] fetchTestById completed:', result ? 'Success' : 'No data');
 
         // Only update state if component is still mounted
         if (!isMounted) return;
@@ -677,7 +689,6 @@ const [startTime, setStartTime] = useState(null);
         setStatus('reviewing');
         setLatestAttemptId(result.attempt.id);
         setShowCorrectAnswers(true);
-        setShowInitialModal(false);
 
         const answersObj = {};
         Object.keys(reviewDataObj).forEach((questionId) => {
@@ -701,6 +712,16 @@ const [startTime, setStartTime] = useState(null);
   const handleRetakeTest = () => {
     if (!id) return;
     
+    // Stop audio immediately
+    if (audioPlayerRef.current && audioPlayerRef.current.pause) {
+      audioPlayerRef.current.pause();
+    }
+    
+    // Stop timer immediately
+    setIsPaused(true);
+    setIsStarted(false);
+    setStartTime(null);
+    
     // Remove review mode from URL
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.delete('mode');
@@ -716,14 +737,10 @@ const [startTime, setStartTime] = useState(null);
     setShowCorrectAnswers(false); // Hide the show correct answers toggle
     // Reset timeRemaining to test duration (will be set by useEffect when currentTest is available)
     setTimeRemaining(currentTest ? convertDurationToSeconds(currentTest.duration) : 60 * 60);
-    setIsStarted(false);
     setHasInteracted(false);
-    setStartTime(null);
     setCurrentPart(1);
     setLatestAttemptId(null);
-    setShowInitialModal(true);
-    setShouldAutoPlay(false); // Reset autoplay flag
-    setIsPaused(false); // Reset pause state
+    setShouldAutoPlay(true); // Auto-play when retaking
     // Keep persisted audio settings (don't reset to loud defaults)
 
     clearListeningPracticeData(id);
@@ -732,6 +749,9 @@ const [startTime, setStartTime] = useState(null);
     if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
       audioPlayerRef.current.clearPosition();
     }
+    
+    // Auto-start the test after retake
+    handleStart();
   };
 
   const handleFinish = () => {
@@ -766,6 +786,32 @@ const [startTime, setStartTime] = useState(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, authUser, id, currentTest]);
+
+  // Auto-start test when page loads (if not in review/retake mode and no saved progress)
+  useEffect(() => {
+    const mode = searchParams.get('mode');
+    const isReviewOrRetake = mode === 'review' || mode === 'retake';
+    
+    // Only auto-start if:
+    // 1. Test is loaded
+    // 2. Not in review/retake mode
+    // 3. Not already started
+    // 4. Not already interacted
+    // 5. No saved data (meaning fresh start)
+    // 6. No startTime set (which would indicate saved progress was loaded)
+    if (
+      currentTest &&
+      !isReviewOrRetake &&
+      !isStarted &&
+      !hasInteracted &&
+      !startTime &&
+      !loadListeningPracticeData(id)
+    ) {
+      handleStart();
+      setShouldAutoPlay(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTest, searchParams, isStarted, hasInteracted, startTime]);
 
 
   // Annotation handlers - now support sectionType and testType
@@ -875,37 +921,6 @@ const [startTime, setStartTime] = useState(null);
         onNote={handleNote}
         testType="listening"
       />
-
-      {/* Initial Modal - only show on first visit, not in review/retake mode */}
-      <Dialog
-        open={status === 'taking' && showInitialModal && !hasInteracted && searchParams.get('mode') !== 'review' && searchParams.get('mode') !== 'retake'}
-        onOpenChange={() => { }}
-      >
-        <DialogContent className="sm:max-w-[500px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Listening Test Instructions</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-            You will be listening to an audio clip during this test. You will not be permitted to pause or rewind the audio while answering the questions. To continue, click Play.
-          </p>
-          <DialogFooter>
-            <Button
-              onClick={() => {
-                setShowInitialModal(false);
-                handleStart();
-                // Trigger audio playback after user interaction
-                setShouldAutoPlay(true);
-              }}
-              className="w-full"
-            >
-              Play
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-
 
       <QuestionHeader
         currentTest={currentTest}

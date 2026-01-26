@@ -23,7 +23,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const fileInputRef = useRef(null);
-  
+
   const [formData, setFormData] = useState({
     full_name: userProfile?.full_name || '',
     telegram_username: userProfile?.telegram_username || '',
@@ -45,12 +45,31 @@ const ProfileModal = ({ open, onOpenChange }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === 'phone_number') {
+      setFormData((prev) => ({ ...prev, [name]: formatUzPhone(value) }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+  // Telefon raqamini formatlash funksiyasi
+  const formatUzPhone = (value) => {
+    // Faqat raqamlarni qoldiramiz
+    const numbers = value.replace(/\D/g, '');
+
+    // Agar +998 bilan boshlanmasa, uni qo'shamiz
+    let result = '';
+    if (numbers.startsWith('998')) {
+      result = '+' + numbers;
+    } else {
+      result = '+998' + numbers;
+    }
+
+    // Maksimal uzunlikni cheklash (+998 va 9 ta raqam = 13 ta belgi)
+    return result.substring(0, 13);
   };
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
-
   };
 
   const handleFileChange = (e) => {
@@ -110,10 +129,15 @@ const ProfileModal = ({ open, onOpenChange }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+    if (formData.phone_number.length !== 13) {
+      toast.error("Iltimos, telefon raqamini to'liq kiriting (+998XXXXXXXXX)");
+      setLoading(false);
+      return;
+    }
+
     try {
       let avatarUrl = userProfile?.avatar_image;
-      
+
       // Upload avatar if new file selected
       if (avatarFile) {
         const uploadResult = await uploadAvatar(avatarFile);
@@ -124,13 +148,13 @@ const ProfileModal = ({ open, onOpenChange }) => {
         }
         avatarUrl = uploadResult.url;
       }
-      
+
       // Update user profile
       const result = await updateUserProfile({
         ...formData,
         avatar_image: avatarUrl,
       });
-      
+
       if (!result.success) {
         const errorMessage = result.error || 'Failed to update profile. Please try again.';
         toast.error(errorMessage);
@@ -148,18 +172,19 @@ const ProfileModal = ({ open, onOpenChange }) => {
     }
   };
 
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-black">Edit Profile</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Avatar Upload */}
           <div className="flex justify-center">
             <div className="relative">
-              <Avatar 
+              <Avatar
                 className="size-24 border-2 border-gray-100 cursor-pointer"
                 onClick={handleAvatarClick}
               >
@@ -195,7 +220,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
               className="rounded-xl h-11"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-gray-500">Telegram Username</Label>
             <Input
@@ -206,18 +231,19 @@ const ProfileModal = ({ open, onOpenChange }) => {
               className="rounded-xl h-11"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-gray-500">Phone Number</Label>
             <Input
               name="phone_number"
               value={formData.phone_number}
               onChange={handleChange}
+              maxLength={13}
               placeholder="+998 90 123 45 67"
               className="rounded-xl h-11"
             />
           </div>
-          
+
           <DialogFooter className="pt-4">
             <Button
               type="button"

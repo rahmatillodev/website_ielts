@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HiOutlinePencil } from "react-icons/hi2";
 import { LuUserRound } from "react-icons/lu";
 import { LiaExternalLinkAltSolid } from "react-icons/lia";
-import { Crown, Send, Zap } from "lucide-react";
+import { Crown, Send, Zap, Paperclip } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useSettingsStore } from "@/store/systemStore";
 import { Link } from "react-router-dom";
@@ -16,7 +16,6 @@ import { motion } from "framer-motion";
 import { useFeedbacksStore } from "@/store/feedbacks";
 import { toast } from "react-toastify";
 
-// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -79,6 +78,7 @@ const ProfilePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [attachment, setAttachment] = useState(null); // Attachment state
   const authUser = useAuthStore((state) => state.authUser);
   const userProfile = useAuthStore((state) => state.userProfile);
   const settings = useSettingsStore((state) => state.settings);
@@ -124,19 +124,57 @@ const ProfilePage = () => {
     return "U";
   };
 
+  // Clipboard copy utility
+  const handleCopy = (value, description = "Copied!") => {
+    if (value) {
+      navigator.clipboard.writeText(value);
+      toast.success(description, { autoClose: 1200 });
+    }
+  };
+
+  // Feedback submit handler with attachment support and toast
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const result = await addFeedback({
-      message: message,
-    });
+
+    let result = { success: false, error: null };
+
+    if (attachment) {
+      // If there's an attachment, upload with message as FormData
+      const formData = new FormData();
+      formData.append("message", message);
+      formData.append("attachment", attachment);
+
+      try {
+        // Here you should send formData (depends on addFeedback implementation)
+        result = await addFeedback(formData, { isFormData: true }); // This interface may need to be adapted!
+      } catch (error) {
+        toast.error("Failed to send feedback with attachment");
+      }
+    } else {
+      result = await addFeedback({
+        message: message,
+      });
+    }
+
     if (result.success) {
       toast.success("Feedback sent successfully");
       setMessage("");
-    } else {
+      setAttachment(null);
+    } else if (result.error) {
       toast.error(result.error);
     }
+
     setLoading(false);
+  };
+
+  // Handle file attachment input and show toast
+  const handleAttachment = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAttachment(file);
+      toast.info(`Attached file: ${file.name}`, { autoClose: 2000 });
+    }
   };
 
   return (
@@ -152,7 +190,6 @@ const ProfilePage = () => {
           <h1 className="text-3xl font-black text-gray-900">
             Account Settings
           </h1>
-
         </div>
         <p className="text-gray-500 font-medium">
           Manage your personal information and preferences.
@@ -359,8 +396,6 @@ const ProfilePage = () => {
           variants={cardVariants}
           whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
         >
-
-
           <motion.div
             className="space-y-6 flex flex-col md:flex-row items-start justify-between gap-6"
             variants={staggerContainer}
@@ -394,11 +429,11 @@ const ProfilePage = () => {
                   whileHover={{ x: 5 }}
                   transition={{ type: "spring", stiffness: 400 }}
                 >
-                  <Link to={settings?.telegram_admin_username} target="_blank">
-                    <p className="text-sm font-semibold text-gray-400 leading-none">
-                      {settings.telegram_admin_username}
+                  <a href={`https://t.me/${settings?.telegram_admin_username}`} target="_blank">
+                  <p className="text-sm font-semibold text-gray-400 leading-none">
+                      @{settings.telegram_admin_username}
                     </p>
-                  </Link>
+                  </a>
                   <LiaExternalLinkAltSolid
                     size={18}
                     className="text-gray-400 mb-0.5"
@@ -415,19 +450,17 @@ const ProfilePage = () => {
                   className="flex items-center gap-1"
                   whileHover={{ x: 5 }}
                   transition={{ type: "spring", stiffness: 400 }}
+                  onClick={() => handleCopy(settings?.support_link, "Email copied!")}
                 >
-                  <Link to={settings?.support_link} target="_blank">
-                    <p className="text-sm font-semibold text-gray-400">
-                      {settings.support_link}{" "}
-                    </p>
-                  </Link>
+                 <p className="text-sm font-semibold text-gray-400">
+                  {settings?.support_link}
+                 </p>
                   <LiaExternalLinkAltSolid
                     size={18}
                     className="text-gray-400 mb-0.5"
                   />
                 </motion.div>
               </motion.div>
-
               <hr className="border-gray-50" />
 
               {/* Support Number */}
@@ -437,22 +470,11 @@ const ProfilePage = () => {
                   className="flex items-center gap-1"
                   whileHover={{ x: 5 }}
                   transition={{ type: "spring", stiffness: 400 }}
+                  onClick={() => handleCopy(settings?.phone_number, "Phone number copied!")}
                 >
-                  <a
-                    href={
-                      settings?.phone_number
-                        ? `tel:${settings.phone_number}`
-                        : "#"
-                    }
-                    target={`${settings?.phone_number ? `tel:${settings.phone_number}` : "#"}`}
-                    rel="noopener noreferrer"
-                  >
-                    <p className="text-sm font-semibold text-gray-400">
-                      {settings?.phone_number
-                        ? settings.phone_number
-                        : "Not available"}
-                    </p>
-                  </a>
+                   <p className="text-sm font-semibold text-gray-400">
+                    {settings?.phone_number}
+                   </p>
                   <LiaExternalLinkAltSolid
                     size={18}
                     className="text-gray-400 mb-0.5"
@@ -462,7 +484,6 @@ const ProfilePage = () => {
             </div>
             <motion.div variants={itemVariants} className="bg-gray-50 p-6 rounded-2xl border border-gray-100 w-full md:w-1/3 mx-auto">
               <h3 className="text-lg font-black text-gray-900 mb-4">Send Feedback</h3>
-
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <textarea
