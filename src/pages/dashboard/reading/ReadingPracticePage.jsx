@@ -95,12 +95,22 @@ const ReadingPracticePageContent = () => {
     let isMounted = true;
 
     const loadTestData = async () => {
-      console.log('[ReadingPracticePage] loadTestData called with id:', id);
+      console.log('[ReadingPracticePage] loadTestData called with id:', id, 'idType:', typeof id);
       try {
+        // Verify fetchTestById is available and is a function
+        if (typeof fetchTestById !== 'function') {
+          console.error('[ReadingPracticePage] fetchTestById is not a function:', typeof fetchTestById);
+          if (isMounted) {
+            const { clearCurrentTest } = useTestStore.getState();
+            clearCurrentTest(false);
+          }
+          return;
+        }
+        
         // Fetch test data
-        console.log('[ReadingPracticePage] Calling fetchTestById...');
-        await fetchTestById(id);
-        console.log('[ReadingPracticePage] fetchTestById completed');
+        console.log('[ReadingPracticePage] Calling fetchTestById with id:', id);
+        const result = await fetchTestById(id);
+        console.log('[ReadingPracticePage] fetchTestById completed:', result ? 'Success' : 'No data');
         
         // Only update state if component is still mounted
         if (!isMounted) return;

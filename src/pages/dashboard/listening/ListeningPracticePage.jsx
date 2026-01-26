@@ -113,9 +113,21 @@ const [startTime, setStartTime] = useState(null);
     setFetchError(null);
 
     const loadTestData = async () => {
+      console.log('[ListeningPracticePage] loadTestData called with id:', id, 'idType:', typeof id);
       try {
+        // Verify fetchTestById is available and is a function
+        if (typeof fetchTestById !== 'function') {
+          console.error('[ListeningPracticePage] fetchTestById is not a function:', typeof fetchTestById);
+          if (isMounted) {
+            setFetchError('fetchTestById is not available');
+          }
+          return;
+        }
+        
         // Fetch test data
-        await fetchTestById(id);
+        console.log('[ListeningPracticePage] Calling fetchTestById with id:', id);
+        const result = await fetchTestById(id);
+        console.log('[ListeningPracticePage] fetchTestById completed:', result ? 'Success' : 'No data');
 
         // Only update state if component is still mounted
         if (!isMounted) return;

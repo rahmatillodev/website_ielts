@@ -7,7 +7,6 @@ import {
   LuSettings,
   LuStar,
   LuLogOut,
-  LuTestTube,
   LuChevronLeft,
   LuChevronRight,
 } from "react-icons/lu";
@@ -23,6 +22,7 @@ import { IoDocumentAttachOutline } from "react-icons/io5";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { useSmallScreen } from "@/hooks/useSmallScreen";
 import LogoDesign from "../LogoDesign";
+import { MdAutoStories } from "react-icons/md";
 
 const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapsed }) => {
   const content = (
@@ -124,9 +124,9 @@ const DashboardSidebar = ({ onNavigate }) => {
             </>
           ) : (
             <div className="flex flex-col items-center gap-2 w-full">
-              <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
-                <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
-              </div>
+               <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#1990e6" }}>
+        <MdAutoStories className="text-white" size={24} />
+      </div>
 
             </div>
           )}

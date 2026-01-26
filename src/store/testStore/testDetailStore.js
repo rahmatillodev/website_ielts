@@ -18,6 +18,8 @@ export const useTestDetailStore = create((set, get) => ({
   error: null,
 
   fetchTestById: async (testId, forceRefresh = false) => {
+    console.log('[fetchTestById] Called with:', { testId, testIdType: typeof testId, forceRefresh });
+    
     // GUARD CLAUSE: Validate testId parameter
     if (!testId || (typeof testId !== 'string' && typeof testId !== 'number')) {
       const errorMessage = `Invalid testId: ${testId}. Expected a valid string or number.`;
@@ -36,6 +38,7 @@ export const useTestDetailStore = create((set, get) => ({
     if (currentState.loadingTest && !forceRefresh) {
       // If already loading and we have data, return it
       if (currentState.currentTest && currentState.currentTest.id === testId) {
+        console.log('[fetchTestById] Already have data for this test, returning cached data');
         return currentState.currentTest;
       }
       // Otherwise wait for current fetch to complete
@@ -44,15 +47,22 @@ export const useTestDetailStore = create((set, get) => ({
     }
 
     // Clear previous test data when fetching a new one
+    console.log('[fetchTestById] Setting loading state and starting fetch...');
     set({ loadingTest: true, error: null, currentTest: null });
 
     try {
+      console.log('[fetchTestById] Starting parallel fetch of test, parts, and options...');
       // Fetch test, parts, and options in parallel (they don't depend on each other)
       const [testData, partsData, allOptions] = await Promise.all([
         fetchTestData(testId),
         fetchPartsData(testId),
         fetchOptionsData(testId),
       ]);
+      console.log('[fetchTestById] Initial fetch completed:', { 
+        hasTestData: !!testData, 
+        partsCount: partsData?.length || 0, 
+        optionsCount: allOptions?.length || 0 
+      });
 
       // Handle case where no parts exist
       if (!partsData || partsData.length === 0) {
