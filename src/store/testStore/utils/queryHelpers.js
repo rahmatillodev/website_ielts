@@ -68,6 +68,7 @@ const formatRLSError = (table, error) => {
 
 /**
  * Fetch test data by ID
+ * Only fetches active tests (is_active = true) as per USER_WEBSITE_TEST_FETCHING.md
  */
 export const fetchTestData = async (testId, timeoutMs = DEFAULT_TIMEOUT_MS) => {
   console.log('[fetchTestData] Fetching started...', { testId, timeoutMs });
@@ -82,6 +83,7 @@ export const fetchTestData = async (testId, timeoutMs = DEFAULT_TIMEOUT_MS) => {
     .from("test")
     .select("id, title, type, difficulty, duration, question_quantity, is_premium, is_active, created_at")
     .eq("id", testId)
+    .eq("is_active", true) // Only fetch active tests
     .maybeSingle();
 
   console.log('[fetchTestData] Query promise created, executing with timeout...');
@@ -192,18 +194,30 @@ export const fetchQuestionGroupsData = async (partIds, timeoutMs = DEFAULT_TIMEO
 
 /**
  * Fetch individual questions for question groups
+ * @param {Array} questionGroupIds - Array of question group IDs
+ * @param {boolean} includeCorrectAnswers - Whether to include correct_answer and explanation fields (for review mode)
+ * @param {number} timeoutMs - Query timeout in milliseconds
+ * @returns {Promise<Array>} Array of question objects
  */
-export const fetchQuestionsData = async (questionGroupIds, timeoutMs = DEFAULT_TIMEOUT_MS) => {
+export const fetchQuestionsData = async (questionGroupIds, includeCorrectAnswers = false, timeoutMs = DEFAULT_TIMEOUT_MS) => {
   if (!questionGroupIds || questionGroupIds.length === 0) {
     console.log('[fetchQuestionsData] No questionGroupIds provided, returning empty array');
     return [];
   }
 
-  console.log('[fetchQuestionsData] Fetching started...', { questionGroupIds: questionGroupIds.length, timeoutMs });
+  console.log('[fetchQuestionsData] Fetching started...', { questionGroupIds: questionGroupIds.length, includeCorrectAnswers, timeoutMs });
+  
+  // Build select query based on includeCorrectAnswers parameter
+  // For test-taking: exclude correct_answer and explanation
+  // For review mode: include correct_answer and explanation
+  let selectFields = "id, question_id, part_id, question_number, question_text, is_correct";
+  if (includeCorrectAnswers) {
+    selectFields = "id, question_id, part_id, question_number, question_text, correct_answer, explanation, is_correct";
+  }
   
   const queryPromise = supabase
     .from("questions")
-    .select("id, question_id, question_number, question_text, correct_answer")
+    .select(selectFields)
     .in("question_id", questionGroupIds)
     .order("question_number", { ascending: true });
 

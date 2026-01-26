@@ -17,8 +17,8 @@ export const useTestDetailStore = create((set, get) => ({
   loadingTest: false,
   error: null,
 
-  fetchTestById: async (testId, forceRefresh = false) => {
-    console.log('[fetchTestById] Called with:', { testId, testIdType: typeof testId, forceRefresh });
+  fetchTestById: async (testId, forceRefresh = false, includeCorrectAnswers = false, userSubscriptionStatus = "free") => {
+    console.log('[fetchTestById] Called with:', { testId, testIdType: typeof testId, forceRefresh, includeCorrectAnswers, userSubscriptionStatus });
     
     // GUARD CLAUSE: Validate testId parameter
     if (!testId || (typeof testId !== 'string' && typeof testId !== 'number')) {
@@ -51,18 +51,29 @@ export const useTestDetailStore = create((set, get) => ({
     set({ loadingTest: true, error: null, currentTest: null });
 
     try {
-      console.log('[fetchTestById] Starting parallel fetch of test, parts, and options...');
-      // Fetch test, parts, and options in parallel (they don't depend on each other)
-      const [testData, partsData, allOptions] = await Promise.all([
-        fetchTestData(testId),
-        fetchPartsData(testId),
-        fetchOptionsData(testId),
-      ]);
-      console.log('[fetchTestById] Initial fetch completed:', { 
-        hasTestData: !!testData, 
-        partsCount: partsData?.length || 0, 
-        optionsCount: allOptions?.length || 0 
-      });
+      // Step 1: Fetch test metadata (with is_active filter as per USER_WEBSITE_TEST_FETCHING.md)
+      console.log('[fetchTestById] Step 1: Fetching test metadata...');
+      const testData = await fetchTestData(testId);
+      
+      if (!testData) {
+        throw new Error(`Test with ID ${testId} not found or not active.`);
+      }
+
+      // Check premium access before proceeding
+      if (testData.is_premium && userSubscriptionStatus !== "premium") {
+        const errorMessage = "This test requires a premium subscription";
+        console.error('[fetchTestById] Premium access denied:', { testId, userSubscriptionStatus });
+        set({ 
+          error: errorMessage, 
+          loadingTest: false, 
+          currentTest: null 
+        });
+        throw new Error(errorMessage);
+      }
+
+      // Step 2: Fetch parts
+      console.log('[fetchTestById] Step 2: Fetching parts...');
+      const partsData = await fetchPartsData(testId);
 
       // Handle case where no parts exist
       if (!partsData || partsData.length === 0) {
@@ -79,20 +90,30 @@ export const useTestDetailStore = create((set, get) => ({
         return completeTest;
       }
 
-      // Fetch question groups and questions in parallel (questions depends on question groups)
-      const [questionGroupsData, individualQuestionsData] = await Promise.all([
-        fetchQuestionGroupsData(partIds),
-        // We'll fetch questions after we have question group IDs
-        Promise.resolve([]),
-      ]);
+      // Step 3: Fetch question groups
+      console.log('[fetchTestById] Step 3: Fetching question groups...');
+      const questionGroupsData = await fetchQuestionGroupsData(partIds);
 
       const questionGroupIds = questionGroupsData.map((qg) => qg.id).filter(Boolean);
 
-      // Fetch individual questions if we have question groups
-      let finalQuestionsData = individualQuestionsData;
+      // Step 4: Fetch individual questions (with conditional correct_answer as per USER_WEBSITE_TEST_FETCHING.md)
+      console.log('[fetchTestById] Step 4: Fetching individual questions...', { includeCorrectAnswers });
+      let finalQuestionsData = [];
       if (questionGroupIds.length > 0) {
-        finalQuestionsData = await fetchQuestionsData(questionGroupIds);
+        finalQuestionsData = await fetchQuestionsData(questionGroupIds, includeCorrectAnswers);
       }
+
+      // Step 5: Fetch options
+      console.log('[fetchTestById] Step 5: Fetching options...');
+      const allOptions = await fetchOptionsData(testId);
+      
+      console.log('[fetchTestById] All data fetched:', { 
+        hasTestData: !!testData, 
+        partsCount: partsData?.length || 0, 
+        questionGroupsCount: questionGroupsData?.length || 0,
+        questionsCount: finalQuestionsData?.length || 0,
+        optionsCount: allOptions?.length || 0 
+      });
 
       // Structure the data: Parts -> Question Groups -> Individual Questions
       const partsWithQuestionGroups = partsData.map((part) => {

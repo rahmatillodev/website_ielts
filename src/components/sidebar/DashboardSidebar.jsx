@@ -115,7 +115,7 @@ const DashboardSidebar = ({ onNavigate }) => {
                 <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
                   IELTSCORE
                 </span> */}
-                <LogoDesign/>
+                <LogoDesign />
                 <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">
                   Beta
                 </span>
@@ -124,9 +124,9 @@ const DashboardSidebar = ({ onNavigate }) => {
             </>
           ) : (
             <div className="flex flex-col items-center gap-2 w-full">
-               <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#1990e6" }}>
-        <MdAutoStories className="text-white" size={24} />
-      </div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#1990e6" }}>
+                <MdAutoStories className="text-white" size={24} />
+              </div>
 
             </div>
           )}
@@ -162,7 +162,7 @@ const DashboardSidebar = ({ onNavigate }) => {
         />
 
         {!effectiveIsCollapsed && (
-          <div className="mt-0 2xl:mt-2 px-4 2xl:px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px]">
+          <div className="mt-2 xl:mt-4 px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px]">
             Practice
           </div>
         )}
@@ -200,7 +200,7 @@ const DashboardSidebar = ({ onNavigate }) => {
         />
 
         {!effectiveIsCollapsed && (
-          <div className="mt-2 xl:mt-4 px-4 2xl:px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px]">
+          <div className="mt-2 xl:mt-4 px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px]">
             Tests & Analytics
           </div>
         )}

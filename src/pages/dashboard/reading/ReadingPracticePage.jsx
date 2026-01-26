@@ -25,7 +25,7 @@ const ReadingPracticePageContent = () => {
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentTest, fetchTestById, loadingTest: LoadingTest, error } = useTestStore();
-  const { authUser } = useAuthStore();
+  const { authUser, userProfile } = useAuthStore();
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const { isSidebarOpen } = useAnnotation();
@@ -107,9 +107,16 @@ const ReadingPracticePageContent = () => {
           return;
         }
         
-        // Fetch test data
-        console.log('[ReadingPracticePage] Calling fetchTestById with id:', id);
-        const result = await fetchTestById(id);
+        // Detect review mode from URL
+        const isReviewMode = searchParams.get('mode') === 'review';
+        const includeCorrectAnswers = isReviewMode;
+        
+        // Get user subscription status
+        const userSubscriptionStatus = userProfile?.subscription_status || "free";
+        
+        // Fetch test data with correct parameters
+        console.log('[ReadingPracticePage] Calling fetchTestById with id:', id, { includeCorrectAnswers, userSubscriptionStatus });
+        const result = await fetchTestById(id, false, includeCorrectAnswers, userSubscriptionStatus);
         console.log('[ReadingPracticePage] fetchTestById completed:', result ? 'Success' : 'No data');
         
         // Only update state if component is still mounted

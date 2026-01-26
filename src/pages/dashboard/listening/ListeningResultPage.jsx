@@ -316,12 +316,11 @@ const ListeningResultPage = () => {
 
         <hr className="border-gray-200 mb-10" />
 
-        {/* Performance Banner */}
 
         {/* Stats Cards - Redesigned */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
           {/* Overall Score Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
+          <div className="border-2 border-blue-200 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
             <div className="relative z-10">
               <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest mb-3">
                 Overall Band Score
@@ -347,7 +346,7 @@ const ListeningResultPage = () => {
           </div>
 
           {/* Correct Answers Card */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-4 sm:p-5 shadow-lg">
+          <div className="border-2 border-grey-200 rounded-2xl p-4 sm:p-5 shadow-lg">
             <div className="flex justify-between items-start mb-3">
               <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest">
                 Correct Answers
@@ -362,13 +361,13 @@ const ListeningResultPage = () => {
                 / {stats.totalQuestions}
               </span>
             </div>
-            <div className="text-sm font-semibold text-green-700">
+            <div className="text-sm font-semibold text-gray-500">
               {stats.percentage}%
             </div>
           </div>
 
           {/* Time Taken Card */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl p-4 sm:p-5 shadow-lg">
+          <div className="border-2 border-grey-200 rounded-2xl p-4 sm:p-5 shadow-lg">
             <div className="flex justify-between items-start mb-3">
               <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest">
                 Time Taken
@@ -380,7 +379,7 @@ const ListeningResultPage = () => {
                 {stats.timeTaken}
               </span>
             </div>
-            <div className="text-sm font-semibold text-purple-700">
+            <div className="text-sm font-semibold text-gray-500">
               Avg. {stats.avgTime} per question
             </div>
           </div>
