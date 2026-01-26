@@ -98,7 +98,7 @@ const PricingPage = () => {
   }, []);
 
   const handleTelegramRedirect = () => {
-    window.open(pricing.telegram_admin, "_blank");
+    window.open("https://t.me/" + pricing.telegram_admin, "_blank");
   };
 
   // Animation variants
