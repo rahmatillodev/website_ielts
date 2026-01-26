@@ -29,6 +29,7 @@ const ListeningPage = () => {
       testData={testListening}
       testType="listening"
       loading={loading}
+      loaded={loaded}
       fetchTests={fetchTests}
       emptyStateMessage=""
       emptyFreeMessage=""

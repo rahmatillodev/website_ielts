@@ -203,7 +203,7 @@ const LandingPage = () => {
             >
               Build Skills,<br />
               Boost Scores,<br />
-              Master <span className="text-[#4A90E2]">IELTS</span>.
+              Master <span className="text-[#4A90E2]">IELTS.</span>
             </motion.h1>
 
             <motion.p 
@@ -218,9 +218,10 @@ const LandingPage = () => {
               <Link to="/signup">
               <Button
                 size="lg"
-                className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white px-6 sm:px-8 py-4 sm:py-6 rounded-full font-semibold text-sm sm:text-base w-full sm:w-auto group transition-all hover:scale-105 shadow-[0_4px_20px_rgba(74,144,226,0.4)]"
+                className="bg-[#4A90E2] hover:bg-[#3a7ac8d3] text-white px-6 sm:px-8 py-4 sm:py-6 rounded-full font-semibold text-sm 
+                sm:text-base w-full sm:w-auto group transition-all shadow-[0px_20px_25px_-5px_#2D9CDB4D]"
                 >
-                Start Free Practice <LuArrowRight className="ml-2 inline transition-transform group-hover:translate-x-1" />
+                Start Free Practice <LuArrowRight className="ml-0 inline transition-transform group-hover:translate-x-2" />
               </Button>
                 </Link>
             </motion.div>
@@ -276,10 +277,10 @@ const LandingPage = () => {
 
             <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6 xl:mb-8">
               {[
-                { name: "Listening", score: 8.5, icon: LuHeadphones, color: "text-blue-500", delay: 0.4 },
-                { name: "Reading", score: 7.5, icon: LuBookOpen, color: "text-orange-500", delay: 0.5 },
-                { name: "Writing", score: 7.0, icon: LuPenTool, color: "text-purple-500", delay: 0.6 },
-                { name: "Speaking", score: 8.0, icon: LuMic, color: "text-green-500", delay: 0.7 },
+                { name: "Listening", score: "8.5", icon: LuHeadphones, color: "text-blue-500", delay: 0.4 },
+                { name: "Reading", score: "7.5", icon: LuBookOpen, color: "text-orange-500", delay: 0.5 },
+                { name: "Writing", score: "7.0", icon: LuPenTool, color: "text-purple-500", delay: 0.6 },
+                { name: "Speaking", score: "8.0", icon: LuMic, color: "text-green-500", delay: 0.7 },
               ].map((s) => (
                 <motion.div 
                   key={s.name} 
@@ -311,7 +312,7 @@ const LandingPage = () => {
                 <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase">
                   Average Score
                 </p>
-                <p className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-semibold">Band 8.5</p>
+                <p className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-semibold">Band 8.0</p>
               </div>
 
               {/* <div className="relative w-12 h-12 sm:w-14 sm:h-14 xl:w-16 xl:h-16 2xl:w-20 2xl:h-20">

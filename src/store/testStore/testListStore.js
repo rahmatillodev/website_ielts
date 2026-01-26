@@ -94,10 +94,13 @@ export const useTestListStore = create((set, get) => ({
         (test) => test.type === "listening"
       );
 
+      // IMPORTANT: Set loaded to true even if arrays are empty
+      // Empty arrays are a valid state (e.g., no listening tests exist)
+      // This prevents infinite loading states in the UI
       set({
         test_reading: filtered_data_reading,
         test_listening: filtered_data_listening,
-        loaded: true,
+        loaded: true, // Always set to true after successful fetch, even with empty data
         error: null,
       });
 
@@ -137,11 +140,14 @@ export const useTestListStore = create((set, get) => ({
       set({ 
         error: error.message || 'Failed to fetch tests. Please check your connection and try again.',
         loaded: false,
+        loading: false, // Ensure loading is false on error
       });
       
       throw error;
     } finally {
       // CRUCIAL: Always set loading to false to prevent infinite loading states
+      // This ensures loading is false even if data is empty (which is a valid state)
+      // The loaded flag is already set appropriately in the try block
       set({ loading: false });
     }
   },

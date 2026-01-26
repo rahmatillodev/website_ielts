@@ -950,7 +950,7 @@ const [startTime, setStartTime] = useState(null);
               <div
                 className="border-b px-6 py-3"
                 style={{
-                  backgroundColor: theme === 'light' ? '#f3f4f6' : themeColors.background,
+                  backgroundColor: theme === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
                   borderColor: themeColors.border
                 }}
               >
@@ -966,7 +966,7 @@ const [startTime, setStartTime] = useState(null);
                   className="text-2xl font-semibold mb-6"
                   style={{ color: themeColors.text }}
                 >
-                  {currentPartData?.title || `Part ${currentPart}`}
+                  {currentPartData?.title}
                 </h2>
                 <div className="prose prose-sm max-w-none relative">
                   <div
@@ -976,9 +976,9 @@ const [startTime, setStartTime] = useState(null);
                     style={{ color: themeColors.text }}
                   >
                     {currentPartData?.content ? (
-                      currentPartData.content.split('\n').map((paragraph, idx) =>
+                      currentPartData.content.split('<br/>').map((paragraph, idx) =>
                         paragraph.trim() ? (
-                          <p key={idx} className="mb-4" data-selectable="true">{paragraph}</p>
+                          <p key={idx} className="mb-4 whitespace-pre-wrap" data-selectable="true">{paragraph}</p>
                         ) : null
                       )
                     ) : null}
@@ -1001,11 +1001,12 @@ const [startTime, setStartTime] = useState(null);
             <div className="px-4">
               <div
                 onMouseDown={startResize}
-                className="w-0.5 cursor-col-resize bg-gray-600 h-full flex justify-center items-center relative"
+                className="w-0.5 cursor-col-resize  dark:bg-gray-600 h-full flex justify-center items-center relative"
                 title="Drag to resize"
+                style={{ backgroundColor: themeColors.border }}
               >
                 <div className="w-6 h-6 rounded-2xl flex items-center justify-center absolute border-2" style={{ borderColor: themeColors.border, backgroundColor: themeColors.background }}>
-                  <LuChevronsLeftRight />
+                  <LuChevronsLeftRight style={{ color: themeColors.text }} />
                 </div>
               </div>
             </div>
