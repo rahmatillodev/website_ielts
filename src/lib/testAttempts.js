@@ -292,39 +292,41 @@ const getCorrectAnswer = (question, questionGroup) => {
   const isMultipleChoice = groupType.includes('multiple') || groupType.includes('choice');
   const isTableType = groupType.includes('table');
 
-  // For multiple_choice and table types: use options table with is_correct
-  if (isMultipleChoice || isTableType) {
+  // For multiple_choice: use options table with is_correct
+  if (isMultipleChoice) {
     // For multiple_choice: find correct option in question's options
-    if (isMultipleChoice && question.options && question.options.length > 0) {
+    if (question.options && question.options.length > 0) {
       const correctOption = question.options.find((opt) => opt.is_correct === true);
       if (correctOption) {
         // Use option_text as the answer value (not letter)
         return correctOption.option_text || '';
       }
     }
+  }
 
-    // For table: try to get from question.correct_answer first (stored in testStore)
-    if (isTableType && question.correct_answer) {
-      return question.correct_answer;
-    }
-
-    // For table: find correct option in group options matching question_number
-    if (isTableType && questionGroup.options && questionGroup.options.length > 0) {
-      const correctOption = questionGroup.options.find(
-        (opt) => opt.is_correct === true && opt.question_number === question.question_number
-      );
-      if (correctOption) {
-        // Use option_text as the answer value (not letter)
-        return correctOption.option_text || '';
+  // For table type: correct_answer is stored directly on the question
+  // Options are group-level (question_number is null) and shared by all questions
+  if (isTableType) {
+    // Get correct answer directly from question.correct_answer (e.g., "A", "B", "C")
+    if (question.correct_answer) {
+      // The correct_answer is stored as a letter (e.g., "A"), but we need to match it
+      // to the option_text from group-level options
+      const correctAnswerLetter = question.correct_answer.toString().trim();
+      
+      // Try to find the option_text that matches this letter from group-level options
+      if (questionGroup.options && questionGroup.options.length > 0) {
+        const correctOption = questionGroup.options.find(
+          (opt) => (opt.letter || '').toLowerCase() === correctAnswerLetter.toLowerCase() ||
+                   (opt.option_text || '').toLowerCase() === correctAnswerLetter.toLowerCase()
+        );
+        if (correctOption) {
+          // Return option_text if available, otherwise return the letter
+          return correctOption.option_text || correctAnswerLetter;
+        }
       }
-    }
-
-    // Fallback: check question's options for table (in case options are stored per question)
-    if (isTableType && question.options && question.options.length > 0) {
-      const correctOption = question.options.find((opt) => opt.is_correct === true);
-      if (correctOption) {
-        return correctOption.option_text || '';
-      }
+      
+      // Fallback: return the letter directly if no matching option found
+      return correctAnswerLetter;
     }
   }
 

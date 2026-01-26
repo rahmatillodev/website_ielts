@@ -13,15 +13,22 @@ import { cn } from "@/lib/utils";
  * MatchingInformation - Renders matching_information question type
  * 
  * Data Structure:
- * - Main Question (question group) contains instruction with JSON: { "original": "...", "answer_options": [...] }
+ * - Main Question (question group) contains instruction as plain string (e.g., "Write NO MORE THAN TWO WORDS")
  * - Multiple questions (statements) that need to be matched to answer options
- * - Each question has correct_answer stored as text (not letter)
+ * - Each question has correct_answer stored as option_key (e.g., "A", "1", "I") in database, converted to text for display
+ * - Options array contains group-level options (question_number is null) with option_key and option_text fields
  * 
  * Format:
- * - Instructions text (from instruction.original)
- * - Answer options list in a grey box (A. Option1, B. Option2, etc.)
+ * - Instructions text (from instruction field, plain string)
+ * - Answer options list in a grey box (A. Option1, B. Option2, etc. or 1. Option1, 2. Option2, etc. or I. Option1, II. Option2, etc.)
  * - Each question with a dropdown selector
- * - Answers stored as text (e.g., "McKeachie"), not letter (e.g., "B")
+ * - Answers stored as text (e.g., "Dr. Nilson") for user selection
+ * - Supports option_key types: alphabetical (A-Z), numeric (1, 2, 3...), and Roman numerals (I, II, III...)
+ * 
+ * Options Structure:
+ * - options array: [{ option_key: "A", option_text: "Dr. Nilson", question_number: null }, ...]
+ * - Uses option_key and option_text directly from options array (new structure)
+ * - Falls back to parsing "A Nilson" format if option_key is not available (legacy support)
  */
 const MatchingInformation = ({ 
   question: _question, 
@@ -39,88 +46,122 @@ const MatchingInformation = ({
   const themeColors = appearance.themeColors;
   const isReviewMode = mode === 'review';
 
-  // Parse instruction JSON to extract answer_options
-  const { instructionText, answerOptions } = useMemo(() => {
+  // Helper function to convert number to Roman numeral (1-26)
+  const toRomanNumeral = (num) => {
+    if (num < 1 || num > 26) return '';
+    const values = [1, 4, 5, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
+    const numerals = ['I', 'IV', 'V', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX', 'XXI', 'XXII', 'XXIII', 'XXIV', 'XXV', 'XXVI'];
+    for (let i = values.length - 1; i >= 0; i--) {
+      if (num >= values[i]) {
+        return numerals[i];
+      }
+    }
+    return '';
+  };
+
+  // Parse instruction and extract answer_options from options array
+  const { instructionText, answerOptions, optionKeyType, optionKeyToTextMap, optionKeyList } = useMemo(() => {
     let instructionText = '';
     let answerOptions = [];
+    let optionKeyType = 'alphabetical'; // Default to alphabetical
+    const optionKeyToTextMap = new Map(); // Maps option_key (A, 1, I) to text
+    const optionKeyList = []; // Array of {key, text} objects to preserve order and keys
 
     try {
-      // Try to parse instruction as JSON
-      const instruction = _question?.instruction || '';
-      if (instruction) {
-        try {
-          const parsed = JSON.parse(instruction);
-          if (parsed && typeof parsed === 'object') {
-            instructionText = parsed.original || instruction;
-            const rawOptions = parsed.answer_options || [];
-            // Ensure answerOptions is always an array of strings
-            // Handle both string arrays and object arrays with {letter, text} structure
-            answerOptions = rawOptions.map(opt => {
-              if (typeof opt === 'string') {
-                return opt;
-              } else if (typeof opt === 'object' && opt !== null) {
-                // Extract text from object (e.g., {letter: 'A', text: 'Nilson'})
-                return opt.text || opt.option_text || String(opt);
-              }
-              return String(opt);
-            }).filter(Boolean);
-          } else {
-            instructionText = instruction;
-          }
-        } catch (e) {
-          // If not JSON, use instruction as-is
-          instructionText = instruction;
-        }
-      }
+      // Get instruction text (plain string, not JSON)
+      instructionText = _question?.instruction || '';
 
-      // Fallback 1: Extract answer options from options table (group level)
-      if (answerOptions.length === 0 && options && options.length > 0) {
+      // Priority 1: Extract answer options directly from options array (new structure)
+      // Options have option_key and option_text fields directly
+      if (options && options.length > 0) {
         const optionsMap = new Map();
-        options.forEach(opt => {
-          const optText = opt.option_text || '';
-          // Parse format: "A Nilson", "B McKeachie", etc.
-          const match = optText.match(/^([A-Z])[.\s]\s*(.+)$/);
-          if (match) {
-            const letter = match[1];
-            const text = match[2].trim();
-            if (!optionsMap.has(letter)) {
-              optionsMap.set(letter, text);
+        
+        // Filter group-level options (question_number is null)
+        const groupLevelOptions = options.filter(opt => opt.question_number === null || opt.question_number === undefined);
+        
+        groupLevelOptions.forEach(opt => {
+          // Check if option has option_key and option_text fields (new structure)
+          if (opt.option_key && opt.option_text) {
+            const key = String(opt.option_key).trim().toUpperCase();
+            const text = String(opt.option_text).trim();
+            if (text && !optionsMap.has(key)) {
+              optionsMap.set(key, text);
+              optionKeyToTextMap.set(key, text);
+              optionKeyList.push({ key, text });
+            }
+          } else if (opt.option_text) {
+            // Fallback: Parse format "A Nilson", "B McKeachie", etc. (old structure)
+            const match = String(opt.option_text).match(/^([A-Z0-9IVXLC]+)[.\s]\s*(.+)$/i);
+            if (match) {
+              const key = match[1].trim().toUpperCase();
+              const text = match[2].trim();
+              if (!optionsMap.has(key)) {
+                optionsMap.set(key, text);
+                optionKeyToTextMap.set(key, text);
+                optionKeyList.push({ key, text });
+              }
             }
           }
         });
         
-        // Sort by letter and extract texts
-        const sortedEntries = Array.from(optionsMap.entries()).sort((a, b) => 
-          a[0].localeCompare(b[0])
-        );
-        answerOptions = sortedEntries.map(([_, text]) => text);
+        // Sort by key and extract texts
+        optionKeyList.sort((a, b) => {
+          const firstKey = a.key;
+          if (/^\d+$/.test(firstKey)) {
+            return parseInt(a.key) - parseInt(b.key);
+          } else if (/^[IVX]+$/i.test(firstKey)) {
+            return a.key.localeCompare(b.key);
+          } else {
+            return a.key.localeCompare(b.key);
+          }
+        });
+        
+        answerOptions = optionKeyList.map(item => item.text);
+        
+        // Infer option_key_type from first key
+        if (optionKeyList.length > 0) {
+          const firstKey = optionKeyList[0].key;
+          if (/^\d+$/.test(firstKey)) {
+            optionKeyType = 'numeric';
+          } else if (/^[IVX]+$/i.test(firstKey)) {
+            optionKeyType = 'roman';
+          } else {
+            optionKeyType = 'alphabetical';
+          }
+        }
       }
 
-      // Fallback 2: Extract answer options from questions' options arrays
-      if (answerOptions.length === 0 && groupQuestions && groupQuestions.length > 0) {
-        const optionsMap = new Map();
-        // Use the first question's options (all questions should have the same options)
-        const firstQuestion = groupQuestions[0];
-        if (firstQuestion?.options && Array.isArray(firstQuestion.options)) {
-          firstQuestion.options.forEach(opt => {
-            const optText = opt.option_text || '';
-            // Parse format: "A uogsidyg", "B yuf678f", etc.
-            const match = optText.match(/^([A-Z])[.\s]\s*(.+)$/);
-            if (match) {
-              const letter = match[1];
-              const text = match[2].trim();
-              // Only add unique letters (first occurrence)
-              if (!optionsMap.has(letter)) {
-                optionsMap.set(letter, text);
+      // Fallback: Try to parse instruction as JSON (legacy support)
+      if (answerOptions.length === 0 && instructionText) {
+        try {
+          const parsed = JSON.parse(instructionText);
+          if (parsed && typeof parsed === 'object') {
+            instructionText = parsed.original || instructionText;
+            optionKeyType = parsed.option_key_type || 'alphabetical';
+            const rawOptions = parsed.answer_options || [];
+            rawOptions.forEach((opt, idx) => {
+              if (typeof opt === 'string') {
+                let optionKey = '';
+                if (optionKeyType === 'numeric') {
+                  optionKey = String(idx + 1);
+                } else if (optionKeyType === 'roman') {
+                  optionKey = toRomanNumeral(idx + 1);
+                } else {
+                  optionKey = String.fromCharCode(65 + idx);
+                }
+                optionKeyToTextMap.set(optionKey, opt);
+                optionKeyList.push({ key: optionKey, text: opt });
+              } else if (typeof opt === 'object' && opt !== null) {
+                const text = opt.text || opt.option_text || String(opt);
+                const key = opt.option_key || opt.letter || String.fromCharCode(65 + idx);
+                optionKeyToTextMap.set(key, text);
+                optionKeyList.push({ key, text });
               }
-            }
-          });
-          
-          // Sort by letter and extract texts
-          const sortedEntries = Array.from(optionsMap.entries()).sort((a, b) => 
-            a[0].localeCompare(b[0])
-          );
-          answerOptions = sortedEntries.map(([_, text]) => text);
+            });
+            answerOptions = optionKeyList.map(item => item.text).filter(Boolean);
+          }
+        } catch (e) {
+          // Not JSON, use instruction as-is
         }
       }
     } catch (error) {
@@ -128,7 +169,7 @@ const MatchingInformation = ({
       instructionText = _question?.instruction || '';
     }
 
-    return { instructionText, answerOptions };
+    return { instructionText, answerOptions, optionKeyType, optionKeyToTextMap, optionKeyList };
   }, [_question?.instruction, options, groupQuestions]);
 
   // Sort questions by question_number
@@ -144,11 +185,34 @@ const MatchingInformation = ({
   }, [groupQuestions]);
 
   // Get correct answer for a question
+  // Converts option_key (A, 1, I) to text if needed, or returns text directly
   const getCorrectAnswerForQuestion = (question) => {
-    if (question && question.correct_answer) {
-      return question.correct_answer;
+    if (!question || !question.correct_answer) {
+      return '';
     }
-    return '';
+    
+    const correctAnswer = question.correct_answer;
+    
+    // If correct_answer is already in answerOptions (text format), return it
+    if (answerOptions.includes(correctAnswer)) {
+      return correctAnswer;
+    }
+    
+    // If correct_answer is an option_key, convert it to text
+    if (optionKeyToTextMap.has(correctAnswer)) {
+      return optionKeyToTextMap.get(correctAnswer);
+    }
+    
+    // Fallback: try case-insensitive match
+    const lowerCorrectAnswer = correctAnswer.toLowerCase();
+    for (const [key, text] of optionKeyToTextMap.entries()) {
+      if (key.toLowerCase() === lowerCorrectAnswer) {
+        return text;
+      }
+    }
+    
+    // If no match found, return as-is (might be text that matches answerOptions)
+    return correctAnswer;
   };
 
   // Get review info for a question
@@ -228,19 +292,42 @@ const MatchingInformation = ({
             List of Researchers
           </h3>
           <div className="space-y-2">
-            {answerOptions.map((optionText, idx) => {
-              const letter = String.fromCharCode(65 + idx); // A, B, C, D...
-              return (
+            {optionKeyList.length > 0 ? (
+              // Use actual option_key from data
+              optionKeyList.map((item, idx) => (
                 <div 
                   key={idx}
                   className="flex items-start gap-2"
                   style={{ color: themeColors.text }}
                 >
-                  <span className="font-medium">{letter}.</span>
-                  <span>{optionText}</span>
+                  <span className="font-medium">{item.key}.</span>
+                  <span>{item.text}</span>
                 </div>
-              );
-            })}
+              ))
+            ) : (
+              // Fallback: Generate display key based on option_key_type
+              answerOptions.map((optionText, idx) => {
+                let displayKey = '';
+                if (optionKeyType === 'numeric') {
+                  displayKey = String(idx + 1);
+                } else if (optionKeyType === 'roman') {
+                  displayKey = toRomanNumeral(idx + 1);
+                } else {
+                  displayKey = String.fromCharCode(65 + idx); // A, B, C, D...
+                }
+                
+                return (
+                  <div 
+                    key={idx}
+                    className="flex items-start gap-2"
+                    style={{ color: themeColors.text }}
+                  >
+                    <span className="font-medium">{displayKey}.</span>
+                    <span>{optionText}</span>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
@@ -252,7 +339,8 @@ const MatchingInformation = ({
           const questionText = q.question_text || q.text || '';
           const review = getQuestionReview(qNumber);
           const isCorrect = review.isCorrect;
-          const correctAnswer = review.correctAnswer || getCorrectAnswerForQuestion(q);
+          // Get correct answer text (converted from option_key if needed)
+          const correctAnswerText = review.correctAnswer || getCorrectAnswerForQuestion(q);
           const selectedAnswer = getSelectedAnswer(qNumber);
           const showWrong = isReviewMode && !isCorrect;
           const showCorrect = isReviewMode && isCorrect;
@@ -289,9 +377,9 @@ const MatchingInformation = ({
                     Correct
                   </span>
                 )}
-                {showWrong && correctAnswer && showCorrectAnswers && (
+                {showWrong && correctAnswerText && showCorrectAnswers && (
                   <span className="text-xs text-green-600 font-medium ml-2">
-                    Correct: {correctAnswer}
+                    Correct: {correctAnswerText}
                   </span>
                 )}
               </div>
@@ -331,31 +419,68 @@ const MatchingInformation = ({
                           color: themeColors.text
                         }}
                       >
-                        {answerOptions.map((optionText, idx) => {
-                          const letter = String.fromCharCode(65 + idx);
-                          const isSelected = selectedAnswer === optionText;
-                          const isCorrectOption = isReviewMode && 
-                            optionText.toLowerCase() === (correctAnswer || '').toLowerCase().trim();
-                          
-                          return (
-                            <SelectItem
-                              key={idx}
-                              value={optionText}
-                              className={cn(
-                                isSelected && showCorrect && "bg-green-50",
-                                isSelected && showWrong && "bg-red-50"
-                              )}
-                              style={{
-                                backgroundColor: isSelected && showCorrect ? 'rgba(220, 252, 231, 0.5)' : 
-                                              isSelected && showWrong ? 'rgba(254, 226, 226, 0.5)' : 
-                                              'transparent',
-                                color: themeColors.text
-                              }}
-                            >
-                              {letter}. {optionText}
-                            </SelectItem>
-                          );
-                        })}
+                        {optionKeyList.length > 0 ? (
+                          // Use actual option_key from data
+                          optionKeyList.map((item, idx) => {
+                            const isSelected = selectedAnswer === item.text;
+                            const isCorrectOption = isReviewMode && 
+                              item.text.toLowerCase() === (correctAnswerText || '').toLowerCase().trim();
+                            
+                            return (
+                              <SelectItem
+                                key={idx}
+                                value={item.text}
+                                className={cn(
+                                  isSelected && showCorrect && "bg-green-50",
+                                  isSelected && showWrong && "bg-red-50"
+                                )}
+                                style={{
+                                  backgroundColor: isSelected && showCorrect ? 'rgba(220, 252, 231, 0.5)' : 
+                                                isSelected && showWrong ? 'rgba(254, 226, 226, 0.5)' : 
+                                                'transparent',
+                                  color: themeColors.text
+                                }}
+                              >
+                                {item.key}
+                              </SelectItem>
+                            );
+                          })
+                        ) : (
+                          // Fallback: Generate display key based on option_key_type
+                          answerOptions.map((optionText, idx) => {
+                            let displayKey = '';
+                            if (optionKeyType === 'numeric') {
+                              displayKey = String(idx + 1);
+                            } else if (optionKeyType === 'roman') {
+                              displayKey = toRomanNumeral(idx + 1);
+                            } else {
+                              displayKey = String.fromCharCode(65 + idx); // A, B, C, D...
+                            }
+                            
+                            const isSelected = selectedAnswer === optionText;
+                            const isCorrectOption = isReviewMode && 
+                              optionText.toLowerCase() === (correctAnswerText || '').toLowerCase().trim();
+                            
+                            return (
+                              <SelectItem
+                                key={idx}
+                                value={optionText}
+                                className={cn(
+                                  isSelected && showCorrect && "bg-green-50",
+                                  isSelected && showWrong && "bg-red-50"
+                                )}
+                                style={{
+                                  backgroundColor: isSelected && showCorrect ? 'rgba(220, 252, 231, 0.5)' : 
+                                                isSelected && showWrong ? 'rgba(254, 226, 226, 0.5)' : 
+                                                'transparent',
+                                  color: themeColors.text
+                                }}
+                              >
+                                {displayKey}. {optionText}
+                              </SelectItem>
+                            );
+                          })
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

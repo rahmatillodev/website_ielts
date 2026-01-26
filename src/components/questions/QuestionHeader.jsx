@@ -8,7 +8,7 @@ import ConfirmModal from '@/components/modal/ConfirmModal'
 import { useAppearance } from '@/contexts/AppearanceContext'
 import { useAnnotation } from '@/contexts/AnnotationContext'
 
-const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, handleStart, onBack, showCorrectAnswers, onToggleShowCorrect, status, type }) => {
+const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, isPaused, handleStart, handlePause, onBack, showCorrectAnswers, onToggleShowCorrect, status, type }) => {
   // Immediately check URL for review mode to prevent flickering
   const [searchParams] = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
@@ -149,13 +149,21 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             >
               {formatTime(timeRemaining)}
             </div>
-            <button
-              onClick={handleStart}
-              disabled={isStarted || hasInteracted}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              { isStarted ? "Pause" : "Start"}
-            </button>
+            {!isStarted && !hasInteracted ? (
+              <button
+                onClick={handleStart}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+              >
+                Start
+              </button>
+            ) : (
+              <button
+                onClick={handlePause}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+              >
+                {isPaused ? "Resume" : "Pause"}
+              </button>
+            )}
           </div>
           <p 
             className="text-xs text-center"

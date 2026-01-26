@@ -5,9 +5,10 @@ import { useAuthStore } from '../store/authStore'
 export default function ProtectedRoute({ children }) {
   const authUser = useAuthStore((state) => state.authUser)
   const loading = useAuthStore((state) => state.loading)
+  const isInitialized = useAuthStore((state) => state.isInitialized)
 
-  // Show loading state while checking authentication
-  if (loading) {
+  // Show loading state while checking authentication or before initialization
+  if (loading || !isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

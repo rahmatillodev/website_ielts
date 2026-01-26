@@ -1,9 +1,10 @@
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 import { useAppearance } from "@/contexts/AppearanceContext";
+import { saveAudioPosition, loadAudioPosition, clearAudioPosition } from "@/store/LocalStorage/listeningStorage";
 
-const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded, autoPlay = false }) => {
+const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded, autoPlay = false, testId = null }, ref) => {
     const { themeColors } = useAppearance();
     const audioRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -11,6 +12,8 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
     const [duration, setDuration] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const [playError, setPlayError] = useState(null);
+    const positionSaveIntervalRef = useRef(null);
+    const hasRestoredPositionRef = useRef(false);
 
     // Update audio source when URL changes
     useEffect(() => {
@@ -26,6 +29,114 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
             });
         }
     }, [audioUrl]);
+
+    // Reset restoration flag when testId changes
+    useEffect(() => {
+        hasRestoredPositionRef.current = false;
+    }, [testId]);
+
+    // Load and restore saved audio position on mount
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio || !audioUrl || !testId || hasRestoredPositionRef.current) return;
+
+        const restorePosition = () => {
+            const savedPosition = loadAudioPosition(testId);
+            if (savedPosition !== null && savedPosition >= 0) {
+                // Wait for audio to be ready before setting position
+                const tryRestore = () => {
+                    // Only restore if position is valid (less than duration)
+                    if (audio.duration && savedPosition >= audio.duration) {
+                        // Position is beyond audio duration, don't restore
+                        hasRestoredPositionRef.current = true;
+                        return;
+                    }
+                    
+                    if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
+                        audio.currentTime = savedPosition;
+                        setCurrentTime(savedPosition);
+                        hasRestoredPositionRef.current = true;
+                    } else {
+                        // Wait for audio to load more data
+                        const handleCanPlay = () => {
+                            if (audio.duration && savedPosition < audio.duration) {
+                                audio.currentTime = savedPosition;
+                                setCurrentTime(savedPosition);
+                            }
+                            hasRestoredPositionRef.current = true;
+                            audio.removeEventListener('canplay', handleCanPlay);
+                        };
+                        audio.addEventListener('canplay', handleCanPlay, { once: true });
+                    }
+                };
+
+                if (audio.readyState >= 1) { // HAVE_METADATA
+                    // Check if we have duration info
+                    if (audio.duration && !isNaN(audio.duration)) {
+                        tryRestore();
+                    } else {
+                        // Wait for duration to be available
+                        const handleLoadedMetadata = () => {
+                            tryRestore();
+                            audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                        };
+                        audio.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
+                    }
+                } else {
+                    audio.addEventListener('loadedmetadata', () => {
+                        tryRestore();
+                    }, { once: true });
+                }
+            } else {
+                // No saved position, mark as restored to prevent further attempts
+                hasRestoredPositionRef.current = true;
+            }
+        };
+
+        // Try to restore position when audio is ready
+        if (audio.readyState >= 1) {
+            restorePosition();
+        } else {
+            audio.addEventListener('loadedmetadata', restorePosition, { once: true });
+        }
+
+        return () => {
+            // Cleanup is handled by once: true on event listeners
+        };
+    }, [audioUrl, testId]);
+
+    // Save audio position every 2 seconds
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio || !testId) return;
+
+        // Clear any existing interval
+        if (positionSaveIntervalRef.current) {
+            clearInterval(positionSaveIntervalRef.current);
+        }
+
+        // Set up interval to save position every 2 seconds
+        positionSaveIntervalRef.current = setInterval(() => {
+            if (audio && !isNaN(audio.currentTime) && audio.currentTime >= 0) {
+                saveAudioPosition(testId, audio.currentTime);
+            }
+        }, 2000);
+
+        return () => {
+            if (positionSaveIntervalRef.current) {
+                clearInterval(positionSaveIntervalRef.current);
+                positionSaveIntervalRef.current = null;
+            }
+        };
+    }, [testId]);
+
+    // Clear audio position when component unmounts or testId changes (cleanup)
+    useEffect(() => {
+        return () => {
+            // Don't clear on unmount - we want to persist the position
+            // Only clear when explicitly requested (e.g., test finished/reset)
+        };
+    }, [testId]);
 
     // NOTE: We intentionally do NOT auto-play in review mode.
     // Autoplay is often blocked by browsers and can also start at full volume,
@@ -124,59 +235,69 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
         }
     }, [volume, isMuted]);
 
+    const pause = () => {
+        if (audioRef.current && isPlaying) {
+            audioRef.current.pause();
+            setIsPlaying(false);
+        }
+    };
+
+    const play = () => {
+        if (!audioRef.current) return;
+        
+        setPlayError(null);
+        const audio = audioRef.current;
+        
+        // Ensure audio is loaded before playing
+        if (audio.readyState < 2) { // HAVE_CURRENT_DATA
+            audio.load();
+        }
+        
+        const playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise
+                .then(() => {
+                    setIsPlaying(true);
+                })
+                .catch((error) => {
+                    console.error('[AudioPlayer] Play error:', error);
+                    setPlayError('Could not start audio. Please try again.');
+                });
+        } else {
+            setIsPlaying(true);
+        }
+    };
+
     const togglePlayPause = () => {
         if (!isTestMode) {
             // In review mode, allow pause
             if (isPlaying) {
-                audioRef.current?.pause();
+                pause();
             } else {
-                setPlayError(null);
-                const p = audioRef.current?.play();
-                if (p && typeof p.catch === 'function') {
-                    p.catch((error) => {
-                        console.error('[AudioPlayer] Play error:', error);
-                        setPlayError('Tap Play to start the audio (your browser blocked autoplay).');
-                    });
-                }
+                play();
             }
-            setIsPlaying(!isPlaying);
         } else {
-            // In test mode, only allow play (no pause)
+            // In test mode, allow play and pause
             if (!isPlaying) {
-                setPlayError(null);
-                const audio = audioRef.current;
-                if (!audio) {
-                    setPlayError('Audio not ready. Please wait a moment.');
-                    return;
-                }
-                
-                // Ensure audio is loaded before playing
-                if (audio.readyState < 2) { // HAVE_CURRENT_DATA
-                    audio.load();
-                }
-                
-                const p = audio.play();
-                if (p && typeof p.catch === 'function') {
-                    p.catch((error) => {
-                        console.error('[AudioPlayer] Play error in test mode:', error);
-                        setPlayError('Tap Play to start the audio. Your browser may have blocked autoplay.');
-                    });
-                } else {
-                    setIsPlaying(true);
-                }
+                play();
+            } else {
+                pause();
             }
         }
     };
     
-    // Expose play method for external control (e.g., from modal)
-    useEffect(() => {
-        if (isTestMode && audioRef.current) {
-            // Store play method on audio element for external access
-            audioRef.current._playMethod = () => {
-                togglePlayPause();
-            };
-        }
-    }, [isTestMode]);
+    // Expose pause, play, and clearPosition methods via ref
+    useImperativeHandle(ref, () => ({
+        pause,
+        play,
+        isPlaying: () => isPlaying,
+        clearPosition: () => {
+            if (testId) {
+                clearAudioPosition(testId);
+                hasRestoredPositionRef.current = false;
+            }
+        },
+    }), [isPlaying, testId]);
 
     const handleSeek = (e) => {
         if (!isTestMode && audioRef.current) {
@@ -215,12 +336,8 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
                 <div className="flex items-center gap-4">
                     <button
                         onClick={togglePlayPause}
-                        disabled={isTestMode && isPlaying}
-                        className={`p-3 rounded-full transition-colors ${isTestMode && isPlaying
-                                ? "bg-gray-300 cursor-not-allowed"
-                                    : "bg-blue-600 hover:bg-blue-700 text-white"
-                            }`}
-                        title={isTestMode && isPlaying ? "Cannot pause during test" : isPlaying ? "Pause" : "Play"}
+                        className="p-3 rounded-full transition-colors bg-blue-600 hover:bg-blue-700 text-white"
+                        title={isPlaying ? "Pause" : "Play"}
                     >
                         {isPlaying ? <FaPause size={16} style={{ color: themeColors.text }} /> : <FaPlay size={16} style={{ color: themeColors.text }} />}
                     </button>
@@ -304,5 +421,8 @@ const AudioPlayer = ({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange,
             </div>
         </div>
     );
-};
+});
+
+AudioPlayer.displayName = 'AudioPlayer';
+
 export default AudioPlayer;

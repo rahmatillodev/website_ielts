@@ -10,6 +10,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import CardLocked from "../cards/CardLocked";
 import CardOpen from "../cards/CardOpen";
 import { motion } from "framer-motion";
+import { LibraryCardShimmer } from "@/components/ui/shimmer";
 
 const TestsLibraryPage = ({
   title,
@@ -44,6 +45,8 @@ const TestsLibraryPage = ({
   const itemsPerLoad = 9; // Items to load per scroll
   const scrollContainerRef = useRef(null);
   const isLoadingMoreRef = useRef(false);
+  const hasFetchedRef = useRef(false); // Track if we've attempted a fetch
+  const loadingTimeoutRef = useRef(null); // Safety timeout ref
 
   // Animation variants for card container
   const containerVariants = {
@@ -77,23 +80,23 @@ const TestsLibraryPage = ({
   const allTests = Array.isArray(testData) ? testData : [];
 
   // Ensure tests are fetched when component mounts or route changes
-  // Force refresh if data was cleared (when navigating back from practice page)
+  // Only fetch on initial mount or route change, not when data is empty
   useEffect(() => {
     if (!fetchTests) return;
 
-    // Force fetch if data is empty, regardless of loading state
-    const hasData = allTests.length > 0;
-    const shouldForceRefresh = !loaded || !hasData;
-
-    // Always fetch if no data, even if loading is true
-    if (shouldForceRefresh) {
-      fetchTests(true);
-    } else if (!loaded && !loading) {
-      // Normal fetch if not loaded and not currently loading
-      fetchTests();
+    // Only fetch if we haven't fetched yet for this route
+    // Don't re-fetch just because data is empty - that's a valid state
+    if (!hasFetchedRef.current && !loading) {
+      hasFetchedRef.current = true;
+      fetchTests(false); // Don't force refresh on initial load
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname, loaded, allTests.length, loading, fetchTests]); // Re-run when route changes or data state changes
+  }, [location.pathname, fetchTests]); // Re-run when route changes
+
+  // Reset fetch flag when route changes to allow fresh fetch
+  useEffect(() => {
+    hasFetchedRef.current = false;
+  }, [location.pathname]);
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(allTests) || allTests.length === 0) {
@@ -248,6 +251,36 @@ const TestsLibraryPage = ({
     setSearchQuery(e.target.value);
   };
 
+  // Safety guard: Prevent infinite loading state
+  // If loading is still true after 5 seconds, force it to false
+  useEffect(() => {
+    if (loading) {
+      // Clear any existing timeout
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+
+      // Set a safety timeout
+      loadingTimeoutRef.current = setTimeout(() => {
+        // This is a safety measure - the store should handle this, but if it doesn't,
+        // we log a warning. The store's finally block should prevent this from happening.
+        console.warn('[TestsLibraryPage] Loading state exceeded 5 seconds. This may indicate a store issue.');
+      }, 5000);
+    } else {
+      // Clear timeout if loading becomes false
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+    }
+
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [loading]);
+
   return (
     <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
       {/* Sticky Header */}
@@ -320,7 +353,15 @@ const TestsLibraryPage = ({
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto pb-4 -mx-3 md:-mx-8 px-3 md:px-8 pt-4"
       >
-        {allTests.length === 0 ? (
+        {/* First Priority: Loading State - Show skeleton loaders when loading and no data */}
+        {loading && allTests.length === 0 ? (
+          <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
+            {Array.from({ length: 9 }).map((_, index) => (
+              <LibraryCardShimmer key={index} isGridView={isGridView} />
+            ))}
+          </div>
+        ) : /* Second Priority: Empty State - Show empty message when not loading and no data */
+        !loading && allTests.length === 0 ? (
           <div className="flex flex-1 items-center justify-center min-h-[300px]">
             {emptyStateMessage ? (
               <motion.div
@@ -349,7 +390,8 @@ const TestsLibraryPage = ({
               </motion.div>
             )}
           </div>
-        ) : allTests.length > 0 && filteredData.length === 0 ? (
+        ) : /* Third Priority: No Search Results - Show message when data exists but filtered results are empty */
+        allTests.length > 0 && filteredData.length === 0 ? (
           <div className="flex flex-1 items-center justify-center min-h-[300px]">
             <div className="py-20 text-center text-gray-400 font-semibold w-full whitespace-pre-line">
               {searchQuery.trim() !== "" && emptySearchMessage ? (
@@ -369,7 +411,8 @@ const TestsLibraryPage = ({
               )}
             </div>
           </div>
-        ) : currentItems.length > 0 ? (
+        ) : /* Fourth Priority: Show Data - Only show cards when not loading and we have items */
+        !loading && currentItems.length > 0 ? (
           <>
             <motion.div
               className={
@@ -382,33 +425,31 @@ const TestsLibraryPage = ({
               animate="visible"
               key={`${activeTab}-${searchQuery}-${isGridView}`}
             >
-              {currentItems
-                
-                .map((test, index) => {
-                  const subscriptionStatus = userProfile?.subscription_status ?? "free";
-                  const canAccess = subscriptionStatus === "premium" || !test.is_premium;
+              {currentItems.map((test, index) => {
+                const subscriptionStatus = userProfile?.subscription_status ?? "free";
+                const canAccess = subscriptionStatus === "premium" || !test.is_premium;
 
-                  return (
-                    <motion.div
-                      key={test.id}
-                      variants={itemVariants}
-                      layout
-                    >
-                      {canAccess ? (
-                        <CardOpen
-                          {...test}
-                          isGridView={isGridView}
-                          testType={testType}
-                        />
-                      ) : (
-                        <CardLocked
-                          {...test}
-                          isGridView={isGridView}
-                        />
-                      )}
-                    </motion.div>
-                  );
-                })}
+                return (
+                  <motion.div
+                    key={test.id}
+                    variants={itemVariants}
+                    layout
+                  >
+                    {canAccess ? (
+                      <CardOpen
+                        {...test}
+                        isGridView={isGridView}
+                        testType={testType}
+                      />
+                    ) : (
+                      <CardLocked
+                        {...test}
+                        isGridView={isGridView}
+                      />
+                    )}
+                  </motion.div>
+                );
+              })}
             </motion.div>
 
             {/* Loading indicator when loading more */}

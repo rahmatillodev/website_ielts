@@ -5,14 +5,13 @@ import { useSettingsStore } from "@/store/systemStore";
 
 const LandingFooter = () => {
   const settings = useSettingsStore((state) => state.settings);
-  const telegramUrl = settings?.telegram_channel || "#";
-  const instagramUrl = settings?.instagram_channel || "#";
+
 
   return (
     <footer className="bg-white border-t border-gray-200 w-full">
       <div className="mx-auto px-4 sm:px-6 py-10 sm:py-16 max-w-7xl">
         {/* Top */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 lg:gap-12 items-start">
+        <div className="flex flex-col sm:flex-row gap-8 sm:gap-10 lg:gap-12 justify-between">
           {/* Brand */}
           <div className="w-full min-w-0 max-w-md">
             <div className="flex items-center gap-2 mb-4">
@@ -27,18 +26,18 @@ const LandingFooter = () => {
             </p>
             <div className="flex gap-3 mt-6">
               <a
-                href={telegramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`https://t.me/${settings?.telegram_channel || "#"}`}
+                target={`https://t.me/${settings?.telegram_channel || "#"}`}
+                rel={`https://t.me/${settings?.telegram_channel || "#"}`}
                 className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-600 transition"
                 aria-label="Telegram"
               >
                 <FaTelegramPlane size={14} />
               </a>
               <a
-                href={instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`https://www.instagram.com/${settings?.instagram_channel || "#"}`}
+                target={`https://www.instagram.com/${settings?.instagram_channel || "#"}`}
+                rel={`https://www.instagram.com/${settings?.instagram_channel || "#"}`}
                 className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-600 transition"
                 aria-label="Instagram"
               >
@@ -67,33 +66,7 @@ const LandingFooter = () => {
           </div>
 
           {/* Social */}
-          <div className="flex flex-col sm:items-start">
-            <span className="text-sm font-semibold text-gray-900 mb-4 block">
-              Social
-            </span>
-            <ul className="space-y-3 text-sm text-gray-500">
-              <li>
-                <a
-                  href={telegramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-blue-600 transition"
-                >
-                  Telegram
-                </a>
-              </li>
-              <li>
-                <a
-                  href={instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-blue-600 transition"
-                >
-                  Instagram
-                </a>
-              </li>
-            </ul>
-          </div>
+          
         </div>
 
         {/* Bottom */}
