@@ -200,3 +200,26 @@ export const clearAudioPosition = (testId) => {
   }
 };
 
+/**
+ * Clear all listening-related data from localStorage
+ * This includes all practice data, result data, and audio positions
+ */
+export const clearAllListeningData = () => {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.startsWith(STORAGE_KEY_PREFIX) ||
+        key.startsWith(RESULT_KEY_PREFIX) ||
+        key.startsWith(AUDIO_POSITION_KEY_PREFIX)
+      )) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  } catch (error) {
+    console.error('Error clearing all listening data:', error);
+  }
+};
+

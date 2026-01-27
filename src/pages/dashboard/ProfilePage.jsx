@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -90,26 +90,45 @@ const ProfilePage = () => {
   const phone_number = userProfile?.phone_number || "";
   const tg_username = userProfile?.telegram_username || "";
 
-  // Premium status check
-  const isPremium = userProfile?.subscription_status === "premium";
-  const premiumStart = userProfile?.premium_started_at ? new Date(userProfile.premium_started_at) : null;
-  const premiumUntil = userProfile?.premium_until
-    ? new Date(userProfile.premium_until)
-    : null;
-  const daysRemaining = premiumUntil
-    ? Math.max(0, differenceInCalendarDays(premiumUntil, premiumStart))
-    : 0;
+  // Memoize name parts and first name
+  const { nameParts, firstName } = useMemo(() => {
+    const parts = fullName ? fullName.split(" ") : [];
+    return {
+      nameParts: parts,
+      firstName: parts[0] || ""
+    };
+  }, [fullName]);
 
-  const totalDays = premiumStart && premiumUntil ? differenceInCalendarDays(premiumUntil, premiumStart) : 0;
-  const remainingDays = premiumUntil ? Math.max(0, differenceInCalendarDays(premiumUntil, new Date())) : 0;
-  const progressPercent = totalDays > 0 ? (remainingDays / totalDays) * 100 : 0;
+  // Memoize premium calculations
+  const premiumData = useMemo(() => {
+    const isPremium = userProfile?.subscription_status === "premium";
+    const premiumStart = userProfile?.premium_started_at ? new Date(userProfile.premium_started_at) : null;
+    const premiumUntil = userProfile?.premium_until
+      ? new Date(userProfile.premium_until)
+      : null;
+    const daysRemaining = premiumUntil
+      ? Math.max(0, differenceInCalendarDays(premiumUntil, premiumStart))
+      : 0;
+    const totalDays = premiumStart && premiumUntil ? differenceInCalendarDays(premiumUntil, premiumStart) : 0;
+    const remainingDays = premiumUntil ? Math.max(0, differenceInCalendarDays(premiumUntil, new Date())) : 0;
+    const progressPercent = totalDays > 0 ? (remainingDays / totalDays) * 100 : 0;
 
-  // Split full_name into first and last name for display
-  const nameParts = fullName ? fullName.split(" ") : [];
-  const firstName = nameParts[0] || "";
+    return {
+      isPremium,
+      premiumStart,
+      premiumUntil,
+      daysRemaining,
+      
+      totalDays,
+      remainingDays,
+      progressPercent
+    };
+  }, [userProfile?.subscription_status, userProfile?.premium_started_at, userProfile?.premium_until]);
 
-  // Get initials for avatar
-  const getInitials = () => {
+  const { isPremium, premiumStart, premiumUntil, daysRemaining, progressPercent } = premiumData;
+
+  // Memoize initials calculation
+  const initials = useMemo(() => {
     if (fullName) {
       if (nameParts.length >= 2) {
         return (
@@ -122,7 +141,7 @@ const ProfilePage = () => {
       return email.substring(0, 2).toUpperCase();
     }
     return "U";
-  };
+  }, [fullName, nameParts, email]);
 
   // Clipboard copy utility
   const handleCopy = (value, description = "Copied!") => {
@@ -239,7 +258,7 @@ const ProfilePage = () => {
                         alt="User Avatar"
                       />
                       <AvatarFallback className="bg-gray-100 text-gray-400 text-3xl font-semibold">
-                        {getInitials()}
+                        {initials}
                       </AvatarFallback>
                     </Avatar>
                   </div>
@@ -346,7 +365,7 @@ const ProfilePage = () => {
                   First Name
                 </Label>
                 <Input
-                  defaultValue={firstName}
+                  value={firstName}
                   placeholder="have don't name"
                   className="bg-gray-50/50 border-gray-100 cursor-default rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
@@ -357,7 +376,7 @@ const ProfilePage = () => {
                   telegram username
                 </Label>
                 <Input
-                  defaultValue={tg_username}
+                  value={tg_username}
                   placeholder="have don't telegram username"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
@@ -368,7 +387,7 @@ const ProfilePage = () => {
                   Email Address
                 </Label>
                 <Input
-                  defaultValue={email}
+                  value={email}
                   type="email"
                   placeholder="have don't email"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
@@ -380,7 +399,7 @@ const ProfilePage = () => {
                   Phone Number
                 </Label>
                 <Input
-                  defaultValue={phone_number}
+                  value={phone_number}
                   placeholder="have don't phone number"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
@@ -510,12 +529,6 @@ const ProfilePage = () => {
                     </>
                   )}
                 </motion.button>
-
-                {status === 'success' && (
-                  <p className="text-xs text-green-600 font-semibold text-center mt-2">
-                    Thank you! Your feedback has been sent.
-                  </p>
-                )}
               </form>
             </motion.div>
           </motion.div>

@@ -3,18 +3,12 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Mail,
-  Lock,
-  User,
-  ChevronLeft,
-  BookOpen,
-  Headphones,
-  PenTool,
-  ArrowRight,
-} from "lucide-react";
+import { Mail, Lock, User, ChevronLeft, ArrowRight } from "lucide-react";
 import { toast } from "react-toastify";
 import LogoDesign from "@/components/LogoDesign";
+import AnimatedPolygonDecoration from "@/components/auth/AnimatedPolygonDecoration";
+import { motion } from "framer-motion";
+import { MdAutoStories } from "react-icons/md";
 
 // Public Sign Up page
 function SignUpPage() {
@@ -45,104 +39,61 @@ function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-white justify-center items-center">
-      {/* Left Panel */}
-      <div className="hidden lg:flex lg:w-2/5 text-white flex-col justify-between p-12 bg-primary min-h-screen">
-        <div>
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 mb-5 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-300 group"
-          >
-            <ChevronLeft className="w-4 h-4 text-white group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-medium text-white">
-              Back to Home
-            </span>
-          </button>
+    <div className="min-h-screen flex bg-white">
+      {/* Left Panel - Branding with Animation */}
+      <AnimatedPolygonDecoration />
 
-          {/* LOGO (yangilangan, yumaloq, oq rangda) */}
-          <div className="mb-12">
-          <LogoDesign className="w-fit text-white" iconColor="text-[#1990e6]" color="white" />
-          </div>
-
-          {/* Headline */}
-          <h2 className="text-4xl font-semibold mb-6">
-            Achieve your dream band score.
-          </h2>
-
-          {/* Description */}
-          <p className="text-white/90 text-lg leading-relaxed">
-            Access premium reading, listening, and writing simulations designed
-            to mirror the exact computer-delivered IELTS interface.
-          </p>
-        </div>
-
-        {/* Features Card */}
-        <div className="bg-gradient-to-br from-white/15 to-white/5 shadow-lg shadow-primary/30 backdrop-blur-sm rounded-lg p-6 max-w-sm">
-          <p className="text-sm text-white/70 mb-4 font-medium">WHAT'S INCLUDED</p>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 rounded-lg p-2.5">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  Reading Practice
-                </p>
-                <p className="text-xs text-white/70">
-                  Full-length simulations
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 rounded-lg p-2.5">
-                <Headphones className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  Listening Practice
-                </p>
-                <p className="text-xs text-white/70">
-                  Audio-based exercises
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 rounded-lg p-2.5">
-                <PenTool className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  Writing Practice
-                </p>
-                <p className="text-xs text-white/70">
-                  Task 1 &amp; 2 simulations
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel */}
-      <div className="w-full lg:w-3/5 p-8 bg-white min-h-screen flex flex-col justify-center items-center">
+      {/* Right Panel - Sign Up Form */}
+      <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center bg-white">
+        {/* Mobile back button */}
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-300 lg:hidden group"
+          className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-300 lg:hidden group self-start"
         >
           <ChevronLeft className="w-4 h-4 text-gray-700 group-hover:-translate-x-1 transition-transform" />
           <span className="text-sm font-medium text-gray-700">Back</span>
         </button>
 
-        <div className="w-full flex items-center justify-center mt-5">
-          <div className="w-full max-w-md">
-            <h1 className="text-3xl font-semibold mb-2">
-              Create an account
-            </h1>
-            <p className="text-gray-600 mb-8">
-              Please enter your details to create an account.
-            </p>
+        <div className="w-full max-w-md">
+          {/* Logo - Mobile */}
+          <div className="lg:hidden mb-8">
+            <LogoDesign
+              className="w-fit"
+              iconColor="text-[#1990e6]"
+              color="#1990e6"
+            />
+          </div>
+          <div className="flex items-center gap-2 py-8">
+            <div className="p-2 bg-[#1990e6] rounded-md">
+              <MdAutoStories className="text-2xl text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">IELTSCORE</h1>
+          </div>
+
+          <h1 className="text-3xl font-semibold mb-2 text-gray-900">
+            Create an account
+          </h1>
+          <p className="text-gray-600 mb-8">
+            Please enter your details to create an account.
+          </p>
+          {/* Tab Switcher */}
+          <div className="flex items-center gap-1 mb-8 bg-gray-100 rounded-lg p-1">
+            <Link
+              to="/login"
+              className="flex-1 px-4 py-2 rounded-md text-gray-600 font-medium text-sm hover:text-gray-900 transition-all text-center"
+            >
+              Sign In
+            </Link>
+            <button className="flex-1 px-4 py-2 rounded-md bg-white text-gray-900 font-medium text-sm shadow-sm transition-all">
+              Sign Up
+            </button>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
 
             <form onSubmit={handleSignUp} className="space-y-6">
               {/* Full Name */}
@@ -155,7 +106,7 @@ function SignUpPage() {
                   <Input
                     type="text"
                     placeholder="Full name"
-                    className="pl-10 bg-gray-50 border-gray-200"
+                    className="pl-10 bg-gray-50 border-gray-200 h-11"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     disabled={loading}
@@ -172,8 +123,8 @@ function SignUpPage() {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
                     type="email"
-                    placeholder="name@example.com"
-                    className="pl-10 bg-gray-50 border-gray-200"
+                    placeholder="name@company.com"
+                    className="pl-10 bg-gray-50 border-gray-200 h-11"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
@@ -190,8 +141,8 @@ function SignUpPage() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
                     type="password"
-                    placeholder="••••••"
-                    className="pl-10 bg-gray-50 border-gray-200"
+                    placeholder="•••••••••"
+                    className="pl-10 bg-gray-50 border-gray-200 h-11"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
@@ -205,25 +156,23 @@ function SignUpPage() {
                 disabled={loading}
               >
                 {loading ? "Creating account..." : "Sign Up"}
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </form>
 
-            {/* Login CTA */}
-            <div className="mt-6 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
-              <p className="text-sm text-gray-700 text-center mb-3">
-                Already have an account?
-              </p>
-              <Link to="/login">
-                <Button
-                  variant="outline"
-                  className="w-full border-primary/30 text-primary hover:bg-primary hover:text-white transition-all duration-300 group"
+            {/* Sign In Link */}
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Already have an account?{" "}
+                <Link
+                  to="/login"
+                  className="text-primary hover:text-primary-dark font-medium"
                 >
                   Sign In
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
+                </Link>
+              </p>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

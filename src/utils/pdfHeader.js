@@ -58,6 +58,7 @@ const imageToBase64 = (url) => {
       }
     });
   };
+
   
 
 
@@ -72,11 +73,18 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
     const margin = 20;
     let yPos = margin;
     const logoSize = 24;
+    const iconSize = 2; // Size for social media icons
     const primaryColor = [59, 130, 246]; // #3B82F6 - Primary blue
     const darkGray = [31, 41, 55]; // #1F2937 - Dark gray for text
     const lightGray = [243, 244, 246]; // #F3F4F6 - Light gray for backgrounds
   
-    // Format contact information with labels
+    // Add top line separator
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(1);
+    doc.line(margin, yPos - 5, pageWidth - margin, yPos - 5);
+    yPos = margin;
+
+    // Format contact information with labels and icons
     const formatContactInfo = (type, value) => {
       if (!value || String(value).trim() === '') return null;
       const val = String(value).trim();
@@ -85,20 +93,20 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
         case 'support_link':
           // Check if it's an email or a URL
           if (val.includes('@')) {
-            return `Email: ${val}`;
+            return { text: val, icon: 'email' };
           } else {
-            return `Support: ${val}`;
+            return { text: val, icon: null };
           }
         case 'telegram_admin_username':
-          return `Telegram Admin: ${val}`;
+          return { text: val, icon: 'telegram' };
         case 'phone_number':
-          return `Phone: ${val}`;
+          return { text: val, icon: 'phone' };
         case 'instagram_channel':
-          return `Instagram: ${val}`;
+          return { text: val, icon: 'instagram' };
         case 'telegram_channel':
-          return `Telegram: ${val}`;
+          return { text: val, icon: 'telegram' };
         default:
-          return val;
+          return { text: val, icon: null };
       }
     };
 
@@ -144,10 +152,35 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
         doc.setFont(undefined, 'normal');
         const rightAlignX = pageWidth - margin - 8;
         let contactY = logoY + 2;
-        contactInfo.forEach((line) => {
-          doc.text(line, rightAlignX, contactY, { align: 'right' });
+        
+        // Load icons from public folder
+        const iconPromises = {
+          telegram: imageToBase64('/telegram.png').catch(() => null),
+          instagram: imageToBase64('/instagram.png').catch(() => null),
+          phone: imageToBase64('/phone.png').catch(() => null),
+          email: imageToBase64('/gmail.png').catch(() => null),
+        };
+        
+        const icons = {
+          telegram: await iconPromises.telegram,
+          instagram: await iconPromises.instagram,
+          phone: await iconPromises.phone,
+          email: await iconPromises.email,
+        };
+        
+        for (const contact of contactInfo) {
+          let textX = rightAlignX;
+          
+          // Add icon if available
+          if (contact.icon && icons[contact.icon]) {
+            const iconX = rightAlignX - iconSize - 2;
+            doc.addImage(icons[contact.icon], 'png', iconX, contactY - iconSize / 2 - 0.9, iconSize, iconSize);
+            textX = iconX - 2; // Adjust text position
+          }
+          
+          doc.text(contact.text, textX, contactY, { align: 'right' });
           contactY += 4;
-        });
+        }
       }
   
       // Bottom border of header box
@@ -206,10 +239,35 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
         doc.setTextColor(...darkGray);
         const rightAlignX = pageWidth - margin - 8;
         let contactY = yPos + 8;
-        contactInfo.forEach((line) => {
-          doc.text(line, rightAlignX, contactY, { align: 'right' });
+        
+        // Load icons from public folder
+        const iconPromises = {
+          telegram: imageToBase64('/telegram.png').catch(() => null),
+          instagram: imageToBase64('/instagram.png').catch(() => null),
+          phone: imageToBase64('/phone.png').catch(() => null),
+          email: imageToBase64('/gmail.png').catch(() => null),
+        };
+        
+        const icons = {
+          telegram: await iconPromises.telegram,
+          instagram: await iconPromises.instagram,
+          phone: await iconPromises.phone,
+          email: await iconPromises.email,
+        };
+        
+        for (const contact of contactInfo) {
+          let textX = rightAlignX;
+          
+          // Add icon if available
+          if (contact.icon && icons[contact.icon]) {
+            const iconX = rightAlignX - iconSize - 2;
+            doc.addImage(icons[contact.icon], 'png', iconX, contactY - iconSize / 2, iconSize, iconSize);
+            textX = iconX - 2; // Adjust text position
+          }
+          
+          doc.text(contact.text, textX, contactY, { align: 'right' });
           contactY += 4;
-        });
+        }
       }
   
       const borderY = yPos + headerHeight;
