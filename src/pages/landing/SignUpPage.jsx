@@ -44,15 +44,7 @@ function SignUpPage() {
       <AnimatedPolygonDecoration />
 
       {/* Right Panel - Sign Up Form */}
-      <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center bg-white">
-        {/* Mobile back button */}
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-300 lg:hidden group self-start"
-        >
-          <ChevronLeft className="w-4 h-4 text-gray-700 group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm font-medium text-gray-700">Back</span>
-        </button>
+      <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center bg-white">       
 
         <div className="w-full max-w-md">
           {/* Logo - Mobile */}
