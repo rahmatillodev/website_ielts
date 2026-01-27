@@ -76,13 +76,39 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
     const darkGray = [31, 41, 55]; // #1F2937 - Dark gray for text
     const lightGray = [243, 244, 246]; // #F3F4F6 - Light gray for backgrounds
   
+    // Format contact information with labels
+    const formatContactInfo = (type, value) => {
+      if (!value || String(value).trim() === '') return null;
+      const val = String(value).trim();
+      
+      switch (type) {
+        case 'support_link':
+          // Check if it's an email or a URL
+          if (val.includes('@')) {
+            return `Email: ${val}`;
+          } else {
+            return `Support: ${val}`;
+          }
+        case 'telegram_admin_username':
+          return `Telegram Admin: ${val}`;
+        case 'phone_number':
+          return `Phone: ${val}`;
+        case 'instagram_channel':
+          return `Instagram: ${val}`;
+        case 'telegram_channel':
+          return `Telegram: ${val}`;
+        default:
+          return val;
+      }
+    };
+
     const contactInfo = [
-      settings?.support_link,
-      settings?.telegram_admin_username,
-      settings?.phone_number,
-      settings?.instagram_channel,
-      settings?.telegram_channel,
-    ].filter((val) => val != null && String(val).trim() !== '').map((val) => String(val));
+      formatContactInfo('support_link', settings?.support_link),
+      formatContactInfo('telegram_admin_username', settings?.telegram_admin_username),
+      formatContactInfo('phone_number', settings?.phone_number),
+      formatContactInfo('instagram_channel', settings?.instagram_channel),
+      formatContactInfo('telegram_channel', settings?.telegram_channel),
+    ].filter((val) => val != null);
 
     try {
       // Header background box with rounded corners effect
@@ -103,7 +129,7 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
       doc.setFont(undefined, 'bold');
       const companyX = logoX + logoSize + 8;
       const companyY = logoY + logoSize / 2 - 2;
-      doc.text('EDUCATION CORP', companyX, companyY);
+      doc.text('IELTSCORE', companyX, companyY);
       
       // Subtitle
       doc.setFontSize(7);
@@ -168,7 +194,7 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text('EDUCATION CORP', margin + 8, yPos + 15);
+      doc.text('IELTSCORE', margin + 8, yPos + 15);
       
       doc.setFontSize(7);
       doc.setTextColor(...darkGray);

@@ -14,6 +14,7 @@ const ListeningPage = () => {
   // Get dashboard data for card review status
   const authUser = useAuthStore((state) => state.authUser);
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
+  const dashboardLoading = useDashboardStore((state) => state.loading);
   
   // Fetch dashboard data on mount to ensure review status is available
   useEffect(() => {
@@ -31,6 +32,7 @@ const ListeningPage = () => {
       loading={loading}
       loaded={loaded}
       fetchTests={fetchTests}
+      dashboardLoading={dashboardLoading}
       emptyStateMessage=""
       emptyFreeMessage=""
       emptyPremiumMessage=""

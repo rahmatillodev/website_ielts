@@ -217,14 +217,12 @@ const PricingPage = () => {
                 icon={LuLightbulb}
                 title="Detailed Explanations"
                 description="In-depth breakdowns for every question."
-                disabled
                 index={2}
               />
               <FeatureItem
                 icon={LuZap}
                 title="Distraction-Free"
                 description="No ads. Real exam conditions."
-                disabled
                 index={3}
               />
             </motion.div>
