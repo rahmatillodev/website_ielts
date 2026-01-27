@@ -20,6 +20,7 @@ const TestsLibraryPage = ({
   loading,
   loaded,
   fetchTests,
+  dashboardLoading = false,
   emptyStateMessage = "",
   emptyFreeMessage = "",
   emptyPremiumMessage = "",
@@ -197,7 +198,7 @@ const TestsLibraryPage = ({
   // Check if we need to load more items initially or after filter changes
   // This handles cases where initial content doesn't fill the viewport
   useEffect(() => {
-    if (loading || filteredData.length === 0) return;
+    if (loading || dashboardLoading || filteredData.length === 0) return;
 
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -239,7 +240,7 @@ const TestsLibraryPage = ({
     // Initial check after a delay to ensure DOM has rendered
     const timeoutId = setTimeout(checkAndLoadMore, 300);
     return () => clearTimeout(timeoutId);
-  }, [filteredData.length, loading, itemsPerLoad]);
+  }, [filteredData.length, loading, dashboardLoading, itemsPerLoad]);
 
   const handleFilterChange = (tab) => {
     if (tab !== activeTab) {
@@ -354,14 +355,14 @@ const TestsLibraryPage = ({
         className="flex-1 overflow-y-auto pb-4 -mx-3 md:-mx-8 px-3 md:px-8 pt-4"
       >
         {/* First Priority: Loading State - Show skeleton loaders when loading and no data */}
-        {loading && allTests.length === 0 ? (
+        {(loading || dashboardLoading) && allTests.length === 0 ? (
           <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
             {Array.from({ length: 9 }).map((_, index) => (
               <LibraryCardShimmer key={index} isGridView={isGridView} />
             ))}
           </div>
         ) : /* Second Priority: Empty State - Show empty message when not loading and no data */
-        !loading && allTests.length === 0 ? (
+        !loading && !dashboardLoading && allTests.length === 0 ? (
           <div className="flex flex-1 items-center justify-center min-h-[300px]">
             {emptyStateMessage ? (
               <motion.div
@@ -412,7 +413,7 @@ const TestsLibraryPage = ({
             </div>
           </div>
         ) : /* Fourth Priority: Show Data - Only show cards when not loading and we have items */
-        !loading && currentItems.length > 0 ? (
+        !loading && !dashboardLoading && currentItems.length > 0 ? (
           <>
             <motion.div
               className={

@@ -4,6 +4,8 @@
  */
 
 import supabase from './supabase';
+import { useTestDetailStore } from '@/store/testStore/testDetailStore';
+import { useAuthStore } from '@/store/authStore';
 
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
 const getUserIdFromLocalStorage = () => {
@@ -28,8 +30,26 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
       throw new Error('User not authenticated');
     }
 
-    // Calculate score and correctness
-    const { correctCount, totalQuestions, answerResults } = calculateTestScore(answers, currentTest);
+    // Fetch test with correct answers to ensure we have correct_answer data for scoring
+    // This is necessary because currentTest might not have correct_answer fields
+    let testWithCorrectAnswers = currentTest;
+    try {
+      // Get user subscription status from auth store
+      const authStore = useAuthStore.getState();
+      const userSubscriptionStatus = authStore.userProfile?.subscription_status || 'free';
+      
+      const testDetailStore = useTestDetailStore.getState();
+      const fetchedTest = await testDetailStore.fetchTestById(testId, false, true, userSubscriptionStatus); // Include correct answers
+      if (fetchedTest) {
+        testWithCorrectAnswers = fetchedTest;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch test with correct answers, using provided currentTest:', error);
+      // Continue with currentTest if fetch fails
+    }
+
+    // Calculate score and correctness using test with correct answers
+    const { correctCount, totalQuestions, answerResults } = calculateTestScore(answers, testWithCorrectAnswers);
 
     // Calculate band score (IELTS 0-9 scale based on percentage)
     const bandScore = calculateBandScore(correctCount, totalQuestions, type);
@@ -291,16 +311,71 @@ const getCorrectAnswer = (question, questionGroup) => {
   const groupType = (questionGroup.type || '').toLowerCase();
   const isMultipleChoice = groupType.includes('multiple') || groupType.includes('choice');
   const isTableType = groupType.includes('table');
+  const isMatchingInformation = groupType.includes('matching_information') || groupType.includes('matching');
+  const isMatchingHeadings = groupType.includes('matching_headings');
 
   // For multiple_choice: use options table with is_correct
   if (isMultipleChoice) {
-    // For multiple_choice: find correct option in question's options
+    // First try to get from question.correct_answer (might be letter like "A")
+    if (question.correct_answer) {
+      const correctAnswerKey = question.correct_answer.toString().trim();
+      // Try to find option_text that matches this letter
+      if (question.options && question.options.length > 0) {
+        const correctOption = question.options.find(
+          (opt) => (opt.letter || opt.option_key || '').toLowerCase() === correctAnswerKey.toLowerCase() ||
+                   opt.is_correct === true
+        );
+        if (correctOption) {
+          return correctOption.option_text || correctAnswerKey;
+        }
+      }
+      // Fallback to the letter if no option found
+      return correctAnswerKey;
+    }
+    // Fallback: find correct option in question's options
     if (question.options && question.options.length > 0) {
       const correctOption = question.options.find((opt) => opt.is_correct === true);
       if (correctOption) {
         // Use option_text as the answer value (not letter)
         return correctOption.option_text || '';
       }
+    }
+  }
+
+  // For matching_information: correct_answer is stored as option_key (e.g., "A"), but we need option_text
+  if (isMatchingInformation) {
+    if (question.correct_answer) {
+      const correctAnswerKey = question.correct_answer.toString().trim();
+      // Try to find option_text from group-level options that matches this option_key
+      if (questionGroup.options && questionGroup.options.length > 0) {
+        const correctOption = questionGroup.options.find(
+          (opt) => (opt.option_key || opt.letter || '').toLowerCase() === correctAnswerKey.toLowerCase()
+        );
+        if (correctOption) {
+          // Return option_text for matching
+          return correctOption.option_text || correctAnswerKey;
+        }
+      }
+      // Fallback: return the key if no matching option found
+      return correctAnswerKey;
+    }
+  }
+
+  // For matching_headings: similar to matching_information
+  if (isMatchingHeadings) {
+    if (question.correct_answer) {
+      const correctAnswerKey = question.correct_answer.toString().trim();
+      // Try to find option_text from group-level options
+      if (questionGroup.options && questionGroup.options.length > 0) {
+        const correctOption = questionGroup.options.find(
+          (opt) => (opt.option_key || opt.letter || '').toLowerCase() === correctAnswerKey.toLowerCase() ||
+                   opt.is_correct === true && opt.question_number === question.question_number
+        );
+        if (correctOption) {
+          return correctOption.option_text || correctAnswerKey;
+        }
+      }
+      return correctAnswerKey;
     }
   }
 
@@ -316,7 +391,7 @@ const getCorrectAnswer = (question, questionGroup) => {
       // Try to find the option_text that matches this letter from group-level options
       if (questionGroup.options && questionGroup.options.length > 0) {
         const correctOption = questionGroup.options.find(
-          (opt) => (opt.letter || '').toLowerCase() === correctAnswerLetter.toLowerCase() ||
+          (opt) => (opt.letter || opt.option_key || '').toLowerCase() === correctAnswerLetter.toLowerCase() ||
                    (opt.option_text || '').toLowerCase() === correctAnswerLetter.toLowerCase()
         );
         if (correctOption) {
@@ -330,9 +405,19 @@ const getCorrectAnswer = (question, questionGroup) => {
     }
   }
 
-  // For other question types: try to get correct answer from question's correct_answer field
+  // For other question types: try to get correct answer from question's correct_answer field first
   if (question.correct_answer) {
-    return question.correct_answer.toString().trim();
+    const correctAnswer = question.correct_answer.toString().trim();
+    // For types that might have option_key stored, try to convert to option_text
+    if (questionGroup.options && questionGroup.options.length > 0) {
+      const matchingOption = questionGroup.options.find(
+        (opt) => (opt.option_key || opt.letter || '').toLowerCase() === correctAnswer.toLowerCase()
+      );
+      if (matchingOption) {
+        return matchingOption.option_text || correctAnswer;
+      }
+    }
+    return correctAnswer;
   }
 
   // For other types with options: find correct option
@@ -340,7 +425,7 @@ const getCorrectAnswer = (question, questionGroup) => {
     const correctOption = question.options.find((opt) => opt.is_correct);
     if (correctOption) {
       // For other types, prefer option_text but fallback to letter
-      return correctOption.option_text || correctOption.letter || '';
+      return correctOption.option_text || correctOption.letter || correctOption.option_key || '';
     }
   }
 
@@ -350,7 +435,7 @@ const getCorrectAnswer = (question, questionGroup) => {
       (opt) => opt.is_correct && opt.question_number === question.question_number
     );
     if (correctOption) {
-      return correctOption.option_text || correctOption.letter || '';
+      return correctOption.option_text || correctOption.letter || correctOption.option_key || '';
     }
   }
 

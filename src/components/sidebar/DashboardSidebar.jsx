@@ -12,7 +12,6 @@ import {
 } from "react-icons/lu";
 import { FaChartSimple } from "react-icons/fa6";
 import { Button } from "../ui/button";
-import { GraduationCap } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import LogoutModal from "../modal/LogoutModal";
 import { toast } from "react-toastify";
@@ -277,16 +276,11 @@ const DashboardSidebar = ({ onNavigate }) => {
 
         <LogoutModal onConfirm={handleLogout}>
           {effectiveIsCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button className="flex items-center justify-center p-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95]">
-                  <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Log out
-              </TooltipContent>
-            </Tooltip>
+
+            <button className="flex items-center justify-center p-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95]">
+              <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" />
+             
+            </button>
           ) : (
             <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
               <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" /> Log out

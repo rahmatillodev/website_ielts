@@ -27,8 +27,8 @@ const LandingFooter = () => {
             <div className="flex gap-3 mt-6">
               <a
                 href={`https://t.me/${settings?.telegram_channel || "#"}`}
-                target={`https://t.me/${settings?.telegram_channel || "#"}`}
-                rel={`https://t.me/${settings?.telegram_channel || "#"}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-600 transition"
                 aria-label="Telegram"
               >
@@ -36,8 +36,8 @@ const LandingFooter = () => {
               </a>
               <a
                 href={`https://www.instagram.com/${settings?.instagram_channel || "#"}`}
-                target={`https://www.instagram.com/${settings?.instagram_channel || "#"}`}
-                rel={`https://www.instagram.com/${settings?.instagram_channel || "#"}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-600 transition"
                 aria-label="Instagram"
               >

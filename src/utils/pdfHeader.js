@@ -58,6 +58,7 @@ const imageToBase64 = (url) => {
       }
     });
   };
+
   
 
 
@@ -72,17 +73,50 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
     const margin = 20;
     let yPos = margin;
     const logoSize = 24;
+    const iconSize = 2; // Size for social media icons
     const primaryColor = [59, 130, 246]; // #3B82F6 - Primary blue
     const darkGray = [31, 41, 55]; // #1F2937 - Dark gray for text
     const lightGray = [243, 244, 246]; // #F3F4F6 - Light gray for backgrounds
   
+    // Add top line separator
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(1);
+    doc.line(margin, yPos - 5, pageWidth - margin, yPos - 5);
+    yPos = margin;
+
+    // Format contact information with labels and icons
+    const formatContactInfo = (type, value) => {
+      if (!value || String(value).trim() === '') return null;
+      const val = String(value).trim();
+      
+      switch (type) {
+        case 'support_link':
+          // Check if it's an email or a URL
+          if (val.includes('@')) {
+            return { text: val, icon: 'email' };
+          } else {
+            return { text: val, icon: null };
+          }
+        case 'telegram_admin_username':
+          return { text: val, icon: 'telegram' };
+        case 'phone_number':
+          return { text: val, icon: 'phone' };
+        case 'instagram_channel':
+          return { text: val, icon: 'instagram' };
+        case 'telegram_channel':
+          return { text: val, icon: 'telegram' };
+        default:
+          return { text: val, icon: null };
+      }
+    };
+
     const contactInfo = [
-      settings?.support_link,
-      settings?.telegram_admin_username,
-      settings?.phone_number,
-      settings?.instagram_channel,
-      settings?.telegram_channel,
-    ].filter((val) => val != null && String(val).trim() !== '').map((val) => String(val));
+      formatContactInfo('support_link', settings?.support_link),
+      formatContactInfo('telegram_admin_username', settings?.telegram_admin_username),
+      formatContactInfo('phone_number', settings?.phone_number),
+      formatContactInfo('instagram_channel', settings?.instagram_channel),
+      formatContactInfo('telegram_channel', settings?.telegram_channel),
+    ].filter((val) => val != null);
 
     try {
       // Header background box with rounded corners effect
@@ -103,7 +137,7 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
       doc.setFont(undefined, 'bold');
       const companyX = logoX + logoSize + 8;
       const companyY = logoY + logoSize / 2 - 2;
-      doc.text('EDUCATION CORP', companyX, companyY);
+      doc.text('IELTSCORE', companyX, companyY);
       
       // Subtitle
       doc.setFontSize(7);
@@ -118,10 +152,35 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
         doc.setFont(undefined, 'normal');
         const rightAlignX = pageWidth - margin - 8;
         let contactY = logoY + 2;
-        contactInfo.forEach((line) => {
-          doc.text(line, rightAlignX, contactY, { align: 'right' });
+        
+        // Load icons from public folder
+        const iconPromises = {
+          telegram: imageToBase64('/telegram.png').catch(() => null),
+          instagram: imageToBase64('/instagram.png').catch(() => null),
+          phone: imageToBase64('/phone.png').catch(() => null),
+          email: imageToBase64('/gmail.png').catch(() => null),
+        };
+        
+        const icons = {
+          telegram: await iconPromises.telegram,
+          instagram: await iconPromises.instagram,
+          phone: await iconPromises.phone,
+          email: await iconPromises.email,
+        };
+        
+        for (const contact of contactInfo) {
+          let textX = rightAlignX;
+          
+          // Add icon if available
+          if (contact.icon && icons[contact.icon]) {
+            const iconX = rightAlignX - iconSize - 2;
+            doc.addImage(icons[contact.icon], 'png', iconX, contactY - iconSize / 2 - 0.9, iconSize, iconSize);
+            textX = iconX - 2; // Adjust text position
+          }
+          
+          doc.text(contact.text, textX, contactY, { align: 'right' });
           contactY += 4;
-        });
+        }
       }
   
       // Bottom border of header box
@@ -168,7 +227,7 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text('EDUCATION CORP', margin + 8, yPos + 15);
+      doc.text('IELTSCORE', margin + 8, yPos + 15);
       
       doc.setFontSize(7);
       doc.setTextColor(...darkGray);
@@ -180,10 +239,35 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
         doc.setTextColor(...darkGray);
         const rightAlignX = pageWidth - margin - 8;
         let contactY = yPos + 8;
-        contactInfo.forEach((line) => {
-          doc.text(line, rightAlignX, contactY, { align: 'right' });
+        
+        // Load icons from public folder
+        const iconPromises = {
+          telegram: imageToBase64('/telegram.png').catch(() => null),
+          instagram: imageToBase64('/instagram.png').catch(() => null),
+          phone: imageToBase64('/phone.png').catch(() => null),
+          email: imageToBase64('/gmail.png').catch(() => null),
+        };
+        
+        const icons = {
+          telegram: await iconPromises.telegram,
+          instagram: await iconPromises.instagram,
+          phone: await iconPromises.phone,
+          email: await iconPromises.email,
+        };
+        
+        for (const contact of contactInfo) {
+          let textX = rightAlignX;
+          
+          // Add icon if available
+          if (contact.icon && icons[contact.icon]) {
+            const iconX = rightAlignX - iconSize - 2;
+            doc.addImage(icons[contact.icon], 'png', iconX, contactY - iconSize / 2, iconSize, iconSize);
+            textX = iconX - 2; // Adjust text position
+          }
+          
+          doc.text(contact.text, textX, contactY, { align: 'right' });
           contactY += 4;
-        });
+        }
       }
   
       const borderY = yPos + headerHeight;

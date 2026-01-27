@@ -129,7 +129,10 @@ const ProfileModal = ({ open, onOpenChange }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    if (formData.phone_number.length !== 13) {
+
+    // Validate phone number format only if provided
+    const phoneNumber = formData.phone_number.trim();
+    if (phoneNumber && phoneNumber.length !== 13) {
       toast.error("Iltimos, telefon raqamini to'liq kiriting (+998XXXXXXXXX)");
       setLoading(false);
       return;
@@ -144,20 +147,27 @@ const ProfileModal = ({ open, onOpenChange }) => {
         if (!uploadResult.success) {
           const errorMessage = uploadResult.error || 'Failed to upload image. Please try again later.';
           toast.error(errorMessage);
+          setLoading(false);
           return;
         }
         avatarUrl = uploadResult.url;
       }
 
-      // Update user profile
-      const result = await updateUserProfile({
-        ...formData,
+      // Prepare profile data - only include phone_number if it's provided and properly formatted
+      const profileData = {
+        full_name: formData.full_name.trim() || null,
+        telegram_username: formData.telegram_username.trim() || null,
+        phone_number: phoneNumber || null,
         avatar_image: avatarUrl,
-      });
+      };
+
+      // Update user profile
+      const result = await updateUserProfile(profileData);
 
       if (!result.success) {
         const errorMessage = result.error || 'Failed to update profile. Please try again.';
         toast.error(errorMessage);
+        setLoading(false);
         return;
       }
 

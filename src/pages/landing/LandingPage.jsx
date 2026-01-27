@@ -175,14 +175,14 @@ const LandingPage = () => {
     <div className="min-h-screen " id="home">
 
       {/* ================= HERO ================= */}
-      <section className="min-h-[90vh] sm:min-h-screen bg-linear-to-br from-[#F8FAFC] via-[#F0F7FF] to-[#EEF5FF] flex items-center py-12 sm:py-12 lg:py-12 px-4 sm:px-6 lg:px-8 overflow-hidden relative">
+      <section className="min-h-[90vh] lg:min-h-screen bg-linear-to-br from-[#F8FAFC] via-[#F0F7FF] to-[#EEF5FF] flex items-center py-6 sm:py-8 md:py-8 lg:py-12 px-4 sm:px-6 md:px-8 lg:px-8 overflow-hidden relative">
         <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-linear-to-br from-[#E0F2FF] via-[#CFE8FF] to-transparent blur-3xl opacity-70" />
         <div className="pointer-events-none absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-linear-to-br from-[#E7F5FF] via-[#D6EBFF] to-transparent blur-3xl opacity-60" />
-        <div className="max-w-10/12 flex flex-col lg:flex-row justify-between gap-8 sm:gap-10 lg:gap-12 items-center w-full mx-auto">
+        <div className="max-w-full lg:max-w-10/12 flex flex-col md:flex-col lg:flex-row justify-between gap-4 sm:gap-6 md:gap-6 lg:gap-12 items-center w-full mx-auto">
 
           {/* LEFT */}
           <motion.div 
-            className="space-y-6 sm:space-y-8 text-center lg:text-left"
+            className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-8 text-center md:text-center lg:text-left w-full lg:w-auto"
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
@@ -199,7 +199,7 @@ const LandingPage = () => {
 
             <motion.h1 
               variants={fadeInUp}
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold text-gray-900 leading-tight"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-semibold text-gray-900 leading-tight"
             >
               Build Skills,<br />
               Boost Scores,<br />
@@ -208,18 +208,18 @@ const LandingPage = () => {
 
             <motion.p 
               variants={fadeInUp}
-              className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-xl mx-auto lg:mx-0 mb-6"
+              className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 max-w-xl mx-auto md:mx-auto lg:mx-0 mb-4 sm:mb-6 px-2 sm:px-0"
             >
               Personalized practice, ruthless feedback, and full-length mock
               tests designed to push you to Band 8.0+.
             </motion.p>
             {/* /// add link to sign up */}
-            <motion.div variants={fadeInUp}>
-              <Link to="/signup">
+            <motion.div variants={fadeInUp} className="w-full md:w-full lg:w-auto">
+              <Link to="/signup" className="block w-full md:block lg:inline-block lg:w-auto">
               <Button
                 size="lg"
-                className="bg-[#4A90E2] hover:bg-[#3a7ac8d3] text-white px-6 sm:px-8 py-4 sm:py-6 rounded-full font-semibold text-sm 
-                sm:text-base w-full sm:w-auto group transition-all shadow-[0px_20px_25px_-5px_#2D9CDB4D]"
+                className="bg-[#4A90E2] hover:bg-[#3a7ac8d3] text-white px-6 sm:px-8 py-3 sm:py-4 md:py-6 rounded-full font-semibold text-sm 
+                sm:text-base w-full md:w-full lg:w-auto group transition-all shadow-[0px_20px_25px_-5px_#2D9CDB4D]"
                 >
                 Start Free Practice <LuArrowRight className="ml-0 inline transition-transform group-hover:translate-x-2" />
               </Button>
@@ -229,7 +229,7 @@ const LandingPage = () => {
             {/* Social Proof */}
             <motion.div 
               variants={fadeIn}
-              className="flex items-center justify-center lg:justify-start gap-2"
+              className="flex flex-col sm:flex-row md:flex-row items-center justify-center md:justify-center lg:justify-start gap-2 sm:gap-2 mt-3 sm:mt-4 md:mt-4 lg:mt-0"
             >
               <div className="flex -space-x-2">
                 {[
@@ -246,7 +246,7 @@ const LandingPage = () => {
                   />
                 ))}
               </div>
-              <p className="text-xs sm:text-sm text-gray-600 ml-2">
+              <p className="text-xs sm:text-sm text-gray-600 sm:ml-2 md:ml-2 text-center md:text-center lg:text-left">
                 Trusted by students from <span className="font-semibold">planet Earth</span> (maybe Mars someday)
               </p>
             </motion.div>
@@ -257,25 +257,25 @@ const LandingPage = () => {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="bg-white/95 backdrop-blur rounded-2xl sm:rounded-3xl shadow-[0_25px_60px_rgba(15,23,42,0.12)] p-4 sm:p-6 xl:p-8 2xl:p-10 
-            max-w-md xl:max-w-lg 2xl:max-w-2xl w-full mx-auto lg:mx-0 hover:shadow-[0_30px_70px_rgba(15,23,42,0.18)] transition-shadow duration-300 border border-white/60"
+            className="bg-white/95 backdrop-blur rounded-2xl sm:rounded-3xl shadow-[0_25px_60px_rgba(15,23,42,0.12)] p-4 sm:p-5 md:p-6 lg:p-6 xl:p-8 2xl:p-10 
+            max-w-full sm:max-w-md md:max-w-md lg:max-w-md xl:max-w-lg 2xl:max-w-2xl w-full mx-auto md:mx-auto lg:mx-0 hover:shadow-[0_30px_70px_rgba(15,23,42,0.18)] transition-shadow duration-300 border border-white/60"
           >
-            <div className="flex items-start justify-between mb-4 sm:mb-6 xl:mb-8">
+            <div className="flex items-start justify-between mb-4 sm:mb-5 md:mb-6 xl:mb-8">
               <div>
-                <h3 className="text-lg sm:text-xl xl:text-2xl 2xl:text-3xl font-semibold text-gray-900">My Progress</h3>
+                <h3 className="text-lg sm:text-xl md:text-xl xl:text-2xl 2xl:text-3xl font-semibold text-gray-900">My Progress</h3>
                 
               </div>
               <motion.span 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.6, type: "spring" }}
-                className="px-2 sm:px-3 xl:px-4 py-1 xl:py-1.5 text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold rounded-full bg-green-100 text-green-600 whitespace-nowrap"
+                className="px-2 sm:px-3 md:px-3 xl:px-4 py-1 xl:py-1.5 text-[10px] sm:text-xs md:text-xs xl:text-sm 2xl:text-base font-semibold rounded-full bg-green-100 text-green-600 whitespace-nowrap"
               >
                 Active Session
               </motion.span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6 xl:mb-8">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-4 mb-4 sm:mb-5 md:mb-6 xl:mb-8">
               {[
                 { name: "Listening", score: "8.5", icon: LuHeadphones, color: "text-blue-500", delay: 0.4 },
                 { name: "Reading", score: "7.5", icon: LuBookOpen, color: "text-orange-500", delay: 0.5 },
@@ -288,15 +288,15 @@ const LandingPage = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: s.delay, duration: 0.4 }}
                   whileHover={{ scale: 1.05 }}
-                  className="bg-linear-to-br from-white via-[#F7FBFF] to-[#ECF4FF] rounded-2xl sm:rounded-3xl p-3.5 border border-white/70 shadow-[0_12px_30px_rgba(15,23,42,0.08)] hover:shadow-[0_16px_36px_rgba(15,23,42,0.12)] transition-all cursor-pointer"
+                  className="bg-linear-to-br from-white via-[#F7FBFF] to-[#ECF4FF] rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 border border-white/70 shadow-[0_12px_30px_rgba(15,23,42,0.08)] hover:shadow-[0_16px_36px_rgba(15,23,42,0.12)] transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2 sm:gap-2.5 xl:gap-3 mb-2 sm:mb-2.5 xl:mb-3">
-                    <span className="w-8 h-8 sm:w-9 sm:h-9 xl:w-10 xl:h-10 2xl:w-12 2xl:h-12 rounded-xl sm:rounded-2xl bg-white/80 shadow-[0_6px_16px_rgba(15,23,42,0.08)] flex items-center justify-center">
-                      <s.icon className={`${s.color} text-base sm:text-lg xl:text-xl 2xl:text-2xl`} />
+                  <div className="flex items-center gap-2 sm:gap-2.5 md:gap-2.5 xl:gap-3 mb-2 sm:mb-2.5 md:mb-2.5 xl:mb-3">
+                    <span className="w-8 h-8 sm:w-9 sm:h-9 md:w-9 md:h-9 xl:w-10 xl:h-10 2xl:w-12 2xl:h-12 rounded-xl sm:rounded-2xl bg-white/80 shadow-[0_6px_16px_rgba(15,23,42,0.08)] flex items-center justify-center">
+                      <s.icon className={`${s.color} text-base sm:text-lg md:text-lg xl:text-xl 2xl:text-2xl`} />
                     </span>
-                    <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase tracking-wide">{s.name}</p>
+                    <p className="text-[10px] sm:text-xs md:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase tracking-wide">{s.name}</p>
                   </div>
-                  <p className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-semibold text-gray-900">{s.score}</p>
+                  <p className="text-xl sm:text-2xl md:text-2xl xl:text-3xl 2xl:text-4xl font-semibold text-gray-900">{s.score}</p>
                 </motion.div>
               ))}
             </div>
@@ -306,13 +306,13 @@ const LandingPage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
-              className="bg-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 xl:p-6 2xl:p-8 flex items-center justify-between"
+              className="bg-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-5 xl:p-6 2xl:p-8 flex items-center justify-between"
             >
               <div>
-                <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase">
+                <p className="text-[10px] sm:text-xs md:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase">
                   Average Score
                 </p>
-                <p className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-semibold">Band 8.0</p>
+                <p className="text-xl sm:text-2xl md:text-2xl xl:text-3xl 2xl:text-4xl font-semibold">Band 8.0</p>
               </div>
 
               {/* <div className="relative w-12 h-12 sm:w-14 sm:h-14 xl:w-16 xl:h-16 2xl:w-20 2xl:h-20">
@@ -341,24 +341,24 @@ const LandingPage = () => {
       </section>
 
       {/* ================= TRUSTED BY ================= */}
-      <AnimatedSection className="bg-white flex items-center py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+      <AnimatedSection className="bg-white flex items-center py-10 sm:py-12 md:py-16 lg:py-20 px-4 sm:px-6 md:px-8 lg:px-8">
         <div className="max-w-7xl mx-auto w-full">
           <motion.p 
             variants={fadeInUp}
-            className="text-center text-[10px] sm:text-xs font-semibold text-gray-400 uppercase tracking-wider mb-8 sm:mb-12"
+            className="text-center text-[10px] sm:text-xs font-semibold text-gray-400 uppercase tracking-wider mb-6 sm:mb-8 md:mb-12"
           >
             Trusted by students from
           </motion.p>
           <motion.div 
             variants={staggerContainer}
-            className="flex flex-wrap justify-center items-center gap-8 sm:gap-12 lg:gap-16"
+            className="flex flex-wrap justify-center items-center gap-6 sm:gap-8 md:gap-12 lg:gap-16"
           >
             {["WIUT", "TUIT", "MDIS", "WEBSTER", "TSUL"].map((name) => (
               <motion.span
                 key={name}
                 variants={fadeInUp}
                 whileHover={{ scale: 1.1, color: "#4A90E2" }}
-                className="text-2xl sm:text-3xl font-semibold text-gray-400 transition-colors cursor-pointer"
+                className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-400 transition-colors cursor-pointer"
               >
                 {name}
               </motion.span>
@@ -368,7 +368,7 @@ const LandingPage = () => {
       </AnimatedSection>
 
       {/* ================= WHY CHOOSE ================= */}
-      <AnimatedSection id="why-choose" className="bg-[#F8FAFC] flex items-center py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+      <AnimatedSection id="why-choose" className="bg-[#F8FAFC] flex items-center py-10 sm:py-12 md:py-16 lg:py-20 px-4 sm:px-6 md:px-8 lg:px-8">
         <div className="max-w-7xl mx-auto w-full">
 
           <motion.p 
@@ -380,24 +380,24 @@ const LandingPage = () => {
 
           <motion.h2 
             variants={fadeInUp}
-            className="text-center text-2xl sm:text-3xl lg:text-4xl font-semibold text-gray-900 mb-10 sm:mb-12 lg:mb-16 px-4"
+            className="text-center text-2xl sm:text-3xl md:text-3xl lg:text-4xl font-semibold text-gray-900 mb-8 sm:mb-10 md:mb-12 lg:mb-16 px-4"
           >
             Because Band 8 doesn't happen by accident 😉
           </motion.h2>
 
           <motion.div 
             variants={staggerContainer}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
+            className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 md:gap-8"
           >
             {/* Full Mock Tests */}
             <motion.div 
               variants={scaleIn}
               whileHover={{ y: -8, scale: 1.02 }}
-              className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-xl transition-all duration-300"
+              className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm hover:shadow-xl transition-all duration-300"
             >
               <motion.div 
                 whileHover={{ rotate: 5, scale: 1.1 }}
-                className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6"
+                className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-5 md:mb-6"
               >
                 <LuFileText className="text-blue-600 text-xl sm:text-2xl" />
               </motion.div>
@@ -411,11 +411,11 @@ const LandingPage = () => {
             <motion.div
               variants={scaleIn}
               whileHover={{ y: -8, scale: 1.02 }}
-              className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-xl transition-all duration-300"
+              className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm hover:shadow-xl transition-all duration-300"
             >
               <motion.div 
                 whileHover={{ rotate: 5, scale: 1.1 }}
-                className="w-12 h-12 sm:w-14 sm:h-14 bg-green-50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6"
+                className="w-12 h-12 sm:w-14 sm:h-14 bg-green-50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-5 md:mb-6"
               >
                 <LuMic className="text-green-600 text-xl sm:text-2xl" />
               </motion.div>
@@ -429,11 +429,11 @@ const LandingPage = () => {
             <motion.div 
               variants={scaleIn}
               whileHover={{ y: -8, scale: 1.02 }}
-              className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-xl transition-all duration-300 md:col-span-2 lg:col-span-1"
+              className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm hover:shadow-xl transition-all duration-300 md:col-span-2 lg:col-span-1"
             >
               <motion.div 
                 whileHover={{ rotate: 5, scale: 1.1 }}
-                className="w-12 h-12 sm:w-14 sm:h-14 bg-purple-50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6"
+                className="w-12 h-12 sm:w-14 sm:h-14 bg-purple-50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-5 md:mb-6"
               >
                 <LuTrendingUp className="text-purple-600 text-xl sm:text-2xl" />
               </motion.div>
@@ -495,7 +495,7 @@ const LandingPage = () => {
       </AnimatedSection> */}
 
       {/* ================= SUCCESS STORIES ================= */}
-      <AnimatedSection id="stories" className="bg-white flex items-center py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+      <AnimatedSection id="stories" className="bg-white flex items-center py-10 sm:py-12 md:py-16 lg:py-20 px-4 sm:px-6 md:px-8 lg:px-8">
         <div className="max-w-7xl mx-auto w-full">
           <motion.p 
             variants={fadeInUp}
@@ -505,35 +505,37 @@ const LandingPage = () => {
           </motion.p>
           <motion.h2 
             variants={fadeInUp}
-            className="text-center text-2xl sm:text-3xl lg:text-4xl font-semibold text-gray-900 mb-10 sm:mb-12 lg:mb-16 px-4"
+            className="text-center text-2xl sm:text-3xl md:text-3xl lg:text-4xl font-semibold text-gray-900 mb-8 sm:mb-10 md:mb-12 lg:mb-16 px-4"
           >
             People like you. Scores they're proud of.
           </motion.h2>
 
-          <div className="overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8 py-4">
-            <div className="flex gap-6 sm:gap-8 animate-marquee">
+          <div className="overflow-hidden -mx-4 sm:-mx-6 md:-mx-8 lg:-mx-8 py-4">
+            <div className="flex gap-4 sm:gap-6 md:gap-8 animate-marquee">
               {/* Первый набор всех карточек */}
               {TESTIMONIALS_MOCK.map((t, i) => (
                 <div
                   key={`first-${i}`}
-                  className="shrink-0 w-[280px] sm:w-[320px] md:w-[360px]"
+                  className="shrink-0 w-[280px] sm:w-[300px] md:w-[320px] lg:w-[360px]"
                 >
-                  <div className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <div
+                    className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col  h-[270px]"
+                  >
                     <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                       <img
                         src={t.avatar}
                         alt={t.name}
-                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full shrink-0 object-cover"
+                        className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full shrink-0 object-cover"
                       />
                       <div>
                         <h4 className="text-sm sm:text-base font-semibold text-gray-900">{t.name}</h4>
                         <p className="text-[10px] sm:text-xs text-gray-500">{t.subtitle}</p>
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed flex-1 line-clamp-5">
                       "{t.quote}"
                     </p>
-                    <div className="flex items-center gap-2 text-green-600">
+                    <div className="flex items-center gap-2 text-green-600 mt-auto">
                       <motion.span
                         animate={{ rotate: [0, 10, -10, 0] }}
                         transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
@@ -546,28 +548,29 @@ const LandingPage = () => {
                   </div>
                 </div>
               ))}
-              {/* Дублированный набор для бесконечного цикла */}
               {TESTIMONIALS_MOCK.map((t, i) => (
                 <div
                   key={`second-${i}`}
-                  className="shrink-0 w-[280px] sm:w-[320px] md:w-[360px]"
+                  className="shrink-0 w-[280px] sm:w-[300px] md:w-[320px] lg:w-[360px]"
                 >
-                  <div className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <div
+                    className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-[270px]"
+                  >
                     <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                       <img
                         src={t.avatar}
                         alt={t.name}
-                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full shrink-0 object-cover"
+                        className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full shrink-0 object-cover"
                       />
                       <div>
                         <h4 className="text-sm sm:text-base font-semibold text-gray-900">{t.name}</h4>
                         <p className="text-[10px] sm:text-xs text-gray-500">{t.subtitle}</p>
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed flex-1 line-clamp-5">
                       "{t.quote}"
                     </p>
-                    <div className="flex items-center gap-2 text-green-600">
+                    <div className="flex items-center gap-2 text-green-600 mt-auto">
                       <motion.span
                         animate={{ rotate: [0, 10, -10, 0] }}
                         transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
@@ -586,7 +589,7 @@ const LandingPage = () => {
       </AnimatedSection>
 
       {/* ================= CTA ================= */}
-      <AnimatedSection className="relative py-16 sm:py-24 lg:py-32 bg-[#082C36] text-center px-4 sm:px-6 lg:px-8 rounded-2xl sm:rounded-3xl mx-2 sm:mx-4 my-6 sm:my-8 overflow-hidden">
+      <AnimatedSection className="relative py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 bg-[#082C36] text-center px-4 sm:px-6 md:px-8 lg:px-8 rounded-2xl sm:rounded-3xl mx-2 sm:mx-4 md:mx-4 my-4 sm:my-6 md:my-8 overflow-hidden">
         {/* Blur элемент - нижний левый угол */}
         <div 
           className="absolute bottom-0 left-0 w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full -translate-x-1/4 translate-y-1/4 pointer-events-none"
@@ -614,21 +617,21 @@ const LandingPage = () => {
           </motion.p>
           <motion.h2 
             variants={fadeInUp}
-            className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-semibold text-white mb-4 sm:mb-6 leading-tight px-2"
+            className="text-2xl sm:text-3xl md:text-3xl lg:text-4xl xl:text-5xl font-semibold text-white mb-4 sm:mb-5 md:mb-6 leading-tight px-2"
           >
             Ready to finally get the band score you <span className="italic">actually</span> want?
           </motion.h2>
           <motion.p 
             variants={fadeInUp}
-            className="text-blue-100 text-xs sm:text-sm mb-6 sm:mb-8 max-w-2xl mx-auto px-2 text-center"
+            className="text-blue-100 text-xs sm:text-sm mb-6 sm:mb-7 md:mb-8 max-w-2xl mx-auto px-2 text-center"
           >
             Join 1,000+ students who turned IELTS stress into confidence with IELTSCORE
           </motion.p>
-          <motion.div variants={fadeInUp}>
-            <Link to="/signup">
+          <motion.div variants={fadeInUp} className="w-full md:w-full lg:w-auto">
+            <Link to="/signup" className="block w-full md:block lg:inline-block lg:w-auto">
                 <Button
               size="lg"
-              className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-full font-semibold transition-all text-sm sm:text-base w-full sm:w-auto group shadow-[0_4px_20px_rgba(74,144,226,0.4)]"
+              className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white px-6 sm:px-8 py-2.5 sm:py-3 md:py-3 rounded-full font-semibold transition-all text-sm sm:text-base w-full md:w-full lg:w-auto group shadow-[0_4px_20px_rgba(74,144,226,0.4)]"
             >
               Get Started Now <LuArrowRight className="ml-2 inline transition-transform group-hover:translate-x-1" />
             </Button>

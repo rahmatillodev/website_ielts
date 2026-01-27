@@ -8,17 +8,20 @@ import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { HiOutlineHome, HiOutlineRefresh } from "react-icons/hi";
 import { useTestStore } from "@/store/testStore";
-import { fetchLatestAttempt, deleteTestAttempts } from "@/lib/testAttempts";
+import { fetchLatestAttempt, deleteTestAttempts, fetchAttemptAnswers } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
+import { useDashboardStore } from "@/store/dashboardStore";
 import { generateTestResultsPDF } from "@/utils/pdfExport";
 import ResultBanner from "@/components/badges/ResultBanner";
 import { useSettingsStore } from "@/store/systemStore";
+import { toast } from "react-toastify";
 
 const ReadingResultPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentTest, fetchTestById } = useTestStore();
   const { authUser } = useAuthStore();
+  const attempts = useDashboardStore((state) => state.attempts);
   const [resultData, setResultData] = useState(null);
   const [attemptData, setAttemptData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,13 +68,57 @@ const ReadingResultPage = () => {
         const currentAuthUser = authUserRef.current;
         const currentFetchTestById = fetchTestByIdRef.current;
 
-        // Fetch test and attempt in parallel
-        const [testResult, attemptResult] = await Promise.all([
-          currentFetchTestById(id),
-          currentAuthUser
-            ? fetchLatestAttempt(currentAuthUser.id, id)
-            : Promise.resolve({ success: true, attempt: null, answers: {} })
-        ]);
+        // Check if the latest attempt is already in dashboardStore
+        const testId = id ? String(id) : null;
+        const attemptsForTest = attempts.filter((a) => String(a.test_id) === testId);
+        const latestAttemptFromStore = attemptsForTest.length > 0
+          ? attemptsForTest.sort((a, b) => {
+              const aDate = new Date(a.completed_at || a.created_at || 0).getTime();
+              const bDate = new Date(b.completed_at || b.created_at || 0).getTime();
+              return bDate - aDate; // Descending order
+            })[0]
+          : null;
+
+        let attemptResult;
+
+        if (latestAttemptFromStore && currentAuthUser) {
+          // Use attempt from store and only fetch answers
+          // Fetch test data and answers in parallel
+          const [testResult, answersResult] = await Promise.all([
+            currentFetchTestById(id),
+            fetchAttemptAnswers(latestAttemptFromStore.id)
+          ]);
+          
+          if (answersResult.success) {
+            attemptResult = {
+              success: true,
+              attempt: {
+                id: latestAttemptFromStore.id,
+                user_id: latestAttemptFromStore.user_id,
+                test_id: latestAttemptFromStore.test_id,
+                score: latestAttemptFromStore.score,
+                total_questions: latestAttemptFromStore.total_questions,
+                correct_answers: latestAttemptFromStore.correct_answers,
+                time_taken: latestAttemptFromStore.time_taken,
+                completed_at: latestAttemptFromStore.completed_at,
+                created_at: latestAttemptFromStore.created_at,
+              },
+              answers: answersResult.answers || {},
+            };
+          } else {
+            // Fallback to fetchLatestAttempt if fetching answers fails
+            attemptResult = await fetchLatestAttempt(currentAuthUser.id, id);
+          }
+        } else {
+          // Fetch test and attempt in parallel
+          const [testResult, fetchedAttemptResult] = await Promise.all([
+            currentFetchTestById(id),
+            currentAuthUser
+              ? fetchLatestAttempt(currentAuthUser.id, id)
+              : Promise.resolve({ success: true, attempt: null, answers: {} })
+          ]);
+          attemptResult = fetchedAttemptResult;
+        }
 
         if (attemptResult.success && attemptResult.attempt && attemptResult.answers) {
           setAttemptData(attemptResult.attempt);
@@ -100,7 +147,8 @@ const ReadingResultPage = () => {
     };
 
     loadData();
-  }, [id]); // Only depend on id, not on other values
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]); // Only depend on id - attempts is read from store when effect runs
 
   // Format time from seconds - ensure never negative
   const formatTime = useCallback((seconds) => {
@@ -189,6 +237,10 @@ const ReadingResultPage = () => {
 
   // PDF Export function
   const downloadPDF = useCallback(async () => {
+    if (answerDisplayData.length === 0) {
+      toast.error('No answers submitted');
+      return;
+    }
     await generateTestResultsPDF({
       test: currentTest,
       stats,
@@ -200,6 +252,7 @@ const ReadingResultPage = () => {
       defaultTestTitle: 'Academic Reading Practice Test',
       settings
     });
+    toast.success('PDF is being generated...');
   }, [currentTest, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDate]);
 
   // Handle retake - delete previous attempts
