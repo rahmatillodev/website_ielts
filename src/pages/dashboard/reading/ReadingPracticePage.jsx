@@ -17,7 +17,7 @@ import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext"
 import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip";
 import NoteSidebar from "@/components/sidebar/NoteSidebar";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
-
+import parse from "html-react-parser"; 
 
 
 
@@ -1046,7 +1046,7 @@ const ReadingPracticePageContent = () => {
                           data-section-type="questions"
                           style={{ color: themeColors.text }}
                         >
-                          {questionGroup.instruction}
+                          {parse(questionGroup.instruction, { allowDangerousHtml: true })}
                         </p>
                       )}
                   </div>

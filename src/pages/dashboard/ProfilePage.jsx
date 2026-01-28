@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -79,8 +79,11 @@ const ProfilePage = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [attachment, setAttachment] = useState(null); // Attachment state
+  const [savingTarget, setSavingTarget] = useState(false);
   const authUser = useAuthStore((state) => state.authUser);
   const userProfile = useAuthStore((state) => state.userProfile);
+  const [targetBandScore, setTargetBandScore] = useState(userProfile?.target_band_score || 7.5);
+  const updateUserProfile = useAuthStore((state) => state.updateUserProfile);
   const settings = useSettingsStore((state) => state.settings);
   const addFeedback = useFeedbacksStore((state) => state.addFeedback);
 
@@ -193,6 +196,40 @@ const ProfilePage = () => {
     if (file) {
       setAttachment(file);
       toast.info(`Attached file: ${file.name}`, { autoClose: 2000 });
+    }
+  };
+
+  // Update target band score
+  useEffect(() => {
+    if (userProfile?.target_band_score !== undefined) {
+      setTargetBandScore(userProfile.target_band_score);
+    }
+  }, [userProfile?.target_band_score]);
+
+  const handleTargetScoreChange = async (value) => {
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || numValue < 0 || numValue > 9) {
+      toast.error('Target score must be between 0 and 9');
+      return;
+    }
+
+    setTargetBandScore(numValue);
+    setSavingTarget(true);
+
+    try {
+      const result = await updateUserProfile({ target_band_score: numValue });
+      if (result.success) {
+        toast.success('Target band score updated');
+      } else {
+        toast.error(result.error || 'Failed to update target score');
+        // Revert on error
+        setTargetBandScore(userProfile?.target_band_score || 7.5);
+      }
+    } catch (error) {
+      toast.error('Failed to update target score');
+      setTargetBandScore(userProfile?.target_band_score || 7.5);
+    } finally {
+      setSavingTarget(false);
     }
   };
 
@@ -404,6 +441,26 @@ const ProfilePage = () => {
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
+              </motion.div>
+              <motion.div className="space-y-2" variants={inputVariants}>
+                <Label className="text-sm font-black text-gray-400 uppercase tracking-tighter">
+                  Target Band Score
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="9"
+                  step="0.5"
+                  disabled={true}
+                  value={targetBandScore}
+                  onChange={(e) => setTargetBandScore(e.target.value)}
+                  onBlur={(e) => handleTargetScoreChange(e.target.value)}
+                  placeholder="7.5"
+                  className="bg-white border-gray-200 rounded-xl h-12 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                />
+                <p className="text-xs text-gray-500">
+                  Set your target IELTS band score (0-9)
+                </p>
               </motion.div>
             </motion.div>
           </div>

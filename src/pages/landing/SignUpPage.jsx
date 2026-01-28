@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Mail, Lock, User, ChevronLeft, ArrowRight } from "lucide-react";
 import { toast } from "react-toastify";
 import LogoDesign from "@/components/LogoDesign";
-import AnimatedPolygonDecoration from "@/components/auth/AnimatedPolygonDecoration";
+import AnimatedPolygonDecoration from "@/components/AnimatedPolygonDecoration";
 import { motion } from "framer-motion";
 import { MdAutoStories } from "react-icons/md";
 

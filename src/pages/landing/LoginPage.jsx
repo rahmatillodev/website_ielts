@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 import LogoDesign from "@/components/LogoDesign";
 import { motion } from "framer-motion";
 import { MdAutoStories, MdInsights } from "react-icons/md";
-import AnimatedPolygonDecoration from "@/components/auth/AnimatedPolygonDecoration";
+import AnimatedPolygonDecoration from "@/components/AnimatedPolygonDecoration";
 
 // Public Login page
 function LoginPage() {
