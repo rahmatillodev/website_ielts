@@ -1,12 +1,25 @@
-import ComingSoonPage from '@/pages/dashboard/ComingSoonPage'
-import React from 'react'
+import React, { useEffect } from "react";
+import TestsLibraryPage from "@/components/pages/TestsLibraryPage";
+import { useWritingStore } from "@/store/WritingStore";
 
 const WritingPage = () => {
-  return (
-    <>
-        <ComingSoonPage type="writing" title="Writing Library" description="Simulate the actual writing test environment. Each test contains 2 tasks and 20 questions." />
-    </>
-  )
-}
+  const { writings, loading, fetchWritings } = useWritingStore();
 
-export default WritingPage
+  useEffect(() => {
+    fetchWritings();
+  }, [fetchWritings]);
+
+  return (
+    <TestsLibraryPage
+      title="Writing Library"
+      description="Boost your band score with our extensive library of writing tests."
+      testData={writings}
+      testType="writing"
+      loading={loading}
+      fetchTests={fetchWritings}
+      headerAction={null}
+    />
+  );
+};
+
+export default WritingPage;

@@ -1,11 +1,11 @@
 import React from "react";
 import { FaTelegramPlane, FaInstagram } from "react-icons/fa";
 import LogoDesign from "../LogoDesign";
-import { useSettingsStore } from "@/store/systemStore";
+
+
 
 const LandingFooter = () => {
   const settings = useSettingsStore((state) => state.settings);
-
 
   return (
     <footer className="bg-white border-t border-gray-200 w-full">

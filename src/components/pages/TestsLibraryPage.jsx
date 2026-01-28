@@ -24,6 +24,8 @@ const TestsLibraryPage = ({
   emptyFreeMessage = "",
   emptyPremiumMessage = "",
   emptySearchMessage = "",
+  customHeight = "h-[calc(100vh-64px)]",
+  headerAction = null,
 }) => {
   // Load view preference from localStorage, default to list view (false)
   const getInitialViewState = () => {
@@ -114,7 +116,7 @@ const TestsLibraryPage = ({
 
       const matchesTab =
         activeTab === "All Tests" ||
-        (activeTab === "premium" && test.is_premium === true) ||
+        (activeTab === "premium" && test.is_premium === true) ||  
         (activeTab === "free" && test.is_premium === false);
 
       return matchesSearch && matchesTab;
@@ -282,7 +284,7 @@ const TestsLibraryPage = ({
   }, [loading]);
 
   return (
-    <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
+    <div className={`flex flex-col mx-auto bg-gray-50 ${customHeight} overflow-hidden px-3 md:px-8`}>
       {/* Sticky Header */}
       <div className="bg-gray-50 pt-4 pb-2 md:pb-4 shrink-0 sticky top-0 z-10">
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">{title}</h1>
@@ -304,8 +306,15 @@ const TestsLibraryPage = ({
             ))}
           </div>
 
+          <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">
+            {/* Header Action (e.g., Practice Now button) - above search bar */}
+            {headerAction && (
+              <div className="flex justify-end">
+                {headerAction}
+              </div>
+            )}
 
-          <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
             {/* Search */}
             <div className="relative flex-1 md:w-80">
               <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm md:text-base" />
@@ -344,6 +353,7 @@ const TestsLibraryPage = ({
                 <IoGridOutline size={20} className="md:w-6 md:h-6" />
               </ToggleGroupItem>
             </ToggleGroup>
+            </div>
           </div>
         </div>
       </div>
@@ -468,4 +478,3 @@ const TestsLibraryPage = ({
 };
 
 export default TestsLibraryPage;
-
