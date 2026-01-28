@@ -29,6 +29,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
     telegram_username: userProfile?.telegram_username || '',
     phone_number: userProfile?.phone_number || '',
     avatar_image: userProfile?.avatar_image || null,
+    target_band_score: userProfile?.target_band_score || 7.5,
   });
 
   useEffect(() => {
@@ -37,6 +38,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
         full_name: userProfile.full_name || '',
         telegram_username: userProfile.telegram_username || '',
         phone_number: userProfile.phone_number || '',
+        target_band_score: userProfile.target_band_score || 7.5,
       });
       setAvatarPreview(userProfile.avatar_image || null);
     }
@@ -47,6 +49,13 @@ const ProfileModal = ({ open, onOpenChange }) => {
     const { name, value } = e.target;
     if (name === 'phone_number') {
       setFormData((prev) => ({ ...prev, [name]: formatUzPhone(value) }));
+    } else if (name === 'target_band_score') {
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue) && numValue >= 0 && numValue <= 9) {
+        setFormData((prev) => ({ ...prev, [name]: numValue }));
+      } else if (value === '') {
+        setFormData((prev) => ({ ...prev, [name]: '' }));
+      }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -153,12 +162,21 @@ const ProfileModal = ({ open, onOpenChange }) => {
         avatarUrl = uploadResult.url;
       }
 
+      // Validate target band score
+      const targetScore = formData.target_band_score;
+      if (targetScore !== '' && (isNaN(targetScore) || targetScore < 0 || targetScore > 9)) {
+        toast.error('Target band score must be between 0 and 9');
+        setLoading(false);
+        return;
+      }
+
       // Prepare profile data - only include phone_number if it's provided and properly formatted
       const profileData = {
         full_name: formData.full_name.trim() || null,
         telegram_username: formData.telegram_username.trim() || null,
         phone_number: phoneNumber || null,
         avatar_image: avatarUrl,
+        target_band_score: targetScore !== '' ? parseFloat(targetScore) : 7.5,
       };
 
       // Update user profile
@@ -252,6 +270,24 @@ const ProfileModal = ({ open, onOpenChange }) => {
               placeholder="+998 90 123 45 67"
               className="rounded-xl h-11"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold text-gray-500">Target Band Score</Label>
+            <Input
+              type="number"
+              name="target_band_score"
+              value={formData.target_band_score}
+              onChange={handleChange}
+              min="0"
+              max="9"
+              step="0.5"
+              placeholder="7.5"
+              className="rounded-xl h-11"
+            />
+            <p className="text-xs text-gray-400">
+              Set your target IELTS band score (0-9)
+            </p>
           </div>
 
           <DialogFooter className="pt-4">

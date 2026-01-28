@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { getOptionValue } from "../../store/optionUtils";
 import { FaRegBookmark, FaBookmark } from "react-icons/fa";
 import { useAppearance } from "@/contexts/AppearanceContext";
-
+import parse from "html-react-parser"; 
 /**
  * Map - Renders a map question type with image and table matching interface
  * 
@@ -151,7 +151,7 @@ const TypeMap = ({
           data-selectable="true"
           style={{ color: themeColors.text }}
         >
-          {instruction}
+          {parse(instruction, { allowDangerousHtml: true })}
         </div>
       )}
 

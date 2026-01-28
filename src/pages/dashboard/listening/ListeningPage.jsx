@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useTestStore } from "@/store/testStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
-import TestsLibraryPage from "@/components/pages/TestsLibraryPage";
+import TestsLibraryPage from "@/components/TestsLibraryPage";
 
 const ListeningPage = () => {
   // Get store state and actions

@@ -85,6 +85,7 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
       user_answer: result.userAnswer || '',
       is_correct: result.isCorrect,
       correct_answer: result.correctAnswer || '',
+      question_type: result.questionType || 'multiple_choice', // Include question type
     }));
 
     if (answersToInsert.length > 0) {
@@ -241,6 +242,49 @@ export const checkTestCompleted = async (testId) => {
 };
 
 /**
+ * Map question group type to standardized question type enum
+ * Valid enum values: multiple_choice, fill_in_blanks, matching_information, 
+ * true_false_not_given, table, drag_drop, yes_no_not_given, map, table_completion
+ * @param {string} groupType - Question group type
+ * @returns {string} Standardized question type enum value
+ */
+const mapQuestionType = (groupType) => {
+  const normalizedType = (groupType || '').toLowerCase();
+  
+  // Map to exact enum values from Supabase
+  if (normalizedType.includes('multiple') || normalizedType.includes('choice')) {
+    return 'multiple_choice';
+  }
+  if (normalizedType === 'fill_in_blanks' || normalizedType.includes('fill_in_blank')) {
+    return 'fill_in_blanks';
+  }
+  if (normalizedType === 'table_completion') {
+    return 'table_completion';
+  }
+  if (normalizedType.includes('drag') || normalizedType.includes('drop') || normalizedType.includes('summary_completion')) {
+    return 'drag_drop';
+  }
+  if (normalizedType.includes('matching_information')) {
+    return 'matching_information';
+  }
+  if (normalizedType.includes('matching_headings') || (normalizedType.includes('table') && !normalizedType.includes('completion'))) {
+    return 'table'; // matching_headings maps to 'table' enum value
+  }
+  if (normalizedType.includes('map')) {
+    return 'map';
+  }
+  if (normalizedType.includes('true_false_not_given')) {
+    return 'true_false_not_given';
+  }
+  if (normalizedType.includes('yes_no_not_given')) {
+    return 'yes_no_not_given';
+  }
+  
+  // Default fallback
+  return 'multiple_choice';
+};
+
+/**
  * Calculate test score by comparing user answers with correct answers
  * @param {object} answers - User answers { [questionId]: answer }
  * @param {object} currentTest - Test data with parts and questions
@@ -262,6 +306,9 @@ const calculateTestScore = (answers, currentTest) => {
         const groupQuestions = questionGroup.questions || [];
         const groupType = (questionGroup.type || '').toLowerCase();
         const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
+        
+        // Map question group type to standardized question type
+        const questionType = mapQuestionType(questionGroup.type);
 
         // For drag and drop, only process questions with question_number (exclude word bank entries)
         const validQuestions = isDragAndDrop
@@ -292,6 +339,7 @@ const calculateTestScore = (answers, currentTest) => {
             userAnswer,
             correctAnswer,
             isCorrect,
+            questionType, // Include question type for analytics
           });
         });
       });

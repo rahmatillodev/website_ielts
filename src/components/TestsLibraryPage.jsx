@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 // import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import CardLocked from "../cards/CardLocked";
-import CardOpen from "../cards/CardOpen";
+import CardLocked from "./cards/CardLocked";
+import CardOpen from "./cards/CardOpen";
 import { motion } from "framer-motion";
 import { LibraryCardShimmer } from "@/components/ui/shimmer";
 

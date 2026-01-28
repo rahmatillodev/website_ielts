@@ -266,7 +266,7 @@ const MatchingInformation = ({
           data-selectable="true"
           style={{ color: themeColors.text }}
         >
-          {instructionText}
+          {parse(instructionText, { allowDangerousHtml: true })}
         </div>
       )}
 
