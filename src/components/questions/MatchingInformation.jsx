@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import parse from "html-react-parser"; 
 /**
  * MatchingInformation - Renders matching_information question type
  * 
@@ -370,7 +371,7 @@ const MatchingInformation = ({
                   className="flex-1"
                   style={{ color: themeColors.text }}
                 >
-                  {questionText}
+                   {parse(questionText, { allowDangerousHtml: true })}
                 </span>
                 {showCorrect && (
                   <span className="text-xs text-green-700 font-medium ml-2">
