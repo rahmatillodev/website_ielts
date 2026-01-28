@@ -1,8 +1,11 @@
 import { MdInsights } from "react-icons/md";
 import { motion } from "framer-motion";
+import { HiArrowLeft } from "react-icons/hi2";
+import { useNavigate } from "react-router-dom";
 
 
 const AnimatedPolygonDecoration = () => {
+  const navigate = useNavigate();
   // Animation variants for the main hexagon
   const polygramshape = {
     clipPath: "polygon(50% 0%, 90% 20%, 100% 60%, 75% 100%, 25% 100%, 0% 60%, 10% 20%)",
@@ -22,6 +25,19 @@ const AnimatedPolygonDecoration = () => {
   return (
     <div className="hidden lg:flex w-1/2 bg-[#0a192f] relative flex-col items-center justify-between overflow-hidden p-12">
       {/* <!-- Background Decoration --> */}
+      <motion.button
+        onClick={()=>navigate("/")} 
+        initial={{ x: -20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        whileHover={{ x: -5 }}
+        className="absolute top-8 left-8 z-50 flex items-center space-x-2 text-blue-200/70 hover:text-white transition-colors group"
+      >
+        <div className="p-2 rounded-full bg-white/5 border border-white/10 group-hover:bg-[#136dec]/20 group-hover:border-[#136dec]/50 transition-all">
+          <HiArrowLeft className="text-xl" />
+        </div>
+        <span className="text-sm font-medium tracking-wide uppercase">Back</span>
+      </motion.button>
+
       <div className="absolute inset-0 opacity-20">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#136dec] blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400 blur-[120px]"></div>
