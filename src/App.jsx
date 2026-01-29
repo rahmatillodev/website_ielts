@@ -22,7 +22,7 @@ import ListeningPage from "./pages/dashboard/listening/ListeningPage";
 import ListeningPracticePage from "./pages/dashboard/listening/ListeningPracticePage";
 import NetworkModal from "./components/modal/NetworkModal";
 import useNetworkStatus from "./hooks/use_network_status";
-import WritingPage from "./pages/dashboard/WritingPage";
+import WritingPage from "./pages/dashboard/writing/WritingPage";
 import SpeakingPage from "./pages/dashboard/SpeakingPage";
 import PricingRoute from "./components/PricingRoute";
 import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
@@ -31,6 +31,7 @@ import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
 import MockTestsPage from "./pages/dashboard/MockTestsPage";
 import "./App.css";
 import FeedbackModal from "./components/modal/FeedbackModal";
+import WritingPracticePage from "./pages/dashboard/writing/WritingPracticePage";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -82,7 +83,7 @@ function App() {
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/login" element={<LoginPage />} />
           </Route>
-
+            
           :
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
@@ -102,14 +103,9 @@ function App() {
                 </PricingRoute>
               }
             />
-            <Route
-              path="/reading-practice/:id"
-              element={<ReadingPracticePage />}
-            />
-            <Route
-              path="/listening-practice/:id"
-              element={<ListeningPracticePage />}
-            />
+            <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
+            <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
+            <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
             <Route path="/reading-result/:id" element={<ReadingResultPage />} />
             <Route path="/listening-result/:id" element={<ListeningResultPage />} />
 

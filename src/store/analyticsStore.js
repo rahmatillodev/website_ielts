@@ -147,7 +147,7 @@ export const useAnalyticsStore = create((set, get) => ({
 
     try {
       // TEMPORARY: Use mock data for testing
-      if (USE_MOCK_DATA) {
+      if (!USE_MOCK_DATA) {
         const { allAttempts: mockAttempts, allAnswers: mockAnswers } = generateMockData();
         
         // Fetch user profile for target score
@@ -312,15 +312,19 @@ function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5) {
   // Get score trends (default to last 5 tests for each type, but can be filtered in UI)
   const scoreTrends = getScoreTrends(readingAttempts, listeningAttempts, 5);
 
-  // Calculate question type performance
-  const questionTypePerformance = calculateQuestionTypePerformance(userAnswers);
+  // Calculate question type performance (7 analytics types)
+  const questionTypePerformance = calculateAnalyticsQuestionTypePerformance(userAnswers);
 
   // Calculate listening part performance (we'll need to infer from question numbers or use a different approach)
   const listeningPartPerformance = calculateListeningPartPerformance(listeningAttempts, userAnswers);
 
-  // Calculate breakdowns
-  const readingBreakdown = calculateReadingBreakdown(readingAttempts, userAnswers);
-  const listeningBreakdown = calculateListeningBreakdown(listeningAttempts, userAnswers);
+  // Calculate breakdowns (7 analytics types)
+  const readingBreakdown = calculateAnalyticsQuestionTypePerformance(
+    userAnswers.filter(a => readingAttempts.some(rt => rt.id === a.attempt_id))
+  );
+  const listeningBreakdown = calculateAnalyticsQuestionTypePerformance(
+    userAnswers.filter(a => listeningAttempts.some(lt => lt.id === a.attempt_id))
+  );
 
   // Generate insights
   const insights = generateInsights(questionTypePerformance, readingBreakdown, listeningBreakdown);
@@ -396,29 +400,34 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
   };
 }
 
-/**
- * All possible question types from the enum
- */
-const ALL_QUESTION_TYPES = [
+// ANALYTICS_QUESTION_TYPES: collapsed 7 groups for analytics reporting
+const ANALYTICS_QUESTION_TYPES = [
   'multiple_choice',
-  'fill_in_blanks',
-  'matching_information',
+  'matching',         // 'table' + 'matching_information'
+  'summary',          // 'fill_in_blanks' + 'drag_drop'
   'true_false_not_given',
-  'table',
-  'drag_drop',
   'yes_no_not_given',
   'map',
   'table_completion',
 ];
 
+// Maps user answer question_type => analytics group name (for 7 groups)
+function analyticsQuestionTypeGroup(type) {
+  if (type === 'table' || type === 'matching_information') return 'matching';
+  if (type === 'fill_in_blanks' || type === 'drag_drop') return 'summary';
+  // direct 1:1 for other types:
+  if (ANALYTICS_QUESTION_TYPES.includes(type)) return type;
+  return 'other';
+}
+
 /**
- * Calculate performance by question type
- * Includes all question types, even if they have no data (defaults to 0)
+ * Calculate performance by analytics question type (7 grouped types)
+ * Collapses 9 enum types into 7 groups for analytics reporting.
  */
-function calculateQuestionTypePerformance(userAnswers) {
-  // Initialize all question types with 0 values
+function calculateAnalyticsQuestionTypePerformance(userAnswers) {
+  // Initialize all analytics types with 0 values
   const typeStats = {};
-  ALL_QUESTION_TYPES.forEach((type) => {
+  ANALYTICS_QUESTION_TYPES.forEach((type) => {
     typeStats[type] = {
       total: 0,
       correct: 0,
@@ -428,17 +437,13 @@ function calculateQuestionTypePerformance(userAnswers) {
 
   // Process actual answers
   userAnswers.forEach((answer) => {
-    const type = answer.question_type || 'unknown';
-    if (!typeStats[type]) {
-      typeStats[type] = {
-        total: 0,
-        correct: 0,
-        accuracy: 0,
-      };
+    const group = analyticsQuestionTypeGroup(answer.question_type || 'other');
+    if (!typeStats[group]) {
+      typeStats[group] = { total: 0, correct: 0, accuracy: 0 };
     }
-    typeStats[type].total++;
+    typeStats[group].total++;
     if (answer.is_correct) {
-      typeStats[type].correct++;
+      typeStats[group].correct++;
     }
   });
 
@@ -497,27 +502,25 @@ function calculateListeningPartPerformance(listeningAttempts, userAnswers) {
 }
 
 /**
- * Calculate reading breakdown by question type
+ * Calculate reading breakdown by analytics question type
  */
 function calculateReadingBreakdown(readingAttempts, userAnswers) {
   const readingAttemptIds = new Set(readingAttempts.map(a => a.id));
   const readingAnswers = userAnswers.filter(a => readingAttemptIds.has(a.attempt_id));
-  
-  return calculateQuestionTypePerformance(readingAnswers);
+  return calculateAnalyticsQuestionTypePerformance(readingAnswers);
 }
 
 /**
- * Calculate listening breakdown by question type (same as reading)
+ * Calculate listening breakdown by analytics question type (same as reading)
  */
 function calculateListeningBreakdown(listeningAttempts, userAnswers) {
   const listeningAttemptIds = new Set(listeningAttempts.map(a => a.id));
   const listeningAnswers = userAnswers.filter(a => listeningAttemptIds.has(a.attempt_id));
-  
-  return calculateQuestionTypePerformance(listeningAnswers);
+  return calculateAnalyticsQuestionTypePerformance(listeningAnswers);
 }
 
 /**
- * Generate insights (strongest area and needs focus)
+ * Generate insights (strongest area and needs focus), using analytics groupings
  */
 function generateInsights(questionTypePerformance, readingBreakdown, listeningBreakdown) {
   // Find strongest area (highest accuracy with at least 5 questions)
@@ -531,7 +534,7 @@ function generateInsights(questionTypePerformance, readingBreakdown, listeningBr
       highestAccuracy = stats.accuracy;
       strongestArea = {
         type: 'Reading',
-        questionType: formatQuestionTypeName(type),
+        questionType: formatAnalyticsQuestionTypeName(type),
         accuracy: stats.accuracy,
       };
     }
@@ -544,7 +547,7 @@ function generateInsights(questionTypePerformance, readingBreakdown, listeningBr
       highestAccuracy = stats.accuracy;
       strongestArea = {
         type: 'Listening',
-        questionType: formatQuestionTypeName(type),
+        questionType: formatAnalyticsQuestionTypeName(type),
         accuracy: stats.accuracy,
       };
     }
@@ -561,7 +564,7 @@ function generateInsights(questionTypePerformance, readingBreakdown, listeningBr
       lowestAccuracy = stats.accuracy;
       needsFocus = {
         type: 'Reading',
-        questionType: formatQuestionTypeName(type),
+        questionType: formatAnalyticsQuestionTypeName(type),
         accuracy: stats.accuracy,
       };
     }
@@ -574,7 +577,7 @@ function generateInsights(questionTypePerformance, readingBreakdown, listeningBr
       lowestAccuracy = stats.accuracy;
       needsFocus = {
         type: 'Listening',
-        questionType: formatQuestionTypeName(type),
+        questionType: formatAnalyticsQuestionTypeName(type),
         accuracy: stats.accuracy,
       };
     }
@@ -587,22 +590,22 @@ function generateInsights(questionTypePerformance, readingBreakdown, listeningBr
 }
 
 /**
- * Format question type name for display
- * Maps enum values to display names
+ * Format analytics group name for display (7 groups)
+ * mapping:
+ *   matching:  Matching Headings, Matching Information
+ *   summary:   Fill in the Blanks, Drag and Drop
+ *   Other groups use singular names
  */
-function formatQuestionTypeName(type) {
-  const typeMap = {
+function formatAnalyticsQuestionTypeName(type) {
+  const analyticsTypeMap = {
     'multiple_choice': 'Multiple Choice',
-    'fill_in_blanks': 'Fill in the Blanks',
-    'table_completion': 'Table Completion',
-    'drag_drop': 'Drag and Drop',
-    'table': 'Matching Headings', // 'table' enum maps to Matching Headings display name
-    'matching_information': 'Matching Information',
-    'map': 'Map Labelling',
+    'matching': 'Matching (Headings & Information)', // combined
+    'summary': 'Summary Completion (Blanks & Drag & Drop)', // combined
     'true_false_not_given': 'True / False / Not Given',
     'yes_no_not_given': 'Yes / No / Not Given',
+    'map': 'Map Labelling',
+    'table_completion': 'Table Completion',
+    'other': 'Other',
   };
-
-  return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  return analyticsTypeMap[type] || (type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
 }
-

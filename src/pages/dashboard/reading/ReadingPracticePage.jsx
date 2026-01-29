@@ -734,7 +734,7 @@ const ReadingPracticePageContent = () => {
   };
 
   // Reset to page 1 when part changes
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [currentPart]);
 

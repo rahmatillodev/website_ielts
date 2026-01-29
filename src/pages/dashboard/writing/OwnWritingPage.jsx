@@ -15,6 +15,7 @@ import { AppearanceProvider, useAppearance } from '@/contexts/AppearanceContext'
 import AppearanceSettingsModal from '@/components/modal/AppearanceSettingsModal';
 import { toast } from "react-toastify";
 import { useSettingsStore } from '@/store/systemStore';
+import { useWritingStore } from '@/store/WritingStore';
 
 const OwnWritingPageContent = () => {
   const navigate = useNavigate();
@@ -553,7 +554,7 @@ Tip: You can drag & drop image`
             disabled={isSubmitted}
             className="ml-3 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-default"
           >
-            {isSubmitted ? "Submitted" : "Submit"}
+            {isSubmitted ? "Saved" : "Save"}
           </button>
         </div>
       </footer>
@@ -569,4 +570,4 @@ const OwnWritingPage = () => {
   );
 };
 
-export default OwnWritingPage
+export default OwnWritingPage; 
