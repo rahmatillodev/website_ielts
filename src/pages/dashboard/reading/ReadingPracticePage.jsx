@@ -66,6 +66,7 @@ const ReadingPracticePageContent = () => {
   const selectableContentRef = useRef(null);
   const universalContentRef = useRef(null); // Universal container for all selectable content
 
+
   useEffect(() => {
     console.log('[ReadingPracticePage] useEffect triggered', { id, idType: typeof id });
     
@@ -93,6 +94,7 @@ const ReadingPracticePageContent = () => {
 
     // Component lifecycle management: Track if component is mounted
     let isMounted = true;
+   
 
     const loadTestData = async () => {
       console.log('[ReadingPracticePage] loadTestData called with id:', id, 'idType:', typeof id);
@@ -108,7 +110,7 @@ const ReadingPracticePageContent = () => {
         }
         
         // Detect review mode from URL
-        const isReviewMode = searchParams.get('mode') === 'review';
+        const isReviewMode = status === 'reviewing';
         const includeCorrectAnswers = isReviewMode;
         
         // Get user subscription status
@@ -645,15 +647,8 @@ const ReadingPracticePageContent = () => {
       return;
     }
 
-    // Prevent concurrent review fetches
-    if (status === 'reviewing') {
-      console.warn('[handleReviewTest] Already in review mode');
-      return;
-    }
-
     try {
       const result = await fetchLatestAttempt(authUser.id, id);
-      
       if (result.success && result.attempt && result.answers) {
         // Convert answers to review data format
         const reviewDataObj = {};
@@ -1087,8 +1082,7 @@ const ReadingPracticePageContent = () => {
                         backgroundColor: themeColors.background
                       }}
                     >
-                     
-
+                     { console.log('reviewData', reviewData)}
                       <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
                         <QuestionRenderer
                           question={{

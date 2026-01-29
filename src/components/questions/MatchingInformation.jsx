@@ -286,12 +286,12 @@ const MatchingInformation = ({
             borderStyle: 'solid'
           }}
         >
-          <h3 
+          {/* <h3 
             className="font-bold mb-3"
             style={{ color: themeColors.text }}
           >
             List of Researchers
-          </h3>
+          </h3> */}
           <div className="space-y-2">
             {optionKeyList.length > 0 ? (
               // Use actual option_key from data
