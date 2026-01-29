@@ -13,98 +13,60 @@ import supabase from '@/lib/supabase';
 const USE_MOCK_DATA = true;
 
 /**
- * Generate temporary mock data for testing
+ * Mock ma'lumotlarni 10 barobar ko'paytirilgan varianti (100 ta attempt)
  */
 const generateMockData = (targetBandScore = 7.5) => {
+  const allAttempts = [];
+  const allAnswers = [];
+  const questionTypes = [
+    'multiple_choice', 'table', 'matching_information', 
+    'fill_in_blanks', 'true_false_not_given', 'drag_drop', 
+    'yes_no_not_given', 'map', 'table_completion'
+  ];
+
   const now = Date.now();
-  const mockReadingAttempts = [
-    { id: '1', score: 7.0, completed_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(), time_taken: 3600, test: { type: 'reading', difficulty: 'medium' } },
-    { id: '2', score: 7.5, completed_at: new Date(now - 4 * 24 * 60 * 60 * 1000).toISOString(), time_taken: 3500, test: { type: 'reading', difficulty: 'medium' } },
-    { id: '3', score: 8.0, completed_at: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(), time_taken: 3400, test: { type: 'reading', difficulty: 'hard' } },
-    { id: '4', score: 0.0, completed_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(), time_taken: 3300, test: { type: 'reading', difficulty: 'medium' } },
-    { id: '5', score: 8.0, completed_at: new Date(now - 1 * 24 * 60 * 60 * 1000).toISOString(), time_taken: 3200, test: { type: 'reading', difficulty: 'hard' } },
-  ];
+  const dayMs = 24 * 60 * 60 * 1000;
 
-  const mockListeningAttempts = [
-    { id: '6', score: 6.5, completed_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(), time_taken: 2400, test: { type: 'listening', difficulty: 'easy' } },
-    { id: '7', score: 7.0, completed_at: new Date(now - 4 * 24 * 60 * 60 * 1000).toISOString(), time_taken: 2300, test: { type: 'listening', difficulty: 'medium' } },
-    { id: '8', score: 7.5, completed_at: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(), time_taken: 2200, test: { type: 'listening', difficulty: 'medium' } },
-    { id: '9', score: 7.0, completed_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(), time_taken: 2100, test: { type: 'listening', difficulty: 'medium' } },
-    { id: '10', score: 7.5, completed_at: new Date(now - 1 * 24 * 60 * 60 * 1000).toISOString(), time_taken: 2000, test: { type: 'listening', difficulty: 'hard' } },
-  ];
-
-  // Mock user answers with realistic performance
-  const mockUserAnswers = [
-    // Reading answers
-    { attempt_id: '1', question_type: 'table', is_correct: true, part_id: null },
-    { attempt_id: '1', question_type: 'table', is_correct: false, part_id: null },
-    { attempt_id: '1', question_type: 'table', is_correct: false, part_id: null },
-    { attempt_id: '1', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '1', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '1', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '1', question_type: 'fill_in_blanks', is_correct: true, part_id: null },
-    { attempt_id: '1', question_type: 'fill_in_blanks', is_correct: true, part_id: null },
-    { attempt_id: '1', question_type: 'true_false_not_given', is_correct: true, part_id: null },
-    { attempt_id: '1', question_type: 'true_false_not_given', is_correct: false, part_id: null },
-    { attempt_id: '2', question_type: 'table', is_correct: true, part_id: null },
-    { attempt_id: '2', question_type: 'table', is_correct: true, part_id: null },
-    { attempt_id: '2', question_type: 'table', is_correct: false, part_id: null },
-    { attempt_id: '2', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '2', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '2', question_type: 'matching_information', is_correct: true, part_id: null },
-    { attempt_id: '2', question_type: 'matching_information', is_correct: true, part_id: null },
-    { attempt_id: '2', question_type: 'matching_information', is_correct: false, part_id: null },
-    { attempt_id: '3', question_type: 'table', is_correct: true, part_id: null },
-    { attempt_id: '3', question_type: 'table', is_correct: true, part_id: null },
-    { attempt_id: '3', question_type: 'table', is_correct: true, part_id: null },
-    { attempt_id: '3', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '3', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '3', question_type: 'fill_in_blanks', is_correct: true, part_id: null },
-    { attempt_id: '3', question_type: 'fill_in_blanks', is_correct: true, part_id: null },
-    { attempt_id: '3', question_type: 'true_false_not_given', is_correct: true, part_id: null },
-    { attempt_id: '3', question_type: 'true_false_not_given', is_correct: true, part_id: null },
-    { attempt_id: '4', question_type: 'table', is_correct: true, part_id: null },
-    { attempt_id: '4', question_type: 'table', is_correct: false, part_id: null },
-    { attempt_id: '4', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '4', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '4', question_type: 'drag_drop', is_correct: true, part_id: null },
-    { attempt_id: '4', question_type: 'drag_drop', is_correct: false, part_id: null },
-    { attempt_id: '5', question_type: 'table', is_correct: true, part_id: null },
-    { attempt_id: '5', question_type: 'table', is_correct: true, part_id: null },
-    { attempt_id: '5', question_type: 'table', is_correct: true, part_id: null },
-    { attempt_id: '5', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '5', question_type: 'multiple_choice', is_correct: true, part_id: null },
-    { attempt_id: '5', question_type: 'yes_no_not_given', is_correct: true, part_id: null },
-    { attempt_id: '5', question_type: 'yes_no_not_given', is_correct: true, part_id: null },
-    { attempt_id: '5', question_type: 'yes_no_not_given', is_correct: false, part_id: null },
+  // 1. Attempts yaratish (50 Reading + 50 Listening)
+  for (let i = 1; i <= 100; i++) {
+    const isReading = i <= 50;
+    const type = isReading ? 'reading' : 'listening';
     
-    // Listening answers
-    { attempt_id: '6', question_type: 'multiple_choice', is_correct: true, part_id: '1' },
-    { attempt_id: '6', question_type: 'multiple_choice', is_correct: false, part_id: '1' },
-    { attempt_id: '6', question_type: 'fill_in_blanks', is_correct: true, part_id: '1' },
-    { attempt_id: '6', question_type: 'fill_in_blanks', is_correct: false, part_id: '1' },
-    { attempt_id: '7', question_type: 'multiple_choice', is_correct: true, part_id: '2' },
-    { attempt_id: '7', question_type: 'multiple_choice', is_correct: true, part_id: '2' },
-    { attempt_id: '7', question_type: 'matching_information', is_correct: true, part_id: '2' },
-    { attempt_id: '7', question_type: 'matching_information', is_correct: false, part_id: '2' },
-    { attempt_id: '8', question_type: 'multiple_choice', is_correct: true, part_id: '3' },
-    { attempt_id: '8', question_type: 'multiple_choice', is_correct: true, part_id: '3' },
-    { attempt_id: '8', question_type: 'multiple_choice', is_correct: true, part_id: '3' },
-    { attempt_id: '8', question_type: 'table_completion', is_correct: true, part_id: '3' },
-    { attempt_id: '8', question_type: 'table_completion', is_correct: false, part_id: '3' },
-    { attempt_id: '9', question_type: 'multiple_choice', is_correct: true, part_id: '4' },
-    { attempt_id: '9', question_type: 'multiple_choice', is_correct: true, part_id: '4' },
-    { attempt_id: '9', question_type: 'fill_in_blanks', is_correct: true, part_id: '4' },
-    { attempt_id: '9', question_type: 'fill_in_blanks', is_correct: false, part_id: '4' },
-    { attempt_id: '10', question_type: 'multiple_choice', is_correct: true, part_id: '1' },
-    { attempt_id: '10', question_type: 'multiple_choice', is_correct: true, part_id: '1' },
-    { attempt_id: '10', question_type: 'multiple_choice', is_correct: true, part_id: '1' },
-    { attempt_id: '10', question_type: 'drag_drop', is_correct: true, part_id: '2' },
-    { attempt_id: '10', question_type: 'drag_drop', is_correct: false, part_id: '2' },
-  ];
+    // Tasodifiy ballar (4.0 dan 9.0 gacha)
+    const score = Math.round((Math.random() * 5 + 4) * 2) / 2;
+    // Tasodifiy vaqt (20 kundan 1 kungacha orqaga)
+    const completedAt = new Date(now - Math.floor(Math.random() * 60) * dayMs).toISOString();
 
-  const allAttempts = [...mockReadingAttempts, ...mockListeningAttempts];
-  const allAnswers = mockUserAnswers;
+    allAttempts.push({
+      id: i.toString(),
+      score: score,
+      completed_at: completedAt,
+      time_taken: isReading ? 3600 - (i * 10) : 2400 - (i * 5),
+      test: {
+        type: type,
+        difficulty: score > 7 ? 'hard' : 'medium'
+      }
+    });
+
+    // 2. Har bir attempt uchun 5-8 tadan tasodifiy javoblar yaratish
+    const numAnswers = Math.floor(Math.random() * 4) + 5; 
+    for (let j = 0; j < numAnswers; j++) {
+      const qType = questionTypes[Math.floor(Math.random() * questionTypes.length)];
+      
+      allAnswers.push({
+        attempt_id: i.toString(),
+        question_type: qType,
+        // Balga qarab to'g'ri javob ehtimolligini belgilash
+        is_correct: Math.random() < (score / 10 + 0.1), 
+        part_id: !isReading ? (Math.floor(Math.random() * 4) + 1).toString() : null,
+        // Listening uchun savol raqami (Partlarni aniqlash uchun)
+        question_id: !isReading ? (Math.floor(Math.random() * 40) + 1).toString() : null
+      });
+    }
+  }
+
+  // Sanalari bo'yicha tartiblab chiqamiz (Newest first)
+  allAttempts.sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
 
   return { allAttempts, allAnswers };
 };
@@ -147,7 +109,7 @@ export const useAnalyticsStore = create((set, get) => ({
 
     try {
       // TEMPORARY: Use mock data for testing
-      if (!USE_MOCK_DATA) {
+      if (USE_MOCK_DATA) {
         const { allAttempts: mockAttempts, allAnswers: mockAnswers } = generateMockData();
         
         // Fetch user profile for target score
@@ -161,6 +123,9 @@ export const useAnalyticsStore = create((set, get) => ({
         
         // Calculate analytics with mock data
         const analytics = calculateAnalytics(mockAttempts, mockAnswers, targetBandScore);
+        
+        // Store userAnswers for filtering purposes
+        analytics.userAnswers = mockAnswers;
         
         set({
           analyticsData: analytics,
@@ -228,6 +193,9 @@ export const useAnalyticsStore = create((set, get) => ({
 
       // Calculate analytics
       const analytics = calculateAnalytics(attempts, userAnswersData, userProfile?.target_band_score || 7.5);
+      
+      // Store userAnswers for filtering purposes
+      analytics.userAnswers = userAnswersData;
 
       set({
         analyticsData: analytics,
@@ -260,9 +228,21 @@ export const useAnalyticsStore = create((set, get) => ({
 }));
 
 /**
- * Calculate all analytics metrics from attempts and answers
+ * Round a score to the nearest 0.5 increment (valid IELTS band score)
+ * Examples: 6.3 -> 6.5, 8.1 -> 8.0, 7.25 -> 7.5
  */
-function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5) {
+function roundToHalf(value) {
+  if (value === null || value === undefined || isNaN(value)) {
+    return null;
+  }
+  return Math.round(value * 2) / 2;
+}
+
+/**
+ * Calculate all analytics metrics from attempts and answers
+ * Exported for use in filtering scenarios
+ */
+export function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5) {
   if (!attempts || attempts.length === 0) {
     return {
       totalTests: 0,
@@ -288,21 +268,24 @@ function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5) {
   const readingAttempts = attempts.filter(a => a.test?.type === 'reading');
   const listeningAttempts = attempts.filter(a => a.test?.type === 'listening');
 
-  // Calculate averages
-  const readingAvg = readingAttempts.length > 0
+  // Calculate averages (rounded to nearest 0.5 for valid IELTS scores)
+  const readingAvgRaw = readingAttempts.length > 0
     ? readingAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / readingAttempts.length
     : null;
+  const readingAvg = roundToHalf(readingAvgRaw);
 
-  const listeningAvg = listeningAttempts.length > 0
+  const listeningAvgRaw = listeningAttempts.length > 0
     ? listeningAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / listeningAttempts.length
     : null;
+  const listeningAvg = roundToHalf(listeningAvgRaw);
 
-  // Calculate overall band (average of latest reading and listening)
+  // Calculate overall band (average of latest reading and listening, rounded to nearest 0.5)
   const latestReading = readingAttempts[0]?.score || null;
   const latestListening = listeningAttempts[0]?.score || null;
-  const overallBand = (latestReading !== null && latestListening !== null)
+  const overallBandRaw = (latestReading !== null && latestListening !== null)
     ? (latestReading + latestListening) / 2
     : (latestReading !== null ? latestReading : latestListening);
+  const overallBand = roundToHalf(overallBandRaw);
 
   // Calculate total practice time
   const totalPracticeSeconds = attempts.reduce((sum, a) => sum + (a.time_taken || 0), 0);
@@ -331,9 +314,9 @@ function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5) {
 
   return {
     totalTests: attempts.length,
-    overallBand: overallBand ? Number(overallBand.toFixed(1)) : null,
-    readingAvg: readingAvg ? Number(readingAvg.toFixed(1)) : null,
-    listeningAvg: listeningAvg ? Number(listeningAvg.toFixed(1)) : null,
+    overallBand: overallBand,
+    readingAvg: readingAvg,
+    listeningAvg: listeningAvg,
     totalPracticeHours,
     totalPracticeMinutes,
     scoreTrends,
@@ -522,70 +505,33 @@ function calculateListeningBreakdown(listeningAttempts, userAnswers) {
 /**
  * Generate insights (strongest area and needs focus), using analytics groupings
  */
+// analyticsStore.js ichidagi generateInsights funksiyasini almashtiring:
+
 function generateInsights(questionTypePerformance, readingBreakdown, listeningBreakdown) {
-  // Find strongest area (highest accuracy with at least 5 questions)
-  let strongestArea = null;
-  let highestAccuracy = 0;
+  const getCategorizedList = (breakdown, categoryName) => {
+    return Object.keys(breakdown)
+      .filter(type => breakdown[type].total > 0) // Faqat kamida 1 marta ishlanganlar
+      .map(type => ({
+        category: categoryName,
+        type: type,
+        displayType: formatAnalyticsQuestionTypeName(type),
+        accuracy: breakdown[type].accuracy,
+        total: breakdown[type].total,
+        correct: breakdown[type].correct,
+        status: breakdown[type].accuracy >= 75 ? 'strong' : (breakdown[type].accuracy < 50 ? 'weak' : 'average')
+      }));
+  };
 
-  // Check reading breakdown
-  Object.keys(readingBreakdown).forEach((type) => {
-    const stats = readingBreakdown[type];
-    if (stats.total >= 5 && stats.accuracy > highestAccuracy) {
-      highestAccuracy = stats.accuracy;
-      strongestArea = {
-        type: 'Reading',
-        questionType: formatAnalyticsQuestionTypeName(type),
-        accuracy: stats.accuracy,
-      };
-    }
-  });
+  const readingInsights = getCategorizedList(readingBreakdown, 'Reading');
+  const listeningInsights = getCategorizedList(listeningBreakdown, 'Listening');
 
-  // Check listening breakdown (by question type)
-  Object.keys(listeningBreakdown).forEach((type) => {
-    const stats = listeningBreakdown[type];
-    if (stats.total >= 5 && stats.accuracy > highestAccuracy) {
-      highestAccuracy = stats.accuracy;
-      strongestArea = {
-        type: 'Listening',
-        questionType: formatAnalyticsQuestionTypeName(type),
-        accuracy: stats.accuracy,
-      };
-    }
-  });
-
-  // Find needs focus (lowest accuracy with at least 3 questions, below 70%)
-  let needsFocus = null;
-  let lowestAccuracy = 100;
-
-  // Check reading breakdown
-  Object.keys(readingBreakdown).forEach((type) => {
-    const stats = readingBreakdown[type];
-    if (stats.total >= 3 && stats.accuracy < 70 && stats.accuracy < lowestAccuracy) {
-      lowestAccuracy = stats.accuracy;
-      needsFocus = {
-        type: 'Reading',
-        questionType: formatAnalyticsQuestionTypeName(type),
-        accuracy: stats.accuracy,
-      };
-    }
-  });
-
-  // Check listening breakdown (by question type)
-  Object.keys(listeningBreakdown).forEach((type) => {
-    const stats = listeningBreakdown[type];
-    if (stats.total >= 3 && stats.accuracy < 70 && stats.accuracy < lowestAccuracy) {
-      lowestAccuracy = stats.accuracy;
-      needsFocus = {
-        type: 'Listening',
-        questionType: formatAnalyticsQuestionTypeName(type),
-        accuracy: stats.accuracy,
-      };
-    }
-  });
+  // Eng kuchli va eng zaifni aniqlash (eski komponentlar buzilmasligi uchun)
+  const all = [...readingInsights, ...listeningInsights].sort((a, b) => b.accuracy - a.accuracy);
 
   return {
-    strongestArea,
-    needsFocus,
+    allInsights: [...readingInsights, ...listeningInsights],
+    strongestArea: all.length > 0 ? all[0] : null,
+    needsFocus: all.length > 0 ? [...all].reverse().find(i => i.total >= 3) : null,
   };
 }
 
@@ -600,7 +546,7 @@ function formatAnalyticsQuestionTypeName(type) {
   const analyticsTypeMap = {
     'multiple_choice': 'Multiple Choice',
     'matching': 'Matching (Headings & Information)', // combined
-    'summary': 'Summary Completion (Blanks & Drag & Drop)', // combined
+    'summary': 'Summary Completion (Blanks and Drag & Drop)', // combined
     'true_false_not_given': 'True / False / Not Given',
     'yes_no_not_given': 'Yes / No / Not Given',
     'map': 'Map Labelling',

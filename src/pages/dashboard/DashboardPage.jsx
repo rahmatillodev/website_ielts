@@ -32,7 +32,6 @@ const CircularProgress = ({ progress, size = 80, strokeWidth = 8 }) => {
         width={size}
         height={size}
       >
-        {/* Background circle */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -41,7 +40,6 @@ const CircularProgress = ({ progress, size = 80, strokeWidth = 8 }) => {
           strokeWidth={strokeWidth}
           fill="none"
         />
-        {/* Progress circle */}
         <circle
           cx={size / 2}
           cy={size / 2}
