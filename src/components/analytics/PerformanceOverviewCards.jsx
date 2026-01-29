@@ -30,9 +30,9 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
   const needsImprovement = overallBand && overallBand < targetBandScore;
 
   // Calculate reading trend (compare last 2 tests)
-  const readingTrend = analyticsData.scoreTrends?.length >= 2
-    ? analyticsData.scoreTrends[analyticsData.scoreTrends.length - 1]?.reading -
-      analyticsData.scoreTrends[analyticsData.scoreTrends.length - 2]?.reading
+  const readingTrends = analyticsData.scoreTrends?.reading || [];
+  const readingTrend = readingTrends.length >= 2
+    ? readingTrends[readingTrends.length - 1]?.score - readingTrends[readingTrends.length - 2]?.score
     : null;
 
   // Determine listening status

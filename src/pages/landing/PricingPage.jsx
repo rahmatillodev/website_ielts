@@ -48,6 +48,7 @@ const PricingPage = () => {
     card_number: "—",
     cardholder_name: "—",
     telegram_admin: "#",
+    telegram_bot_url: "#",
   });
 
   const [showCopySnackbar, setShowCopySnackbar] = useState(false);
@@ -74,6 +75,7 @@ const PricingPage = () => {
         card_number: settings.receiving_card_number ?? "—",
         cardholder_name: settings.cardholder_name ?? "—",
         telegram_admin: settings.telegram_admin_username ?? "#",
+        telegram_bot_url: settings.telegram_bot_url ?? "#",
       });
     }
   }, [settings]);
@@ -112,6 +114,9 @@ const PricingPage = () => {
     hidden: { opacity: 0, y: 24 },
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 250, damping: 30 } }
   };
+
+  console.log(pricing.telegram_bot_url);
+  
 
   return (
     <motion.div
@@ -351,7 +356,7 @@ const PricingPage = () => {
 
                 <a 
                   variants={fadeUpVariant}
-                  href={`https://t.me/${pricing.telegram_admin}`}
+                  href={`https://t.me/${pricing.telegram_bot_url}`}
                   target="_blank"
                   className="w-full bg-[#4A90E2] hover:bg-blue-600 text-white font-black py-3 sm:py-4 rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base transition-colors"
                   whileTap={{ scale: 0.97 }}

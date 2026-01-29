@@ -112,22 +112,12 @@ const DashboardNavbar = ({ onMenuClick }) => {
                 </Link>
               </DropdownMenuItem>
 
-              <DropdownMenuItem asChild>
-                <Link
-                  to="/pricing"
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl"
-                >
-                  <LuCreditCard className="w-5 h-5" />
-                  Billing & Plan
-                </Link>
-              </DropdownMenuItem>
-
               <LogoutModal onConfirm={handleLogout}>
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
-                  className="text-red-600"
+                  className="text-red-600 font-semibold p-2 px-4"
                 >
-                  <LuLogOut className="w-5 h-5 mr-2" />
+                  <LuLogOut className="w-5 h-5 mr-2 text-red-600" />
                   Log out
                 </DropdownMenuItem>
               </LogoutModal>

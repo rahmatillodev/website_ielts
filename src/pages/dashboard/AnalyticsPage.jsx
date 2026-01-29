@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { useAnalyticsStore } from '@/store/analyticsStore';
+import { useAnalyticsStore, calculateAnalytics } from '@/store/analyticsStore';
 import PerformanceOverviewCards from '@/components/analytics/PerformanceOverviewCards';
 import ScoreProgressionChart from '@/components/analytics/ScoreProgressionChart';
 import InsightsSection from '@/components/analytics/InsightsSection';
@@ -30,10 +30,10 @@ const AnalyticsPage = () => {
 
   const targetBandScore = userProfile?.target_band_score || 7.5;
 
-  // Calculate filtered score trends based on selected limit
-  const filteredScoreTrends = useMemo(() => {
+  // Calculate filtered analytics based on selected limit
+  const filteredAnalyticsData = useMemo(() => {
     if (!analyticsData?.allAttempts) {
-      return { reading: [], listening: [], combined: [] };
+      return analyticsData;
     }
 
     const readingAttempts = analyticsData.allAttempts.reading || [];
@@ -45,14 +45,31 @@ const AnalyticsPage = () => {
       : parseInt(testLimit, 10);
 
     // Take last N attempts for each type (they're already sorted newest first)
-    const recentReading = readingAttempts.slice(0, limit);
-    const recentListening = listeningAttempts.slice(0, limit);
+    const filteredReadingAttempts = readingAttempts.slice(0, limit);
+    const filteredListeningAttempts = listeningAttempts.slice(0, limit);
 
-    // Reverse to get chronological order (oldest to newest)
-    const readingReversed = [...recentReading].reverse();
-    const listeningReversed = [...recentListening].reverse();
+    // Combine filtered attempts
+    const filteredAttempts = [...filteredReadingAttempts, ...filteredListeningAttempts];
 
-    // Create combined format for chart (matching by position)
+    // Filter userAnswers to only include answers from filtered attempts
+    // Use empty array if userAnswers is not available (for backward compatibility)
+    const userAnswers = analyticsData.userAnswers || [];
+    const filteredAttemptIds = new Set(filteredAttempts.map(a => a.id));
+    const filteredUserAnswers = userAnswers.filter(
+      answer => filteredAttemptIds.has(answer.attempt_id)
+    );
+
+    // Recalculate analytics with filtered data
+    const filteredAnalytics = calculateAnalytics(
+      filteredAttempts,
+      filteredUserAnswers,
+      targetBandScore
+    );
+
+    // Calculate filtered score trends for chart
+    const readingReversed = [...filteredReadingAttempts].reverse();
+    const listeningReversed = [...filteredListeningAttempts].reverse();
+
     const maxLength = Math.max(readingReversed.length, listeningReversed.length);
     const combinedTrends = [];
 
@@ -69,7 +86,8 @@ const AnalyticsPage = () => {
       }
     }
 
-    return {
+    // Add filtered score trends
+    filteredAnalytics.scoreTrends = {
       reading: readingReversed.map((attempt, index) => ({
         testNumber: index + 1,
         score: attempt.score,
@@ -80,7 +98,9 @@ const AnalyticsPage = () => {
       })),
       combined: combinedTrends,
     };
-  }, [analyticsData?.allAttempts, testLimit]);
+
+    return filteredAnalytics;
+  }, [analyticsData, testLimit, targetBandScore]);
 
   if (loading && !analyticsData) {
     return (
@@ -105,7 +125,8 @@ const AnalyticsPage = () => {
               </p>
             </div>
             {/* Test Limit Selector */}
-            {analyticsData && analyticsData.totalTests > 0 && (
+            {analyticsData && analyticsData.allAttempts && 
+             (analyticsData.allAttempts.reading?.length > 0 || analyticsData.allAttempts.listening?.length > 0) && (
               <div className="flex items-center gap-3">
                 <label className="text-sm font-semibold text-gray-600">
                   Show last:
@@ -128,7 +149,7 @@ const AnalyticsPage = () => {
         {/* KPI Cards */}
         <div className="mb-8">
           <PerformanceOverviewCards
-            analyticsData={analyticsData}
+            analyticsData={filteredAnalyticsData}
             targetBandScore={targetBandScore}
           />
         </div>
@@ -138,25 +159,25 @@ const AnalyticsPage = () => {
           {/* Score Progression Chart */}
           <div>
             <ScoreProgressionChart
-              scoreTrends={filteredScoreTrends.combined}
+              scoreTrends={filteredAnalyticsData?.scoreTrends?.combined || []}
               testLimit={testLimit}
             />
           </div>
 
           {/* Insights */}
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            <InsightsSection insights={analyticsData?.insights} />
+            <InsightsSection insights={filteredAnalyticsData?.insights} />
           </div>
         </div>
 
         {/* Bottom Section: Breakdowns */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ReadingBreakdown readingBreakdown={analyticsData?.readingBreakdown} />
-          <ListeningBreakdown listeningBreakdown={analyticsData?.listeningBreakdown} />
+          <ReadingBreakdown readingBreakdown={filteredAnalyticsData?.readingBreakdown} />
+          <ListeningBreakdown listeningBreakdown={filteredAnalyticsData?.listeningBreakdown} />
         </div>
 
         {/* Empty State */}
-        {!loading && (!analyticsData || analyticsData.totalTests === 0) && (
+        {!loading && (!filteredAnalyticsData || filteredAnalyticsData.totalTests === 0) && (
           <div className="bg-white border border-gray-200 rounded-xl p-12 text-center shadow-sm">
             <div className="text-gray-400 mb-4">
               <svg
