@@ -7,7 +7,7 @@ import { useLocation ,  Outlet} from 'react-router-dom'
 // Public layout for public pages
 function LandingLayout() {
   const { pathname } = useLocation()
-  const hideNavOn = ["/login", "/signup", "/pricing"]
+  const hideNavOn = ["/login", "/signup"]
   const isHide = hideNavOn.some((p) => pathname.startsWith(p))
   return (
     <DashboardRoute>

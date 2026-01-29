@@ -22,6 +22,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { useSmallScreen } from "@/hooks/useSmallScreen";
 import LogoDesign from "../LogoDesign";
 import { MdAutoStories } from "react-icons/md";
+import UpgradeModal from "../modal/UpgradeModal";
 
 const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapsed }) => {
   const content = (
@@ -236,26 +237,45 @@ const DashboardSidebar = ({ onNavigate }) => {
       </nav>
 
       <div className="p-3 2xl:p-4 border-t border-gray-50 bg-white shrink-0 space-y-2 2xl:space-y-3">
-        {userProfile?.subscription_status !== "premium" && !effectiveIsCollapsed && (
-          <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100  sm:block">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-2 bg-white/20 rounded-xl text-white">
-                <LuStar size={20} fill="currentColor" />
-              </div>
-              <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black text-white uppercase tracking-wider">
-                Free Plan
-              </span>
-            </div>
-            <div className="text-[17px] font-black text-white mb-1">Upgrade to Pro</div>
-            <p className="text-[12px] text-white/80 font-medium leading-tight mb-5">
-              Unlock unlimited tests and AI scoring.
-            </p>
-            <Link to="/pricing">
-              <Button className="w-full bg-white hover:bg-blue-50 text-[#4B8EE3] font-semibold py-5 rounded-xl border-none shadow-sm active:scale-[0.98] transition-all text-[13px]">
-                View Plans
-              </Button>
-            </Link>
-          </div>
+        {userProfile?.subscription_status !== "premium" && (
+          <>
+            {!effectiveIsCollapsed ? (
+              /* Expanded holatdagi Upgrade Card */
+              <UpgradeModal>
+                <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100 cursor-pointer active:scale-[0.98] transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-2 bg-white/20 rounded-xl text-white">
+                      <LuStar size={20} fill="currentColor" />
+                    </div>
+                    <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black text-white uppercase tracking-wider">
+                      Free Plan
+                    </span>
+                  </div>
+                  <div className="text-[17px] font-black text-white mb-1">Upgrade to Pro</div>
+                  <p className="text-[12px] text-white/80 font-medium leading-tight mb-5">
+                    Unlock unlimited tests and AI scoring.
+                  </p>
+                  <Button className="w-full bg-white hover:bg-blue-50 text-[#4B8EE3] font-semibold py-5 rounded-xl border-none shadow-sm transition-all text-[13px]">
+                    View Plans
+                  </Button>
+                </div>
+              </UpgradeModal>
+            ) : (
+              /* Collapsed holatdagi Upgrade Icon */
+              <UpgradeModal>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="flex items-center justify-center p-3 w-full bg-[#4B8EE3] rounded-xl hover:bg-[#3a7bc8] transition-colors">
+                      <LuStar size={20} className="text-white" fill="currentColor" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    Upgrade to Pro
+                  </TooltipContent>
+                </Tooltip>
+              </UpgradeModal>
+            )}
+          </>
         )}
 
         {userProfile?.subscription_status !== "premium" && effectiveIsCollapsed && (
@@ -279,7 +299,7 @@ const DashboardSidebar = ({ onNavigate }) => {
 
             <button className="flex items-center justify-center p-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95]">
               <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" />
-             
+
             </button>
           ) : (
             <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
