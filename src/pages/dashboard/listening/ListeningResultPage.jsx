@@ -75,15 +75,44 @@ const ListeningResultPage = () => {
 
         if (attemptResult.success && attemptResult.attempt && attemptResult.answers) {
           setAttemptData(attemptResult.attempt);
+          
+          // Get test data - use testResult from parallel fetch
+          const testDataForMapping = testResult || currentTest;
+          
+          // Map question_id (questions.id) back to question_number for display
+          // Build a mapping from questions.id to question_number from the test data
+          const questionIdToNumberMap = {};
+          if (testDataForMapping?.parts) {
+            testDataForMapping.parts.forEach((part) => {
+              if (part.questionGroups) {
+                part.questionGroups.forEach((questionGroup) => {
+                  if (questionGroup.questions) {
+                    questionGroup.questions.forEach((question) => {
+                      if (question.id && question.question_number) {
+                        questionIdToNumberMap[question.id] = question.question_number;
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          }
+          
           // Convert answers to the format expected by the component
+          // Use question_number as key for display, but keep question_id mapping for review data
           const answersObj = {};
+          const reviewDataObj = {};
           Object.keys(attemptResult.answers).forEach((questionId) => {
-            answersObj[questionId] = attemptResult.answers[questionId].userAnswer;
+            // questionId is now questions.id (UUID), map it to question_number
+            const questionNumber = questionIdToNumberMap[questionId] || questionId;
+            answersObj[questionNumber] = attemptResult.answers[questionId].userAnswer;
+            reviewDataObj[questionNumber] = attemptResult.answers[questionId];
           });
+          
           setResultData({
             answers: answersObj,
             attempt: attemptResult.attempt,
-            reviewData: attemptResult.answers,
+            reviewData: reviewDataObj,
           });
         } else {
           setResultData(null);

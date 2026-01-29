@@ -80,14 +80,16 @@ const ReadingResultPage = () => {
           : null;
 
         let attemptResult;
+        let testResult = null; // Declare testResult outside if/else blocks
 
         if (latestAttemptFromStore && currentAuthUser) {
           // Use attempt from store and only fetch answers
           // Fetch test data and answers in parallel
-          const [testResult, answersResult] = await Promise.all([
+          const [fetchedTestResult, answersResult] = await Promise.all([
             currentFetchTestById(id),
             fetchAttemptAnswers(latestAttemptFromStore.id)
           ]);
+          testResult = fetchedTestResult; // Store testResult for later use
           
           if (answersResult.success) {
             attemptResult = {
@@ -103,7 +105,7 @@ const ReadingResultPage = () => {
                 completed_at: latestAttemptFromStore.completed_at,
                 created_at: latestAttemptFromStore.created_at,
               },
-              answers: answersResult.answers || {},
+              answers: answersResult.answers || {}, // Keep original answers with question_id keys, will map later
             };
           } else {
             // Fallback to fetchLatestAttempt if fetching answers fails
@@ -111,26 +113,56 @@ const ReadingResultPage = () => {
           }
         } else {
           // Fetch test and attempt in parallel
-          const [testResult, fetchedAttemptResult] = await Promise.all([
+          const [fetchedTestResult, fetchedAttemptResult] = await Promise.all([
             currentFetchTestById(id),
             currentAuthUser
               ? fetchLatestAttempt(currentAuthUser.id, id)
               : Promise.resolve({ success: true, attempt: null, answers: {} })
           ]);
+          testResult = fetchedTestResult; // Store testResult for later use
           attemptResult = fetchedAttemptResult;
         }
 
         if (attemptResult.success && attemptResult.attempt && attemptResult.answers) {
           setAttemptData(attemptResult.attempt);
+          
+          // Get test data - use testResult if available (from parallel fetch), otherwise use currentTest from store
+          const testDataForMapping = testResult || currentTest;
+          
+          // Map question_id (questions.id) back to question_number for display
+          // Build a mapping from questions.id to question_number from the test data
+          const questionIdToNumberMap = {};
+          if (testDataForMapping?.parts) {
+            testDataForMapping.parts.forEach((part) => {
+              if (part.questionGroups) {
+                part.questionGroups.forEach((questionGroup) => {
+                  if (questionGroup.questions) {
+                    questionGroup.questions.forEach((question) => {
+                      if (question.id && question.question_number) {
+                        questionIdToNumberMap[question.id] = question.question_number;
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          }
+          
           // Convert answers to the format expected by the component
+          // Use question_number as key for display, but keep question_id mapping for review data
           const answersObj = {};
+          const reviewDataObj = {};
           Object.keys(attemptResult.answers).forEach((questionId) => {
-            answersObj[questionId] = attemptResult.answers[questionId].userAnswer;
+            // questionId is now questions.id (UUID), map it to question_number
+            const questionNumber = questionIdToNumberMap[questionId] || questionId;
+            answersObj[questionNumber] = attemptResult.answers[questionId].userAnswer;
+            reviewDataObj[questionNumber] = attemptResult.answers[questionId];
           });
+          
           setResultData({
             answers: answersObj,
             attempt: attemptResult.attempt,
-            reviewData: attemptResult.answers,
+            reviewData: reviewDataObj,
           });
         } else {
           setResultData(null);

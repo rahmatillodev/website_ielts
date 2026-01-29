@@ -12,11 +12,11 @@ import ComingSoonPage from './ComingSoonPage';
 
 const AnalyticsPage = () => {
 
-  // return (
-  //   <div>
-  //     <ComingSoonPage title="Analytics" description="Detailed insights into your IELTS preparation journey." type="analytics" />
-  //   </div>
-  // );
+  return (
+    <div>
+      <ComingSoonPage title="Analytics" description="Detailed insights into your IELTS preparation journey." type="analytics" />
+    </div>
+  );
 
   const { authUser, userProfile } = useAuthStore();
   const { analyticsData, loading, fetchAnalyticsData } = useAnalyticsStore();

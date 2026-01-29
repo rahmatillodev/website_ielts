@@ -1,6 +1,7 @@
 import React from "react";
 import { FaTelegramPlane, FaInstagram } from "react-icons/fa";
 import LogoDesign from "../LogoDesign";
+import { useSettingsStore } from "@/store/systemStore";
 
 
 

@@ -327,6 +327,8 @@ const ListeningPracticePageContent = () => {
     if (!hasInteracted && !isStarted) {
       setHasInteracted(true);
     }
+    // Use questions.id as the answer key (from the nested structure)
+    // questionIdOrNumber should now be questions.id from the nested query
     setAnswers((prev) => ({
       ...prev,
       [questionIdOrNumber]: answer,
@@ -700,7 +702,8 @@ const ListeningPracticePageContent = () => {
   const getPartAnsweredCount = (partQuestions) => {
     if (!partQuestions) return 0;
     return partQuestions.filter(q => {
-      const answerKey = q.question_number || q.id;
+      // Use questions.id as primary key, fallback to question_number for backward compatibility
+      const answerKey = q.id || q.question_number;
       return answerKey && answers[answerKey] && answers[answerKey].toString().trim() !== '';
     }).length;
   };
@@ -1089,7 +1092,7 @@ const ListeningPracticePageContent = () => {
                                         ? groupQuestions
                                         : undefined
                                     }
-                                    answer={answers[questionNumber]}
+                                    answer={answers[question.id] || answers[questionNumber]}
                                     answers={answers}
                                     onAnswerChange={handleAnswerChange}
                                     onInteraction={handleInputInteraction}

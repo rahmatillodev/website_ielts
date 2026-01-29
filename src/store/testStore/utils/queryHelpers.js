@@ -235,3 +235,72 @@ export const fetchQuestionsData = async (questionGroupIds, includeCorrectAnswers
   return data || [];
 };
 
+/**
+ * Fetch test data using nested Supabase query
+ * This is the new approach that fetches all data in a single nested query
+ * Structure: test -> part -> question -> questions -> options
+ * @param {string|number} testId - Test ID
+ * @param {boolean} includeCorrectAnswers - Whether to include correct_answer and explanation fields (for review mode)
+ * @param {number} timeoutMs - Query timeout in milliseconds
+ * @returns {Promise<Object>} Complete test object with nested structure
+ */
+export const fetchTestDataNested = async (testId, includeCorrectAnswers = false, timeoutMs = DEFAULT_TIMEOUT_MS) => {
+  console.log('[fetchTestDataNested] Fetching started...', { testId, includeCorrectAnswers, timeoutMs });
+  
+  // Verify Supabase client is initialized
+  if (!supabase) {
+    console.error('[fetchTestDataNested] Supabase client is not initialized');
+    throw new Error('Supabase client is not initialized. Check environment variables.');
+  }
+
+  // Build options select fields
+  // Options are linked to question (group) via question_id, and matched to questions via question_number
+  const optionsSelect = "id, test_id, question_id, part_id, question_number, option_text, option_key, is_correct";
+
+  // Build questions select fields (without nested options - we'll match them manually)
+  const questionsSelect = includeCorrectAnswers
+    ? `id, test_id, question_id, part_id, question_number, question_text, correct_answer, explanation, is_correct`
+    : `id, test_id, question_id, part_id, question_number, question_text, is_correct`;
+
+  // Build question (group) select fields with nested questions and options
+  // Options are nested under question (group), not directly under questions
+  const questionSelect = `id, test_id, part_id, type, instruction, question_text, question_range, image_url, questions(${questionsSelect}), options(${optionsSelect})`;
+
+  // Build part select fields with nested question groups
+  const partSelect = `id, test_id, part_number, title, content, image_url, listening_url, question(${questionSelect})`;
+
+  // Build test select fields with nested parts
+  const testSelect = `id, title, type, difficulty, duration, question_quantity, is_premium, is_active, created_at, part(${partSelect})`;
+
+  const queryPromise = supabase
+    .from("test")
+    .select(testSelect)
+    .eq("id", testId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  console.log('[fetchTestDataNested] Query promise created, executing with timeout...');
+  const { data, error } = await executeQueryWithTimeout(queryPromise, timeoutMs);
+  console.log('[fetchTestDataNested] Data received:', data ? { id: data.id, title: data.title, partsCount: data.part?.length || 0 } : null, 'Error:', error?.message || null);
+
+  if (error) {
+    console.error('[fetchTestDataNested] Supabase Error:', {
+      table: 'test',
+      testId,
+      error: error.message,
+      code: error.code,
+    });
+    
+    if (isRLSError(error)) {
+      throw new Error(formatRLSError('test', error));
+    }
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error(`Test with ID ${testId} not found in 'test' table. Verify the ID exists and RLS policies allow access.`);
+  }
+
+  return data;
+};
+
