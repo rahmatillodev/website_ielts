@@ -1,14 +1,17 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { sortOptionsByLetter, getOptionDisplayText, getOptionValue, isOptionSelected } from "../../store/optionUtils";
 import { FaRegBookmark, FaBookmark } from "react-icons/fa";
 
 const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, useTableFormat = false, bookmarks = new Set(), toggleBookmark = () => {} }) => {
+  // Use questions.id as the answer key (from questions table), fallback to question_number for display
+  const questionId = question.id; // This is questions.id from the nested structure
   const questionNumber = question.question_number || question.id;
   const questionText = question.question_text || question.text || '';
-  const isBookmarked = bookmarks.has(questionNumber);
+  const isBookmarked = bookmarks.has(questionId) || bookmarks.has(questionNumber);
+
   
   // Deduplicate options based on unique identifier (id, or combination of option_text and letter)
-  const deduplicatedOptions = React.useMemo(() => {
+  const deduplicatedOptions = useMemo(() => {
     const seen = new Set();
     const unique = [];
     
@@ -35,7 +38,8 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
   const correctAnswerFromOptions = correctOption ? getOptionValue(correctOption) : '';
   
   const isReviewMode = mode === 'review';
-  const review = reviewData[questionNumber] || {};
+  // Check review data by questionId first, then fallback to questionNumber for backward compatibility
+  const review = reviewData[questionId] || reviewData[questionNumber] || {};
   const isCorrect = review.isCorrect;
   // Use correct answer from review data if available, otherwise from options
   const correctAnswer = review.correctAnswer || correctAnswerFromOptions;
@@ -93,7 +97,7 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleBookmark(questionNumber);
+                    toggleBookmark(questionId);
                   }}
                   className={`absolute right-10 top-1/2 -translate-y-1/2 transition-all ${
                     isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
@@ -130,7 +134,8 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                         checked={isSelected}
                         onChange={() => {
                           if (mode !== 'review') {
-                            onAnswerChange(questionNumber, optionValue);
+                            // Use questionId (questions.id) as the answer key
+                            onAnswerChange(questionId, optionValue);
                           }
                         }}
                         disabled={mode === 'review'}
@@ -158,7 +163,7 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
       <button
         onClick={(e) => {
           e.stopPropagation();
-          toggleBookmark(questionNumber);
+          toggleBookmark(questionId);
         }}
         className={`absolute right-0 -top-10 transition-all ${
           isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
@@ -202,8 +207,8 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
               checked={isSelected}
               onChange={() => {
                 if (mode !== 'review') {
-                  // Store option_text as the answer value
-                  onAnswerChange(questionNumber, optionValue);
+                  // Use questionId (questions.id) as the answer key, store option_text as the answer value
+                  onAnswerChange(questionId, optionValue);
                 }
               }}
               disabled={mode === 'review'}

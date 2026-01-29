@@ -9,8 +9,9 @@ import {
   fetchOptionsData,
   fetchQuestionGroupsData,
   fetchQuestionsData,
+  fetchTestDataNested,
 } from "./utils/queryHelpers";
-import { processQuestionGroup } from "./utils/questionTransformers";
+import { processQuestionGroup, processNestedQuestionGroup } from "./utils/questionTransformers";
 
 export const useTestDetailStore = create((set, get) => ({
   currentTest: null,
@@ -51,16 +52,16 @@ export const useTestDetailStore = create((set, get) => ({
     set({ loadingTest: true, error: null, currentTest: null });
 
     try {
-      // Step 1: Fetch test metadata (with is_active filter as per USER_WEBSITE_TEST_FETCHING.md)
-      console.log('[fetchTestById] Step 1: Fetching test metadata...');
-      const testData = await fetchTestData(testId);
+      // Use new nested query approach
+      console.log('[fetchTestById] Using nested query approach...');
+      const nestedTestData = await fetchTestDataNested(testId, includeCorrectAnswers);
       
-      if (!testData) {
+      if (!nestedTestData) {
         throw new Error(`Test with ID ${testId} not found or not active.`);
       }
 
       // Check premium access before proceeding
-      if (testData.is_premium && userSubscriptionStatus !== "premium") {
+      if (nestedTestData.is_premium && userSubscriptionStatus !== "premium") {
         const errorMessage = "This test requires a premium subscription";
         console.error('[fetchTestById] Premium access denied:', { testId, userSubscriptionStatus });
         set({ 
@@ -71,57 +72,25 @@ export const useTestDetailStore = create((set, get) => ({
         throw new Error(errorMessage);
       }
 
-      // Step 2: Fetch parts
-      console.log('[fetchTestById] Step 2: Fetching parts...');
-      const partsData = await fetchPartsData(testId);
-
       // Handle case where no parts exist
-      if (!partsData || partsData.length === 0) {
+      if (!nestedTestData.part || nestedTestData.part.length === 0) {
         console.warn('[fetchTestById] No parts found for test:', testId);
-        const completeTest = { ...testData, parts: [] };
+        const completeTest = { ...nestedTestData, parts: [] };
         set({ currentTest: completeTest, loadingTest: false, error: null });
         return completeTest;
       }
 
-      const partIds = partsData.map((p) => p.id);
-      if (!partIds || partIds.length === 0) {
-        const completeTest = { ...testData, parts: [] };
-        set({ currentTest: completeTest, loadingTest: false, error: null });
-        return completeTest;
-      }
-
-      // Step 3: Fetch question groups
-      console.log('[fetchTestById] Step 3: Fetching question groups...');
-      const questionGroupsData = await fetchQuestionGroupsData(partIds);
-
-      const questionGroupIds = questionGroupsData.map((qg) => qg.id).filter(Boolean);
-
-      // Step 4: Fetch individual questions (with conditional correct_answer as per USER_WEBSITE_TEST_FETCHING.md)
-      console.log('[fetchTestById] Step 4: Fetching individual questions...', { includeCorrectAnswers });
-      let finalQuestionsData = [];
-      if (questionGroupIds.length > 0) {
-        finalQuestionsData = await fetchQuestionsData(questionGroupIds, includeCorrectAnswers);
-      }
-
-      // Step 5: Fetch options
-      console.log('[fetchTestById] Step 5: Fetching options...');
-      const allOptions = await fetchOptionsData(testId);
-      
-      console.log('[fetchTestById] All data fetched:', { 
-        hasTestData: !!testData, 
-        partsCount: partsData?.length || 0, 
-        questionGroupsCount: questionGroupsData?.length || 0,
-        questionsCount: finalQuestionsData?.length || 0,
-        optionsCount: allOptions?.length || 0 
+      console.log('[fetchTestById] Processing nested data structure...', { 
+        partsCount: nestedTestData.part?.length || 0 
       });
 
-      // Structure the data: Parts -> Question Groups -> Individual Questions
-      const partsWithQuestionGroups = partsData.map((part) => {
-        // Get question groups for this part
-        const partQuestionGroups = questionGroupsData
-          .filter((qg) => qg.part_id === part.id)
+      // Process nested structure: part -> question -> questions -> options
+      const partsWithQuestionGroups = nestedTestData.part.map((part) => {
+        // Process question groups (question array) for this part
+        const partQuestionGroups = (part.question || [])
           .map((questionGroup) => {
-            return processQuestionGroup(questionGroup, finalQuestionsData, allOptions);
+            // Process the nested question group with its nested questions and options
+            return processNestedQuestionGroup(questionGroup);
           })
           // Sort question groups by their first child's question_number
           .sort((a, b) => {
@@ -131,11 +100,17 @@ export const useTestDetailStore = create((set, get) => ({
           });
 
         return {
-          ...part,
+          id: part.id,
+          test_id: part.test_id,
+          part_number: part.part_number,
+          title: part.title,
+          content: part.content,
+          image_url: part.image_url,
+          listening_url: part.listening_url,
           questionGroups: partQuestionGroups,
           // Flatten all individual questions for easy access, sorted by question_number
           questions: partQuestionGroups
-            .flatMap((qg) => qg.questions)
+            .flatMap((qg) => qg.questions || [])
             .sort((a, b) => {
               const aNum = a.question_number ?? 0;
               const bNum = b.question_number ?? 0;
@@ -145,7 +120,15 @@ export const useTestDetailStore = create((set, get) => ({
       });
 
       const completeTest = {
-        ...testData,
+        id: nestedTestData.id,
+        title: nestedTestData.title,
+        type: nestedTestData.type,
+        difficulty: nestedTestData.difficulty,
+        duration: nestedTestData.duration,
+        question_quantity: nestedTestData.question_quantity,
+        is_premium: nestedTestData.is_premium,
+        is_active: nestedTestData.is_active,
+        created_at: nestedTestData.created_at,
         parts: partsWithQuestionGroups,
       };
 

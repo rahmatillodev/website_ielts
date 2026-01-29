@@ -316,12 +316,19 @@ const calculateTestScore = (answers, currentTest) => {
           : groupQuestions;
 
         validQuestions.forEach((question) => {
-          // Use question_number as primary key (consistent with DragAndDrop component)
-          const questionKey = question.question_number;
-          if (!questionKey) return;
-
+          // Use questions.id as primary key (from nested structure), fallback to question_number for backward compatibility
+          const questionId = question.id; // This is questions.id from the nested structure
+          const questionNumber = question.question_number;
+          
+          // Try to get answer using questions.id first, then fallback to question_number
+          const userAnswer = (questionId && answers[questionId]?.toString().trim()) || 
+                            (questionNumber && answers[questionNumber]?.toString().trim()) || 
+                            '';
+          
+          // Skip if no answer found and no question ID/number
+          if (!questionId && !questionNumber) return;
+          
           totalQuestions++;
-          const userAnswer = answers[questionKey]?.toString().trim() || '';
           const correctAnswer = getCorrectAnswer(question, questionGroup);
 
           // Normalize answers for comparison
@@ -334,8 +341,9 @@ const calculateTestScore = (answers, currentTest) => {
             correctCount++;
           }
 
+          // Use questions.id as questionId for database storage, fallback to question_number
           answerResults.push({
-            questionId: questionKey,
+            questionId: questionId || questionNumber, // Use questions.id if available, otherwise question_number
             userAnswer,
             correctAnswer,
             isCorrect,

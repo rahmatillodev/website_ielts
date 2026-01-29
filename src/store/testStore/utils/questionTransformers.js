@@ -207,7 +207,7 @@ export const processMultipleChoice = (questionGroup, allOptions) => {
       const correctAnswer = correctOption
         ? correctOption.option_text
         : "";
-
+      console.log('questionGroup', questionGroup);
       return {
         id: `q-${questionGroup.id}-${qNum}`,
         question_id: questionGroup.id,
@@ -314,6 +314,7 @@ export const processOtherQuestionTypes = (questionGroup, individualQuestionsData
  * Process a question group based on its type
  */
 export const processQuestionGroup = (questionGroup, individualQuestionsData, allOptions) => {
+  
   const groupType = (questionGroup.type || "").toLowerCase();
   const isMultipleChoice =
     groupType.includes("multiple") || groupType.includes("choice");
@@ -333,5 +334,208 @@ export const processQuestionGroup = (questionGroup, individualQuestionsData, all
   }
 
   return processOtherQuestionTypes(questionGroup, individualQuestionsData, allOptions);
+};
+
+/**
+ * Process a question group from nested query structure
+ * Structure: question -> questions[], question -> options[]
+ * Options are nested under question (group), matched to questions via question_number
+ */
+export const processNestedQuestionGroup = (questionGroup) => {
+  const groupType = (questionGroup.type || "").toLowerCase();
+  
+  // Get questions array and options array (both nested under question group)
+  const nestedQuestions = questionGroup.questions || [];
+  const groupOptions = questionGroup.options || [];
+  
+  // Process each question and match options to it
+  const processedQuestions = nestedQuestions
+    .filter(q => q.is_correct !== false) // Filter out distractors
+    .map((question) => {
+      // Match options to this question based on question_number
+      // Options can be:
+      // 1. Linked to this specific question (question_number matches)
+      // 2. Group-level options (question_number is null) - shared across all questions
+      const questionSpecificOptions = groupOptions.filter(
+        opt => opt.question_number === question.question_number
+      );
+      
+      const groupLevelOptions = groupOptions.filter(
+        opt => opt.question_number === null || opt.question_number === undefined
+      );
+      
+      // Combine question-specific and group-level options
+      // For multiple_choice, use question-specific options
+      // For other types (table, map, matching_information), use group-level options
+      const isMultipleChoice = groupType.includes("multiple") || groupType.includes("choice");
+      const optionsToUse = isMultipleChoice ? questionSpecificOptions : groupLevelOptions;
+      
+      // Process options for this question
+      const questionOptions = optionsToUse.map((opt, index) => {
+        // Generate letter if not present
+        const letter = opt.letter || getLetterFromIndex(index);
+        return {
+          id: opt.id,
+          option_text: opt.option_text,
+          letter: letter,
+          is_correct: opt.is_correct || false,
+          question_id: opt.question_id,
+          question_number: opt.question_number,
+          option_key: opt.option_key,
+        };
+      });
+
+      return {
+        id: question.id,
+        question_id: question.question_id,
+        part_id: question.part_id,
+        question_number: question.question_number,
+        question_text: question.question_text || "",
+        correct_answer: question.correct_answer || "",
+        explanation: question.explanation || "",
+        is_correct: question.is_correct !== false,
+        options: questionOptions,
+      };
+    })
+    .sort((a, b) => {
+      const aNum = a.question_number ?? 0;
+      const bNum = b.question_number ?? 0;
+      return aNum - bNum;
+    });
+
+  // For multiple_choice, each question in the group is a separate question
+  // For other types, questions are grouped together
+  const isMultipleChoice = groupType.includes("multiple") || groupType.includes("choice");
+  const isTableCompletion = groupType === "table_completion";
+  const isTableType = groupType.includes("table") && !isTableCompletion;
+  const isFillInTheBlanks = groupType === "fill_in_blanks";
+  const isDragAndDrop = groupType.includes("drag") || groupType.includes("drop") || groupType.includes("summary_completion");
+  const isMap = groupType.includes("map");
+  const isMatchingInformation = groupType.includes("matching_information");
+
+  // For multiple_choice: options are per question, so we return as-is
+  if (isMultipleChoice) {
+    return {
+      id: questionGroup.id,
+      test_id: questionGroup.test_id,
+      part_id: questionGroup.part_id,
+      type: questionGroup.type,
+      instruction: questionGroup.instruction || "",
+      question_text: questionGroup.question_text || "",
+      question_range: questionGroup.question_range,
+      image_url: questionGroup.image_url,
+      questions: processedQuestions,
+      options: [], // Options are nested under questions
+    };
+  }
+
+  // For table_completion: extract table structure from question_text
+  if (isTableCompletion) {
+    const questionText = questionGroup.question_text || "";
+    let columnHeaders = [];
+    let parsedTableData = null;
+
+    if (questionText) {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(questionText, "text/html");
+        const table = doc.querySelector("table");
+
+        if (table) {
+          const thead = table.querySelector("thead");
+          if (thead) {
+            const headerRow = thead.querySelector("tr");
+            if (headerRow) {
+              const thElements = headerRow.querySelectorAll("th");
+              columnHeaders = Array.from(thElements).map((th) => {
+                return th.textContent?.trim() || "";
+              });
+            }
+          }
+
+          const tbody = table.querySelector("tbody");
+          if (tbody) {
+            const rows = tbody.querySelectorAll("tr");
+            parsedTableData = {
+              columnHeaders,
+              rows: Array.from(rows).map((row) => {
+                const cells = row.querySelectorAll("td");
+                return Array.from(cells).map((td) => {
+                  return td.innerHTML?.trim() || "";
+                });
+              }),
+            };
+          }
+        }
+      } catch (error) {
+        console.error("[processNestedQuestionGroup] Error parsing HTML:", error);
+      }
+    }
+
+    return {
+      id: questionGroup.id,
+      test_id: questionGroup.test_id,
+      part_id: questionGroup.part_id,
+      type: questionGroup.type,
+      instruction: questionGroup.instruction || "",
+      question_text: questionGroup.question_text || "",
+      question_range: questionGroup.question_range,
+      image_url: questionGroup.image_url,
+      questions: processedQuestions,
+      options: [],
+      column_headers: columnHeaders,
+      parsed_table_data: parsedTableData,
+    };
+  }
+
+  // For table, map, drag_drop, matching_information: get group-level options
+  // Group-level options are those with question_number === null
+  // These are already extracted from groupOptions in the processing above
+  let groupLevelOptions = [];
+  
+  if (isTableType || isMap || isMatchingInformation || isDragAndDrop) {
+    // Extract group-level options (question_number === null)
+    const groupLevelOptionsRaw = groupOptions.filter(
+      opt => opt.question_number === null || opt.question_number === undefined
+    );
+    
+    groupLevelOptions = groupLevelOptionsRaw
+      .sort((a, b) => {
+        if (a.option_key && b.option_key) {
+          const aKey = String(a.option_key).toUpperCase();
+          const bKey = String(b.option_key).toUpperCase();
+          if (/^\d+$/.test(aKey) && /^\d+$/.test(bKey)) {
+            return parseInt(aKey) - parseInt(bKey);
+          }
+          return aKey.localeCompare(bKey);
+        }
+        if (a.letter && b.letter) {
+          return a.letter.localeCompare(b.letter);
+        }
+        return (a.id || 0) - (b.id || 0);
+      })
+      .map((opt, index) => ({
+        id: opt.id,
+        option_text: opt.option_text,
+        option_key: opt.option_key,
+        letter: opt.letter || opt.option_key || getLetterFromIndex(index),
+        is_correct: opt.is_correct || false,
+        question_id: opt.question_id,
+        question_number: opt.question_number,
+      }));
+  }
+
+  return {
+    id: questionGroup.id,
+    test_id: questionGroup.test_id,
+    part_id: questionGroup.part_id,
+    type: questionGroup.type,
+    instruction: questionGroup.instruction || "",
+    question_text: questionGroup.question_text || "",
+    question_range: questionGroup.question_range,
+    image_url: questionGroup.image_url,
+    questions: processedQuestions,
+    options: groupLevelOptions,
+  };
 };
 

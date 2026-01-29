@@ -68,7 +68,6 @@ const ReadingPracticePageContent = () => {
 
 
   useEffect(() => {
-    console.log('[ReadingPracticePage] useEffect triggered', { id, idType: typeof id });
     
     // Safety check: Reset loadingTest if it's stuck from a previous state
     const { loadingTest: currentLoadingTest, clearCurrentTest } = useTestStore.getState();
@@ -188,6 +187,7 @@ const ReadingPracticePageContent = () => {
 
     if (currentTest && timeRemaining === null && !isStarted && !hasInteracted && isMounted) {
       const durationInSeconds = convertDurationToSeconds(currentTest.duration);
+      
       setTimeRemaining(durationInSeconds);
     } else if (currentTest && timeRemaining !== null && !isStarted && !hasInteracted && isMounted) {
       // If timeRemaining was set from localStorage but we don't have a saved startTime,
@@ -318,12 +318,12 @@ const ReadingPracticePageContent = () => {
   };
 
   // Calculate answered questions for a part
-  // Supports both questions.id (for Fill-in-the-Blanks) and question_number (for other types)
+  // Uses questions.id as the answer key (from nested structure)
   const getPartAnsweredCount = (partQuestions) => {
     if (!partQuestions) return 0;
     return partQuestions.filter(q => {
-      // Match the logic used in question components: question_number || id
-      const answerKey = q.question_number || q.id;
+      // Use questions.id as primary key, fallback to question_number for backward compatibility
+      const answerKey = q.id || q.question_number;
       return answerKey && answers[answerKey] && answers[answerKey].toString().trim() !== '';
     }).length;
   };
@@ -531,7 +531,8 @@ const ReadingPracticePageContent = () => {
       setHasInteracted(true);
     }
     
-    // Support both questions.id (for Fill-in-the-Blanks) and question_number (for other types)
+    // Use questions.id as the answer key (from the nested structure)
+    // questionIdOrNumber should now be questions.id from the nested query
     setAnswers((prev) => ({
       ...prev,
       [questionIdOrNumber]: answer,
@@ -540,7 +541,6 @@ const ReadingPracticePageContent = () => {
 
   // Toggle bookmark for a question
   const toggleBookmark = (questionIdOrNumber) => {
-    console.log('toggleBookmark', questionIdOrNumber);
     setBookmarks((prev) => {
       const newBookmarks = new Set(prev);
       if (newBookmarks.has(questionIdOrNumber)) {
@@ -734,7 +734,7 @@ const ReadingPracticePageContent = () => {
   };
 
   // Reset to page 1 when part changes
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [currentPart]);
 
@@ -1022,7 +1022,8 @@ const ReadingPracticePageContent = () => {
               const isTable = groupType.includes('table') && !isTableCompletion;
               const isMap = groupType.includes('map');
               const isMatchingInformation = groupType.includes('matching_information');
-              
+
+
               return (
                 <div key={questionGroup.id || groupIdx} className="space-y-6">
                   {/* Group Header with Instruction and Range */}
@@ -1055,7 +1056,7 @@ const ReadingPracticePageContent = () => {
                   )}
                 
                   {/* For Fill-in-the-Blanks, Drag-and-Drop, Table Completion, Table, Map, and Matching Information: Render as a single group with group-level options */}
-                  {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation) ? (
+                  {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation ) ? (
                     <div
                       ref={(el) => {
                         // Set ref for all questions in the group for scrolling
@@ -1082,7 +1083,6 @@ const ReadingPracticePageContent = () => {
                         backgroundColor: themeColors.background
                       }}
                     >
-                     { console.log('reviewData', reviewData)}
                       <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
                         <QuestionRenderer
                           question={{
@@ -1168,7 +1168,8 @@ const ReadingPracticePageContent = () => {
                                 type: questionGroup.type,
                                 instruction: questionGroup.instruction,
                                 // For drag-drop, summary, table, and map, use group-level options; otherwise use question-specific options
-                                options: (groupType.includes('drag') || groupType.includes('summary') || groupType.includes('table') || groupType.includes('map'))
+                                options: (groupType.includes('drag') || groupType.includes('summary') || groupType.includes('table') 
+                                || groupType.includes('map'))
                                   ? (questionGroup.options || [])
                                   : (question.options || questionGroup.options || [])
                               }}
@@ -1177,11 +1178,11 @@ const ReadingPracticePageContent = () => {
                                 (groupType.includes('drag') ||
                                  groupType.includes('summary') ||
                                  groupType.includes('table') ||
-                                 groupType.includes('map'))
+                                 groupType.includes('map')) 
                                 ? groupQuestions 
                                 : undefined
                               }
-                              answer={answers[questionNumber]}
+                              answer={answers[question.id] || answers[questionNumber]}
                               answers={answers}
                               onAnswerChange={handleAnswerChange}
                               onInteraction={handleInputInteraction}
