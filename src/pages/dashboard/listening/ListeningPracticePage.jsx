@@ -8,10 +8,8 @@ import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPra
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
-
+import parse from "html-react-parser";
 import QuestionHeader from "@/components/questions/QuestionHeader";
 import FinishModal from "@/components/modal/FinishModal";
 import { convertDurationToSeconds } from "@/utils/testDuration";
@@ -22,50 +20,44 @@ import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip"
 import NoteSidebar from "@/components/sidebar/NoteSidebar";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 
-
 const ListeningPracticePageContent = () => {
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { currentTest, fetchTestById, loadingTest, error: testError } = useTestStore();
   const loading = loadingTest;
-  const { authUser } = useAuthStore();
+  const { authUser, userProfile } = useAuthStore();
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const [fetchError, setFetchError] = useState(null);
+
+  // ====== TIMER/CONTROL STATE ======
   // Status: 'taking', 'completed', 'reviewing'
-  // Initialize status immediately from URL to prevent flickering
   const [status, setStatus] = useState(() => {
     const mode = new URLSearchParams(window.location.search).get('mode');
     return mode === 'review' ? 'reviewing' : 'taking';
   });
   const [currentPart, setCurrentPart] = useState(1);
-  const [timeRemaining, setTimeRemaining] = useState(null); // Will be set from test duration
+  // "timeRemaining" is always stopped if stored "isPaused" on refresh
+  const [timeRemaining, setTimeRemaining] = useState(null);
   const [isStarted, setIsStarted] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-// Initialize modal state based on URL mode parameter
-const [showInitialModal, setShowInitialModal] = useState(() => {
-  const mode = new URLSearchParams(window.location.search).get('mode');
-  return mode !== 'review' && mode !== 'retake'; // Don't show modal in review or retake mode
-});
-const [startTime, setStartTime] = useState(null);
+  const [startTime, setStartTime] = useState(null);
 
   const [answers, setAnswers] = useState({});
   const [reviewData, setReviewData] = useState({});
   const [latestAttemptId, setLatestAttemptId] = useState(null);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
-  const [bookmarks, setBookmarks] = useState(new Set()); // Store bookmarked question IDs/numbers
+  const [bookmarks, setBookmarks] = useState(new Set());
 
   // Audio player state
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [volume, setVolume] = useState(0.7);
-  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(true);
   const audioPlayerRef = useRef(null);
-
-
 
   const questionRefs = useRef({});
   const questionsContainerRef = useRef(null);
@@ -78,9 +70,9 @@ const [startTime, setStartTime] = useState(null);
   // Annotation system
   const { addHighlight, addNote } = useAnnotation();
   const selectableContentRef = useRef(null);
-  const universalContentRef = useRef(null); // Universal container for all selectable content
+  const universalContentRef = useRef(null);
 
-  // Get audio URL from first part - use this for entire session
+  // AUDIO URL
   const audioUrl = React.useMemo(() => {
     if (!currentTest?.parts || currentTest.parts.length === 0) return null;
     const sortedParts = [...currentTest.parts].sort((a, b) => {
@@ -99,8 +91,8 @@ const [startTime, setStartTime] = useState(null);
     }
   }, [testError, currentTest]);
 
+  // ====== LOAD TEST/DATA & STATE FROM LOCALSTORAGE ======
   useEffect(() => {
-    // GUARD CLAUSE: Validate id parameter
     if (!id || (typeof id !== 'string' && typeof id !== 'number')) {
       console.error('[ListeningPracticePage] Invalid test ID:', id);
       setFetchError('Invalid test ID');
@@ -108,16 +100,21 @@ const [startTime, setStartTime] = useState(null);
       return;
     }
 
-    // Component lifecycle management: Track if component is mounted
     let isMounted = true;
     setFetchError(null);
 
     const loadTestData = async () => {
       try {
-        // Fetch test data
-        await fetchTestById(id);
+        if (typeof fetchTestById !== 'function') {
+          console.error('[ListeningPracticePage] fetchTestById is not a function:', typeof fetchTestById);
+          if (isMounted) setFetchError('fetchTestById is not available');
+          return;
+        }
+        const isReviewMode = searchParams.get('mode') === 'review';
+        const includeCorrectAnswers = isReviewMode;
+        const userSubscriptionStatus = userProfile?.subscription_status || "free";
+        await fetchTestById(id, false, includeCorrectAnswers, userSubscriptionStatus);
 
-        // Only update state if component is still mounted
         if (!isMounted) return;
 
         // Validate that test data was loaded
@@ -132,14 +129,12 @@ const [startTime, setStartTime] = useState(null);
           const bNum = b.part_number ?? 0;
           return aNum - bNum;
         });
-        
         const firstPart = sortedParts[0];
         if (!firstPart?.listening_url) {
-          console.warn('[ListeningPracticePage] No listening_url found for test:', id);
           toast.error('Audio file not available for this test. Please contact support.');
         }
 
-        // Load saved data from localStorage
+        // Load/restore progress on refresh
         const savedData = loadListeningPracticeData(id);
         if (savedData && isMounted) {
           if (savedData.answers && Object.keys(savedData.answers).length > 0) {
@@ -149,36 +144,21 @@ const [startTime, setStartTime] = useState(null);
           if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
             setBookmarks(new Set(savedData.bookmarks));
           }
-          if (savedData.startTime) {
-            const savedStartTime = savedData.startTime;
-            setStartTime(savedStartTime);
-            setIsStarted(true);
-
-            const elapsedSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
-            // Use saved timeRemaining if available, otherwise calculate from test duration
-            let initialTime = savedData.timeRemaining;
-            if (initialTime === undefined || initialTime === null) {
-              // Will be set when currentTest loads
-              initialTime = 60 * 60; // Fallback to 1 hour
-            }
-            const remainingTime = Math.max(0, initialTime - elapsedSeconds);
-            if (isMounted) {
-              setTimeRemaining(remainingTime);
-            }
-          } else if (savedData.timeRemaining !== undefined && isMounted) {
+          // If user had started the test previously or interacted:
+          // On refresh, the timer should be *paused* (time does not continue)
+          // Thus, we load paused state, setIsStarted(false).
+          if (savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
             setTimeRemaining(savedData.timeRemaining);
+            setIsStarted(false);      // timer is stopped after refresh
+            setIsPaused(true);        // set paused so start button works
+          }
+          if (savedData.startTime) {
+            setStartTime(savedData.startTime);
           }
         }
       } catch (error) {
-        // Only log and show error if component is still mounted
         if (isMounted) {
           const errorMessage = error?.message || 'Failed to load test data. Please check your connection and try again.';
-          console.error('[ListeningPracticePage] Error loading test data:', {
-            testId: id,
-            error: errorMessage,
-            errorName: error?.name,
-            errorStack: error?.stack
-          });
           setFetchError(errorMessage);
           toast.error(errorMessage);
         }
@@ -187,26 +167,34 @@ const [startTime, setStartTime] = useState(null);
 
     loadTestData();
 
-    // Cleanup: Clear currentTest when component unmounts and prevent state updates
-    // Only clear currentTest, not the test list data, to preserve data when navigating back
     return () => {
       isMounted = false;
       const { clearCurrentTest } = useTestStore.getState();
-      clearCurrentTest(false); // Only clear currentTest, preserve test list data
+      clearCurrentTest(false);
     };
+    // eslint-disable-next-line
   }, [id, fetchTestById]);
 
-  // Initialize timeRemaining from test duration when currentTest loads
+  // Initialize timeRemaining from test duration when currentTest loads (if not loaded from storage)
   useEffect(() => {
-    // Component lifecycle management: Track if component is mounted
     let isMounted = true;
 
-    if (currentTest && timeRemaining === null && !isStarted && !hasInteracted && isMounted) {
+    if (
+      currentTest &&
+      timeRemaining === null &&
+      !isStarted &&
+      !hasInteracted &&
+      isMounted
+    ) {
       const durationInSeconds = convertDurationToSeconds(currentTest.duration);
       setTimeRemaining(durationInSeconds);
-    } else if (currentTest && timeRemaining !== null && !isStarted && !hasInteracted && isMounted) {
-      // If timeRemaining was set from localStorage but we don't have a saved startTime,
-      // update it to use the test duration to ensure consistency
+    } else if (
+      currentTest &&
+      timeRemaining !== null &&
+      !isStarted &&
+      !hasInteracted &&
+      isMounted
+    ) {
       const savedData = loadListeningPracticeData(id);
       if (!savedData?.startTime && isMounted) {
         const durationInSeconds = convertDurationToSeconds(currentTest.duration);
@@ -214,194 +202,21 @@ const [startTime, setStartTime] = useState(null);
       }
     }
 
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [currentTest, timeRemaining, isStarted, hasInteracted, id]);
 
-  const startResize = (e) => {
-    isResizing.current = true;
-  };
-
-  const stopResize = () => {
-    isResizing.current = false;
-  };
-
-  const handleResize = (e) => {
-    if (!isResizing.current || !containerRef.current) return;
-    const containerWidth = containerRef.current.offsetWidth;
-    const newLeftWidth = (e.clientX / containerWidth) * 100;
-    if (newLeftWidth > 20 && newLeftWidth < 80) {
-      setLeftWidth(newLeftWidth);
-    }
-  };
-
+  // ========== TIMER LOGIC ==========
+  // Timer counts down only if not paused and started (and not after refresh until re-enabled)
   useEffect(() => {
-    window.addEventListener("mousemove", handleResize);
-    window.addEventListener("mouseup", stopResize);
-    return () => {
-      window.removeEventListener("mousemove", handleResize);
-      window.removeEventListener("mouseup", stopResize);
-    };
-  }, []);
+    if (!isStarted || isPaused) return;
+    if (!hasInteracted) return;
+    if (timeRemaining === null) return;
 
-  const getSortedParts = React.useCallback(() => {
-    if (!currentTest?.parts) return [];
-    return [...currentTest.parts].sort((a, b) => {
-      const aNum = a.part_number ?? 0;
-      const bNum = b.part_number ?? 0;
-      return aNum - bNum;
-    });
-  }, [currentTest?.parts]);
-
-  const currentPartData = currentTest?.parts?.find(part => part.part_number === currentPart);
-
-  const questionGroups = React.useMemo(() => {
-    if (!currentPartData?.questionGroups) return [];
-
-    return [...currentPartData.questionGroups]
-      .map(questionGroup => {
-        const sortedQuestions = [...(questionGroup.questions || [])].sort((a, b) => {
-          const aNum = a.question_number ?? Number.MAX_SAFE_INTEGER;
-          const bNum = b.question_number ?? Number.MAX_SAFE_INTEGER;
-          return aNum - bNum;
-        });
-
-        return {
-          ...questionGroup,
-          questions: sortedQuestions
-        };
-      })
-      .sort((a, b) => {
-        const aQuestions = a.questions || [];
-        const bQuestions = b.questions || [];
-
-        const aMin = aQuestions
-          .map(q => q.question_number)
-          .filter(num => num != null)
-          .sort((x, y) => x - y)[0] ?? Number.MAX_SAFE_INTEGER;
-
-        const bMin = bQuestions
-          .map(q => q.question_number)
-          .filter(num => num != null)
-          .sort((x, y) => x - y)[0] ?? Number.MAX_SAFE_INTEGER;
-
-        return aMin - bMin;
-      });
-  }, [currentPartData]);
-
-  const getQuestionRange = (questionGroup) => {
-    const questions = questionGroup.questions || [];
-    if (questions.length === 0) return '';
-
-    const questionsWithNumbers = questions
-      .filter(q => q.question_number != null)
-      .sort((a, b) => {
-        const aNum = a.question_number ?? 0;
-        const bNum = b.question_number ?? 0;
-        return aNum - bNum;
-      });
-
-    if (questionsWithNumbers.length === 0) return '';
-
-    const first = questionsWithNumbers[0]?.question_number ?? 0;
-    const last = questionsWithNumbers[questionsWithNumbers.length - 1]?.question_number ?? 0;
-
-    return first === last ? `${first}` : `${first}-${last}`;
-  };
-
-  const getPartQuestionRange = () => {
-    if (!currentPartData?.questions || currentPartData.questions.length === 0) return '';
-    const sorted = [...currentPartData.questions].sort((a, b) => {
-      const aNum = a.question_number ?? 0;
-      const bNum = b.question_number ?? 0;
-      return aNum - bNum;
-    });
-    const first = sorted[0]?.question_number ?? 0;
-    const last = sorted[sorted.length - 1]?.question_number ?? 0;
-    return first === last ? `${first}` : `${first}-${last}`;
-  };
-
-  const getPartAnsweredCount = (partQuestions) => {
-    if (!partQuestions) return 0;
-    return partQuestions.filter(q => {
-      const answerKey = q.question_number || q.id;
-      return answerKey && answers[answerKey] && answers[answerKey].toString().trim() !== '';
-    }).length;
-  };
-
-  // Get all questions across all parts, sorted by question_number
-  const getAllQuestions = useCallback(() => {
-    if (!currentTest?.parts) return [];
-
-    const allQuestions = [];
-    const seenQuestionNumbers = new Set(); // Track seen question numbers to avoid duplicates
-    const sortedParts = getSortedParts();
-
-    sortedParts.forEach(part => {
-      // Get questions from part.questions (this is already a flattened list)
-      if (part.questions && Array.isArray(part.questions) && part.questions.length > 0) {
-        part.questions.forEach(q => {
-          if (q.question_number != null && !seenQuestionNumbers.has(q.question_number)) {
-            seenQuestionNumbers.add(q.question_number);
-            allQuestions.push({
-              questionNumber: q.question_number,
-              partNumber: part.part_number ?? part.id,
-              question: q
-            });
-          }
-        });
-      } else {
-        // Fallback: get questions from questionGroups if part.questions is empty
-        if (part.questionGroups && Array.isArray(part.questionGroups)) {
-          part.questionGroups.forEach(group => {
-            if (group.questions && Array.isArray(group.questions)) {
-              group.questions.forEach(q => {
-                if (q.question_number != null && !seenQuestionNumbers.has(q.question_number)) {
-                  seenQuestionNumbers.add(q.question_number);
-                  allQuestions.push({
-                    questionNumber: q.question_number,
-                    partNumber: part.part_number ?? part.id,
-                    question: q
-                  });
-                }
-              });
-            }
-          });
-        }
-      }
-    });
-
-    return allQuestions.sort((a, b) => a.questionNumber - b.questionNumber);
-  }, [currentTest?.parts, getSortedParts]);
-
-  const scrollToQuestion = (questionNumber) => {
-    const el = questionRefs.current[questionNumber];
-    if (!el || !questionsContainerRef.current) return;
-
-
-    const container = questionsContainerRef.current;
-
-    container.scrollTo({
-      top: el.offsetTop - container.offsetTop - 20,
-      behavior: "smooth",
-    });
-
-    setActiveQuestion(questionNumber);
-  };
-
-  useEffect(() => {
-    if (!isStarted && !hasInteracted) return;
-    if (isPaused) return; // Don't countdown when paused
-    if (timeRemaining === null) return; // Wait for timeRemaining to be initialized
-
-    if (!startTime) {
-      const now = Date.now();
-      setStartTime(now);
-    }
+    // Set startTime if not set
+    if (!startTime) setStartTime(Date.now());
 
     const interval = setInterval(() => {
-      setTimeRemaining((prev) => {
+      setTimeRemaining(prev => {
         if (prev === null || prev <= 1) {
           setIsStarted(false);
           return 0;
@@ -415,14 +230,18 @@ const [startTime, setStartTime] = useState(null);
 
   // Auto-submit when timer reaches zero
   useEffect(() => {
-    // Component lifecycle management: Track if component is mounted
     let isMounted = true;
-
-    if (timeRemaining === 0 && (isStarted || hasInteracted) && status === 'taking' && authUser && id && currentTest && isMounted) {
-      // Auto-submit the test when timer reaches zero
+    if (
+      timeRemaining === 0 &&
+      (isStarted || hasInteracted) &&
+      status === 'taking' &&
+      authUser &&
+      id &&
+      currentTest &&
+      isMounted
+    ) {
       const autoSubmit = async () => {
         try {
-          // Clear audio position before submitting
           if (id) {
             clearAudioPosition(id);
             if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
@@ -430,64 +249,45 @@ const [startTime, setStartTime] = useState(null);
             }
           }
           const result = await handleSubmitTest();
-          // Only navigate if component is still mounted
           if (isMounted) {
-            if (result.success) {
-              // Navigate to result page
-              navigate(`/listening-result/${id}`);
-            } else {
-              console.error('[ListeningPracticePage] Auto-submit failed:', result.error);
-              // Still navigate to result page even if submission failed
-              navigate(`/listening-result/${id}`);
-            }
+            navigate(`/listening-result/${id}`);
           }
         } catch (error) {
           if (isMounted) {
-            console.error('[ListeningPracticePage] Auto-submit error:', error);
             navigate(`/listening-result/${id}`);
           }
         }
       };
       autoSubmit();
     }
-
     return () => {
       isMounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRemaining, status]);
 
-
+  // persist data on change
   useEffect(() => {
     if (id && hasInteracted) {
-      const elapsedTime = startTime
-        ? Math.floor((Date.now() - startTime) / 1000)
-        : 0;
-
       saveListeningPracticeData(id, {
         answers,
         timeRemaining,
-        elapsedTime,
-        startTime: startTime || (hasInteracted ? Date.now() : null),
+        startTime,
         bookmarks,
       });
     }
   }, [answers, id, hasInteracted, timeRemaining, startTime, bookmarks]);
 
+  // persist data every 5s if interacting
   useEffect(() => {
     if (!id || (!isStarted && !hasInteracted)) return;
 
     const interval = setInterval(() => {
       if (hasInteracted) {
-        const elapsedTime = startTime
-          ? Math.floor((Date.now() - startTime) / 1000)
-          : 0;
-
         saveListeningPracticeData(id, {
           answers,
           timeRemaining,
-          elapsedTime,
-          startTime: startTime || Date.now(),
+          startTime,
           bookmarks,
         });
       }
@@ -496,6 +296,7 @@ const [startTime, setStartTime] = useState(null);
     return () => clearInterval(interval);
   }, [id, timeRemaining, answers, hasInteracted, isStarted, startTime, bookmarks]);
 
+  // Question scroll and intersection observer
   useEffect(() => {
     if (!questionsContainerRef.current) return;
 
@@ -514,28 +315,24 @@ const [startTime, setStartTime] = useState(null);
         rootMargin: '-100px 0px -50% 0px',
       }
     );
-
     Object.values(questionRefs.current).forEach((el) => {
       if (el) observer.observe(el);
     });
-
     return () => observer.disconnect();
-  }, [currentPart, currentPartData?.questions]);
+  }, [currentPart, currentTest?.parts]);
 
+  // === UI HANDLERS ===
   const handleAnswerChange = (questionIdOrNumber, answer) => {
     if (status === 'reviewing') return;
-
     if (!hasInteracted && !isStarted) {
       setHasInteracted(true);
     }
-
     setAnswers((prev) => ({
       ...prev,
       [questionIdOrNumber]: answer,
     }));
   };
 
-  // Toggle bookmark for a question
   const toggleBookmark = (questionIdOrNumber) => {
     setBookmarks((prev) => {
       const newBookmarks = new Set(prev);
@@ -553,18 +350,16 @@ const [startTime, setStartTime] = useState(null);
   };
 
   const handleStart = () => {
-    const now = Date.now();
     setIsStarted(true);
-    setHasInteracted(true);
     setIsPaused(false);
-    setStartTime(now);
-
+    setStartTime(Date.now());
+    setHasInteracted(true);
+    // persist resumed state
     if (id) {
       saveListeningPracticeData(id, {
         answers,
         timeRemaining,
-        elapsedTime: 0,
-        startTime: now,
+        startTime: Date.now(),
         bookmarks,
       });
     }
@@ -572,7 +367,6 @@ const [startTime, setStartTime] = useState(null);
 
   const handlePause = () => {
     if (isPaused) {
-      // Resume
       setIsPaused(false);
       setIsStarted(true);
       // Resume audio if it exists
@@ -580,7 +374,6 @@ const [startTime, setStartTime] = useState(null);
         audioPlayerRef.current.play();
       }
     } else {
-      // Pause
       setIsPaused(true);
       setIsStarted(false);
       // Pause audio if it exists
@@ -608,23 +401,19 @@ const [startTime, setStartTime] = useState(null);
 
     setIsSubmitting(true);
     try {
-      // Calculate time taken from startTime
       let timeTaken = 0;
-      if (startTime) {
-        timeTaken = Math.floor((Date.now() - startTime) / 1000);
+      if (startTime && timeRemaining != null) {
+        const dur = convertDurationToSeconds(currentTest.duration);
+        timeTaken = dur - timeRemaining;
       }
-
-      // Submit even if answers object is empty - submitTestAttempt handles this
       const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'listening');
 
       if (result.success) {
         setLatestAttemptId(result.attemptId);
         setStatus('completed');
-        // Clear practice data and audio position after successful submission
         if (id) {
           clearListeningPracticeData(id);
           clearAudioPosition(id);
-          // Also clear via audio player ref if available
           if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
             audioPlayerRef.current.clearPosition();
           }
@@ -632,7 +421,6 @@ const [startTime, setStartTime] = useState(null);
         if (authUser?.id) {
           await fetchDashboardData(authUser.id, true);
         }
-        // Return success to allow modal to navigate
         return { success: true };
       } else {
         console.error('Failed to submit test:', result.error);
@@ -647,21 +435,12 @@ const [startTime, setStartTime] = useState(null);
   };
 
   const handleReviewTest = async () => {
-    // Ensure all required data is available
     if (!authUser || !id || !currentTest) {
-      console.warn('[handleReviewTest] Missing required data:', { authUser: !!authUser, id: !!id, currentTest: !!currentTest });
       return;
     }
-
-    // Prevent concurrent review fetches
-    if (status === 'reviewing') {
-      console.warn('[handleReviewTest] Already in review mode');
-      return;
-    }
-
+    if (status === 'reviewing') return;
     try {
       const result = await fetchLatestAttempt(authUser.id, id);
-
       if (result.success && result.attempt && result.answers) {
         const reviewDataObj = {};
         Object.keys(result.answers).forEach((questionId) => {
@@ -677,7 +456,6 @@ const [startTime, setStartTime] = useState(null);
         setStatus('reviewing');
         setLatestAttemptId(result.attempt.id);
         setShowCorrectAnswers(true);
-        setShowInitialModal(false);
 
         const answersObj = {};
         Object.keys(reviewDataObj).forEach((questionId) => {
@@ -685,26 +463,28 @@ const [startTime, setStartTime] = useState(null);
         });
         setAnswers(answersObj);
       } else {
-        console.error('[handleReviewTest] Failed to fetch attempt:', result.error);
-        setStatus('taking'); // Reset to taking mode on error
+        setStatus('taking');
         setShowCorrectAnswers(false);
-        console.warn('Failed to load review data. Please try again.');
       }
     } catch (error) {
-      console.error('[handleReviewTest] Error fetching attempt:', error);
-      setStatus('taking'); // Reset to taking mode on error
+      setStatus('taking');
       setShowCorrectAnswers(false);
-      console.warn('An error occurred while loading review data.');
     }
   };
 
   const handleRetakeTest = () => {
     if (!id) return;
-    
-    // Remove review mode from URL
+
+    if (audioPlayerRef.current && audioPlayerRef.current.pause) {
+      audioPlayerRef.current.pause();
+    }
+    setIsPaused(true);
+    setIsStarted(false);
+    setStartTime(null);
+
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.delete('mode');
-    const newUrl = newSearchParams.toString() 
+    const newUrl = newSearchParams.toString()
       ? `/listening-practice/${id}?${newSearchParams.toString()}`
       : `/listening-practice/${id}`;
     window.history.replaceState({}, '', newUrl);
@@ -713,25 +493,20 @@ const [startTime, setStartTime] = useState(null);
     setAnswers({});
     setReviewData({});
     setStatus('taking');
-    setShowCorrectAnswers(false); // Hide the show correct answers toggle
-    // Reset timeRemaining to test duration (will be set by useEffect when currentTest is available)
+    setShowCorrectAnswers(false);
     setTimeRemaining(currentTest ? convertDurationToSeconds(currentTest.duration) : 60 * 60);
-    setIsStarted(false);
     setHasInteracted(false);
-    setStartTime(null);
     setCurrentPart(1);
     setLatestAttemptId(null);
-    setShowInitialModal(true);
-    setShouldAutoPlay(false); // Reset autoplay flag
-    setIsPaused(false); // Reset pause state
-    // Keep persisted audio settings (don't reset to loud defaults)
+    setShouldAutoPlay(true);
 
     clearListeningPracticeData(id);
     clearAudioPosition(id);
-    // Also clear via audio player ref if available
     if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
       audioPlayerRef.current.clearPosition();
     }
+
+    handleStart();
   };
 
   const handleFinish = () => {
@@ -749,9 +524,7 @@ const [startTime, setStartTime] = useState(null);
   }, [currentTest]);
 
   useEffect(() => {
-    // Component lifecycle management: Track if component is mounted
     let isMounted = true;
-
     const mode = searchParams.get('mode');
     if (isMounted) {
       if (mode === 'review' && authUser && id && currentTest) {
@@ -760,24 +533,45 @@ const [startTime, setStartTime] = useState(null);
         handleRetakeTest();
       }
     }
-
     return () => {
       isMounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, authUser, id, currentTest]);
 
+  // Auto-start test when page loads (if not in review/retake mode and no saved progress)
+  useEffect(() => {
+    const mode = searchParams.get('mode');
+    const isReviewOrRetake = mode === 'review' || mode === 'retake';
 
-  // Annotation handlers - now support sectionType and testType
+    // Only auto-start if:
+    // 1. Test is loaded
+    // 2. Not in review/retake mode
+    // 3. Not already started
+    // 4. Not already interacted
+    // 5. No saved data (meaning fresh start)
+    // 6. No startTime set (which would indicate saved progress was loaded)
+    if (
+      currentTest &&
+      !isReviewOrRetake &&
+      !isStarted &&
+      !hasInteracted &&
+      !startTime &&
+      !loadListeningPracticeData(id)
+    ) {
+      handleStart();
+      setShouldAutoPlay(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTest, searchParams, isStarted, hasInteracted, startTime]);
+
+  // ========== Annotation handlers ==========
   const handleHighlight = useCallback((range, text, partId, sectionType = 'passage', testType = 'listening') => {
-    // Find the appropriate container based on section type
     let container = null;
     if (sectionType === 'passage') {
       container = selectableContentRef.current;
     } else {
-      // For questions section, find the container from the range
       container = range.commonAncestorContainer;
-      // Walk up to find a suitable container
       let element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
       while (element && element !== universalContentRef.current) {
         if (element.hasAttribute('data-selectable') || element.hasAttribute('data-section')) {
@@ -787,12 +581,8 @@ const [startTime, setStartTime] = useState(null);
         element = element.parentElement;
       }
     }
-
     if (!container) return;
-
     const offsets = getTextOffsets(container, range);
-
-    // Apply highlight to DOM
     const highlightId = addHighlight({
       text,
       startOffset: offsets.startOffset,
@@ -803,23 +593,16 @@ const [startTime, setStartTime] = useState(null);
       testType,
       range: range.cloneRange(),
     });
-
-    // Apply visual highlight
     applyHighlight(range, highlightId);
-
-    // Clear selection
     window.getSelection().removeAllRanges();
   }, [addHighlight]);
 
   const handleNote = useCallback((range, text, partId, sectionType = 'passage', testType = 'listening') => {
-    // Find the appropriate container based on section type
     let container = null;
     if (sectionType === 'passage') {
       container = selectableContentRef.current;
     } else {
-      // For questions section, find the container from the range
       container = range.commonAncestorContainer;
-      // Walk up to find a suitable container
       let element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
       while (element && element !== universalContentRef.current) {
         if (element.hasAttribute('data-selectable') || element.hasAttribute('data-section')) {
@@ -829,12 +612,8 @@ const [startTime, setStartTime] = useState(null);
         element = element.parentElement;
       }
     }
-
     if (!container) return;
-
     const offsets = getTextOffsets(container, range);
-
-    // Apply note to DOM
     const noteId = addNote({
       text,
       note: '',
@@ -846,16 +625,152 @@ const [startTime, setStartTime] = useState(null);
       testType,
       range: range.cloneRange(),
     });
-
-    // Apply visual note
     applyNote(range, noteId);
-
-    // Clear selection
     window.getSelection().removeAllRanges();
   }, [addNote]);
 
+  // Other helpers...
+  const getSortedParts = React.useCallback(() => {
+    if (!currentTest?.parts) return [];
+    return [...currentTest.parts].sort((a, b) => {
+      const aNum = a.part_number ?? 0;
+      const bNum = b.part_number ?? 0;
+      return aNum - bNum;
+    });
+  }, [currentTest?.parts]);
+
+  const currentPartData = currentTest?.parts?.find(part => part.part_number === currentPart);
+
+  const questionGroups = React.useMemo(() => {
+    if (!currentPartData?.questionGroups) return [];
+    return [...currentPartData.questionGroups]
+      .map(questionGroup => {
+        const sortedQuestions = [...(questionGroup.questions || [])].sort((a, b) => {
+          const aNum = a.question_number ?? Number.MAX_SAFE_INTEGER;
+          const bNum = b.question_number ?? Number.MAX_SAFE_INTEGER;
+          return aNum - bNum;
+        });
+        return {
+          ...questionGroup,
+          questions: sortedQuestions
+        };
+      })
+      .sort((a, b) => {
+        const aQuestions = a.questions || [];
+        const bQuestions = b.questions || [];
+        const aMin = aQuestions
+          .map(q => q.question_number)
+          .filter(num => num != null)
+          .sort((x, y) => x - y)[0] ?? Number.MAX_SAFE_INTEGER;
+        const bMin = bQuestions
+          .map(q => q.question_number)
+          .filter(num => num != null)
+          .sort((x, y) => x - y)[0] ?? Number.MAX_SAFE_INTEGER;
+        return aMin - bMin;
+      });
+  }, [currentPartData]);
+
+  const getQuestionRange = (questionGroup) => {
+    const questions = questionGroup.questions || [];
+    if (questions.length === 0) return '';
+    const questionsWithNumbers = questions
+      .filter(q => q.question_number != null)
+      .sort((a, b) => {
+        const aNum = a.question_number ?? 0;
+        const bNum = b.question_number ?? 0;
+        return aNum - bNum;
+      });
+    if (questionsWithNumbers.length === 0) return '';
+    const first = questionsWithNumbers[0]?.question_number ?? 0;
+    const last = questionsWithNumbers[questionsWithNumbers.length - 1]?.question_number ?? 0;
+    return first === last ? `${first}` : `${first}-${last}`;
+  };
+
+  const scrollToQuestion = (questionNumber) => {
+    const el = questionRefs.current[questionNumber];
+    if (!el || !questionsContainerRef.current) return;
+    const container = questionsContainerRef.current;
+    container.scrollTo({
+      top: el.offsetTop - container.offsetTop - 20,
+      behavior: "smooth",
+    });
+    setActiveQuestion(questionNumber);
+  };
+
+  const getPartAnsweredCount = (partQuestions) => {
+    if (!partQuestions) return 0;
+    return partQuestions.filter(q => {
+      const answerKey = q.question_number || q.id;
+      return answerKey && answers[answerKey] && answers[answerKey].toString().trim() !== '';
+    }).length;
+  };
+
+  // Get all questions across all parts, sorted by question_number
+  const getAllQuestions = useCallback(() => {
+    if (!currentTest?.parts) return [];
+    const allQuestions = [];
+    const seenQuestionNumbers = new Set();
+    const sortedParts = getSortedParts();
+    sortedParts.forEach(part => {
+      if (part.questions && Array.isArray(part.questions) && part.questions.length > 0) {
+        part.questions.forEach(q => {
+          if (q.question_number != null && !seenQuestionNumbers.has(q.question_number)) {
+            seenQuestionNumbers.add(q.question_number);
+            allQuestions.push({
+              questionNumber: q.question_number,
+              partNumber: part.part_number ?? part.id,
+              question: q
+            });
+          }
+        });
+      } else {
+        if (part.questionGroups && Array.isArray(part.questionGroups)) {
+          part.questionGroups.forEach(group => {
+            if (group.questions && Array.isArray(group.questions)) {
+              group.questions.forEach(q => {
+                if (q.question_number != null && !seenQuestionNumbers.has(q.question_number)) {
+                  seenQuestionNumbers.add(q.question_number);
+                  allQuestions.push({
+                    questionNumber: q.question_number,
+                    partNumber: part.part_number ?? part.id,
+                    question: q
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+    });
+    return allQuestions.sort((a, b) => a.questionNumber - b.questionNumber);
+  }, [currentTest?.parts, getSortedParts]);
+
+  // Resize panel handlers
+  const startResize = (e) => {
+    isResizing.current = true;
+  };
+  const stopResize = () => {
+    isResizing.current = false;
+  };
+  const handleResize = (e) => {
+    if (!isResizing.current || !containerRef.current) return;
+    const containerWidth = containerRef.current.offsetWidth;
+    const newLeftWidth = (e.clientX / containerWidth) * 100;
+    if (newLeftWidth > 20 && newLeftWidth < 80) {
+      setLeftWidth(newLeftWidth);
+    }
+  };
+  useEffect(() => {
+    window.addEventListener("mousemove", handleResize);
+    window.addEventListener("mouseup", stopResize);
+    return () => {
+      window.removeEventListener("mousemove", handleResize);
+      window.removeEventListener("mouseup", stopResize);
+    };
+  }, []);
+
   // Calculate font size in rem (base 16px = 1rem)
-  const baseFontSize = fontSizeValue.base / 16; // Convert px to rem
+  const baseFontSize = fontSizeValue.base / 16;
 
   return (
     <div
@@ -876,37 +791,6 @@ const [startTime, setStartTime] = useState(null);
         testType="listening"
       />
 
-      {/* Initial Modal - only show on first visit, not in review/retake mode */}
-      <Dialog
-        open={status === 'taking' && showInitialModal && !hasInteracted && searchParams.get('mode') !== 'review' && searchParams.get('mode') !== 'retake'}
-        onOpenChange={() => { }}
-      >
-        <DialogContent className="sm:max-w-[500px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Listening Test Instructions</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-            You will be listening to an audio clip during this test. You will not be permitted to pause or rewind the audio while answering the questions. To continue, click Play.
-          </p>
-          <DialogFooter>
-            <Button
-              onClick={() => {
-                setShowInitialModal(false);
-                handleStart();
-                // Trigger audio playback after user interaction
-                setShouldAutoPlay(true);
-              }}
-              className="w-full"
-            >
-              Play
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-
-
       <QuestionHeader
         currentTest={currentTest}
         id={id}
@@ -924,7 +808,6 @@ const [startTime, setStartTime] = useState(null);
         type="Listening"
       />
 
-      {/* Main Content - Universal Container for all selectable content */}
       <div
         className="flex flex-1 overflow-hidden p-3 transition-all duration-300"
         ref={containerRef}
@@ -1027,7 +910,6 @@ const [startTime, setStartTime] = useState(null);
                 transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
               }}
             >
-              {/* Sticky Audio Player - visible in review mode, hidden but functional in test mode */}
               {audioUrl && (
                 <div className={status === 'taking' ? 'hidden' : ''}>
                   <AudioPlayer
@@ -1041,14 +923,12 @@ const [startTime, setStartTime] = useState(null);
                     autoPlay={shouldAutoPlay && status === 'taking' && !isPaused}
                     testId={id}
                     onAudioEnded={status === 'taking' ? () => {
-                      // Clear audio position when audio ends
                       if (id) {
                         clearAudioPosition(id);
                         if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
                           audioPlayerRef.current.clearPosition();
                         }
                       }
-                      // Auto-submit when audio ends in test mode (if timer hasn't already)
                       if (timeRemaining > 0 && status === 'taking') {
                         handleSubmitTest().then((result) => {
                           if (result.success) {
@@ -1072,19 +952,20 @@ const [startTime, setStartTime] = useState(null);
                   const isTableCompletion = groupType === 'table_completion';
                   const isTable = groupType.includes('table') && !isTableCompletion;
                   const isMap = groupType.includes('map');
+                  
 
                   return (
                     <div key={questionGroup.id || groupIdx} className={`space-y-6 ${status === 'reviewing' ? 'w-full' : 'w-6/12'}`}>
                       <div className="space-y-3">
-                        <h3
+                        <div
                           className="text-lg font-semibold"
                           data-selectable="true"
                           data-part-id={currentPart}
                           data-section-type="questions"
                           style={{ color: themeColors.text }}
                         >
-                          Questions {questionRange}
-                        </h3>
+                          <h1>Questions {questionRange}</h1>
+                        </div>
                         {questionGroup.instruction && (
                           <p
                             className="text-sm leading-relaxed"
@@ -1093,7 +974,7 @@ const [startTime, setStartTime] = useState(null);
                             data-section-type="questions"
                             style={{ color: themeColors.text }}
                           >
-                            {questionGroup.instruction}
+                            {parse(questionGroup.instruction, { allowDangerousHtml: true })}
                           </p>
                         )}
                       </div>
@@ -1101,7 +982,6 @@ const [startTime, setStartTime] = useState(null);
                       {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap) ? (
                         <div
                           ref={(el) => {
-                            // Set ref for all questions in the group for scrolling
                             if (el && groupQuestions.length > 0) {
                               groupQuestions
                                 .filter(q => q.question_number != null)
@@ -1249,7 +1129,6 @@ const [startTime, setStartTime] = useState(null);
         </div>
       </div>
 
-      {/* Footer */}
       <PrecticeFooter
         currentTest={currentTest}
         currentPart={currentPart}
@@ -1272,17 +1151,14 @@ const [startTime, setStartTime] = useState(null);
         isSubmitting={isSubmitting}
       />
 
-      {/* Finish Modal */}
-        <FinishModal
-          loading={isSubmitting}
+      <FinishModal
+        loading={isSubmitting}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         link={`/listening-result/${id}`}
         testId={id}
         onSubmit={handleSubmitTest}
       />
-
-      {/* Note Sidebar */}
 
       <NoteSidebar />
     </div>

@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import parse from "html-react-parser"; 
 /**
  * MatchingInformation - Renders matching_information question type
  * 
@@ -266,7 +267,7 @@ const MatchingInformation = ({
           data-selectable="true"
           style={{ color: themeColors.text }}
         >
-          {instructionText}
+          {parse(instructionText, { allowDangerousHtml: true })}
         </div>
       )}
 
@@ -285,12 +286,12 @@ const MatchingInformation = ({
             borderStyle: 'solid'
           }}
         >
-          <h3 
+          {/* <h3 
             className="font-bold mb-3"
             style={{ color: themeColors.text }}
           >
             List of Researchers
-          </h3>
+          </h3> */}
           <div className="space-y-2">
             {optionKeyList.length > 0 ? (
               // Use actual option_key from data
@@ -370,7 +371,7 @@ const MatchingInformation = ({
                   className="flex-1"
                   style={{ color: themeColors.text }}
                 >
-                  {questionText}
+                   {parse(questionText, { allowDangerousHtml: true })}
                 </span>
                 {showCorrect && (
                   <span className="text-xs text-green-700 font-medium ml-2">

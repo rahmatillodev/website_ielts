@@ -3,6 +3,8 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import supabase from '@/lib/supabase'
+import { clearAllReadingData } from '@/store/LocalStorage/readingStorage'
+import { clearAllListeningData } from '@/store/LocalStorage/listeningStorage'
 
 export const useAuthStore = create(
   persist(
@@ -12,15 +14,17 @@ export const useAuthStore = create(
       userProfile: null,
       loading: false,
       error: null,
-      isInitialized: false, 
+      isInitialized: false,
 
 
       initializeSession: async () => {
-        // initialized bo'lsa ham sessiyani tekshirish kerak bo'lishi mumkin
+        // Prevent multiple initializations
+        if (get().isInitialized) return;
+
         try {
           set({ loading: true });
           const { data: { session } } = await supabase.auth.getSession();
-      
+
           if (session?.user) {
             set({ authUser: session.user });
             // Diqqat: Har doim bazadan tekshiramiz
@@ -28,17 +32,19 @@ export const useAuthStore = create(
           } else {
             set({ authUser: null, userProfile: null });
           }
-      
-          // Auth o'zgarishini kuzatish
-          supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' && session?.user) {
-              set({ authUser: session.user });
-              await get().fetchUserProfile(session.user.id);
-            } else if (event === 'SIGNED_OUT') {
-              set({ authUser: null, userProfile: null });
-            }
-          });
-      
+
+          // Auth o'zgarishini kuzatish - only set up once
+          if (!get().isInitialized) {
+            supabase.auth.onAuthStateChange(async (event, session) => {
+              if (event === 'SIGNED_IN' && session?.user) {
+                set({ authUser: session.user });
+                await get().fetchUserProfile(session.user.id);
+              } else if (event === 'SIGNED_OUT') {
+                set({ authUser: null, userProfile: null });
+              }
+            });
+          }
+
           set({ isInitialized: true });
         } catch (error) {
           set({ error: error.message });
@@ -50,53 +56,103 @@ export const useAuthStore = create(
       // Kirish (Sign In)
       signIn: async (email, password) => {
         set({ loading: true, error: null })
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
-        if (error) {
-          set({ error: error.message, loading: false })
-          return { success: false, error: error.message }
+          if (error) {
+            set({ error: error.message, loading: false })
+            return { success: false, error: error.message }
+          }
+
+          set({ authUser: data.user })
+          // Fetch profile - if it fails, don't block the login
+          try {
+            await get().fetchUserProfile(data.user.id)
+          } catch (profileError) {
+            console.error('Error fetching user profile:', profileError)
+            // Continue with login even if profile fetch fails
+          }
+          set({ loading: false })
+          return { success: true }
+        } catch (error) {
+          const message = error?.message || 'Failed to sign in. Please try again.'
+          set({ error: message, loading: false })
+          return { success: false, error: message }
         }
-
-        set({ authUser: data.user })
-        await get().fetchUserProfile(data.user.id)
-        set({ loading: false })
-        return { success: true }
       },
 
       // Ro'yxatdan o'tish (Sign Up)
       signUp: async (email, password, fullName) => {
         set({ loading: true, error: null })
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: fullName || "User" } }
-        })
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { full_name: fullName || "User" } }
+          })
 
-        if (error) {
-          set({ error: error.message, loading: false })
-          return { success: false, error: error.message }
+          if (error) {
+            set({ error: error.message, loading: false })
+            return { success: false, error: error.message }
+          }
+
+          set({ authUser: data.user })
+
+          // Try to fetch profile - if it doesn't exist yet (e.g., waiting for DB trigger), 
+          // that's okay, the onAuthStateChange listener will handle it later
+          if (data.user) {
+            try {
+              // Don't force logout if profile is missing (common for new signups)
+              await get().fetchUserProfile(data.user.id, false)
+            } catch (profileError) {
+              console.log('Profile not available yet, will be fetched by auth state listener')
+              // Continue - profile will be fetched by onAuthStateChange or created by trigger
+            }
+          }
+
+          set({ loading: false })
+          return { success: true }
+        } catch (error) {
+          const message = error?.message || 'Failed to sign up. Please try again.'
+          set({ error: message, loading: false })
+          return { success: false, error: message }
         }
-
-        set({ authUser: data.user, loading: false })
-        // Trigger ishga tushishi uchun biroz kutish yoki profilni keyinroq olish mumkin
-        return { success: true }
       },
 
       // Profilni olish
-      fetchUserProfile: async (userId) => {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle(); // Xato bermay null qaytaradi
-      
-        if (error || !data) {
-          console.error("User profile missing in Database. Logging out...");
-          await get().forceSignOutToLogin('Unauthorized: Profile not found.');
-          return;
+      fetchUserProfile: async (userId, shouldLogoutOnMissing = true) => {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle(); // Xato bermay null qaytaradi
+
+          if (error) {
+            console.error("Error fetching user profile:", error);
+            if (shouldLogoutOnMissing) {
+              await get().forceSignOutToLogin('Error fetching profile.');
+            }
+            return null;
+          }
+
+          if (!data) {
+            console.warn("User profile missing in Database.");
+            if (shouldLogoutOnMissing) {
+              await get().forceSignOutToLogin('Unauthorized: Profile not found.');
+            }
+            return null;
+          }
+
+          set({ userProfile: data });
+          return data;
+        } catch (error) {
+          console.error("Exception in fetchUserProfile:", error);
+          if (shouldLogoutOnMissing) {
+            await get().forceSignOutToLogin('Error fetching profile.');
+          }
+          return null;
         }
-      
-        set({ userProfile: data });
       },
 
       // Sessiya bor bo'lsa ham DB'da user borligini tekshirish
@@ -192,7 +248,7 @@ export const useAuthStore = create(
         if (!userId) return { success: false, error: 'User not authenticated' };
 
         set({ loading: true, error: null });
-        
+
         const { data, error } = await supabase
           .from('users')
           .update(profileData)
@@ -213,19 +269,39 @@ export const useAuthStore = create(
       signOut: async () => {
         set({ loading: true, error: null })
         try {
+          // Clear Supabase session
           const { error } = await supabase.auth.signOut()
           if (error) {
-            set({ error: error.message })
+            set({ error: error.message, loading: false })
             return { success: false, error: error.message }
           }
-          set({ authUser: null, userProfile: null })
-          return { success: true }
+
+          // Clear Zustand state
+          set({ authUser: null, userProfile: null, isInitialized: false })
+
+          // Clear all user-specific localStorage data
+          try {
+            // Clear reading and listening practice/result data
+            clearAllReadingData()
+            clearAllListeningData()
+
+            // Clear Zustand persist storage
+            localStorage.removeItem('auth-storage')
+
+            localStorage.clear();
+
+
+          } catch (storageError) {
+            console.error('Error clearing localStorage:', storageError)
+            // Continue with logout even if storage clearing fails
+          }
+
+          set({ loading: false })
+          return { success: true, redirectTo: '/' }
         } catch (error) {
           const message = error?.message || 'Failed to log out. Please try again.'
-          set({ error: message })
+          set({ error: message, loading: false })
           return { success: false, error: message }
-        } finally {
-          set({ loading: false })
         }
       },
 
@@ -238,11 +314,57 @@ export const useAuthStore = create(
           const message = error?.message || reason || 'Failed to log out.'
           set({ error: message })
         } finally {
-          set({ authUser: null, userProfile: null, loading: false })
-          if (typeof window !== 'undefined') {
-            if (window.location.pathname !== '/') {
-              window.location.assign('/')
+          // Clear Zustand state
+          set({ authUser: null, userProfile: null, isInitialized: false, loading: false })
+
+          // Clear all user-specific localStorage data
+          try {
+            // Clear reading and listening practice/result data
+            clearAllReadingData()
+            clearAllListeningData()
+
+            // Clear Zustand persist storage
+            localStorage.removeItem('auth-storage')
+
+            // Clear any other user-specific keys (comprehensive cleanup)
+            const keysToRemove = []
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i)
+              if (key) {
+                // Keep UI preferences (theme, sidebar, etc.) but clear user data
+                const isUserData =
+                  key.startsWith('reading_') ||
+                  key.startsWith('listening_') ||
+                  key === 'auth-storage' ||
+                  key.includes('practice_') ||
+                  key.includes('result_') ||
+                  key.includes('audio_position_')
+
+                if (isUserData) {
+                  keysToRemove.push(key)
+                }
+              }
             }
+
+            // Remove all identified user-specific keys
+            keysToRemove.forEach(key => {
+              try {
+                localStorage.removeItem(key)
+              } catch (err) {
+                console.warn(`Failed to remove key ${key}:`, err)
+              }
+            })
+          } catch (storageError) {
+            console.error('Error clearing localStorage:', storageError)
+          }
+
+          // Navigate to landing page - use setTimeout to avoid blocking
+          if (typeof window !== 'undefined') {
+            setTimeout(() => {
+              if (window.location.pathname !== '/') {
+                window.location.href = '/'
+              }
+            }, 100)
           }
         }
       },
@@ -252,8 +374,8 @@ export const useAuthStore = create(
     {
       name: 'auth-storage', // localStorage dagi kalit nomi
       storage: createJSONStorage(() => localStorage), // Ma'lumotni qayerga saqlash
-      partialize: (state) => ({ 
-        authUser: state.authUser, 
+      partialize: (state) => ({
+        authUser: state.authUser,
         userProfile: state.userProfile,
       }), // Faqat kerakli qismlarni localStoragega saqlaymiz (loading saqlanmaydi)
     }

@@ -17,7 +17,7 @@ import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext"
 import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip";
 import NoteSidebar from "@/components/sidebar/NoteSidebar";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
-
+import parse from "html-react-parser"; 
 
 
 
@@ -25,7 +25,7 @@ const ReadingPracticePageContent = () => {
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentTest, fetchTestById, loadingTest: LoadingTest, error } = useTestStore();
-  const { authUser } = useAuthStore();
+  const { authUser, userProfile } = useAuthStore();
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const { isSidebarOpen } = useAnnotation();
@@ -66,6 +66,7 @@ const ReadingPracticePageContent = () => {
   const selectableContentRef = useRef(null);
   const universalContentRef = useRef(null); // Universal container for all selectable content
 
+
   useEffect(() => {
     console.log('[ReadingPracticePage] useEffect triggered', { id, idType: typeof id });
     
@@ -93,14 +94,32 @@ const ReadingPracticePageContent = () => {
 
     // Component lifecycle management: Track if component is mounted
     let isMounted = true;
+   
 
     const loadTestData = async () => {
-      console.log('[ReadingPracticePage] loadTestData called with id:', id);
+      console.log('[ReadingPracticePage] loadTestData called with id:', id, 'idType:', typeof id);
       try {
-        // Fetch test data
-        console.log('[ReadingPracticePage] Calling fetchTestById...');
-        await fetchTestById(id);
-        console.log('[ReadingPracticePage] fetchTestById completed');
+        // Verify fetchTestById is available and is a function
+        if (typeof fetchTestById !== 'function') {
+          console.error('[ReadingPracticePage] fetchTestById is not a function:', typeof fetchTestById);
+          if (isMounted) {
+            const { clearCurrentTest } = useTestStore.getState();
+            clearCurrentTest(false);
+          }
+          return;
+        }
+        
+        // Detect review mode from URL
+        const isReviewMode = status === 'reviewing';
+        const includeCorrectAnswers = isReviewMode;
+        
+        // Get user subscription status
+        const userSubscriptionStatus = userProfile?.subscription_status || "free";
+        
+        // Fetch test data with correct parameters
+        console.log('[ReadingPracticePage] Calling fetchTestById with id:', id, { includeCorrectAnswers, userSubscriptionStatus });
+        const result = await fetchTestById(id, false, includeCorrectAnswers, userSubscriptionStatus);
+        console.log('[ReadingPracticePage] fetchTestById completed:', result ? 'Success' : 'No data');
         
         // Only update state if component is still mounted
         if (!isMounted) return;
@@ -628,15 +647,8 @@ const ReadingPracticePageContent = () => {
       return;
     }
 
-    // Prevent concurrent review fetches
-    if (status === 'reviewing') {
-      console.warn('[handleReviewTest] Already in review mode');
-      return;
-    }
-
     try {
       const result = await fetchLatestAttempt(authUser.id, id);
-      
       if (result.success && result.attempt && result.answers) {
         // Convert answers to review data format
         const reviewDataObj = {};
@@ -1015,6 +1027,7 @@ const ReadingPracticePageContent = () => {
                 <div key={questionGroup.id || groupIdx} className="space-y-6">
                   {/* Group Header with Instruction and Range */}
                   <div className="space-y-3">
+
                     <h3 
                       className="text-lg font-semibold"
                       style={{ color: themeColors.text }}
@@ -1029,17 +1042,17 @@ const ReadingPracticePageContent = () => {
                           data-section-type="questions"
                           style={{ color: themeColors.text }}
                         >
-                          {questionGroup.instruction}
+                          {parse(questionGroup.instruction, { allowDangerousHtml: true })}
                         </p>
                       )}
                   </div>
-                  {/* {questionGroup.type === 'matching_information' && (
+                  {questionGroup.type === 'matching_information' && (
                     <div className="space-y-3">
                       <h3 className="text-lg font-semibold" style={{ color: themeColors.text }}>
                         Matching Information
                       </h3>
                     </div>
-                  )} */}
+                  )}
                 
                   {/* For Fill-in-the-Blanks, Drag-and-Drop, Table Completion, Table, Map, and Matching Information: Render as a single group with group-level options */}
                   {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation) ? (
@@ -1069,8 +1082,7 @@ const ReadingPracticePageContent = () => {
                         backgroundColor: themeColors.background
                       }}
                     >
-                     
-
+                     { console.log('reviewData', reviewData)}
                       <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
                         <QuestionRenderer
                           question={{

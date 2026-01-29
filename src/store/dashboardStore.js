@@ -8,6 +8,7 @@ export const useDashboardStore = create((set, get) => ({
   scores: { listening: null, reading: null, average: null },
   loading: false,
   error: null,
+  lastFetched: null, // Timestamp of last successful fetch
 
   // Fetch all dashboard data in one optimized query with join
   fetchDashboardData: async (userId, forceRefresh = false) => {
@@ -20,11 +21,15 @@ export const useDashboardStore = create((set, get) => ({
         scores: { listening: null, reading: null, average: null },
         loading: false,
         error: null,
+        lastFetched: null,
       });
       return;
     }
 
-    const shouldFetch = forceRefresh || state.attempts.length === 0;
+    // Check if data is stale (more than 3 minutes old)
+    const fiveMinutesAgo = Date.now() - 3 * 60 * 1000;
+    const isStale = !state.lastFetched || state.lastFetched < fiveMinutesAgo;
+    const shouldFetch = forceRefresh || state.attempts.length === 0 || isStale;
     if (!shouldFetch && !state.loading) {
       return {
         attempts: state.attempts,
@@ -59,6 +64,7 @@ export const useDashboardStore = create((set, get) => ({
           completions: {},
           loading: false,
           scores: { listening: null, reading: null, average: null },
+          lastFetched: null,
         });
         return {
           attempts: [],
@@ -152,6 +158,7 @@ export const useDashboardStore = create((set, get) => ({
         scores,
         loading: false,
         error: null,
+        lastFetched: Date.now(),
       });
 
       return { attempts: attemptsWithType, completions, scores };
@@ -163,6 +170,7 @@ export const useDashboardStore = create((set, get) => ({
         loading: false,
         scores: { listening: null, reading: null, average: null },
         error: error.message,
+        lastFetched: null,
       });
       return {
         attempts: [],
@@ -186,6 +194,7 @@ export const useDashboardStore = create((set, get) => ({
       scores: { listening: null, reading: null, average: null },
       loading: false,
       error: null,
+      lastFetched: null,
     });
   },
 }));

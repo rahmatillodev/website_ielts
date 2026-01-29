@@ -1,7 +1,7 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { FaRegBookmark, FaBookmark } from "react-icons/fa";
-
+import parse from "html-react-parser"; 
 const FillInTheBlank = ({ 
   question, 
   answer, 
@@ -69,7 +69,7 @@ const FillInTheBlank = ({
       </div>
       {question.instruction && (
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          {question.instruction}
+          {parse(question.instruction, { allowDangerousHtml: true })}
         </p>
       )}
     </div>

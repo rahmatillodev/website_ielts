@@ -138,7 +138,7 @@ const CardOpen = ({
 
         {/* Score Badge for Completed */}
         {hasCompleted && (
-          <div className="absolute top-12 md:top-16 right-3 md:right-5 z-10">
+          <div className="absolute top-10 md:top-12 right-3 md:right-5 z-10">
             <div className="bg-white border border-gray-200 w-12 md:w-18 h-12 md:h-18 rounded-full p-2 md:p-4 flex items-center justify-center flex-col shadow-sm">
               <p className="text-[10px] md:text-xs text-gray-500 font-semibold">Score</p>
               <p className="text-sm md:text-xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</p>

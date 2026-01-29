@@ -518,7 +518,9 @@ const LandingPage = () => {
                   key={`first-${i}`}
                   className="shrink-0 w-[280px] sm:w-[300px] md:w-[320px] lg:w-[360px]"
                 >
-                  <div className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <div
+                    className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col  h-[270px]"
+                  >
                     <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                       <img
                         src={t.avatar}
@@ -530,10 +532,10 @@ const LandingPage = () => {
                         <p className="text-[10px] sm:text-xs text-gray-500">{t.subtitle}</p>
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed flex-1 line-clamp-5">
                       "{t.quote}"
                     </p>
-                    <div className="flex items-center gap-2 text-green-600">
+                    <div className="flex items-center gap-2 text-green-600 mt-auto">
                       <motion.span
                         animate={{ rotate: [0, 10, -10, 0] }}
                         transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
@@ -546,13 +548,14 @@ const LandingPage = () => {
                   </div>
                 </div>
               ))}
-              {/* Дублированный набор для бесконечного цикла */}
               {TESTIMONIALS_MOCK.map((t, i) => (
                 <div
                   key={`second-${i}`}
                   className="shrink-0 w-[280px] sm:w-[300px] md:w-[320px] lg:w-[360px]"
                 >
-                  <div className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <div
+                    className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-[270px]"
+                  >
                     <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                       <img
                         src={t.avatar}
@@ -564,10 +567,10 @@ const LandingPage = () => {
                         <p className="text-[10px] sm:text-xs text-gray-500">{t.subtitle}</p>
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed flex-1 line-clamp-5">
                       "{t.quote}"
                     </p>
-                    <div className="flex items-center gap-2 text-green-600">
+                    <div className="flex items-center gap-2 text-green-600 mt-auto">
                       <motion.span
                         animate={{ rotate: [0, 10, -10, 0] }}
                         transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}

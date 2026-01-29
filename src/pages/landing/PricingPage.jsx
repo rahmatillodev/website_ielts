@@ -97,9 +97,6 @@ const PricingPage = () => {
     };
   }, []);
 
-  const handleTelegramRedirect = () => {
-    window.open(pricing.telegram_admin, "_blank");
-  };
 
   // Animation variants
   const containerVariants = {
@@ -220,14 +217,12 @@ const PricingPage = () => {
                 icon={LuLightbulb}
                 title="Detailed Explanations"
                 description="In-depth breakdowns for every question."
-                disabled
                 index={2}
               />
               <FeatureItem
                 icon={LuZap}
                 title="Distraction-Free"
                 description="No ads. Real exam conditions."
-                disabled
                 index={3}
               />
             </motion.div>
@@ -354,16 +349,17 @@ const PricingPage = () => {
                   </p>
                 </motion.div>
 
-                <motion.button
+                <a 
                   variants={fadeUpVariant}
-                  onClick={handleTelegramRedirect}
+                  href={`https://t.me/${pricing.telegram_admin}`}
+                  target="_blank"
                   className="w-full bg-[#4A90E2] hover:bg-blue-600 text-white font-black py-3 sm:py-4 rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base transition-colors"
                   whileTap={{ scale: 0.97 }}
                   whileHover={{ scale: 1.04 }}
                 >
                   <FiSend size={18} />
                   Send Screenshot on Telegram
-                </motion.button>
+                </a>
               </motion.div>
             </motion.div>
           </motion.div>

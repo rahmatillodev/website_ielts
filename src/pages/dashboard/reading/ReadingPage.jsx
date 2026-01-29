@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useTestStore } from "@/store/testStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
-import TestsLibraryPage from "@/components/pages/TestsLibraryPage";
+import TestsLibraryPage from "@/components/TestsLibraryPage";
 
 const ReadingPage = () => {
   // Get store state and actions
@@ -14,6 +14,7 @@ const ReadingPage = () => {
   // Get dashboard data for card review status
   const authUser = useAuthStore((state) => state.authUser);
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
+  const dashboardLoading = useDashboardStore((state) => state.loading);
   
   // Fetch dashboard data on mount to ensure review status is available
   useEffect(() => {
@@ -31,6 +32,7 @@ const ReadingPage = () => {
       loading={loading}
       loaded={loaded}
       fetchTests={fetchTests}
+      dashboardLoading={dashboardLoading}
       emptyStateMessage=""
       emptyFreeMessage=""
       emptyPremiumMessage=""

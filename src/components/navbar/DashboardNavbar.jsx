@@ -36,7 +36,7 @@ const DashboardNavbar = ({ onMenuClick }) => {
     const result = await signOut();
     if (result?.success) {
       toast.success('Logged out successfully');
-      navigate('/login');
+      navigate('/');
     } else {
       toast.error(result?.error || 'Failed to log out');
     }

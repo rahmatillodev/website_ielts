@@ -140,66 +140,33 @@ const ListeningResultPage = () => {
   // Get answer display data - memoized for performance
   // Include ALL questions from the test, not just answered ones
   const answerDisplayData = useMemo(() => {
-    if (!resultData || !currentTest) return [];
+    if (!resultData || !resultData.answers) return [];
 
     const answers = resultData.answers || {};
     const reviewData = resultData.reviewData || {};
-    
-    // Collect all questions from the test
-    const allQuestionsMap = new Map();
-    
-    if (currentTest.parts) {
-      currentTest.parts.forEach((part) => {
-        if (part.questionGroups) {
-          part.questionGroups.forEach((questionGroup) => {
-            const groupQuestions = questionGroup.questions || [];
-            groupQuestions.forEach((question) => {
-              const questionKey = question.question_number || question.id;
-              if (questionKey) {
-                allQuestionsMap.set(questionKey, {
-                  questionNumber: questionKey,
-                  question: question,
-                  questionGroup: questionGroup
-                });
-              }
-            });
-          });
+    const answerEntries = Object.entries(answers);
+
+    return answerEntries
+      .filter(([key, value]) => value && value.toString().trim() !== '')
+      .map(([key, value]) => {
+        const review = reviewData[key] || {};
+        return {
+          questionNumber: key,
+          yourAnswer: value.toString(),
+          isCorrect: review.isCorrect || false,
+          correctAnswer: review.correctAnswer || '',
+        };
+      })
+      .sort((a, b) => {
+        // Sort by question number if numeric, otherwise by string
+        const aNum = Number(a.questionNumber);
+        const bNum = Number(b.questionNumber);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return aNum - bNum;
         }
+        return a.questionNumber.localeCompare(b.questionNumber);
       });
-    }
-
-    // Create display data for all questions
-    const displayData = Array.from(allQuestionsMap.values()).map(({ questionNumber, question, questionGroup }) => {
-      // Try to find review data with type conversion (handle string/number mismatch)
-      const review = reviewData[questionNumber] || 
-                     reviewData[String(questionNumber)] || 
-                     reviewData[Number(questionNumber)] || 
-                     {};
-      // Try to find user answer with type conversion
-      const userAnswer = answers[questionNumber] || 
-                         answers[String(questionNumber)] || 
-                         answers[Number(questionNumber)] || 
-                         '';
-      
-      return {
-        questionNumber: questionNumber,
-        yourAnswer: userAnswer ? userAnswer.toString().trim() : '',
-        isCorrect: review.isCorrect || false,
-        correctAnswer: review.correctAnswer || '',
-      };
-    });
-
-    // Sort by question number
-    return displayData.sort((a, b) => {
-      const aNum = Number(a.questionNumber);
-      const bNum = Number(b.questionNumber);
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        return aNum - bNum;
-      }
-      // Convert to string for localeCompare
-      return String(a.questionNumber).localeCompare(String(b.questionNumber));
-    });
-  }, [resultData, currentTest]);
+  }, [resultData]);
 
   // Memoized stats calculations
   const stats = useMemo(() => {
@@ -316,12 +283,11 @@ const ListeningResultPage = () => {
 
         <hr className="border-gray-200 mb-10" />
 
-        {/* Performance Banner */}
 
         {/* Stats Cards - Redesigned */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
           {/* Overall Score Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
+          <div className="border-2 border-blue-200 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
             <div className="relative z-10">
               <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest mb-3">
                 Overall Band Score
@@ -347,7 +313,7 @@ const ListeningResultPage = () => {
           </div>
 
           {/* Correct Answers Card */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-4 sm:p-5 shadow-lg">
+          <div className="border-2 border-grey-200 rounded-2xl p-4 sm:p-5 shadow-lg">
             <div className="flex justify-between items-start mb-3">
               <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest">
                 Correct Answers
@@ -362,13 +328,13 @@ const ListeningResultPage = () => {
                 / {stats.totalQuestions}
               </span>
             </div>
-            <div className="text-sm font-semibold text-green-700">
+            <div className="text-sm font-semibold text-gray-500">
               {stats.percentage}%
             </div>
           </div>
 
           {/* Time Taken Card */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl p-4 sm:p-5 shadow-lg">
+          <div className="border-2 border-grey-200 rounded-2xl p-4 sm:p-5 shadow-lg">
             <div className="flex justify-between items-start mb-3">
               <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest">
                 Time Taken
@@ -380,7 +346,7 @@ const ListeningResultPage = () => {
                 {stats.timeTaken}
               </span>
             </div>
-            <div className="text-sm font-semibold text-purple-700">
+            <div className="text-sm font-semibold text-gray-500">
               Avg. {stats.avgTime} per question
             </div>
           </div>
@@ -445,7 +411,7 @@ const ListeningResultPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {answerDisplayData.length > 0 ? (
+                {answerDisplayData.length > 0 ? (
                     answerDisplayData.map((answerItem) => (
                       <tr
                         key={answerItem.questionNumber}
@@ -455,33 +421,24 @@ const ListeningResultPage = () => {
                           {answerItem.questionNumber}
                         </td>
                         <td className="p-4">
-                          {answerItem.yourAnswer ? (
-                            answerItem.isCorrect ? (
-                              <FaCheckCircle className="text-green-500 text-xl" />
-                            ) : (
-                              <FaTimesCircle className="text-red-500 text-xl" />
-                            )
+                          {answerItem.isCorrect ? (
+                            <FaCheckCircle className="text-green-500 text-xl" />
                           ) : (
-                            <span className="text-gray-400">—</span>
+                            <FaTimesCircle className="text-red-500 text-xl" />
                           )}
                         </td>
                         <td className="p-4">
-                          <span className={answerItem.yourAnswer 
-                            ? (answerItem.isCorrect ? "text-green-600 font-semibold" : "text-red-600 font-semibold")
-                            : "text-gray-400"
-                          }>
-                            {answerItem.yourAnswer || "Not answered"}
+                          <span className={answerItem.isCorrect ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                            {answerItem.yourAnswer || "N/A"}
                           </span>
                         </td>
                         {showCorrectAnswers && (
                           <td className="p-4">
-                            {answerItem.correctAnswer ? (
-                              <span className="text-green-600 font-semibold">
-                                {answerItem.correctAnswer}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
+
+                            <span className="text-green-600 font-semibold">
+                              {answerItem.correctAnswer}
+                            </span>
+
                           </td>
                         )}
                       </tr>

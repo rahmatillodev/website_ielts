@@ -523,7 +523,7 @@ const DashboardPage = () => {
         iconColor: 'text-blue-500',
         bgColor: 'bg-blue-50',
         borderColor: 'border-blue-200',
-        isActive: scores.listening !== null,
+        isActive: true,
       },
       {
         label: 'Reading',
@@ -532,7 +532,7 @@ const DashboardPage = () => {
         iconColor: 'text-orange-500',
         bgColor: 'bg-orange-50',
         borderColor: 'border-orange-200',
-        isActive: scores.reading !== null,
+        isActive: true,
       },
       {
         label: 'Writing',

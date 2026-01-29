@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HiOutlinePencil } from "react-icons/hi2";
 import { LuUserRound } from "react-icons/lu";
 import { LiaExternalLinkAltSolid } from "react-icons/lia";
-import { Crown, Send, Zap } from "lucide-react";
+import { Crown, Send, Zap, Paperclip } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useSettingsStore } from "@/store/systemStore";
 import { Link } from "react-router-dom";
@@ -16,7 +16,6 @@ import { motion } from "framer-motion";
 import { useFeedbacksStore } from "@/store/feedbacks";
 import { toast } from "react-toastify";
 
-// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -79,8 +78,12 @@ const ProfilePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [attachment, setAttachment] = useState(null); // Attachment state
+  const [savingTarget, setSavingTarget] = useState(false);
   const authUser = useAuthStore((state) => state.authUser);
   const userProfile = useAuthStore((state) => state.userProfile);
+  const [targetBandScore, setTargetBandScore] = useState(userProfile?.target_band_score || 7.5);
+  const updateUserProfile = useAuthStore((state) => state.updateUserProfile);
   const settings = useSettingsStore((state) => state.settings);
   const addFeedback = useFeedbacksStore((state) => state.addFeedback);
 
@@ -90,26 +93,45 @@ const ProfilePage = () => {
   const phone_number = userProfile?.phone_number || "";
   const tg_username = userProfile?.telegram_username || "";
 
-  // Premium status check
-  const isPremium = userProfile?.subscription_status === "premium";
-  const premiumStart = userProfile?.premium_started_at ? new Date(userProfile.premium_started_at) : null;
-  const premiumUntil = userProfile?.premium_until
-    ? new Date(userProfile.premium_until)
-    : null;
-  const daysRemaining = premiumUntil
-    ? Math.max(0, differenceInCalendarDays(premiumUntil, premiumStart))
-    : 0;
+  // Memoize name parts and first name
+  const { nameParts, firstName } = useMemo(() => {
+    const parts = fullName ? fullName.split(" ") : [];
+    return {
+      nameParts: parts,
+      firstName: parts[0] || ""
+    };
+  }, [fullName]);
 
-  const totalDays = premiumStart && premiumUntil ? differenceInCalendarDays(premiumUntil, premiumStart) : 0;
-  const remainingDays = premiumUntil ? Math.max(0, differenceInCalendarDays(premiumUntil, new Date())) : 0;
-  const progressPercent = totalDays > 0 ? (remainingDays / totalDays) * 100 : 0;
+  // Memoize premium calculations
+  const premiumData = useMemo(() => {
+    const isPremium = userProfile?.subscription_status === "premium";
+    const premiumStart = userProfile?.premium_started_at ? new Date(userProfile.premium_started_at) : null;
+    const premiumUntil = userProfile?.premium_until
+      ? new Date(userProfile.premium_until)
+      : null;
+    const daysRemaining = premiumUntil
+      ? Math.max(0, differenceInCalendarDays(premiumUntil, premiumStart))
+      : 0;
+    const totalDays = premiumStart && premiumUntil ? differenceInCalendarDays(premiumUntil, premiumStart) : 0;
+    const remainingDays = premiumUntil ? Math.max(0, differenceInCalendarDays(premiumUntil, new Date())) : 0;
+    const progressPercent = totalDays > 0 ? (remainingDays / totalDays) * 100 : 0;
 
-  // Split full_name into first and last name for display
-  const nameParts = fullName ? fullName.split(" ") : [];
-  const firstName = nameParts[0] || "";
+    return {
+      isPremium,
+      premiumStart,
+      premiumUntil,
+      daysRemaining,
+      
+      totalDays,
+      remainingDays,
+      progressPercent
+    };
+  }, [userProfile?.subscription_status, userProfile?.premium_started_at, userProfile?.premium_until]);
 
-  // Get initials for avatar
-  const getInitials = () => {
+  const { isPremium, premiumStart, premiumUntil, daysRemaining, progressPercent } = premiumData;
+
+  // Memoize initials calculation
+  const initials = useMemo(() => {
     if (fullName) {
       if (nameParts.length >= 2) {
         return (
@@ -122,21 +144,93 @@ const ProfilePage = () => {
       return email.substring(0, 2).toUpperCase();
     }
     return "U";
+  }, [fullName, nameParts, email]);
+
+  // Clipboard copy utility
+  const handleCopy = (value, description = "Copied!") => {
+    if (value) {
+      navigator.clipboard.writeText(value);
+      toast.success(description, { autoClose: 1200 });
+    }
   };
 
+  // Feedback submit handler with attachment support and toast
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const result = await addFeedback({
-      message: message,
-    });
+
+    let result = { success: false, error: null };
+
+    if (attachment) {
+      // If there's an attachment, upload with message as FormData
+      const formData = new FormData();
+      formData.append("message", message);
+      formData.append("attachment", attachment);
+
+      try {
+        // Here you should send formData (depends on addFeedback implementation)
+        result = await addFeedback(formData, { isFormData: true }); // This interface may need to be adapted!
+      } catch (error) {
+        toast.error("Failed to send feedback with attachment");
+      }
+    } else {
+      result = await addFeedback({
+        message: message,
+      });
+    }
+
     if (result.success) {
       toast.success("Feedback sent successfully");
       setMessage("");
-    } else {
+      setAttachment(null);
+    } else if (result.error) {
       toast.error(result.error);
     }
+
     setLoading(false);
+  };
+
+  // Handle file attachment input and show toast
+  const handleAttachment = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAttachment(file);
+      toast.info(`Attached file: ${file.name}`, { autoClose: 2000 });
+    }
+  };
+
+  // Update target band score
+  useEffect(() => {
+    if (userProfile?.target_band_score !== undefined) {
+      setTargetBandScore(userProfile.target_band_score);
+    }
+  }, [userProfile?.target_band_score]);
+
+  const handleTargetScoreChange = async (value) => {
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || numValue < 0 || numValue > 9) {
+      toast.error('Target score must be between 0 and 9');
+      return;
+    }
+
+    setTargetBandScore(numValue);
+    setSavingTarget(true);
+
+    try {
+      const result = await updateUserProfile({ target_band_score: numValue });
+      if (result.success) {
+        toast.success('Target band score updated');
+      } else {
+        toast.error(result.error || 'Failed to update target score');
+        // Revert on error
+        setTargetBandScore(userProfile?.target_band_score || 7.5);
+      }
+    } catch (error) {
+      toast.error('Failed to update target score');
+      setTargetBandScore(userProfile?.target_band_score || 7.5);
+    } finally {
+      setSavingTarget(false);
+    }
   };
 
   return (
@@ -152,7 +246,6 @@ const ProfilePage = () => {
           <h1 className="text-3xl font-black text-gray-900">
             Account Settings
           </h1>
-
         </div>
         <p className="text-gray-500 font-medium">
           Manage your personal information and preferences.
@@ -202,7 +295,7 @@ const ProfilePage = () => {
                         alt="User Avatar"
                       />
                       <AvatarFallback className="bg-gray-100 text-gray-400 text-3xl font-semibold">
-                        {getInitials()}
+                        {initials}
                       </AvatarFallback>
                     </Avatar>
                   </div>
@@ -309,7 +402,7 @@ const ProfilePage = () => {
                   First Name
                 </Label>
                 <Input
-                  defaultValue={firstName}
+                  value={firstName}
                   placeholder="have don't name"
                   className="bg-gray-50/50 border-gray-100 cursor-default rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
@@ -320,7 +413,7 @@ const ProfilePage = () => {
                   telegram username
                 </Label>
                 <Input
-                  defaultValue={tg_username}
+                  value={tg_username}
                   placeholder="have don't telegram username"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
@@ -331,7 +424,7 @@ const ProfilePage = () => {
                   Email Address
                 </Label>
                 <Input
-                  defaultValue={email}
+                  value={email}
                   type="email"
                   placeholder="have don't email"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
@@ -343,11 +436,31 @@ const ProfilePage = () => {
                   Phone Number
                 </Label>
                 <Input
-                  defaultValue={phone_number}
+                  value={phone_number}
                   placeholder="have don't phone number"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
+              </motion.div>
+              <motion.div className="space-y-2" variants={inputVariants}>
+                <Label className="text-sm font-black text-gray-400 uppercase tracking-tighter">
+                  Target Band Score
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="9"
+                  step="0.5"
+                  disabled={true}
+                  value={targetBandScore}
+                  onChange={(e) => setTargetBandScore(e.target.value)}
+                  onBlur={(e) => handleTargetScoreChange(e.target.value)}
+                  placeholder="7.5"
+                  className="bg-white border-gray-200 rounded-xl h-12 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                />
+                <p className="text-xs text-gray-500">
+                  Set your target IELTS band score (0-9)
+                </p>
               </motion.div>
             </motion.div>
           </div>
@@ -359,8 +472,6 @@ const ProfilePage = () => {
           variants={cardVariants}
           whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
         >
-
-
           <motion.div
             className="space-y-6 flex flex-col md:flex-row items-start justify-between gap-6"
             variants={staggerContainer}
@@ -394,11 +505,11 @@ const ProfilePage = () => {
                   whileHover={{ x: 5 }}
                   transition={{ type: "spring", stiffness: 400 }}
                 >
-                  <Link to={settings?.telegram_admin_username} target="_blank">
-                    <p className="text-sm font-semibold text-gray-400 leading-none">
-                      {settings.telegram_admin_username}
+                  <a href={`https://t.me/${settings?.telegram_admin_username}`} target="_blank">
+                  <p className="text-sm font-semibold text-gray-400 leading-none">
+                      @{settings.telegram_admin_username}
                     </p>
-                  </Link>
+                  </a>
                   <LiaExternalLinkAltSolid
                     size={18}
                     className="text-gray-400 mb-0.5"
@@ -415,19 +526,17 @@ const ProfilePage = () => {
                   className="flex items-center gap-1"
                   whileHover={{ x: 5 }}
                   transition={{ type: "spring", stiffness: 400 }}
+                  onClick={() => handleCopy(settings?.support_link, "Email copied!")}
                 >
-                  <Link to={settings?.support_link} target="_blank">
-                    <p className="text-sm font-semibold text-gray-400">
-                      {settings.support_link}{" "}
-                    </p>
-                  </Link>
+                 <p className="text-sm font-semibold text-gray-400">
+                  {settings?.support_link}
+                 </p>
                   <LiaExternalLinkAltSolid
                     size={18}
                     className="text-gray-400 mb-0.5"
                   />
                 </motion.div>
               </motion.div>
-
               <hr className="border-gray-50" />
 
               {/* Support Number */}
@@ -437,22 +546,11 @@ const ProfilePage = () => {
                   className="flex items-center gap-1"
                   whileHover={{ x: 5 }}
                   transition={{ type: "spring", stiffness: 400 }}
+                  onClick={() => handleCopy(settings?.phone_number, "Phone number copied!")}
                 >
-                  <a
-                    href={
-                      settings?.phone_number
-                        ? `tel:${settings.phone_number}`
-                        : "#"
-                    }
-                    target={`${settings?.phone_number ? `tel:${settings.phone_number}` : "#"}`}
-                    rel="noopener noreferrer"
-                  >
-                    <p className="text-sm font-semibold text-gray-400">
-                      {settings?.phone_number
-                        ? settings.phone_number
-                        : "Not available"}
-                    </p>
-                  </a>
+                   <p className="text-sm font-semibold text-gray-400">
+                    {settings?.phone_number}
+                   </p>
                   <LiaExternalLinkAltSolid
                     size={18}
                     className="text-gray-400 mb-0.5"
@@ -462,7 +560,6 @@ const ProfilePage = () => {
             </div>
             <motion.div variants={itemVariants} className="bg-gray-50 p-6 rounded-2xl border border-gray-100 w-full md:w-1/3 mx-auto">
               <h3 className="text-lg font-black text-gray-900 mb-4">Send Feedback</h3>
-
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <textarea
@@ -489,12 +586,6 @@ const ProfilePage = () => {
                     </>
                   )}
                 </motion.button>
-
-                {status === 'success' && (
-                  <p className="text-xs text-green-600 font-semibold text-center mt-2">
-                    Thank you! Your feedback has been sent.
-                  </p>
-                )}
               </form>
             </motion.div>
           </motion.div>

@@ -32,10 +32,11 @@ const QuestionRenderer = ({
   const questionType = question.type;
   const normalizedType = questionType.toLowerCase().trim();
 
-  // Fill-in-the-Blanks - inline inputs with ___ placeholders from question_text
+  // Fill-in-the-Blanks - inline inputs with ___ placeholders from question_text  
   if (
     normalizedType.includes('fill_in_blank') 
   ) {
+
     return (
       <CompletionGapFill
         question={question}
@@ -170,7 +171,10 @@ const QuestionRenderer = ({
   }
 
   // Map - with image_url, instruction, and table matching interface
+  
   if (normalizedType.includes('map')) {
+    console.log(question)
+    console.log(groupQuestions)
     return (
       <TypeMap
         question={question}

@@ -2,21 +2,27 @@ import React, { useMemo } from "react";
 import { getOptionValue } from "../../store/optionUtils";
 import { FaRegBookmark, FaBookmark } from "react-icons/fa";
 import { useAppearance } from "@/contexts/AppearanceContext";
+import parse from "html-react-parser"; 
 
 /**
  * Map - Renders a map question type with image and table matching interface
- * 
- * Data Structure:
- * - Main Question (question group) contains image_url and instruction
- * - Multiple questions (rows) that need to be matched to column letters
- * - Options table with column letters (A, B, C, D, etc.) and is_correct flags
- * 
- * Format:
- * - Instructions text
- * - Map image (from question.image_url)
- * - Table with:
- *   - First column: question_number and question_text
- *   - Subsequent columns: Radio buttons for options (A, B, C, etc.)
+ *  example:
+ * - Uses _question?.options as the answer option source (array of option objects)
+ * - Each groupQuestion corresponds to a row; options must be joined with columns from _question.options for table alignment
+ *  {
+ *  _question: {
+ *    options: [
+ *      {
+ *        option_key: "A",
+ *        option_text: "Paris",
+ *        is_correct: true // true or false
+ *        question_id: "123", // the question id
+ *        question_number: null, // the question number
+ *        id: "123", // the option id
+ *      }
+ *    ]
+ *  }
+ * }
  */
 const TypeMap = ({ 
   question: _question, 
@@ -30,115 +36,98 @@ const TypeMap = ({
   bookmarks = new Set(), 
   toggleBookmark = () => {} 
 }) => {
-  // Prepare unified table structure with all unique options for column headers
-  const tableData = useMemo(() => {
-    if (!groupQuestions || groupQuestions.length === 0) {
-      return { questions: [], columnOptions: [] };
+  console.log(_question.opt);
+  // Always use _question.options for column options
+  const columnOptions = useMemo(() => {
+    const qOpts = _question?.options || [];
+    const uniqueMap = new Map();
+    for (const opt of qOpts) {
+      const key = (opt.letter || opt.option_key || opt.option_text || '').toUpperCase();
+      if (key && !uniqueMap.has(key)) uniqueMap.set(key, opt);
     }
-
-    // Collect all unique options from all questions to create unified column headers
-    // This ensures perfect vertical alignment (all Option A columns align, etc.)
-    const allUniqueOptionsMap = new Map();
-    
-    // Iterate through all questions and collect their nested options
-    groupQuestions.forEach(q => {
-      // Each question has nested options: q.options contains options where option.question_id === q.id
-      if (q.options && Array.isArray(q.options)) {
-        q.options.forEach(opt => {
-          const optText = opt.option_text || '';
-          // Use option_text as key to ensure unique columns
-          if (optText && !allUniqueOptionsMap.has(optText)) {
-            allUniqueOptionsMap.set(optText, opt);
-          }
-        });
-      }
+    return Array.from(uniqueMap.values()).sort((a, b) => {
+      const la = a.letter || a.option_key || '';
+      const lb = b.letter || b.option_key || '';
+      return la.localeCompare(lb, undefined, { sensitivity: 'base' });
     });
+  }, [_question]);
+  
 
-    // Convert to sorted array for consistent column ordering
-    // Sort by letter if available, otherwise by option_text
-    const columnOptions = Array.from(allUniqueOptionsMap.values())
-      .sort((a, b) => {
-        if (a.letter && b.letter) {
-          return a.letter.localeCompare(b.letter);
-        }
-        const aText = a.option_text || '';
-        const bText = b.option_text || '';
-        return aText.localeCompare(bText);
-      });
-
-    // Sort questions by question_number
-    const sortedQuestions = [...groupQuestions].sort((a, b) => {
+  // Table questions sorted by question_number
+  const questions = useMemo(() => {
+    if (!Array.isArray(groupQuestions)) return [];
+    console.log(groupQuestions);
+    return [...groupQuestions].sort((a, b) => {
       const aNum = a.question_number ?? 0;
       const bNum = b.question_number ?? 0;
       return aNum - bNum;
     });
-
-    return {
-      questions: sortedQuestions,
-      columnOptions: columnOptions
-    };
-  }, [groupQuestions, options]);
+  }, [groupQuestions]);
 
   const isReviewMode = mode === 'review';
   const appearance = useAppearance();
   const themeColors = appearance.themeColors;
 
-  // Get correct answer for a question from question object or its nested options
+  // Find correct answer for a question (by correct_answer on question or by is_correct option in _question.options)
   const getCorrectAnswerForQuestion = (question) => {
-    // First, try to get from question object's correct_answer field
     if (question && question.correct_answer) {
       return question.correct_answer;
     }
-    
-    // Fallback: find option with is_correct = true in question's nested options array
-    if (question && question.options && Array.isArray(question.options)) {
-      const correctOption = question.options.find(opt => opt.is_correct === true);
-      if (correctOption) {
-        // Use correct_answer from option if available, otherwise use option_text
-        return correctOption.correct_answer || getOptionValue(correctOption);
+    // Try _question.options (shared among all rows)
+    if (_question?.options && Array.isArray(_question.options)) {
+      // Look for an option that links to this question via question_id
+      let correct = _question.options.find(
+        opt => opt.is_correct === true && (opt.question_id === question.id || opt.question_number === question.question_number)
+      );
+      // Fallback: if none are linked, just return first correct
+      if (!correct) {
+        correct = _question.options.find(opt => opt.is_correct === true);
+      }
+      if (correct) {
+        return correct.letter || correct.option_text || getOptionValue(correct);
       }
     }
-    
     return '';
   };
 
-  // Get the option from a question's nested options array that matches a specific option_text
-  const getQuestionOption = (question, optionText) => {
-    if (!question || !question.options || !Array.isArray(question.options)) {
-      return null;
-    }
-    return question.options.find(opt => 
-      (opt.option_text || '').toLowerCase() === (optionText || '').toLowerCase()
-    );
+  // Get the option from _question.options that matches this column and question row
+  const getQuestionColumnOption = (question, colOption) => {
+    if (!_question?.options) return null;
+    console.log(question);
+    console.log(colOption);
+    // Try to match both question and column via option.question_id + letter/option_key/option_text
+    return _question.options.find(opt => {
+      // console.log(opt.question_id === question.id);
+      // Must match to this row (question id), and column (letter/option_key/option_text)
+      const matchesRow = opt.question_id === question.question_id;
+      const matchesCol = (
+        (colOption.letter && (opt.letter || '').toUpperCase() === (colOption.letter || '').toUpperCase()) ||
+        (colOption.option_key && (opt.option_key || '').toUpperCase() === (colOption.option_key || '').toUpperCase()) ||
+        (colOption.option_text && (opt.option_text || '').toUpperCase() === (colOption.option_text || '').toUpperCase())
+      );
+      return matchesRow && matchesCol;
+    });
   };
 
-  // Check if an option is selected for a question (match by option_text)
-  const isOptionSelected = (questionNumber, optionValue) => {
+  // Is selected: answers[question_number] matches column option value
+  const isOptionSelected = (questionNumber, columnOptionValue) => {
     const review = reviewData[questionNumber] || {};
     const answer = review.userAnswer || answers[questionNumber] || '';
-    // Match by option_text (not letter)
-    return answer === optionValue || answer === optionValue.toLowerCase();
+    return answer === columnOptionValue || answer === (columnOptionValue || '').toLowerCase();
   };
 
-  // Get review info for a question
-  const getQuestionReview = (questionNumber) => {
-    return reviewData[questionNumber] || {};
-  };
+  // Get review data for a question
+  const getQuestionReview = (questionNumber) => reviewData[questionNumber] || {};
 
-  // Handle option selection
-  const handleOptionChange = (questionNumber, optionValue) => {
+  // Selection handler: value is either columnOption.letter or getOptionValue(colOption)
+  const handleOptionChange = (questionNumber, columnOptionValue) => {
     if (mode !== 'review') {
-      // Store option_text as the answer value
-      onAnswerChange(questionNumber, optionValue);
+      onAnswerChange(questionNumber, columnOptionValue);
     }
   };
 
-  // Render component
-  if (!tableData.questions || tableData.questions.length === 0) {
-    return null;
-  }
+  if (!questions || questions.length === 0) return null;
 
-  const { questions, columnOptions } = tableData;
   const instruction = _question?.instruction || '';
   const imageUrl = _question?.image_url || '';
 
@@ -151,10 +140,9 @@ const TypeMap = ({
           data-selectable="true"
           style={{ color: themeColors.text }}
         >
-          {instruction}
+          {parse(instruction, { allowDangerousHtml: true })}
         </div>
       )}
-
       {/* Map Image */}
       {imageUrl && (
         <div className="mb-6">
@@ -189,28 +177,25 @@ const TypeMap = ({
                 {/* First column header: Question */}
                 <th 
                   className="px-4 py-3 text-left font-semibold text-gray-700 border-r"
-                  style={{ 
-                    color: themeColors.text,
-                    borderColor: themeColors.border 
-                  }}
+                  style={{ color: themeColors.text, borderColor: themeColors.border }}
                 >
                   Question
                 </th>
-                {/* Subsequent column headers: Option letters (A, B, C, etc.) */}
-                {columnOptions.map((option) => {
-                  const optionLetter = option.letter || '';
-                  const optionText = option.option_text || '';
+                {/* Option columns */}
+                {columnOptions.map((colOpt) => {
+                  const letter = colOpt.letter || colOpt.option_key || colOpt.option_text;
+                  const optionText = colOpt.option_text || '';
                   return (
                     <th
-                      key={option.id || optionLetter || optionText}
+                      key={colOpt.id || letter}
                       className="px-4 py-3 text-center font-semibold text-gray-700"
-                      title={optionText} // Show option text on hover
-                      style={{ 
-                        backgroundColor: themeColors.background, 
-                        color: themeColors.text 
+                      title={optionText}
+                      style={{
+                        backgroundColor: themeColors.background,
+                        color: themeColors.text,
                       }}
                     >
-                      {optionLetter}
+                      {letter}
                     </th>
                   );
                 })}
@@ -222,16 +207,12 @@ const TypeMap = ({
                 const questionText = q.question_text || q.text || '';
                 const review = getQuestionReview(qNumber);
                 const isCorrect = review.isCorrect;
-                
-                // Get correct answer from review data or from question's nested options
                 const correctAnswerFromReview = review.correctAnswer || '';
                 const correctAnswerFromQuestion = getCorrectAnswerForQuestion(q);
                 const correctAnswer = correctAnswerFromReview || correctAnswerFromQuestion;
                 const showWrong = isReviewMode && !isCorrect;
                 const showCorrect = isReviewMode && isCorrect;
-
                 const isBookmarked = bookmarks.has(qNumber);
-
                 return (
                   <tr
                     key={q.id || qNumber}
@@ -240,7 +221,7 @@ const TypeMap = ({
                     }`}
                     style={{ borderColor: themeColors.border }}
                   >
-                    {/* First Column: Question Number and Question Text */}
+                    {/* Row Question */}
                     <td 
                       className={`px-4 py-3 text-gray-900 border-r ${
                         showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : ''
@@ -283,59 +264,47 @@ const TypeMap = ({
                         </button>
                       </div>
                     </td>
-                    
-                    {/* Subsequent Columns: Radio Buttons for Options */}
-                    {columnOptions.map((columnOption) => {
-                      const columnOptionText = columnOption.option_text || '';
-                      const columnOptionLetter = columnOption.letter || '';
-                      
-                      // Find if this question has an option matching this column's option_text
-                      const questionOption = getQuestionOption(q, columnOptionText);
-                      
-                      // If this question doesn't have this option, render empty cell for perfect alignment
-                      if (!questionOption) {
+                    {/* Options */}
+                    {columnOptions.map((colOpt) => {
+                      // Value to store as answer: usually the letter/option_key.
+                      const colValue = colOpt.letter || colOpt.option_key || colOpt.option_text;
+                      // See if this row has an option for this column (lookup by question_id and letter/etc)
+                      const optInRow = getQuestionColumnOption(q, colOpt);
+                      // If missing, render empty for vertical alignment
+                      if (!optInRow) {
                         return (
                           <td
-                            key={`${q.id}-${columnOption.id || columnOptionLetter || columnOptionText}`}
+                            key={`${q.id}-${colOpt.id || colValue}`}
                             className="px-4 py-3 text-center"
-                            style={{ 
-                              backgroundColor: themeColors.background, 
-                              color: themeColors.text 
-                            }}
-                          >
-                            {/* Empty cell - question doesn't have this option, maintaining column alignment */}
-                          </td>
+                            style={{ backgroundColor: themeColors.background, color: themeColors.text }}
+                          ></td>
                         );
                       }
-                      
-                      // This question has this option, render radio button
-                      const optionValue = getOptionValue(questionOption);
-                      const isSelected = isOptionSelected(qNumber, optionValue);
-                      const isCorrectOption = questionOption.is_correct === true;
-                      const isCorrectAnswerMatch = isReviewMode && 
-                        (optionValue.toLowerCase() === (correctAnswer || '').toLowerCase().trim() ||
-                         questionOption.correct_answer?.toLowerCase() === (correctAnswer || '').toLowerCase().trim());
-                      
+                      const isSelected = isOptionSelected(qNumber, colValue);
+                      const isCorrectOption = optInRow.is_correct === true;
+                      const isCorrectAnswerMatch = isReviewMode &&
+                        (colValue?.toLowerCase() === (correctAnswer || '').toLowerCase().trim() ||
+                        optInRow.correct_answer?.toLowerCase() === (correctAnswer || '').toLowerCase().trim());
                       return (
                         <td
-                          key={`${q.id}-${questionOption.id || columnOptionLetter || columnOptionText}`}
+                          key={`${q.id}-${optInRow.id || colValue}`}
                           className={`px-4 py-3 text-center ${
-                            isSelected && showCorrect ? 'bg-green-100' : 
-                            isSelected && showWrong ? 'bg-red-400' : 
+                            isSelected && showCorrect ? 'bg-green-100' :
+                            isSelected && showWrong ? 'bg-red-400' :
                             (isCorrectOption || isCorrectAnswerMatch) && isReviewMode && !isSelected ? 'bg-green-50' : ''
                           }`}
-                          style={{ 
-                            backgroundColor: themeColors.background, 
-                            color: themeColors.text 
+                          style={{
+                            backgroundColor: themeColors.background,
+                            color: themeColors.text,
                           }}
                         >
                           <label className={`flex items-center justify-center ${mode === 'review' ? 'cursor-default' : 'cursor-pointer'}`}>
                             <input
                               type="radio"
                               name={`map-q-${qNumber}`}
-                              value={optionValue}
+                              value={colValue}
                               checked={isSelected}
-                              onChange={() => handleOptionChange(qNumber, optionValue)}
+                              onChange={() => handleOptionChange(qNumber, colValue)}
                               disabled={mode === 'review'}
                               className={`w-5 h-5 ${
                                 isSelected && showCorrect ? 'accent-green-600' :
@@ -359,4 +328,3 @@ const TypeMap = ({
 };
 
 export default TypeMap;
-
