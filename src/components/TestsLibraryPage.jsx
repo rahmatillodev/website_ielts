@@ -18,7 +18,6 @@ const TestsLibraryPage = ({
   testData,
   testType = "reading",
   loading,
-  loaded,
   fetchTests,
   dashboardLoading = false,
   emptyStateMessage = "",
@@ -26,6 +25,15 @@ const TestsLibraryPage = ({
   emptyPremiumMessage = "",
   emptySearchMessage = "",
 }) => {
+  // Log incoming props on every render
+  // console.log("[TestsLibraryPage] render", { 
+  //   testData, 
+  //   loading, 
+  //   dashboardLoading,
+  //   title,
+  //   fetchTestsIsPresent: !!fetchTests
+  // });
+
   // Load view preference from localStorage, default to list view (false)
   const getInitialViewState = () => {
     try {
@@ -79,16 +87,22 @@ const TestsLibraryPage = ({
 
   // Ensure allTests is always an array
   const allTests = Array.isArray(testData) ? testData : [];
+  // useEffect(() => {
+  //   console.log("[TestsLibraryPage] testData prop changed:", testData);
+  //   console.log("[TestsLibraryPage] allTests calculated:", allTests);
+  // }, [testData]);
 
   // Ensure tests are fetched when component mounts or route changes
   // Only fetch on initial mount or route change, not when data is empty
   useEffect(() => {
+    // console.log("[TestsLibraryPage] useEffect: route/fetchTests changed", { pathname: location.pathname, fetchTestsPresent: !!fetchTests, loading });
     if (!fetchTests) return;
 
     // Only fetch if we haven't fetched yet for this route
     // Don't re-fetch just because data is empty - that's a valid state
     if (!hasFetchedRef.current && !loading) {
       hasFetchedRef.current = true;
+      // console.log("[TestsLibraryPage] Fetching tests (initial load or route change)");
       fetchTests(false); // Don't force refresh on initial load
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,13 +111,15 @@ const TestsLibraryPage = ({
   // Reset fetch flag when route changes to allow fresh fetch
   useEffect(() => {
     hasFetchedRef.current = false;
+    // console.log("[TestsLibraryPage] Route changed, reset hasFetchedRef to false");
   }, [location.pathname]);
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(allTests) || allTests.length === 0) {
+      // console.log("[TestsLibraryPage] filteredData computes [] because allTests is falsy or empty", { allTests });
       return [];
     }
-    return allTests.filter((test) => {
+    const filtered = allTests.filter((test) => {
       // Safety check: ensure test exists and has required properties
       if (!test || typeof test !== 'object') {
         return false;
@@ -120,6 +136,8 @@ const TestsLibraryPage = ({
 
       return matchesSearch && matchesTab;
     });
+    // console.log("[TestsLibraryPage] filteredData calculation", { filtered, searchQuery, activeTab, allTestsLength: allTests.length });
+    return filtered;
   }, [allTests, searchQuery, activeTab]);
 
   const handleViewChange = (value) => {
@@ -138,11 +156,14 @@ const TestsLibraryPage = ({
         console.error("Error saving to localStorage:", error);
       }
     }
+    //  console.log("[TestsLibraryPage] handleViewChange", value);
   };
 
   // Lazy loading: Get items to display
   const currentItems = useMemo(() => {
-    return filteredData.slice(0, displayedItems);
+    const items = filteredData.slice(0, displayedItems);
+    // console.log("[TestsLibraryPage] currentItems calculation", { len: items.length, displayedItems, filteredDataLen: filteredData.length });
+    return items;
   }, [filteredData, displayedItems]);
 
   // Check if there are more items to load
@@ -169,6 +190,7 @@ const TestsLibraryPage = ({
         setTimeout(() => {
           isLoadingMoreRef.current = false;
         }, 300);
+        // console.log("[TestsLibraryPage] Lazy loading more items on scroll", { prev, newValue, filteredDataLen: filteredData.length });
         return newValue;
       });
     }
@@ -179,8 +201,10 @@ const TestsLibraryPage = ({
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll);
+      // console.log("[TestsLibraryPage] Added scroll event listener");
       return () => {
         container.removeEventListener('scroll', handleScroll);
+        // console.log("[TestsLibraryPage] Removed scroll event listener");
       };
     }
   }, [handleScroll]);
@@ -193,15 +217,22 @@ const TestsLibraryPage = ({
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
+    // console.log("[TestsLibraryPage] activeTab/searchQuery changed, reset displayedItems to 9", { activeTab, searchQuery });
   }, [activeTab, searchQuery]);
 
   // Check if we need to load more items initially or after filter changes
   // This handles cases where initial content doesn't fill the viewport
   useEffect(() => {
-    if (loading || dashboardLoading || filteredData.length === 0) return;
+    if (loading || dashboardLoading || filteredData.length === 0) {
+      // console.log("[TestsLibraryPage] Skipping load more items on init/filter-change due to loading/dashboardLoading/empty filteredData", { loading, dashboardLoading, filteredDataLen: filteredData.length });
+      return;
+    }
 
     const container = scrollContainerRef.current;
-    if (!container) return;
+    if (!container) {
+      // console.log("[TestsLibraryPage] No scrollContainerRef on load-more-check");
+      return;
+    }
 
     // Function to check and load more if needed
     let checkCount = 0;
@@ -221,6 +252,8 @@ const TestsLibraryPage = ({
           if (scrollHeight <= clientHeight && currentHasMore) {
             isLoadingMoreRef.current = true;
             const newValue = Math.min(prev + itemsPerLoad, filteredData.length);
+
+            // console.log("[TestsLibraryPage] Initial load: Not enough content, loading more", { prev, newValue, scrollHeight, clientHeight, filteredDataLen: filteredData.length });
 
             // After loading, check again if more is needed
             setTimeout(() => {
@@ -245,11 +278,13 @@ const TestsLibraryPage = ({
   const handleFilterChange = (tab) => {
     if (tab !== activeTab) {
       setActiveTab(tab);
+      // console.log("[TestsLibraryPage] Changed activeTab", tab);
     }
   };
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
+    // console.log("[TestsLibraryPage] Changed searchQuery", e.target.value);
   };
 
   // Safety guard: Prevent infinite loading state
@@ -267,12 +302,14 @@ const TestsLibraryPage = ({
         // we log a warning. The store's finally block should prevent this from happening.
         console.warn('[TestsLibraryPage] Loading state exceeded 5 seconds. This may indicate a store issue.');
       }, 5000);
+      // console.log("[TestsLibraryPage] loading became true");
     } else {
       // Clear timeout if loading becomes false
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
         loadingTimeoutRef.current = null;
       }
+      // console.log("[TestsLibraryPage] loading became false");
     }
 
     return () => {
@@ -281,6 +318,11 @@ const TestsLibraryPage = ({
       }
     };
   }, [loading]);
+
+  // Additional logging after currentItems calculated
+    // useEffect(() => {
+    //   console.log("[TestsLibraryPage] Post-calc: currentItems", currentItems);
+    // }, [currentItems]);
 
   return (
     <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-hidden px-3 md:px-8">
@@ -321,7 +363,7 @@ const TestsLibraryPage = ({
               type="single"
               value={isGridView ? "grid" : "list"}
               onValueChange={handleViewChange}
-              className="flex items-center bg-gray-100/80 p-1 rounded-xl border border-gray-200 shrink-0 gap-1" // gap-1 qo'shsangiz orasi ochiladi va radius ko'rinadi
+              className="flex items-center bg-gray-100/80 p-1 rounded-xl border border-gray-200 shrink-0 gap-1"
             >
               <ToggleGroupItem
                 value="list"
@@ -329,7 +371,7 @@ const TestsLibraryPage = ({
                 className="flex items-center justify-center p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all duration-200 
                data-[state=on]:bg-white data-[state=on]:text-black data-[state=on]:shadow-sm
                data-[state=off]:text-gray-400 hover:text-gray-600 
-               [&:not(:first-child)]:rounded-lg [&:not(:last-child)]:rounded-lg" // Radix default radiusni bekor qilish
+               [&:not(:first-child)]:rounded-lg [&:not(:last-child)]:rounded-lg"
               >
                 <IoListOutline size={20} className="md:w-6 md:h-6" />
               </ToggleGroupItem>
@@ -340,7 +382,7 @@ const TestsLibraryPage = ({
                 className="flex items-center justify-center p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all duration-200 
                data-[state=on]:bg-white data-[state=on]:text-black data-[state=on]:shadow-sm
                data-[state=off]:text-gray-400 hover:text-gray-600
-               [&:not(:first-child)]:rounded-lg [&:not(:last-child)]:rounded-lg" // Radix default radiusni bekor qilish
+               [&:not(:first-child)]:rounded-lg [&:not(:last-child)]:rounded-lg"
               >
                 <IoGridOutline size={20} className="md:w-6 md:h-6" />
               </ToggleGroupItem>
@@ -356,65 +398,75 @@ const TestsLibraryPage = ({
       >
         {/* First Priority: Loading State - Show skeleton loaders when loading and no data */}
         {(loading || dashboardLoading) && allTests.length === 0 ? (
-          <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
-            {Array.from({ length: 9 }).map((_, index) => (
-              <LibraryCardShimmer key={index} isGridView={isGridView} />
-            ))}
-          </div>
+          <>
+            {/* {console.log("[TestsLibraryPage] [RENDER] State=loading/dashboardLoading && allTests.length===0", { loading, dashboardLoading, allTests })} */}
+            <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
+              {Array.from({ length: 9 }).map((_, index) => (
+                <LibraryCardShimmer key={index} isGridView={isGridView} />
+              ))}
+            </div>
+          </>
         ) : /* Second Priority: Empty State - Show empty message when not loading and no data */
         !loading && !dashboardLoading && allTests.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center min-h-[300px]">
-            {emptyStateMessage ? (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
-                className="flex flex-col items-center text-center gap-2 py-16"
-              >
-                <div className="text-gray-700 font-semibold text-base md:text-lg whitespace-pre-line">
-                  {emptyStateMessage}
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
-                className="flex flex-col items-center text-center gap-2 py-16"
-              >
-                <div className="text-gray-700 font-semibold text-base md:text-lg">
-                  We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
-                </div>
-                <div className="text-gray-400 text-sm md:text-base">
-                  Please check back later or try again soon.
-                </div>
-              </motion.div>
-            )}
-          </div>
-        ) : /* Third Priority: No Search Results - Show message when data exists but filtered results are empty */
-        allTests.length > 0 && filteredData.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center min-h-[300px]">
-            <div className="py-20 text-center text-gray-400 font-semibold w-full whitespace-pre-line">
-              {searchQuery.trim() !== "" && emptySearchMessage ? (
-                emptySearchMessage
-              ) : activeTab === "free" && emptyFreeMessage ? (
-                emptyFreeMessage
-              ) : activeTab === "premium" && emptyPremiumMessage ? (
-                emptyPremiumMessage
-              ) : searchQuery.trim() !== "" ? (
-                "No results match your search."
-              ) : activeTab === "free" ? (
-                "No free tests available."
-              ) : activeTab === "premium" ? (
-                "No premium tests available."
+          <>
+            {/* {console.log("[TestsLibraryPage] [RENDER] State=not loading && not dashboardLoading && allTests.length===0", { loading, dashboardLoading, allTests })} */}
+            <div className="flex flex-1 items-center justify-center min-h-[300px]">
+              {emptyStateMessage ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                  className="flex flex-col items-center text-center gap-2 py-16"
+                >
+                  <div className="text-gray-700 font-semibold text-base md:text-lg whitespace-pre-line">
+                    {emptyStateMessage}
+                  </div>
+                </motion.div>
               ) : (
-                "No results found."
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                  className="flex flex-col items-center text-center gap-2 py-16"
+                >
+                  <div className="text-gray-700 font-semibold text-base md:text-lg">
+                    We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
+                  </div>
+                  <div className="text-gray-400 text-sm md:text-base">
+                    Please check back later or try again soon.
+                  </div>
+                </motion.div>
               )}
             </div>
-          </div>
-        ) : /* Fourth Priority: Show Data - Only show cards when not loading and we have items */
-        !loading && !dashboardLoading && currentItems.length > 0 ? (
+          </>
+        ) : /* Third Priority: No Search Results - Show message when data exists but filtered results are empty */
+        allTests.length > 0 && filteredData.length === 0 ? (
           <>
+            {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab })} */}
+            <div className="flex flex-1 items-center justify-center min-h-[300px]">
+              <div className="py-20 text-center text-gray-400 font-semibold w-full whitespace-pre-line">
+                {searchQuery.trim() !== "" && emptySearchMessage ? (
+                  emptySearchMessage
+                ) : activeTab === "free" && emptyFreeMessage ? (
+                  emptyFreeMessage
+                ) : activeTab === "premium" && emptyPremiumMessage ? (
+                  emptyPremiumMessage
+                ) : searchQuery.trim() !== "" ? (
+                  "No results match your search."
+                ) : activeTab === "free" ? (
+                  "No free tests available."
+                ) : activeTab === "premium" ? (
+                  "No premium tests available."
+                ) : (
+                  "No results found."
+                )}
+              </div>
+            </div>
+          </>
+        ) : /* Fourth Priority: Show Data - Only show cards when not loading and we have items */
+        currentItems.length > 0 ? (
+          <>
+            {/* {console.log("[TestsLibraryPage] [RENDER] State=Show Data", { loading, dashboardLoading, currentItems, filteredData, allTests })} */}
             <motion.div
               className={
                 isGridView
@@ -462,7 +514,22 @@ const TestsLibraryPage = ({
               </div>
             )}
           </>
-        ) : null}
+        ) : (
+          (() => {
+            console.log(
+              "[TestsLibraryPage] [RENDER] State=null catchall",
+              {
+                loading,
+                dashboardLoading,
+                currentItems,
+                filteredData,
+                allTests,
+                reason: "All other render branches failed"
+              }
+            );
+            return null;
+          })()
+        )}
       </div>
     </div>
   );
