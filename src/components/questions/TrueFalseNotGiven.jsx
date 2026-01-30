@@ -73,12 +73,12 @@ const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', re
                 Wrong
               </span>
             )}
-            {isSelected && showWrong && correctAnswer && (
+            {isSelected && showWrong && correctAnswer && showCorrectAnswers && (
               <span className="text-xs text-green-600 font-medium ml-2">
                 Correct: {correctAnswer}
               </span>
             )}
-            {isCorrectOption && isReviewMode && !isSelected && correctAnswer && (
+            {isCorrectOption && isReviewMode && !isSelected && correctAnswer && showCorrectAnswers && (
               <span className="text-xs text-green-700 font-medium">Correct Answer</span>
             )}
           </label>

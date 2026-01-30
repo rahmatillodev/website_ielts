@@ -52,17 +52,21 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
   }), [questionId]);
 
   const isReviewMode = mode === 'review';
-  // Try to find review data with type conversion (handle string/number mismatch)
+  // Try to find review data - reviewData is keyed by question.id (UUID) or question_number
+  // Try multiple keys to handle different key formats
   const review = reviewData[questionId] ||
     reviewData[String(questionId)] ||
     reviewData[Number(questionId)] ||
+    (questionNumber ? reviewData[questionNumber] : null) ||
+    (questionNumber ? reviewData[String(questionNumber)] : null) ||
+    (questionNumber ? reviewData[Number(questionNumber)] : null) ||
     {};
   const isCorrect = review.isCorrect;
   const correctAnswer = review.correctAnswer || '';
-  const showWrong = isReviewMode && review.hasOwnProperty('isCorrect') && !isCorrect;
-  const showCorrect = isReviewMode && isCorrect;
-  const isBookmarked = bookmarks.has(questionId) || bookmarks.has(questionNumber);
-
+  // Show wrong if in review mode and isCorrect is explicitly false (not undefined)
+  const showWrong = isReviewMode && review.hasOwnProperty('isCorrect') && review.isCorrect === false;
+  const showCorrect = isReviewMode && review.isCorrect === true;
+  const isBookmarked = bookmarks.has(questionId) || (questionNumber ? bookmarks.has(questionNumber) : false);   
   return (
     <span
       ref={isReviewMode ? null : drop}
@@ -121,6 +125,8 @@ const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInte
       .sort((a, b) => (a.question_number ?? 0) - (b.question_number ?? 0));
   }, [groupQuestions]);
 
+  
+
   // So'zlar banki (shuffled)
   const wordBank = React.useMemo(() => {
     if (!groupQuestions) return [];
@@ -132,11 +138,13 @@ const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInte
 
   const handleDrop = (qId, word) => {
     onInteraction?.();
+    // qId is already the correct key (question.id or question_number) from DropZone
     onAnswerChange(qId, word);
   };
 
   const handleClear = (qId) => {
     onInteraction?.();
+    // qId is already the correct key (question.id or question_number) from DropZone
     onAnswerChange(qId, '');
   };
 
@@ -157,13 +165,17 @@ const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInte
                 {i < segments.length - 1 && currentBlankIndex < validQuestions.length ? (
                   (() => {
                     const target = validQuestions[currentBlankIndex++];
-                    // Use question_number as primary key (consistent with calculateTestScore)
-                    const questionKey = target.question_number || target.id;
+                    // Use question.id (UUID) as primary key, fallback to question_number
+                    // This matches how reviewData is keyed in handleReviewTest
+                    const questionId = target.id;
+                    const questionNumber = target.question_number;
+                    const questionKey = questionId || questionNumber;
                     return (
                       <DropZone
                         questionId={questionKey}
-                        questionNumber={target.question_number}
-                        answer={answers[questionKey]}
+                        questionNumber={questionNumber}
+                        // Try both question.id and question_number for answer lookup
+                        answer={answers[questionId] || answers[questionNumber] || answers[questionKey] || ''}
                         onDrop={handleDrop}
                         onClear={handleClear}
                         mode={mode}

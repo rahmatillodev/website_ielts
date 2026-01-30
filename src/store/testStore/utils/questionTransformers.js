@@ -235,6 +235,8 @@ export const processMultipleChoice = (questionGroup, allOptions) => {
  * Process other question types (fill_in_blanks, drag_drop, matching_information, etc.)
  */
 export const processOtherQuestionTypes = (questionGroup, individualQuestionsData, allOptions) => {
+
+  
   // Get individual questions for this question group
   const groupQuestions = individualQuestionsData
     .filter((iq) => iq.question_id === questionGroup.id)
@@ -342,6 +344,7 @@ export const processQuestionGroup = (questionGroup, individualQuestionsData, all
  * Options are nested under question (group), matched to questions via question_number
  */
 export const processNestedQuestionGroup = (questionGroup) => {
+  
   const groupType = (questionGroup.type || "").toLowerCase();
   
   // Get questions array and options array (both nested under question group)
@@ -349,8 +352,10 @@ export const processNestedQuestionGroup = (questionGroup) => {
   const groupOptions = questionGroup.options || [];
   
   // Process each question and match options to it
+  
+  
   const processedQuestions = nestedQuestions
-    .filter(q => q.is_correct !== false) // Filter out distractors
+    // .filter(q => q.is_correct !== false) // Filter out distractors
     .map((question) => {
       // Match options to this question based on question_number
       // Options can be:
@@ -498,6 +503,7 @@ export const processNestedQuestionGroup = (questionGroup) => {
     const groupLevelOptionsRaw = groupOptions.filter(
       opt => opt.question_number === null || opt.question_number === undefined
     );
+    
     
     groupLevelOptions = groupLevelOptionsRaw
       .sort((a, b) => {

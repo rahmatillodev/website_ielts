@@ -174,16 +174,21 @@ const MatchingInformation = ({
   }, [_question?.instruction, options, groupQuestions]);
 
   // Sort questions by question_number
-  const sortedQuestions = useMemo(() => {
-    if (!groupQuestions || groupQuestions.length === 0) {
-      return [];
-    }
-    return [...groupQuestions].sort((a, b) => {
-      const aNum = a.question_number ?? 0;
-      const bNum = b.question_number ?? 0;
-      return aNum - bNum;
-    });
-  }, [groupQuestions]);
+// 1. Savollarni qayerdan olishni aniqlaymiz
+const actualQuestions = useMemo(() => {
+  if (groupQuestions && groupQuestions.length > 0) return groupQuestions;
+  if (_question?.questions && _question.questions.length > 0) return _question.questions;
+  return [];
+}, [groupQuestions, _question]);
+
+// 2. O'sha savollarni tartiblaymiz
+const sortedQuestions = useMemo(() => {
+  return [...actualQuestions].sort((a, b) => {
+    const aNum = a.question_number ?? 0;
+    const bNum = b.question_number ?? 0;
+    return aNum - bNum;
+  });
+}, [actualQuestions]);
 
   // Get correct answer for a question
   // Converts option_key (A, 1, I) to text if needed, or returns text directly
@@ -235,13 +240,6 @@ const MatchingInformation = ({
     return review.userAnswer || answers[questionNumber] || '';
   };
 
-  // Calculate question range for heading
-  const questionRange = useMemo(() => {
-    if (sortedQuestions.length === 0) return '';
-    const first = sortedQuestions[0]?.question_number ?? 0;
-    const last = sortedQuestions[sortedQuestions.length - 1]?.question_number ?? 0;
-    return first === last ? `${first}` : `${first}-${last}`;
-  }, [sortedQuestions]);
 
   // Render component
   if (sortedQuestions.length === 0) {

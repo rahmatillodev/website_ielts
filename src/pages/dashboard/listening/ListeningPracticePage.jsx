@@ -440,30 +440,64 @@ const ListeningPracticePageContent = () => {
     if (!authUser || !id || !currentTest) {
       return;
     }
-    if (status === 'reviewing') return;
+    // if (status === 'reviewing') return;
     try {
       const result = await fetchLatestAttempt(authUser.id, id);
       if (result.success && result.attempt && result.answers) {
+        // Build mapping from question.id to question_number for consistent keying
+        const questionIdToNumberMap = {};
+        if (currentTest?.parts) {
+          currentTest.parts.forEach((part) => {
+            if (part.questionGroups) {
+              part.questionGroups.forEach((questionGroup) => {
+                if (questionGroup.questions) {
+                  questionGroup.questions.forEach((question) => {
+                    if (question.id && question.question_number) {
+                      questionIdToNumberMap[question.id] = question.question_number;
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+
+        // Convert answers to review data format, keyed by both question.id and question_number
         const reviewDataObj = {};
+        const reviewDataByNumber = {};
         Object.keys(result.answers).forEach((questionId) => {
           const answerInfo = result.answers[questionId];
-          reviewDataObj[questionId] = {
+          const questionNumber = questionIdToNumberMap[questionId] || questionId;
+          const reviewItem = {
             userAnswer: answerInfo.userAnswer || '',
             isCorrect: answerInfo.isCorrect || false,
             correctAnswer: answerInfo.correctAnswer || '',
           };
+          // Store by both question.id (UUID) and question_number for compatibility
+          reviewDataObj[questionId] = reviewItem;
+          if (questionNumber !== questionId) {
+            reviewDataByNumber[questionNumber] = reviewItem;
+          }
         });
 
-        setReviewData(reviewDataObj);
+        // Merge both key formats for maximum compatibility
+        setReviewData({ ...reviewDataObj, ...reviewDataByNumber });
         setStatus('reviewing');
         setLatestAttemptId(result.attempt.id);
         setShowCorrectAnswers(true);
 
+        // Also set answers for display, keyed by both question.id and question_number
         const answersObj = {};
+        const answersByNumber = {};
         Object.keys(reviewDataObj).forEach((questionId) => {
-          answersObj[questionId] = reviewDataObj[questionId].userAnswer;
+          const questionNumber = questionIdToNumberMap[questionId] || questionId;
+          const userAnswer = reviewDataObj[questionId].userAnswer;
+          answersObj[questionId] = userAnswer;
+          if (questionNumber !== questionId) {
+            answersByNumber[questionNumber] = userAnswer;
+          }
         });
-        setAnswers(answersObj);
+        setAnswers({ ...answersObj, ...answersByNumber });
       } else {
         setStatus('taking');
         setShowCorrectAnswers(false);
@@ -955,6 +989,8 @@ const ListeningPracticePageContent = () => {
                   const isTableCompletion = groupType === 'table_completion';
                   const isTable = groupType.includes('table') && !isTableCompletion;
                   const isMap = groupType.includes('map');
+                  const isMatching = groupType.includes('matching_information');
+                  const isMultipleAnswers = groupType === 'multiple_answers';
                   
 
                   return (
@@ -982,7 +1018,7 @@ const ListeningPracticePageContent = () => {
                         )}
                       </div>
 
-                      {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap) ? (
+                      {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatching || isMultipleAnswers) ? (
                         <div
                           ref={(el) => {
                             if (el && groupQuestions.length > 0) {
@@ -1018,14 +1054,7 @@ const ListeningPracticePageContent = () => {
                               onAnswerChange={handleAnswerChange}
                               onInteraction={handleInputInteraction}
                               mode={status === 'reviewing' ? 'review' : 'test'}
-                              reviewData={status === 'reviewing' ? (showCorrectAnswers ? reviewData : Object.keys(reviewData).reduce((acc, key) => {
-                                acc[key] = {
-                                  userAnswer: reviewData[key].userAnswer,
-                                  isCorrect: reviewData[key].isCorrect,
-                                  correctAnswer: ''
-                                };
-                                return acc;
-                              }, {})) : {}}
+                              reviewData={status === 'reviewing' ? reviewData : {}}
                               showCorrectAnswers={showCorrectAnswers}
                               bookmarks={bookmarks}
                               toggleBookmark={toggleBookmark}
@@ -1097,14 +1126,7 @@ const ListeningPracticePageContent = () => {
                                     onAnswerChange={handleAnswerChange}
                                     onInteraction={handleInputInteraction}
                                     mode={status === 'reviewing' ? 'review' : 'test'}
-                                    reviewData={status === 'reviewing' ? (showCorrectAnswers ? reviewData : Object.keys(reviewData).reduce((acc, key) => {
-                                      acc[key] = {
-                                        userAnswer: reviewData[key].userAnswer,
-                                        isCorrect: reviewData[key].isCorrect,
-                                        correctAnswer: ''
-                                      };
-                                      return acc;
-                                    }, {})) : {}}
+                                    reviewData={status === 'reviewing' ? reviewData : {}}
                                     showCorrectAnswers={showCorrectAnswers}
                                     bookmarks={bookmarks}
                                     toggleBookmark={toggleBookmark}

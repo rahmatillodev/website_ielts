@@ -306,6 +306,7 @@ const calculateTestScore = (answers, currentTest) => {
         const groupQuestions = questionGroup.questions || [];
         const groupType = (questionGroup.type || '').toLowerCase();
         const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
+        const isMultipleAnswers = groupType === 'multiple_answers';
         
         // Map question group type to standardized question type
         const questionType = mapQuestionType(questionGroup.type);
@@ -315,41 +316,84 @@ const calculateTestScore = (answers, currentTest) => {
           ? groupQuestions.filter(q => q.question_number != null)
           : groupQuestions;
 
-        validQuestions.forEach((question) => {
-          // Use questions.id as primary key (from nested structure), fallback to question_number for backward compatibility
-          const questionId = question.id; // This is questions.id from the nested structure
-          const questionNumber = question.question_number;
-          
-          // Try to get answer using questions.id first, then fallback to question_number
-          const userAnswer = (questionId && answers[questionId]?.toString().trim()) || 
-                            (questionNumber && answers[questionNumber]?.toString().trim()) || 
-                            '';
-          
-          // Skip if no answer found and no question ID/number
-          if (!questionId && !questionNumber) return;
-          
-          totalQuestions++;
-          const correctAnswer = getCorrectAnswer(question, questionGroup);
+        // For multiple_answers: parse group-level answer and check each question
+        if (isMultipleAnswers) {
+          // Get group-level answer (comma-separated option_keys like "A,B")
+          const groupAnswer = answers[questionGroup.id] || '';
+          const selectedOptionKeys = groupAnswer
+            .split(',')
+            .map(key => key.trim().toUpperCase())
+            .filter(Boolean);
 
-          // Normalize answers for comparison
-          const normalizedUserAnswer = normalizeAnswer(userAnswer);
-          const normalizedCorrectAnswer = normalizeAnswer(correctAnswer);
+          // Process each question in the group
+          validQuestions.forEach((question) => {
+            const questionId = question.id;
+            const questionNumber = question.question_number;
+            
+            if (!questionId && !questionNumber) return;
+            
+            totalQuestions++;
+            
+            // Get correct answer option_key for this question
+            const correctAnswerKey = question.correct_answer?.toString().trim().toUpperCase() || '';
+            const correctAnswer = getCorrectAnswer(question, questionGroup);
+            
+            // Check if the correct answer option_key is in the selected options
+            const isCorrect = correctAnswerKey && selectedOptionKeys.includes(correctAnswerKey);
+            
+            // Format user answer for display (show selected options)
+            const userAnswer = groupAnswer || '';
 
-          const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer && normalizedUserAnswer !== '';
+            if (isCorrect) {
+              correctCount++;
+            }
 
-          if (isCorrect) {
-            correctCount++;
-          }
-
-          // Use questions.id as questionId for database storage, fallback to question_number
-          answerResults.push({
-            questionId: questionId || questionNumber, // Use questions.id if available, otherwise question_number
-            userAnswer,
-            correctAnswer,
-            isCorrect,
-            questionType, // Include question type for analytics
+            answerResults.push({
+              questionId: questionId || questionNumber,
+              userAnswer,
+              correctAnswer,
+              isCorrect,
+              questionType,
+            });
           });
-        });
+        } else {
+          // For other question types: process normally
+          validQuestions.forEach((question) => {
+            // Use questions.id as primary key (from nested structure), fallback to question_number for backward compatibility
+            const questionId = question.id; // This is questions.id from the nested structure
+            const questionNumber = question.question_number;
+            
+            // Try to get answer using questions.id first, then fallback to question_number
+            const userAnswer = (questionId && answers[questionId]?.toString().trim()) || 
+                              (questionNumber && answers[questionNumber]?.toString().trim()) || 
+                              '';
+            
+            // Skip if no answer found and no question ID/number
+            if (!questionId && !questionNumber) return;
+            
+            totalQuestions++;
+            const correctAnswer = getCorrectAnswer(question, questionGroup);
+
+            // Normalize answers for comparison
+            const normalizedUserAnswer = normalizeAnswer(userAnswer);
+            const normalizedCorrectAnswer = normalizeAnswer(correctAnswer);
+
+            const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer && normalizedUserAnswer !== '';
+
+            if (isCorrect) {
+              correctCount++;
+            }
+
+            // Use questions.id as questionId for database storage, fallback to question_number
+            answerResults.push({
+              questionId: questionId || questionNumber, // Use questions.id if available, otherwise question_number
+              userAnswer,
+              correctAnswer,
+              isCorrect,
+              questionType, // Include question type for analytics
+            });
+          });
+        }
       });
     }
   });
@@ -365,7 +409,8 @@ const calculateTestScore = (answers, currentTest) => {
  */
 const getCorrectAnswer = (question, questionGroup) => {
   const groupType = (questionGroup.type || '').toLowerCase();
-  const isMultipleChoice = groupType.includes('multiple') || groupType.includes('choice');
+  const isMultipleChoice = (groupType.includes('multiple') || groupType.includes('choice')) && groupType !== 'multiple_answers';
+  const isMultipleAnswers = groupType === 'multiple_answers';
   const isTableType = groupType.includes('table');
   const isMatchingInformation = groupType.includes('matching_information') || groupType.includes('matching');
   const isMatchingHeadings = groupType.includes('matching_headings');
@@ -395,6 +440,25 @@ const getCorrectAnswer = (question, questionGroup) => {
         // Use option_text as the answer value (not letter)
         return correctOption.option_text || '';
       }
+    }
+  }
+
+  // For multiple_answers: correct_answer is stored as option_key (e.g., "A"), convert to option_text
+  if (isMultipleAnswers) {
+    if (question.correct_answer) {
+      const correctAnswerKey = question.correct_answer.toString().trim().toUpperCase();
+      // Try to find option_text from group-level options that matches this option_key
+      if (questionGroup.options && questionGroup.options.length > 0) {
+        const correctOption = questionGroup.options.find(
+          (opt) => (opt.option_key || opt.letter || '').toString().trim().toUpperCase() === correctAnswerKey
+        );
+        if (correctOption) {
+          // Return option_text for display
+          return correctOption.option_text || correctAnswerKey;
+        }
+      }
+      // Fallback: return the key if no matching option found
+      return correctAnswerKey;
     }
   }
 

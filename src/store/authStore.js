@@ -269,34 +269,46 @@ export const useAuthStore = create(
       signOut: async () => {
         set({ loading: true, error: null })
         try {
-          // Clear Supabase session
           const { error } = await supabase.auth.signOut()
           if (error) {
             set({ error: error.message, loading: false })
             return { success: false, error: error.message }
           }
-
+      
           // Clear Zustand state
-          set({ authUser: null, userProfile: null, isInitialized: false })
-
-          // Clear all user-specific localStorage data
+          set({
+            authUser: null,
+            userProfile: null,
+            loading: false,
+            // isInitialized: true  ❗ MUHIM: false QILINMAYDI
+          })
+      
+          // Clear only user-related storage
           try {
-            // Clear reading and listening practice/result data
             clearAllReadingData()
             clearAllListeningData()
-
-            // Clear Zustand persist storage
             localStorage.removeItem('auth-storage')
-
-            localStorage.clear();
-
-
-          } catch (storageError) {
-            console.error('Error clearing localStorage:', storageError)
-            // Continue with logout even if storage clearing fails
+      
+            const keysToRemove = []
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i)
+              if (!key) continue
+      
+              const isUserData =
+                key.startsWith('reading_') ||
+                key.startsWith('listening_') ||
+                key.includes('practice_') ||
+                key.includes('result_') ||
+                key.includes('audio_position_')
+      
+              if (isUserData) keysToRemove.push(key)
+            }
+      
+            keysToRemove.forEach(k => localStorage.removeItem(k))
+          } catch (e) {
+            console.warn('Storage cleanup error:', e)
           }
-
-          set({ loading: false })
+      
           return { success: true, redirectTo: '/' }
         } catch (error) {
           const message = error?.message || 'Failed to log out. Please try again.'
@@ -304,6 +316,7 @@ export const useAuthStore = create(
           return { success: false, error: message }
         }
       },
+      
 
       // Xavfsizlik uchun logout va login sahifasiga yo'naltirish
       forceSignOutToLogin: async (reason) => {
