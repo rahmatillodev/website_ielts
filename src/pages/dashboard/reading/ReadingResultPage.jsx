@@ -20,7 +20,7 @@ const ReadingResultPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentTest, fetchTestById } = useTestStore();
-  const { authUser } = useAuthStore();
+  const { authUser, userProfile } = useAuthStore();
   const attempts = useDashboardStore((state) => state.attempts);
   const [resultData, setResultData] = useState(null);
   const [attemptData, setAttemptData] = useState(null);
@@ -33,6 +33,7 @@ const ReadingResultPage = () => {
   const isLoadingRef = useRef(false);
   const fetchTestByIdRef = useRef(fetchTestById);
   const authUserRef = useRef(authUser);
+  const userProfileRef = useRef(userProfile);
   const settings = useSettingsStore((state) => state.settings);
   // Update refs when values change (but don't trigger re-fetch)
   useEffect(() => {
@@ -42,6 +43,10 @@ const ReadingResultPage = () => {
   useEffect(() => {
     authUserRef.current = authUser;
   }, [authUser]);
+
+  useEffect(() => {
+    userProfileRef.current = userProfile;
+  }, [userProfile]);
 
   // Load data only when id changes, not on re-renders or tab focus
   useEffect(() => {
@@ -79,14 +84,19 @@ const ReadingResultPage = () => {
           })[0]
           : null;
 
+        // On result pages, we should always bypass premium check since results are only shown after completion
+        // First, try to get attempt from store or fetch it
         let attemptResult;
         let testResult = null; // Declare testResult outside if/else blocks
+        const currentUserProfile = userProfileRef.current;
+        const userSubscriptionStatus = currentUserProfile?.subscription_status || "free";
 
         if (latestAttemptFromStore && currentAuthUser) {
           // Use attempt from store and only fetch answers
           // Fetch test data and answers in parallel
+          // Always bypass premium check on result pages
           const [fetchedTestResult, answersResult] = await Promise.all([
-            currentFetchTestById(id),
+            currentFetchTestById(id, false, false, userSubscriptionStatus, true),
             fetchAttemptAnswers(latestAttemptFromStore.id)
           ]);
           testResult = fetchedTestResult; // Store testResult for later use
@@ -113,8 +123,9 @@ const ReadingResultPage = () => {
           }
         } else {
           // Fetch test and attempt in parallel
+          // Always bypass premium check on result pages (user can only reach here if they completed the test)
           const [fetchedTestResult, fetchedAttemptResult] = await Promise.all([
-            currentFetchTestById(id),
+            currentFetchTestById(id, false, false, userSubscriptionStatus, true),
             currentAuthUser
               ? fetchLatestAttempt(currentAuthUser.id, id)
               : Promise.resolve({ success: true, attempt: null, answers: {} })

@@ -18,8 +18,8 @@ export const useTestDetailStore = create((set, get) => ({
   loadingTest: false,
   error: null,
 
-  fetchTestById: async (testId, forceRefresh = false, includeCorrectAnswers = false, userSubscriptionStatus = "free") => {
-    console.log('[fetchTestById] Called with:', { testId, testIdType: typeof testId, forceRefresh, includeCorrectAnswers, userSubscriptionStatus });
+  fetchTestById: async (testId, forceRefresh = false, includeCorrectAnswers = false, userSubscriptionStatus = "free", bypassPremiumCheck = false) => {
+    console.log('[fetchTestById] Called with:', { testId, testIdType: typeof testId, forceRefresh, includeCorrectAnswers, userSubscriptionStatus, bypassPremiumCheck });
     
     // GUARD CLAUSE: Validate testId parameter
     if (!testId || (typeof testId !== 'string' && typeof testId !== 'number')) {
@@ -60,8 +60,8 @@ export const useTestDetailStore = create((set, get) => ({
         throw new Error(`Test with ID ${testId} not found or not active.`);
       }
 
-      // Check premium access before proceeding
-      if (nestedTestData.is_premium && userSubscriptionStatus !== "premium") {
+      // Check premium access before proceeding (skip if bypassPremiumCheck is true)
+      if (!bypassPremiumCheck && nestedTestData.is_premium && userSubscriptionStatus !== "premium") {
         const errorMessage = "This test requires a premium subscription";
         console.error('[fetchTestById] Premium access denied:', { testId, userSubscriptionStatus });
         set({ 

@@ -18,7 +18,7 @@ const ListeningResultPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentTest, fetchTestById } = useTestStore();
-  const { authUser } = useAuthStore();
+  const { authUser, userProfile } = useAuthStore();
   const [resultData, setResultData] = useState(null);
   const [attemptData, setAttemptData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,6 +30,7 @@ const ListeningResultPage = () => {
   const isLoadingRef = useRef(false);
   const fetchTestByIdRef = useRef(fetchTestById);
   const authUserRef = useRef(authUser);
+  const userProfileRef = useRef(userProfile);
 
   // Update refs when values change (but don't trigger re-fetch)
   useEffect(() => {
@@ -39,6 +40,10 @@ const ListeningResultPage = () => {
   useEffect(() => {
     authUserRef.current = authUser;
   }, [authUser]);
+
+  useEffect(() => {
+    userProfileRef.current = userProfile;
+  }, [userProfile]);
 
   // Load data only when id changes, not on re-renders or tab focus
   useEffect(() => {
@@ -65,9 +70,14 @@ const ListeningResultPage = () => {
         const currentAuthUser = authUserRef.current;
         const currentFetchTestById = fetchTestByIdRef.current;
 
+        // On result pages, we should always bypass premium check since results are only shown after completion
+        const currentUserProfile = userProfileRef.current;
+        const userSubscriptionStatus = currentUserProfile?.subscription_status || "free";
+        
         // Fetch test and attempt in parallel
+        // Always bypass premium check on result pages (user can only reach here if they completed the test)
         const [testResult, attemptResult] = await Promise.all([
-          currentFetchTestById(id),
+          currentFetchTestById(id, false, false, userSubscriptionStatus, true),
           currentAuthUser 
             ? fetchLatestAttempt(currentAuthUser.id, id) 
             : Promise.resolve({ success: true, attempt: null, answers: {} })
