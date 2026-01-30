@@ -46,6 +46,7 @@ const ListeningPracticePageContent = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [startTime, setStartTime] = useState(null);
+  
 
   const [answers, setAnswers] = useState({});
   const [reviewData, setReviewData] = useState({});
@@ -131,7 +132,12 @@ const ListeningPracticePageContent = () => {
         });
         const firstPart = sortedParts[0];
         if (!firstPart?.listening_url) {
-          toast.error('Audio file not available for this test. Please contact support.');
+          const errorMsg = 'Audio file not available for this test. Please contact support.';
+          if (isMounted) {
+            setFetchError(errorMsg);
+            toast.error(errorMsg);
+          }
+          return;
         }
 
         // Load/restore progress on refresh
@@ -853,7 +859,65 @@ const ListeningPracticePageContent = () => {
         }}
       >
         <div ref={universalContentRef} className="flex flex-1 overflow-hidden w-full">
-          {/* Left Panel - Transcript (only in review mode) */}
+          {/* ===== Error Panel ===== */}
+          {fetchError ? (
+            <div
+              className="flex flex-1 items-center justify-center p-6 w-full"
+              style={{
+                backgroundColor: themeColors.background,
+                color: themeColors.text,
+              }}
+            >
+              <div
+                className="max-w-md w-full border rounded-2xl p-6 text-center shadow-sm"
+                style={{
+                  borderColor: themeColors.border,
+                  backgroundColor: theme === "light" ? "#fff5f5" : "rgba(255,0,0,0.05)",
+                }}
+              >
+                <div className="text-red-500 text-lg font-semibold mb-2">
+                  ⚠️ Xatolik yuz berdi
+                </div>
+
+                <p className="text-sm opacity-80 mb-4 break-words">
+                  {fetchError}
+                </p>
+
+                <div className="flex gap-3 justify-center">
+                  {/* Refresh */}
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 rounded-lg text-sm border transition-all hover:scale-[1.02]"
+                    style={{
+                      borderColor: themeColors.border,
+                      backgroundColor: themeColors.background,
+                      color: themeColors.text,
+                    }}
+                  >
+                    🔄 Refresh
+                  </button>
+
+                  {/* Back to Dashboard */}
+                  <button
+                    onClick={() => {
+                      toast.error(fetchError);
+                      navigate("/dashboard");
+                    }}
+                    className="px-4 py-2 rounded-lg text-sm border transition-all hover:scale-[1.02]"
+                    style={{
+                      borderColor: themeColors.border,
+                      backgroundColor: themeColors.background,
+                      color: themeColors.text,
+                    }}
+                  >
+                    ⬅ Back to Dashboard
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Left Panel - Transcript (only in review mode) */}
           {status === 'reviewing' && currentPartData ? (
             <div
               className="border rounded-2xl overflow-y-auto"
@@ -1047,6 +1111,7 @@ const ListeningPracticePageContent = () => {
                                 type: questionGroup.type,
                                 instruction: questionGroup.instruction,
                                 question_text: questionGroup.question_text,
+                                // For multiple_answers, options come from group-level options table
                                 options: questionGroup.options || []
                               }}
                               groupQuestions={groupQuestions}
@@ -1147,9 +1212,11 @@ const ListeningPracticePageContent = () => {
               style={{ width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%', backgroundColor: themeColors.background, color: themeColors.text }}
             >
               <div className="text-gray-500">
-                {loading ? "Loading questions..." : fetchError ? `Error: ${fetchError}` : testError ? `Error: ${testError}` : "No questions available"}
+                {loading ? "Loading questions..." : "No questions available"}
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>

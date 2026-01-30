@@ -230,33 +230,132 @@ const ReadingResultPage = () => {
 
   // Get answer display data - memoized for performance
   const answerDisplayData = useMemo(() => {
-    if (!resultData || !resultData.answers) return [];
+    if (!resultData || !resultData.answers || !currentTest) return [];
 
     const answers = resultData.answers || {};
     const reviewData = resultData.reviewData || {};
-    const answerEntries = Object.entries(answers);
+    const result = [];
+    const processedQuestionNumbers = new Set(); // Track processed question numbers to avoid duplicates
 
-    return answerEntries
-      .filter(([key, value]) => value && value.toString().trim() !== '')
-      .map(([key, value]) => {
-        const review = reviewData[key] || {};
-        return {
-          questionNumber: key,
-          yourAnswer: value.toString(),
+    // First, process review data to get individual question entries for multiple_answers
+    // For multiple_answers, review data has entries for each individual question
+    Object.entries(reviewData).forEach(([questionNum, review]) => {
+      if (processedQuestionNumbers.has(questionNum)) return;
+      
+      const userAnswer = (review.userAnswer || '').toString().trim();
+      if (!userAnswer) return;
+      
+      // Check if answer contains commas (multiple answers like "D,B")
+      if (userAnswer.includes(',')) {
+        // This is a multiple_answers question - split the answer
+        const answerParts = userAnswer.split(',').map(a => a.trim()).filter(Boolean);
+        const correctAnswer = (review.correctAnswer || '').toString().trim();
+        
+        // For multiple_answers, each question in the group has the same userAnswer
+        // We need to find which part of the answer corresponds to this question number
+        // by matching the correct answer
+        if (correctAnswer) {
+          // This question's correct answer should match one of the parts
+          const matchingPart = answerParts.find(part => 
+            part.toUpperCase() === correctAnswer.toUpperCase()
+          );
+          
+          if (matchingPart) {
+            processedQuestionNumbers.add(questionNum);
+            result.push({
+              questionNumber: questionNum,
+              yourAnswer: matchingPart,
+              isCorrect: review.isCorrect || false,
+              correctAnswer: correctAnswer,
+            });
+          }
+        }
+      } else {
+        // Single answer - process normally
+        processedQuestionNumbers.add(questionNum);
+        result.push({
+          questionNumber: questionNum,
+          yourAnswer: userAnswer,
           isCorrect: review.isCorrect || false,
           correctAnswer: review.correctAnswer || '',
-        };
-      })
-      .sort((a, b) => {
-        // Sort by question number if numeric, otherwise by string
-        const aNum = Number(a.questionNumber);
-        const bNum = Number(b.questionNumber);
-        if (!isNaN(aNum) && !isNaN(bNum)) {
-          return aNum - bNum;
+        });
+      }
+    });
+
+    // Also process answers object for any entries not in review data
+    Object.entries(answers).forEach(([key, value]) => {
+      if (processedQuestionNumbers.has(key)) return;
+      
+      const answerStr = value.toString().trim();
+      if (!answerStr) return;
+      
+      const review = reviewData[key] || {};
+      
+      // Check if answer contains commas (multiple answers like "D,B")
+      if (answerStr.includes(',')) {
+        // Split comma-separated answers
+        const answerParts = answerStr.split(',').map(a => a.trim()).filter(Boolean);
+        const correctAnswerStr = (review.correctAnswer || '').toString().trim();
+        const correctAnswerParts = correctAnswerStr.includes(',') 
+          ? correctAnswerStr.split(',').map(a => a.trim()).filter(Boolean)
+          : [correctAnswerStr].filter(Boolean);
+        
+        // For multiple_answers, we need to map each part to a question number
+        // Find review entries with matching userAnswer
+        const matchingReviews = Object.entries(reviewData).filter(([qNum, rev]) => {
+          return rev.userAnswer === answerStr && !processedQuestionNumbers.has(qNum);
+        });
+        
+        if (matchingReviews.length > 0) {
+          // Sort by question number
+          matchingReviews.sort(([a], [b]) => {
+            const aNum = Number(a);
+            const bNum = Number(b);
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+              return aNum - bNum;
+            }
+            return a.toString().localeCompare(b.toString());
+          });
+          
+          // Map each answer part to a question number
+          answerParts.forEach((part, index) => {
+            const reviewEntry = matchingReviews[index];
+            if (reviewEntry) {
+              const [questionNum, rev] = reviewEntry;
+              if (!processedQuestionNumbers.has(questionNum)) {
+                processedQuestionNumbers.add(questionNum);
+                result.push({
+                  questionNumber: questionNum,
+                  yourAnswer: part,
+                  isCorrect: rev.isCorrect || false,
+                  correctAnswer: rev.correctAnswer || '',
+                });
+              }
+            }
+          });
         }
-        return a.questionNumber.localeCompare(b.questionNumber);
-      });
-  }, [resultData]);
+      } else {
+        // Single answer
+        processedQuestionNumbers.add(key);
+        result.push({
+          questionNumber: key,
+          yourAnswer: answerStr,
+          isCorrect: review.isCorrect || false,
+          correctAnswer: review.correctAnswer || '',
+        });
+      }
+    });
+
+    return result.sort((a, b) => {
+      // Sort by question number if numeric, otherwise by string
+      const aNum = Number(a.questionNumber);
+      const bNum = Number(b.questionNumber);
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum;
+      }
+      return a.questionNumber.toString().localeCompare(b.questionNumber.toString());
+    });
+  }, [resultData, currentTest]);
 
   // Memoized stats calculations
   const stats = useMemo(() => {

@@ -397,7 +397,7 @@ const SimpleCalendar = ({ userAttempts = [] }) => {
                 )}
                 {/* Hover tooltip */}
                 {c.hasActivity && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
+                  <div className="absolute bottom-full left-1/2 z-50 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ">
                     {c.count} test{c.count !== 1 ? 's' : ''} completed
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                   </div>

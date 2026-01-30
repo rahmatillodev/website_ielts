@@ -252,7 +252,7 @@ const mapQuestionType = (groupType) => {
   const normalizedType = (groupType || '').toLowerCase();
   
   // Map to exact enum values from Supabase
-  if (normalizedType.includes('multiple') || normalizedType.includes('choice')) {
+  if (normalizedType.includes('multiple_choice')) {
     return 'multiple_choice';
   }
   if (normalizedType === 'fill_in_blanks' || normalizedType.includes('fill_in_blank')) {
@@ -279,7 +279,10 @@ const mapQuestionType = (groupType) => {
   if (normalizedType.includes('yes_no_not_given')) {
     return 'yes_no_not_given';
   }
-  
+  if (normalizedType.includes('multiple_answers')) {
+    return 'multiple_answers';
+  }
+
   // Default fallback
   return 'multiple_choice';
 };
@@ -298,6 +301,7 @@ const calculateTestScore = (answers, currentTest) => {
   const answerResults = [];
   let correctCount = 0;
   let totalQuestions = 0;
+  
 
   // Iterate through all parts and questions
   currentTest.parts.forEach((part) => {
@@ -315,6 +319,7 @@ const calculateTestScore = (answers, currentTest) => {
         const validQuestions = isDragAndDrop
           ? groupQuestions.filter(q => q.question_number != null)
           : groupQuestions;
+
 
         // For multiple_answers: parse group-level answer and check each question
         if (isMultipleAnswers) {
@@ -409,11 +414,12 @@ const calculateTestScore = (answers, currentTest) => {
  */
 const getCorrectAnswer = (question, questionGroup) => {
   const groupType = (questionGroup.type || '').toLowerCase();
-  const isMultipleChoice = (groupType.includes('multiple') || groupType.includes('choice')) && groupType !== 'multiple_answers';
+  const isMultipleChoice = groupType.includes('multiple_choice');
   const isMultipleAnswers = groupType === 'multiple_answers';
   const isTableType = groupType.includes('table');
   const isMatchingInformation = groupType.includes('matching_information') || groupType.includes('matching');
   const isMatchingHeadings = groupType.includes('matching_headings');
+  
 
   // For multiple_choice: use options table with is_correct
   if (isMultipleChoice) {
