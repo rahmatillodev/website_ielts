@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { MdHeadset, MdTimer, MdQuiz, MdCheckCircle, MdStar } from "react-icons/md";
+import { MdHeadset, MdTimer, MdQuiz, MdCheckCircle, MdStar, MdEdit } from "react-icons/md";
 import { HiOutlinePlay } from "react-icons/hi2";
 import { useNavigate } from "react-router-dom";
 import { clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
@@ -7,6 +7,7 @@ import { clearListeningPracticeData } from "@/store/LocalStorage/listeningStorag
 import { IoBookOutline } from "react-icons/io5";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { motion } from "framer-motion";
+import { FaPencilAlt } from "react-icons/fa";
 
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
@@ -60,14 +61,16 @@ const CardOpen = ({
     if (id) {
       if (testType === 'listening') {
         clearListeningPracticeData(id);
-      } else {
+      } else if (testType === 'reading') {
         clearReadingPracticeData(id);
+      } else if (testType === 'writing') {
+        // clearWritingPracticeData(id);
       }
     }
     // Navigate using navigate to ensure localStorage is cleared first
     const practiceLink = testType === 'listening'
       ? `/listening-practice/${id}`
-      : (link || `/reading-practice/${id}`);
+      : (testType === 'reading' ? `/reading-practice/${id}` : `/writing-practice/${id}`);
     navigate(practiceLink);
   };
 
@@ -75,21 +78,27 @@ const CardOpen = ({
     if (id) {
       if (testType === 'listening') {
         clearListeningPracticeData(id);
-      } else {
+      } else if (testType === 'reading') {
         clearReadingPracticeData(id);
       }
     }
-    const practiceLink = testType === 'listening'
-      ? `/listening-practice/${id}`
-      : `/reading-practice/${id}`;
-    navigate(practiceLink);
+    if (testType === 'listening') {
+      navigate(`/listening-practice/${id}`);
+    } else if (testType === 'reading') {
+      navigate(`/reading-practice/${id}`);
+    } else if (testType === 'writing') {
+      navigate(`/writing-practice/${id}`);
+    }
   };
 
   const handleReview = () => {
-    const practiceLink = testType === 'listening'
-      ? `/listening-practice/${id}?mode=review`
-      : `/reading-practice/${id}?mode=review`;
-    navigate(practiceLink);
+    if (testType === 'listening') {
+      navigate(`/listening-practice/${id}?mode=review`);
+    } else if (testType === 'reading') {
+      navigate(`/reading-practice/${id}?mode=review`);
+    } else if (testType === 'writing') {
+      navigate(`/writing-practice/${id}?mode=review`);
+    }
   };
   
   const cardStatus = is_premium ? "Premium" : "Free";
@@ -159,6 +168,8 @@ const CardOpen = ({
             ) : (
               testType === 'listening' ? (
                 <MdHeadset className="text-2xl md:text-3xl" />
+              ) : testType === 'writing' ? (
+                <FaPencilAlt className="text-2xl md:text-3xl" />
               ) : (
                 <IoBookOutline className="text-2xl md:text-3xl" />
               )

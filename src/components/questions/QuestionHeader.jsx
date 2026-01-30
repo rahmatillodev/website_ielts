@@ -85,6 +85,8 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
     }
       if (type == "Reading") {
         navigate("/reading");
+      } else if (type == "Writing") {
+        navigate("/writing");
       } else {
         navigate("/listening");
       }
