@@ -371,12 +371,15 @@ export const processNestedQuestionGroup = (questionGroup) => {
       
       // Combine question-specific and group-level options
       // For multiple_choice, use question-specific options
+      // For multiple_answers, use group-level options (options are at group level)
       // For other types (table, map, matching_information), use group-level options
-      const isMultipleChoice = groupType.includes("multiple") || groupType.includes("choice");
+      const isMultipleAnswers = groupType === "multiple_answers";
+      const isMultipleChoice = (groupType.includes("multiple") || groupType.includes("choice")) && !isMultipleAnswers;
       const optionsToUse = isMultipleChoice ? questionSpecificOptions : groupLevelOptions;
       
       // Process options for this question
-      const questionOptions = optionsToUse.map((opt, index) => {
+      // For multiple_answers, options are at group level, not per question
+      const questionOptions = isMultipleAnswers ? [] : optionsToUse.map((opt, index) => {
         // Generate letter if not present
         const letter = opt.letter || getLetterFromIndex(index);
         return {
@@ -410,7 +413,8 @@ export const processNestedQuestionGroup = (questionGroup) => {
 
   // For multiple_choice, each question in the group is a separate question
   // For other types, questions are grouped together
-  const isMultipleChoice = groupType.includes("multiple") || groupType.includes("choice");
+  const isMultipleAnswers = groupType === "multiple_answers";
+  const isMultipleChoice = (groupType.includes("multiple") || groupType.includes("choice")) && !isMultipleAnswers;
   const isTableCompletion = groupType === "table_completion";
   const isTableType = groupType.includes("table") && !isTableCompletion;
   const isFillInTheBlanks = groupType === "fill_in_blanks";
@@ -493,12 +497,12 @@ export const processNestedQuestionGroup = (questionGroup) => {
     };
   }
 
-  // For table, map, drag_drop, matching_information: get group-level options
+  // For table, map, drag_drop, matching_information, multiple_answers: get group-level options
   // Group-level options are those with question_number === null
   // These are already extracted from groupOptions in the processing above
   let groupLevelOptions = [];
   
-  if (isTableType || isMap || isMatchingInformation || isDragAndDrop) {
+  if (isTableType || isMap || isMatchingInformation || isDragAndDrop || isMultipleAnswers) {
     // Extract group-level options (question_number === null)
     const groupLevelOptionsRaw = groupOptions.filter(
       opt => opt.question_number === null || opt.question_number === undefined

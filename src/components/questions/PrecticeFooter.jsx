@@ -183,7 +183,16 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                 if (!questionNumber) return null;
 
                                 const answerKey = questionNumber || q.id;
-                                const answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
+                                // For multiple_answers, check if group-level answer exists
+                                // The question might have a question_id (group ID) or question_group_id
+                                const groupId = q.question_id || q.question_group_id;
+                                let answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
+                                
+                                // If not answered at question level, check group level for multiple_answers
+                                if (!answered && groupId) {
+                                  const groupAnswer = answers[groupId];
+                                  answered = groupAnswer && groupAnswer.toString().trim() !== '';
+                                }
 
 
                                 // Determine line color: only answered questions are green, default is gray
@@ -213,7 +222,17 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                 const questionNumber = q.question_number;
                                 if (!questionNumber) return null;
                                 const answerKey = questionNumber || q.id;
-                                const answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
+                                // For multiple_answers, check if group-level answer exists
+                                // The question might have a question_id (group ID) or question_group_id
+                                const groupId = q.question_id || q.question_group_id;
+                                let answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
+                                
+                                // If not answered at question level, check group level for multiple_answers
+                                if (!answered && groupId) {
+                                  const groupAnswer = answers[groupId];
+                                  answered = groupAnswer && groupAnswer.toString().trim() !== '';
+                                }
+                                
                                 // Ensure type consistency for comparison
                                 const active = activeQuestion != null && Number(activeQuestion) === Number(questionNumber);
                                 // Check bookmarks: some components use question_number, others use id
