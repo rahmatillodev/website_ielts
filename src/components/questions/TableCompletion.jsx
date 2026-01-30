@@ -39,17 +39,26 @@ const TableCompletion = ({
 
     const questionItem = sortedQuestions[qIndex];
     const qNumber = questionItem.question_number;
-    const answerKey = qNumber || questionItem.id;
+    const questionId = questionItem.id;
+    // Try both question.id (UUID) and question_number for lookup
+    const answerKey = questionId || qNumber;
 
-    const answer = answers[answerKey] || "";
-    const review = reviewData[answerKey] || {};
+    // Try multiple keys for answer lookup
+    const answer = answers[questionId] || answers[qNumber] || answers[answerKey] || "";
+    // Try multiple keys for review data lookup
+    const review = reviewData[questionId] ||
+                   reviewData[String(questionId)] ||
+                   reviewData[qNumber] ||
+                   reviewData[String(qNumber)] ||
+                   reviewData[answerKey] ||
+                   {};
     const isReviewMode = mode === "review";
     const isCorrect = review.isCorrect;
     const correctAnswer = review.correctAnswer || "";
     const showWrong =
-      isReviewMode && review.hasOwnProperty("isCorrect") && !isCorrect;
-    const showCorrect = isReviewMode && isCorrect;
-    const isBookmarked = bookmarks.has(answerKey) || bookmarks.has(qNumber);
+      isReviewMode && review.hasOwnProperty("isCorrect") && review.isCorrect === false;
+    const showCorrect = isReviewMode && review.isCorrect === true;
+    const isBookmarked = bookmarks.has(questionId) || bookmarks.has(qNumber) || bookmarks.has(answerKey);
 
     return (
       <span
@@ -62,7 +71,8 @@ const TableCompletion = ({
           onChange={(e) => {
             if (mode !== "review") {
               onInteraction?.();
-              onAnswerChange(answerKey, e.target.value);
+              // Use question.id (UUID) as primary key, fallback to question_number
+              onAnswerChange(questionId || qNumber, e.target.value);
             }
           }}
           onFocus={onInteraction}

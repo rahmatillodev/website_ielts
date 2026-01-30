@@ -11,6 +11,7 @@ import Table from "./Table";
 import TableCompletion from "./TableCompletion";
 
 import TypeMap from "./TypeMap";
+import MultipleAnswers from "./MultipleAnswers";
 
 /**
  * Smart QuestionRenderer - Routes to appropriate component based on question type
@@ -102,6 +103,23 @@ const QuestionRenderer = ({
       <YesNoNotGiven
         question={question}
         answer={answer}
+        onAnswerChange={onAnswerChange}
+        mode={mode}
+        reviewData={reviewData}
+        showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
+      />
+    );
+  }
+
+  // Multiple Answers - must be checked before Multiple Choice to avoid conflicts
+  if (normalizedType.includes('multiple_answers')) {
+    return (
+      <MultipleAnswers
+        question={question}
+        groupQuestions={groupQuestions}
+        answers={answers}
         onAnswerChange={onAnswerChange}
         mode={mode}
         reviewData={reviewData}

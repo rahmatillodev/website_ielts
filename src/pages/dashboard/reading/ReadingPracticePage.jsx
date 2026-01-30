@@ -650,28 +650,60 @@ const ReadingPracticePageContent = () => {
     try {
       const result = await fetchLatestAttempt(authUser.id, id);
       if (result.success && result.attempt && result.answers) {
-        // Convert answers to review data format
+        // Build mapping from question.id to question_number for consistent keying
+        const questionIdToNumberMap = {};
+        if (currentTest?.parts) {
+          currentTest.parts.forEach((part) => {
+            if (part.questionGroups) {
+              part.questionGroups.forEach((questionGroup) => {
+                if (questionGroup.questions) {
+                  questionGroup.questions.forEach((question) => {
+                    if (question.id && question.question_number) {
+                      questionIdToNumberMap[question.id] = question.question_number;
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+
+        // Convert answers to review data format, keyed by both question.id and question_number
         const reviewDataObj = {};
+        const reviewDataByNumber = {};
         Object.keys(result.answers).forEach((questionId) => {
           const answerInfo = result.answers[questionId];
-          reviewDataObj[questionId] = {
+          const questionNumber = questionIdToNumberMap[questionId] || questionId;
+          const reviewItem = {
             userAnswer: answerInfo.userAnswer || '',
             isCorrect: answerInfo.isCorrect || false,
             correctAnswer: answerInfo.correctAnswer || '',
           };
+          // Store by both question.id (UUID) and question_number for compatibility
+          reviewDataObj[questionId] = reviewItem;
+          if (questionNumber !== questionId) {
+            reviewDataByNumber[questionNumber] = reviewItem;
+          }
         });
 
-        setReviewData(reviewDataObj);
+        // Merge both key formats for maximum compatibility
+        setReviewData({ ...reviewDataObj, ...reviewDataByNumber });
         setStatus('reviewing');
         setLatestAttemptId(result.attempt.id);
         setShowCorrectAnswers(true); // Default to showing correct answers
         
-        // Also set answers for display
+        // Also set answers for display, keyed by both question.id and question_number
         const answersObj = {};
+        const answersByNumber = {};
         Object.keys(reviewDataObj).forEach((questionId) => {
-          answersObj[questionId] = reviewDataObj[questionId].userAnswer;
+          const questionNumber = questionIdToNumberMap[questionId] || questionId;
+          const userAnswer = reviewDataObj[questionId].userAnswer;
+          answersObj[questionId] = userAnswer;
+          if (questionNumber !== questionId) {
+            answersByNumber[questionNumber] = userAnswer;
+          }
         });
-        setAnswers(answersObj);
+        setAnswers({ ...answersObj, ...answersByNumber });
       } else {
         console.error('[handleReviewTest] Failed to fetch attempt:', result.error);
         // Better error handling - don't use alert, use console and set state
@@ -1022,6 +1054,8 @@ const ReadingPracticePageContent = () => {
               const isTable = groupType.includes('table') && !isTableCompletion;
               const isMap = groupType.includes('map');
               const isMatchingInformation = groupType.includes('matching_information');
+              const isMultipleAnswers = groupType === 'multiple_answers';
+
 
 
               return (
@@ -1055,8 +1089,8 @@ const ReadingPracticePageContent = () => {
                     </div>
                   )}
                 
-                  {/* For Fill-in-the-Blanks, Drag-and-Drop, Table Completion, Table, Map, and Matching Information: Render as a single group with group-level options */}
-                  {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation ) ? (
+                  {/* For Fill-in-the-Blanks, Drag-and-Drop, Table Completion, Table, Map, Matching Information, and Multiple Answers: Render as a single group with group-level options */}
+                  {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation || isMultipleAnswers) ? (
                     <div
                       ref={(el) => {
                         // Set ref for all questions in the group for scrolling
@@ -1097,14 +1131,7 @@ const ReadingPracticePageContent = () => {
                           onAnswerChange={handleAnswerChange}
                           onInteraction={handleInputInteraction}
                           mode={status === 'reviewing' ? 'review' : 'test'}
-                          reviewData={status === 'reviewing' ? (showCorrectAnswers ? reviewData : Object.keys(reviewData).reduce((acc, key) => {
-                            acc[key] = {
-                              userAnswer: reviewData[key].userAnswer,
-                              isCorrect: reviewData[key].isCorrect,
-                              correctAnswer: '' // Hide correct answer when toggle is off
-                            };
-                            return acc;
-                          }, {})) : {}}
+                          reviewData={status === 'reviewing' ? reviewData : {}}
                           showCorrectAnswers={showCorrectAnswers}
                           bookmarks={bookmarks}
                           toggleBookmark={toggleBookmark}
@@ -1187,14 +1214,7 @@ const ReadingPracticePageContent = () => {
                               onAnswerChange={handleAnswerChange}
                               onInteraction={handleInputInteraction}
                               mode={status === 'reviewing' ? 'review' : 'test'}
-                              reviewData={status === 'reviewing' ? (showCorrectAnswers ? reviewData : Object.keys(reviewData).reduce((acc, key) => {
-                                acc[key] = {
-                                  userAnswer: reviewData[key].userAnswer,
-                                  isCorrect: reviewData[key].isCorrect,
-                                  correctAnswer: '' // Hide correct answer when toggle is off
-                                };
-                                return acc;
-                              }, {})) : {}}
+                              reviewData={status === 'reviewing' ? reviewData : {}}
                               showCorrectAnswers={showCorrectAnswers}
                               bookmarks={bookmarks}
                               toggleBookmark={toggleBookmark}

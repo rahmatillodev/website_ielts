@@ -73,10 +73,10 @@ const ReadingResultPage = () => {
         const attemptsForTest = attempts.filter((a) => String(a.test_id) === testId);
         const latestAttemptFromStore = attemptsForTest.length > 0
           ? attemptsForTest.sort((a, b) => {
-              const aDate = new Date(a.completed_at || a.created_at || 0).getTime();
-              const bDate = new Date(b.completed_at || b.created_at || 0).getTime();
-              return bDate - aDate; // Descending order
-            })[0]
+            const aDate = new Date(a.completed_at || a.created_at || 0).getTime();
+            const bDate = new Date(b.completed_at || b.created_at || 0).getTime();
+            return bDate - aDate; // Descending order
+          })[0]
           : null;
 
         let attemptResult;
@@ -90,7 +90,7 @@ const ReadingResultPage = () => {
             fetchAttemptAnswers(latestAttemptFromStore.id)
           ]);
           testResult = fetchedTestResult; // Store testResult for later use
-          
+
           if (answersResult.success) {
             attemptResult = {
               success: true,
@@ -125,10 +125,10 @@ const ReadingResultPage = () => {
 
         if (attemptResult.success && attemptResult.attempt && attemptResult.answers) {
           setAttemptData(attemptResult.attempt);
-          
+
           // Get test data - use testResult if available (from parallel fetch), otherwise use currentTest from store
           const testDataForMapping = testResult || currentTest;
-          
+
           // Map question_id (questions.id) back to question_number for display
           // Build a mapping from questions.id to question_number from the test data
           const questionIdToNumberMap = {};
@@ -147,7 +147,7 @@ const ReadingResultPage = () => {
               }
             });
           }
-          
+
           // Convert answers to the format expected by the component
           // Use question_number as key for display, but keep question_id mapping for review data
           const answersObj = {};
@@ -158,7 +158,7 @@ const ReadingResultPage = () => {
             answersObj[questionNumber] = attemptResult.answers[questionId].userAnswer;
             reviewDataObj[questionNumber] = attemptResult.answers[questionId];
           });
-          
+
           setResultData({
             answers: answersObj,
             attempt: attemptResult.attempt,
@@ -290,23 +290,7 @@ const ReadingResultPage = () => {
   // Handle retake - delete previous attempts
   const handleRetake = useCallback(async () => {
     if (!authUser || !id) return;
-
-    setIsDeleting(true);
-    try {
-      const result = await deleteTestAttempts(id);
-      if (result.success) {
-        // Navigate to practice page to retake the test
-        navigate(`/reading-practice/${id}`);
-      } else {
-        console.error('Failed to delete attempts:', result.error);
-        alert('Failed to clear previous attempts. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error deleting attempts:', error);
-      alert('An error occurred while clearing attempts.');
-    } finally {
-      setIsDeleting(false);
-    }
+    navigate(`/reading-practice/${id}`);
   }, [authUser, id, navigate]);
 
   if (loading) {
@@ -367,7 +351,7 @@ const ReadingResultPage = () => {
 
         <hr className="border-gray-200 mb-10" />
 
-      
+
 
         {/* Stats Cards - Redesigned */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
@@ -436,8 +420,8 @@ const ReadingResultPage = () => {
             </div>
           </div>
         </div>
-          {/* Performance Banner */}
-          <ResultBanner score={stats.score} testType="Reading" />
+        {/* Performance Banner */}
+        <ResultBanner score={stats.score} testType="Reading" />
 
         {/* Detailed Answer Review Section */}
         <div className="mt-12">

@@ -93,8 +93,6 @@ const TypeMap = ({
   // Get the option from _question.options that matches this column and question row
   const getQuestionColumnOption = (question, colOption) => {
     if (!_question?.options) return null;
-    console.log(question);
-    console.log(colOption);
     // Try to match both question and column via option.question_id + letter/option_key/option_text
     return _question.options.find(opt => {
       // console.log(opt.question_id === question.id);

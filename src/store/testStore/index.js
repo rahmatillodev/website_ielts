@@ -23,7 +23,6 @@ export const useTestStore = create((set, get) => {
     const completionState = useTestCompletionStore.getState();
 
     
-    console.log('listState', listState);
     return {
       test_reading: listState.test_reading,
       test_listening: listState.test_listening,

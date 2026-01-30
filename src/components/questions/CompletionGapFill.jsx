@@ -37,17 +37,25 @@ const CompletionGapFill = ({
 
     const questionItem = sortedQuestions[qIndex];
     const qNumber = questionItem.question_number;
-    // Use questionNumber as key if it exists, otherwise fall back to id (matching footer logic)
-    const answerKey = qNumber || questionItem.id;
+    const questionId = questionItem.id;
+    // Try both question.id (UUID) and question_number for lookup (matching reviewData structure)
+    const answerKey = questionId || qNumber;
     
-    const answer = answers[answerKey] || '';
-    const review = reviewData[answerKey] || {};
+    // Try multiple keys for answer lookup
+    const answer = answers[questionId] || answers[qNumber] || answers[answerKey] || '';
+    // Try multiple keys for review data lookup
+    const review = reviewData[questionId] || 
+                   reviewData[String(questionId)] ||
+                   reviewData[qNumber] || 
+                   reviewData[String(qNumber)] ||
+                   reviewData[answerKey] || 
+                   {};
     const isReviewMode = mode === 'review';
     const isCorrect = review.isCorrect;
     const correctAnswer = review.correctAnswer || '';
-    const showWrong = isReviewMode && review.hasOwnProperty('isCorrect') && !isCorrect;
-    const showCorrect = isReviewMode && isCorrect;
-    const isBookmarked = bookmarks.has(answerKey) || bookmarks.has(qNumber);
+    const showWrong = isReviewMode && review.hasOwnProperty('isCorrect') && review.isCorrect === false;
+    const showCorrect = isReviewMode && review.isCorrect === true;
+    const isBookmarked = bookmarks.has(questionId) || bookmarks.has(qNumber) || bookmarks.has(answerKey);
 
     return (
       <span key={`input-${qIndex}`} className="inline-flex items-center  relative  align-middle group">
@@ -57,7 +65,8 @@ const CompletionGapFill = ({
           onChange={(e) => {
             if (mode !== 'review') {
               onInteraction?.();
-              onAnswerChange(answerKey, e.target.value);
+              // Use question.id (UUID) as primary key, fallback to question_number
+              onAnswerChange(questionId || qNumber, e.target.value);
             }
           }}
           onFocus={onInteraction}
