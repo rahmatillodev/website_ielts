@@ -21,22 +21,34 @@ const MultipleAnswers = ({
 
   // Get question data
   const questionId = question.id; // Group-level ID for answer storage
-  const questionRange = question.question_range || 1; // Number of correct answers to select
+  const questionRange = question.question_range || groupQuestions.length || 1; // Number of correct answers to select
   const instruction = question.instruction || '';
   const questionText = question.question_text || '';
   const options = question.options || [];
+
+  // Get question number range for display (e.g., "27-28")
+  const questionNumberRange = useMemo(() => {
+    if (!groupQuestions || groupQuestions.length === 0) return '';
+    const numbers = groupQuestions
+      .map(q => q.question_number)
+      .filter(num => num != null)
+      .sort((a, b) => a - b);
+    if (numbers.length === 0) return '';
+    if (numbers.length === 1) return `${numbers[0]}`;
+    return `${numbers[0]}-${numbers[numbers.length - 1]}`;
+  }, [groupQuestions]);
 
   // Parse current answer (comma-separated option_keys like "A,B")
   const currentAnswer = answers[questionId] || '';
   const selectedOptionKeys = useMemo(() => {
     if (!currentAnswer) return [];
-    return currentAnswer.split(',').map(key => key.trim()).filter(Boolean);
+    return currentAnswer.split(',').map(key => key.trim().toUpperCase()).filter(Boolean);
   }, [currentAnswer]);
 
-  // Get correct answer option_keys from groupQuestions
+  // Get correct answer option_keys from groupQuestions (normalized to uppercase)
   const correctOptionKeys = useMemo(() => {
     return groupQuestions
-      .map(q => q.correct_answer?.toString().trim())
+      .map(q => q.correct_answer?.toString().trim().toUpperCase())
       .filter(Boolean);
   }, [groupQuestions]);
 
@@ -69,19 +81,20 @@ const MultipleAnswers = ({
     let newSelectedKeys;
 
     if (selectedOptionKeys.includes(key)) {
-      // Remove if already selected
+      // Remove if already selected (undo functionality)
       newSelectedKeys = selectedOptionKeys.filter(k => k !== key);
     } else {
       // Add if not at limit
       if (selectedOptionKeys.length < questionRange) {
         newSelectedKeys = [...selectedOptionKeys, key];
       } else {
-        // If at limit, replace first selected (IELTS behavior)
+        // If at limit, automatically replace first selected (IELTS behavior)
+        // This enforces the selection limit
         newSelectedKeys = [...selectedOptionKeys.slice(1), key];
       }
     }
 
-    // Store as comma-separated string
+    // Store as comma-separated string (order doesn't matter for checking)
     const answerValue = newSelectedKeys.join(',');
     onAnswerChange(questionId, answerValue);
   };
@@ -141,10 +154,29 @@ const MultipleAnswers = ({
       className="space-y-6"
       style={{ color: themeColors.text }}
     >
+      {/* Question Number Range Display - Shows grouped questions (e.g., "27-28") */}
+      {questionNumberRange && (
+        <div 
+          className="flex items-center gap-2 mb-2 pb-2 border-b"
+          style={{ 
+            color: themeColors.text,
+            borderColor: themeColors.border
+          }}
+        >
+          <span className="text-sm font-semibold" style={{ color: themeColors.text }}>
+            Questions {questionNumberRange}
+          </span>
+          <span className="text-xs" style={{ color: themeColors.text, opacity: 0.6 }}>•</span>
+          <span className="text-xs" style={{ color: themeColors.text, opacity: 0.7 }}>
+            Select {questionRange} {questionRange === 1 ? 'answer' : 'answers'}
+          </span>
+        </div>
+      )}
+
       {/* Instruction */}
       {instruction && (
         <div 
-          className="text-sm leading-relaxed"
+          className="text-sm leading-relaxed mb-2"
           data-selectable="true"
           style={{ color: themeColors.text }}
         >
@@ -155,7 +187,7 @@ const MultipleAnswers = ({
       {/* Main Question Text */}
       {questionText && (
         <h3 
-          className="text-lg font-semibold"
+          className="text-lg font-semibold mb-4"
           data-selectable="true"
           style={{ color: themeColors.text }}
         >
@@ -259,16 +291,31 @@ const MultipleAnswers = ({
         })}
       </div>
 
-      {/* Footer Info */}
-      <div className="flex justify-between items-center text-sm" style={{ color: themeColors.text }}>
-        <p>
-          <span className="font-bold" style={{ color: '#6366f1' }}>
-            {selectedOptionKeys.length}
-          </span>/{questionRange}
-        </p>
+      {/* Footer Info - Real-time selection indicator */}
+      <div className="flex justify-between items-center text-sm pt-2 border-t" style={{ 
+        color: themeColors.text,
+        borderColor: themeColors.border 
+      }}>
+        <div className="flex items-center gap-2">
+          <p className="text-sm">
+            <span className="font-bold" style={{ color: '#6366f1' }}>
+              {selectedOptionKeys.length}
+            </span>
+            <span className="text-gray-500 mx-1">out of</span>
+            <span className="font-semibold">{questionRange}</span>
+            <span className="text-gray-500 ml-1">
+              {selectedOptionKeys.length === 1 ? 'selected' : 'selected'}
+            </span>
+          </p>
+        </div>
         {!isReviewMode && selectedOptionKeys.length === questionRange && (
           <span className="text-green-500 font-medium flex items-center gap-1">
-            <Check size={14} /> Ready
+            <Check size={14} /> Complete
+          </span>
+        )}
+        {!isReviewMode && selectedOptionKeys.length > 0 && selectedOptionKeys.length < questionRange && (
+          <span className="text-amber-500 font-medium text-xs">
+            Select {questionRange - selectedOptionKeys.length} more
           </span>
         )}
       </div>
