@@ -22,10 +22,18 @@ function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
 
+
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Invalid email format");
+      return;
+    }
+
 
     const result = await signIn(email, password);
 
@@ -45,7 +53,7 @@ function LoginPage() {
       {/* Right Panel - Login Form */}
       <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center bg-white">
         {/* Mobile back button */}
-        
+
 
         <div className="w-full max-w-md">
           {/* Logo - Mobile */}

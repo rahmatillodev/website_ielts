@@ -100,42 +100,7 @@ const AnimatedSection = ({ children, className = "", id = "" }) => {
   );
 };
 
-// Animated Counter Component
-const AnimatedCounter = ({ value, suffix = "", duration = 2 }) => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
-  const [count, setCount] = React.useState(0);
 
-  useEffect(() => {
-    if (!isInView) return;
-    
-    const numericValue = parseFloat(value.replace(/[^0-9.]/g, ''));
-    if (isNaN(numericValue)) {
-      setCount(value);
-      return;
-    }
-    
-    const startTime = Date.now();
-    const endTime = startTime + duration * 1000;
-
-    const animate = () => {
-      const now = Date.now();
-      const progress = Math.min((now - startTime) / (endTime - startTime), 1);
-      const current = Math.floor(numericValue * progress);
-      setCount(current);
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        setCount(numericValue);
-      }
-    };
-
-    animate();
-  }, [isInView, value, duration]);
-
-  return <span ref={ref}>{count}{suffix}</span>;
-};
 
 const LandingPage = () => {
   const progressRef = useRef(null);
@@ -189,7 +154,7 @@ const LandingPage = () => {
           >
             <motion.div 
               variants={fadeInUp}
-              className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-100 border border-blue-300 rounded-full"
+              className="inline-flex items-center mt-12 lg:mt-0 gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-100 border border-blue-300 rounded-full"
             >
               <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
               <span className="text-[10px] sm:text-xs font-semibold text-blue-600 uppercase whitespace-nowrap">
@@ -219,7 +184,7 @@ const LandingPage = () => {
               <Button
                 size="lg"
                 className="bg-[#4A90E2] hover:bg-[#3a7ac8d3] text-white px-6 sm:px-8 py-3 sm:py-4 md:py-6 rounded-full font-semibold text-sm 
-                sm:text-base w-full md:w-full lg:w-auto group transition-all shadow-[0px_20px_25px_-5px_#2D9CDB4D]"
+                sm:text-base w-4/12 lg:w-auto group transition-all shadow-[0px_20px_25px_-5px_#2D9CDB4D]"
                 >
                 Start Free Practice <LuArrowRight className="ml-0 inline transition-transform group-hover:translate-x-2" />
               </Button>
@@ -628,7 +593,7 @@ const LandingPage = () => {
             Join 1,000+ students who turned IELTS stress into confidence with IELTSCORE
           </motion.p>
           <motion.div variants={fadeInUp} className="w-full md:w-full lg:w-auto">
-            <Link to="/signup" className="block w-full md:block lg:inline-block lg:w-auto">
+            <Link to="/signup" className="block w-4/12 lg:w-auto md:block lg:inline-block mx-auto">
                 <Button
               size="lg"
               className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white px-6 sm:px-8 py-2.5 sm:py-3 md:py-3 rounded-full font-semibold transition-all text-sm sm:text-base w-full md:w-full lg:w-auto group shadow-[0_4px_20px_rgba(74,144,226,0.4)]"

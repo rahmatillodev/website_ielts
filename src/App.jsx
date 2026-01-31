@@ -145,4 +145,3 @@ export default App;
 /// reaview qilish patdi va redo qilish tekshirish 
 /// send telegram button qilish kerak 
 /// channel qo'shish kerak 
-

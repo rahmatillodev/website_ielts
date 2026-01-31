@@ -12,11 +12,13 @@ const FillInTheBlank = ({
   bookmarks = new Set(), 
   toggleBookmark = () => {} 
 }) => {
-  const questionNumber = question.question_number || question.id;
-  const isBookmarked = bookmarks.has(questionNumber);
+  const questionId = question.id; // Use question.id as primary key (UUID)
+  const questionNumber = question.question_number || question.id; // For display
+  const isBookmarked = bookmarks.has(questionId) || bookmarks.has(questionNumber);
   
   const isReviewMode = mode === 'review';
-  const review = reviewData[questionNumber] || {};
+  // Check review data by questionId first, then fallback to questionNumber for backward compatibility
+  const review = reviewData[questionId] || reviewData[questionNumber] || {};
   const isCorrect = review.isCorrect;
   const correctAnswer = review.correctAnswer || '';
   const showWrong = isReviewMode && review.hasOwnProperty('isCorrect') && !isCorrect;
@@ -30,7 +32,8 @@ const FillInTheBlank = ({
           value={isReviewMode ? `[${questionNumber}] ${answer || ''}` : (answer || "")}
           onChange={(e) => {
             if (mode !== 'review') {
-              onAnswerChange(questionNumber, e.target.value);
+              // Use questionId (questions.id) as the answer key, fallback to questionNumber
+              onAnswerChange(questionId || questionNumber, e.target.value);
             }
           }}
           placeholder="Enter your answer..."
@@ -47,7 +50,7 @@ const FillInTheBlank = ({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            toggleBookmark(questionNumber);
+            toggleBookmark(questionId || questionNumber);
           }}
           className={`transition-all ${
             isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'

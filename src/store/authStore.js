@@ -18,33 +18,35 @@ export const useAuthStore = create(
 
 
       initializeSession: async () => {
-        // Prevent multiple initializations
-        if (get().isInitialized) return;
-
+        if (get().isInitialized && get().authUser) return;
+      
         try {
           set({ loading: true });
+      
           const { data: { session } } = await supabase.auth.getSession();
-
+      
           if (session?.user) {
             set({ authUser: session.user });
-            // Diqqat: Har doim bazadan tekshiramiz
             await get().fetchUserProfile(session.user.id);
           } else {
             set({ authUser: null, userProfile: null });
           }
-
-          // Auth o'zgarishini kuzatish - only set up once
+      
           if (!get().isInitialized) {
-            supabase.auth.onAuthStateChange(async (event, session) => {
+            const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
               if (event === 'SIGNED_IN' && session?.user) {
                 set({ authUser: session.user });
                 await get().fetchUserProfile(session.user.id);
               } else if (event === 'SIGNED_OUT') {
                 set({ authUser: null, userProfile: null });
+                set({ isInitialized: false }); // 🔥 important
               }
             });
+      
+            // store unsubscribe if needed later
+            set({ _authListener: listener?.subscription });
           }
-
+      
           set({ isInitialized: true });
         } catch (error) {
           set({ error: error.message });
@@ -52,6 +54,7 @@ export const useAuthStore = create(
           set({ loading: false });
         }
       },
+      
 
       // Kirish (Sign In)
       signIn: async (email, password) => {
@@ -280,8 +283,8 @@ export const useAuthStore = create(
             authUser: null,
             userProfile: null,
             loading: false,
-            // isInitialized: true  ❗ MUHIM: false QILINMAYDI
-          })
+            isInitialized: false
+                    })
       
           // Clear only user-related storage
           try {

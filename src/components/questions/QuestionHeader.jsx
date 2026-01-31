@@ -151,7 +151,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             >
               {formatTime(timeRemaining)}
             </div>
-            {!isStarted && !hasInteracted ? (
+            {(!isStarted && formatTime(timeRemaining).slice(0, -3) == currentTest?.duration) ? (
               <button
                 onClick={handleStart}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"

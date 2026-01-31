@@ -51,8 +51,7 @@ export const useTestListStore = create((set, get) => ({
         .from("test")
         .select("id, title, type, difficulty, duration, question_quantity, is_premium, is_active, created_at")
         .eq("is_active", true)
-        .order("created_at", { ascending: false });
-
+        .order("created_at", { ascending: true });
       const { data, error } = await Promise.race([
         testsQueryPromise,
         timeoutPromise
