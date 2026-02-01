@@ -78,8 +78,13 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
       const selection = window.getSelection();
       const container = universalContentRef?.current;
       
-      // Check if clicking on an existing highlight FIRST (before text selection)
+      // Check if clicking on tooltip buttons - don't process if so
       const clickedElement = e.target;
+      if (tooltipRef.current && tooltipRef.current.contains(clickedElement)) {
+        return;
+      }
+      
+      // Check if clicking on an existing highlight FIRST (before text selection)
       const markElement = clickedElement.closest('mark[data-highlight-id]');
       const noteElement = clickedElement.closest('[data-note-id]');
       
@@ -247,12 +252,25 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
     return false;
   };
 
-  const handleAction = (callback) => {
+  const handleAction = (callback, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (callback && selectedRange) {
       callback(selectedRange, selectedText, currentPartId, currentSectionType, testType);
     }
+    
+    // Clear selection and close tooltip immediately
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      selection.removeAllRanges();
+    }
+    
     setShowTooltip(false);
-    window.getSelection().removeAllRanges();
+    setSelectedRange(null);
+    setSelectedText('');
   };
 
   const handleDeleteHighlight = (e) => {
@@ -372,8 +390,12 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
           <>
             <button 
               className="ielts-btn" 
-              onClick={() => handleAction(onNote)}
-              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => handleAction(onNote, e)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              type="button"
             >
               <FaQuoteLeft className="ielts-icon" />
               <span>Note</span>
@@ -383,8 +405,12 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
 
             <button 
               className="ielts-btn" 
-              onClick={() => handleAction(onHighlight)}
-              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => handleAction(onHighlight, e)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              type="button"
             >
               <FaHighlighter className="ielts-icon" />
               <span>Highlight</span>

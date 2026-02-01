@@ -18,7 +18,13 @@ export const useAuthStore = create(
 
 
       initializeSession: async () => {
-        if (get().isInitialized) return;  // ❗ authUser ni tekshirma
+        if (get().isInitialized) {
+          // If already initialized but loading is stuck, reset it
+          if (get().loading) {
+            set({ loading: false });
+          }
+          return;
+        }
       
         try {
           set({ loading: true });
@@ -27,7 +33,12 @@ export const useAuthStore = create(
       
           if (session?.user) {
             set({ authUser: session.user });
-            await get().fetchUserProfile(session.user.id, false);
+            try {
+              await get().fetchUserProfile(session.user.id, false);
+            } catch (error) {
+              console.error('Error fetching profile during initialization:', error);
+              // Don't block initialization if profile fetch fails
+            }
           } else {
             set({ authUser: null, userProfile: null });
           }
@@ -39,6 +50,8 @@ export const useAuthStore = create(
                 set({ loading: true, authUser: session.user });
                 try {
                   await get().fetchUserProfile(session.user.id, false);
+                } catch (error) {
+                  console.error('Error fetching profile on sign in:', error);
                 } finally {
                   set({ loading: false });
                 }
@@ -53,6 +66,9 @@ export const useAuthStore = create(
           }
       
           set({ isInitialized: true });
+        } catch (error) {
+          console.error('Error initializing session:', error);
+          set({ error: error.message });
         } finally {
           set({ loading: false });
         }
@@ -74,7 +90,7 @@ export const useAuthStore = create(
           set({ authUser: data.user })
           // Fetch profile - if it fails, don't block the login
           try {
-            await get().fetchUserProfile(data.user.id)
+            await get().fetchUserProfile(data.user.id, false)
           } catch (profileError) {
             console.error('Error fetching user profile:', profileError)
             // Continue with login even if profile fetch fails
@@ -129,11 +145,18 @@ export const useAuthStore = create(
       // Profilni olish
       fetchUserProfile: async (userId, shouldLogoutOnMissing = true) => {
         try {
+          // Add timeout to prevent hanging
+          const timeoutId = setTimeout(() => {
+            console.warn('Profile fetch taking too long, continuing anyway...');
+          }, 10000);
+
           const { data, error } = await supabase
             .from('users')
             .select('*')
             .eq('id', userId)
             .maybeSingle(); // Xato bermay null qaytaradi
+
+          clearTimeout(timeoutId);
 
           if (error) {
             console.error("Error fetching user profile:", error);
@@ -325,11 +348,12 @@ export const useAuthStore = create(
       },
       
 
-      // Xavfsizlik uchun logout va login sahifasiga yo'naltirish
       forceSignOutToLogin: async (reason) => {
         set({ loading: true, error: reason || null })
         try {
-          await supabase.auth.signOut()
+          await supabase.auth.signOut();
+          localStorage.clear();
+          set({ authUser: null, userProfile: null, isInitialized: false, loading: false })
         } catch (error) {
           const message = error?.message || reason || 'Failed to log out.'
           set({ error: message })
@@ -338,54 +362,7 @@ export const useAuthStore = create(
           set({ authUser: null, userProfile: null, isInitialized: false, loading: false })
 
           // Clear all user-specific localStorage data
-          try {
-            // Clear reading and listening practice/result data
-            clearAllReadingData()
-            clearAllListeningData()
-
-            // Clear Zustand persist storage
-            localStorage.removeItem('auth-storage')
-
-            // Clear any other user-specific keys (comprehensive cleanup)
-            const keysToRemove = []
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i)
-              if (key) {
-                // Keep UI preferences (theme, sidebar, etc.) but clear user data
-                const isUserData =
-                  key.startsWith('reading_') ||
-                  key.startsWith('listening_') ||
-                  key === 'auth-storage' ||
-                  key.includes('practice_') ||
-                  key.includes('result_') ||
-                  key.includes('audio_position_')
-
-                if (isUserData) {
-                  keysToRemove.push(key)
-                }
-              }
-            }
-
-            // Remove all identified user-specific keys
-            keysToRemove.forEach(key => {
-              try {
-                localStorage.removeItem(key)
-              } catch (err) {
-                console.warn(`Failed to remove key ${key}:`, err)
-              }
-            })
-          } catch (storageError) {
-            console.error('Error clearing localStorage:', storageError)
-          }
-
-          // Navigate to landing page - use setTimeout to avoid blocking
-          if (typeof window !== 'undefined') {
-            setTimeout(() => {
-              if (window.location.pathname !== '/') {
-                window.location.href = '/'
-              }
-            }, 100)
-          }
+          
         }
       },
 

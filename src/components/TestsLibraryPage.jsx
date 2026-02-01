@@ -29,14 +29,6 @@ const TestsLibraryPage = ({
   headerAction = null,
   headerActionText = "Practice Now",
 }) => {
-  // Log incoming props on every render
-  // console.log("[TestsLibraryPage] render", { 
-  //   testData, 
-  //   loading, 
-  //   dashboardLoading,
-  //   title,
-  //   fetchTestsIsPresent: !!fetchTests
-  // });
 
   // Load view preference from localStorage, default to list view (false)
   const getInitialViewState = () => {
