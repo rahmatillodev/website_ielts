@@ -4,7 +4,6 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { LuChevronsLeftRight } from "react-icons/lu";
 import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
-import PracticeFooter from "@/components/questions/PracticeFooter";
 import QuestionHeader from "@/components/questions/QuestionHeader";
 import { saveReadingPracticeData, loadReadingPracticeData, clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
@@ -18,6 +17,7 @@ import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip"
 import NoteSidebar from "@/components/sidebar/NoteSidebar";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 import parse from "html-react-parser";
+import PracticeFooter from "@/components/questions/PracticeFooter";
 
 
 
@@ -66,12 +66,8 @@ const ReadingPracticePageContent = () => {
   const selectableContentRef = useRef(null);
   const universalContentRef = useRef(null); // Universal container for all selectable content
 
-  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!id) return;
-    if (hasLoadedRef.current) return; 
-    hasLoadedRef.current = true;
 
     // Safety check: Reset loadingTest if it's stuck from a previous state
     const { loadingTest: currentLoadingTest, clearCurrentTest } = useTestStore.getState();
@@ -179,11 +175,11 @@ const ReadingPracticePageContent = () => {
     // Cleanup: Clear currentTest when component unmounts and prevent state updates
     // Only clear currentTest, not the test list data, to preserve data when navigating back
     return () => {
+      isMounted = false;
       const { clearCurrentTest } = useTestStore.getState();
-      clearCurrentTest(false);
-      hasLoadedRef.current = false;
+      clearCurrentTest(false); // Only clear currentTest, preserve test list data
     };
-  }, [id]);
+  }, [id, fetchTestById]);
 
   // Initialize timeRemaining from test duration when currentTest loads
   useEffect(() => {
@@ -203,6 +199,7 @@ const ReadingPracticePageContent = () => {
         setTimeRemaining(durationInSeconds);
       }
     }
+    console.log(currentTest);
 
 
     return () => {
@@ -441,6 +438,7 @@ const ReadingPracticePageContent = () => {
         } catch (error) {
           if (isMounted) {
             console.error('[ReadingPracticePage] Auto-submit error:', error);
+            navigate(`/reading-result/${id}`);
           }
         }
       };

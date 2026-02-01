@@ -94,7 +94,7 @@ function App() {
             <Route path="/speaking" element={<SpeakingPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/mock-tests" element={<MockTestsPage />} />
-            <Route path="/writing-practice" element={<OwnWritingPage />} />
+            <Route path="/own-writing" element={<OwnWritingPage />} />
             <Route
               path="/pricing"
               element={

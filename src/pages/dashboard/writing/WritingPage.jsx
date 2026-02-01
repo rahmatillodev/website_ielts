@@ -19,7 +19,7 @@ const WritingPage = () => {
       testType="writing"
       loading={loading}
       fetchTests={fetchWritings}
-      headerAction={"/writing/practice"}
+      headerAction={"/own-writing"}
       headerActionText="Practice Now"
     />
   );

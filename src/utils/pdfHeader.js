@@ -3,61 +3,65 @@
  * @param {string} url - The image URL
  * @returns {Promise<string>} - Base64 data URL
  */
-const imageToBase64 = (url) => {
-    return new Promise((resolve, reject) => {
-      // For same-origin resources, we can load directly
-      // For SVGs, we'll use fetch and convert to blob if needed
-      if (url.endsWith('.svg')) {
-        fetch(url)
-          .then(response => response.blob())
-          .then(blob => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const img = new Image();
-              img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width || 60;
-                canvas.height = img.height || 60;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                try {
-                  const dataURL = canvas.toDataURL('image/png');
-                  resolve(dataURL);
-                } catch (error) {
-                  reject(error);
-                }
-              };
-              img.onerror = reject;
-              img.src = reader.result;
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          })
-          .catch(reject);
-      } else {
-        const img = new Image();
-        // Only set crossOrigin for external resources
-        if (url.startsWith('http') && !url.startsWith(window.location.origin)) {
-          img.crossOrigin = 'anonymous';
-        }
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          try {
-            const dataURL = canvas.toDataURL('image/png');
-            resolve(dataURL);
-          } catch (error) {
-            reject(error);
-          }
-        };
-        img.onerror = reject;
-        img.src = url;
+const imageToBase64 = (url, options = {}) => {
+  const {
+    maxWidth = 64,
+    maxHeight = 64,
+    quality = 0.9,     // 0.4–0.7 ideal
+    format = 'image/png',
+    sharpen = false  
+  } = options;
+  const imageCache = {};
+
+  if (imageCache[url]) {
+    return Promise.resolve(imageCache[url]);
+  }
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    if (url.startsWith('http') && !url.startsWith(window.location.origin)) {
+      img.crossOrigin = 'anonymous';
+    }
+
+    img.onload = () => {
+      let { width, height } = img;
+
+      // 🔽 resize logic
+      const scale = Math.min(maxWidth / width, maxHeight / height, 1);
+      width = Math.floor(width * scale);
+      height = Math.floor(height * scale);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // 🔥 soft sharpen
+      if (sharpen) {
+        ctx.globalAlpha = 0.35;                  // kuchi
+        ctx.filter = 'contrast(1.08)';           // tiniqlik
+        ctx.drawImage(canvas, 0, 0, width, height);
+        ctx.filter = 'none';
+        ctx.globalAlpha = 1;
       }
-    });
-  };
+
+      const dataURL = canvas.toDataURL(format, quality);
+
+      // cache
+      imageCache[url] = dataURL;
+      resolve(dataURL);
+    };
+
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
 
   
 
@@ -126,8 +130,14 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
       
       // Load and add logo
       const logoUrl = '/logo.png';
-      const logoDataUrl = await imageToBase64(logoUrl);
-      const logoX = margin + 8;
+      const logoDataUrl = await imageToBase64(logoUrl, {
+        maxWidth: 64,
+        maxHeight: 64,
+        quality: 0.7,
+        format: 'image/png',
+        sharpen: true
+      });
+            const logoX = margin + 8;
       const logoY = yPos + (headerHeight - logoSize) / 2;
       doc.addImage(logoDataUrl, 'png', logoX, logoY, logoSize, logoSize);
   
@@ -242,11 +252,12 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
         
         // Load icons from public folder
         const iconPromises = {
-          telegram: imageToBase64('/telegram.png').catch(() => null),
-          instagram: imageToBase64('/instagram.png').catch(() => null),
-          phone: imageToBase64('/phone.png').catch(() => null),
-          email: imageToBase64('/gmail.png').catch(() => null),
+          telegram: imageToBase64('/telegram.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }),
+          instagram: imageToBase64('/instagram.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }),
+          phone: imageToBase64('/phone.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }),
+          email: imageToBase64('/gmail.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }),
         };
+        
         
         const icons = {
           telegram: await iconPromises.telegram,

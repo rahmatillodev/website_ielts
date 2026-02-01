@@ -694,4 +694,3 @@ export const deleteTestAttempts = async (testId) => {
     };
   }
 };
-

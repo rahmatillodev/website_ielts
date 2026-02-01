@@ -190,16 +190,8 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                   answered = true;
                                 }
                                 
-                                // For multiple_answers, check if group-level answer exists
-                                // The question might have a question_id (group ID) or question_group_id
-                                if (!answered) {
-                                  const groupId = q.question_id || q.question_group_id;
-                                  if (groupId) {
-                                    const groupAnswer = answers[groupId];
-                                    answered = groupAnswer && groupAnswer.toString().trim() !== '';
-                                  }
-                                }
-
+                                // For multiple_answers: each question stores its own answer individually
+                                // So we don't need to check group-level answers - the check above is sufficient
 
                                 // Determine line color: only answered questions are green, default is gray
                                 let lineColor = "bg-gray-300 dark:bg-gray-600";
@@ -243,15 +235,8 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                   answered = true;
                                 }
                                 
-                                // For multiple_answers, check if group-level answer exists
-                                // The question might have a question_id (group ID) or question_group_id
-                                if (!answered) {
-                                  const groupId = q.question_id || q.question_group_id;
-                                  if (groupId) {
-                                    const groupAnswer = answers[groupId];
-                                    answered = groupAnswer && groupAnswer.toString().trim() !== '';
-                                  }
-                                }
+                                // For multiple_answers: each question stores its own answer individually
+                                // So we don't need to check group-level answers - the check above is sufficient
                                 
                                 // Get the actual answer value for display (check both keys)
                                 const answerValue = (questionId && answers[questionId]) || (questionNumber && answers[questionNumber]) || '';
