@@ -113,8 +113,7 @@ const ListeningPracticePageContent = () => {
         }
         const isReviewMode = searchParams.get('mode') === 'review';
         const includeCorrectAnswers = isReviewMode;
-        const userSubscriptionStatus = userProfile?.subscription_status || "free";
-        await fetchTestById(id, false, includeCorrectAnswers, userSubscriptionStatus);
+        await fetchTestById(id, false, includeCorrectAnswers);
 
         if (!isMounted) return;
 

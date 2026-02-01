@@ -68,118 +68,30 @@ const ReadingPracticePageContent = () => {
 
 
   useEffect(() => {
-
-    // Safety check: Reset loadingTest if it's stuck from a previous state
-    const { loadingTest: currentLoadingTest, clearCurrentTest } = useTestStore.getState();
-    if (currentLoadingTest && !id) {
-      console.warn('[ReadingPracticePage] loadingTest is true but no ID, resetting...');
-      clearCurrentTest(false);
-    }
-
-
-    // GUARD CLAUSE: Validate id parameter
-    if (!id || (typeof id !== 'string' && typeof id !== 'number')) {
-      console.error('[ReadingPracticePage] Invalid test ID:', id, 'Type:', typeof id);
-      // Reset loading state if ID is invalid to prevent infinite loading
-      clearCurrentTest(false);
-      return;
-    }
-
-    // Verify fetchTestById is a function
-    if (typeof fetchTestById !== 'function') {
-      console.error('[ReadingPracticePage] fetchTestById is not a function:', typeof fetchTestById);
-      clearCurrentTest(false);
-      return;
-    }
-
-    // Component lifecycle management: Track if component is mounted
-    let isMounted = true;
-
+    if (!id) return;
 
     const loadTestData = async () => {
-      console.log('[ReadingPracticePage] loadTestData called with id:', id, 'idType:', typeof id);
       try {
-        // Verify fetchTestById is available and is a function
-        if (typeof fetchTestById !== 'function') {
-          console.error('[ReadingPracticePage] fetchTestById is not a function:', typeof fetchTestById);
-          if (isMounted) {
-            const { clearCurrentTest } = useTestStore.getState();
-            clearCurrentTest(false);
-          }
-          return;
-        }
-
-        // Detect review mode from URL
         const isReviewMode = status === 'reviewing';
         const includeCorrectAnswers = isReviewMode;
 
-        // Get user subscription status
-        const userSubscriptionStatus = userProfile?.subscription_status || "free";
-
-        // Fetch test data with correct parameters
-        console.log('[ReadingPracticePage] Calling fetchTestById with id:', id, { includeCorrectAnswers, userSubscriptionStatus });
-        const result = await fetchTestById(id, false, includeCorrectAnswers, userSubscriptionStatus);
-        console.log('[ReadingPracticePage] fetchTestById completed:', result ? 'Success' : 'No data');
-
-        // Only update state if component is still mounted
-        if (!isMounted) return;
-
-        // Load saved data from localStorage
-        const savedData = loadReadingPracticeData(id);
-        if (savedData && isMounted) {
-          if (savedData.answers && Object.keys(savedData.answers).length > 0) {
-            setAnswers(savedData.answers);
-            setHasInteracted(true); // User has interacted if there are saved answers
-          }
-          if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
-            setBookmarks(new Set(savedData.bookmarks));
-          }
-          if (savedData.startTime) {
-            const savedStartTime = savedData.startTime;
-            setStartTime(savedStartTime);
-            setIsStarted(true);
-
-            // Calculate elapsed time since start
-            const elapsedSeconds = Math.floor((Date.now() - savedStartTime) / 1000);
-
-            // Use saved timeRemaining if available, otherwise calculate from test duration
-            let initialTime = savedData.timeRemaining;
-            if (initialTime === undefined || initialTime === null) {
-              // Will be set when currentTest loads
-              initialTime = 60 * 60; // Fallback to 1 hour
-            }
-            const remainingTime = Math.max(0, initialTime - elapsedSeconds);
-            if (isMounted) {
-              setTimeRemaining(remainingTime);
-            }
-          } else if (savedData.timeRemaining !== undefined && isMounted) {
-            // Fallback: use saved timeRemaining if startTime is not available
-            setTimeRemaining(savedData.timeRemaining);
-          }
-        }
-      } catch (error) {
-        // Only log if component is still mounted
-        if (isMounted) {
-          console.error('[ReadingPracticePage] Error loading test data:', {
-            testId: id,
-            error: error.message,
-            errorStack: error.stack
-          });
+        await fetchTestById(id, false, includeCorrectAnswers);
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          console.error('[ReadingPracticePage] fetch error:', e);
         }
       }
     };
 
-    console.log('[ReadingPracticePage] Starting loadTestData...');
     loadTestData();
 
-    // Cleanup: Clear currentTest when component unmounts and prevent state updates
-    // Only clear currentTest, not the test list data, to preserve data when navigating back
     return () => {
-      isMounted = false;
+      // Cleanup: cancel any active fetch requests
       const { clearCurrentTest } = useTestStore.getState();
-      clearCurrentTest(false); // Only clear currentTest, preserve test list data
+      clearCurrentTest(false);
     };
-  }, [id, fetchTestById]);
+  }, [id, status]);
+
 
   // Initialize timeRemaining from test duration when currentTest loads
   useEffect(() => {
@@ -1090,6 +1002,12 @@ const ReadingPracticePageContent = () => {
                 const isMap = groupType.includes('map');
                 const isMatchingInformation = groupType.includes('matching_information');
                 const isMultipleAnswers = groupType === 'multiple_answers';
+                let sortedOptions = questionGroup.options || [];
+
+                if (isMultipleAnswers) {
+                  // Agar optionlar object bo'lsa, DB da saqlangan 'order' yoki 'id' bo'yicha sort qilamiz
+                  sortedOptions = [...sortedOptions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                }
 
 
                 return (
@@ -1158,8 +1076,7 @@ const ReadingPracticePageContent = () => {
                               type: questionGroup.type,
                               instruction: questionGroup.instruction,
                               question_text: questionGroup.question_text,
-                              // For multiple_answers, options come from group-level options table
-                              options: questionGroup.options || []
+                              options: sortedOptions
                             }}
                             groupQuestions={groupQuestions}
                             answers={answers}
@@ -1171,6 +1088,7 @@ const ReadingPracticePageContent = () => {
                             bookmarks={bookmarks}
                             toggleBookmark={toggleBookmark}
                           />
+
                         </div>
                       </div>
                     ) : (

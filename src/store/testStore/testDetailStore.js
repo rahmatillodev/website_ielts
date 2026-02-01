@@ -1,366 +1,199 @@
 /**
- * Test detail store - handles fetching individual test data by ID
- * Manages state for current test, loading status, and error handling
+ * Test detail store - fixed version
  */
 
 import { create } from "zustand";
-import {
-  fetchTestData,
-  fetchPartsData,
-  fetchOptionsData,
-  fetchQuestionGroupsData,
-  fetchQuestionsData,
-  fetchTestDataNested,
-} from "./utils/queryHelpers";
-import { processQuestionGroup, processNestedQuestionGroup } from "./utils/questionTransformers";
-
-// Development mode flag for conditional logging
-const IS_DEV = process.env.NODE_ENV === 'development';
+import supabase from "@/lib/supabase";
+import { processNestedQuestionGroup } from "./utils/questionTransformers";
 
 /**
- * Log a message only in development mode
- * @param {...any} args - Arguments to log
+ * Fetch test data with nested structure
  */
-const devLog = (...args) => {
-  if (IS_DEV) {
-    console.log(...args);
+const fetchTestDataNested = async (testId,) => {
+  try {
+    // Step 1: Fetch test metadata
+
+    const data = await Promise.race([supabase
+      .from("test")
+      .select("id, title, duration, difficulty, type, is_premium, is_active, question_quantity, created_at")
+      .eq("id", testId)
+      .eq("is_active", true)
+      .maybeSingle(),
+    new Promise((reject) => setTimeout(reject, 15000))
+    ]);
+
+    const testMetadata = data.data;
+
+    if (!testMetadata) return null;
+
+    // Step 2: Fetch parts
+    const { data: parts, error: partsError } = await supabase
+      .from("part")
+      .select("id, test_id, part_number, title, content, image_url, listening_url")
+      .eq("test_id", testId)
+      .order("part_number", { ascending: true });
+
+    if (partsError) throw new Error(`Failed to fetch parts: ${partsError.message}`);
+    if (!parts || parts.length === 0) return { ...testMetadata, part: [] };
+
+    const partIds = parts.map(p => p.id);
+
+    // Step 3: Fetch question groups
+    const { data: questionGroups, error: groupsError } = await supabase
+      .from("question")
+      .select("id, test_id, part_id, type, question_range, instruction, question_text, image_url")
+      .in("part_id", partIds);
+
+    if (groupsError) throw new Error(`Failed to fetch question groups: ${groupsError.message}`);
+    if (!questionGroups || questionGroups.length === 0)
+      return { ...testMetadata, part: parts.map(p => ({ ...p, question: [] })) };
+
+    const groupIds = questionGroups.map(g => g.id);
+
+    // Step 4: Fetch questions
+    const { data: questions, error: questionsError } = await supabase
+      .from("questions")
+      .select(
+        "id, test_id, question_id, part_id, question_number, question_text, correct_answer, explanation, is_correct"
+      )
+      .in("question_id", groupIds)
+      .order("question_number", { ascending: true });
+
+    if (questionsError) throw new Error(`Failed to fetch questions: ${questionsError.message}`);
+
+    // Step 5: Fetch options
+    const { data: options, error: optionsError } = await supabase
+      .from("options")
+      .select("id, test_id, question_id, part_id, question_number, option_text, option_key, is_correct")
+      .in("question_id", groupIds)
+      .order("option_text");
+
+    if (optionsError) throw new Error(`Failed to fetch options: ${optionsError.message}`);
+
+    // Step 6: Structure nested data
+    const questionsByGroup = {};
+    (questions || []).forEach(q => {
+      if (!questionsByGroup[q.question_id]) questionsByGroup[q.question_id] = [];
+      questionsByGroup[q.question_id].push(q);
+    });
+
+    const optionsByGroup = {};
+    const optionsByQuestion = {};
+    (options || []).forEach(opt => {
+      if (opt.question_number === null) {
+        if (!optionsByGroup[opt.question_id]) optionsByGroup[opt.question_id] = [];
+        optionsByGroup[opt.question_id].push(opt);
+      } else {
+        if (!optionsByQuestion[opt.question_id]) optionsByQuestion[opt.question_id] = [];
+        optionsByQuestion[opt.question_id].push(opt);
+      }
+    });
+
+    const groupsByPart = {};
+    questionGroups.forEach(group => {
+      if (!groupsByPart[group.part_id]) groupsByPart[group.part_id] = [];
+      groupsByPart[group.part_id].push(group);
+    });
+
+    const nestedParts = parts.map(part => {
+      const groups = (groupsByPart[part.id] || []).map(group => {
+        const groupQuestions = questionsByGroup[group.id] || [];
+        const groupOptions = optionsByGroup[group.id] || [];
+        const questionOptions = optionsByQuestion[group.id] || [];
+
+        return {
+          ...group,
+          questions: groupQuestions,
+          options: [...groupOptions, ...questionOptions],
+        };
+      });
+
+      return {
+        ...part,
+        question: groups,
+      };
+    });
+
+    return {
+      ...testMetadata,
+      part: nestedParts,
+    };
+  } catch (error) {
+    console.log("errrr");
+
+    console.error("fetchTestDataNested error:", error);
+    throw error;
   }
 };
 
 /**
- * Log an error (always logged, even in production)
- * @param {...any} args - Arguments to log
- */
-const devError = (...args) => {
-  console.error(...args);
-};
-
-/**
- * Validate and normalize testId
- * @param {any} testId - The test ID to validate
- * @returns {string|number|null} - Normalized test ID or null if invalid
- */
-const validateTestId = (testId) => {
-  if (testId === null || testId === undefined) {
-    return null;
-  }
-  
-  if (typeof testId === 'string' && testId.trim().length > 0) {
-    return testId.trim();
-  }
-  
-  if (typeof testId === 'number' && !isNaN(testId) && isFinite(testId)) {
-    return testId;
-  }
-  
-  if (typeof testId === 'string') {
-    const num = Number(testId);
-    if (!isNaN(num) && isFinite(num)) {
-      return num;
-    }
-  }
-  
-  return null;
-};
-
-/**
- * Zustand store for managing test detail state
+ * Zustand store
  */
 export const useTestDetailStore = create((set, get) => ({
   currentTest: null,
   loadingTest: false,
   error: null,
-  // Track ongoing fetch operations to prevent race conditions
-  _fetchAbortController: null,
-  _fetchPromise: null,
 
-  /**
-   * Fetch test by ID with comprehensive error handling and race condition prevention
-   * @param {string|number} testId - Test ID to fetch
-   * @param {boolean} [forceRefresh=false] - Force refresh even if test is already loaded
-   * @param {boolean} [includeCorrectAnswers=false] - Include correct answers and explanations (for review mode)
-   * @param {string} [userSubscriptionStatus="free"] - User's subscription status
-   * @param {boolean} [bypassPremiumCheck=false] - Bypass premium access check
-   * @returns {Promise<Object|null>} - Complete test object or null if aborted
-   * @throws {Error} - If fetch fails or test is not found
-   */
-  fetchTestById: async (testId, forceRefresh = false, includeCorrectAnswers = false, userSubscriptionStatus = "free", bypassPremiumCheck = false) => {
-    devLog('[fetchTestById] Called with:', { testId, testIdType: typeof testId, forceRefresh, includeCorrectAnswers, userSubscriptionStatus, bypassPremiumCheck });
+  fetchTestById: async (testId, includeCorrectAnswers = false) => {
+    set({ loadingTest: true, error: null });
 
-    // Validate testId parameter
-    const normalizedId = validateTestId(testId);
-    if (!normalizedId) {
-      const errorMessage = `Invalid testId: ${testId}. Expected a valid string or number.`;
-      devError('[fetchTestById] Validation Error:', errorMessage);
-      set({
-        error: errorMessage,
-        loadingTest: false,
-        currentTest: null
-      });
-      throw new Error(errorMessage);
-    }
+    try {
+      const nestedTestData = await fetchTestDataNested(testId, includeCorrectAnswers);
 
-    const currentState = get();
+      if (!nestedTestData) throw new Error(`Test not found: ${testId}`);
 
-    // Prevent concurrent fetches for the same test (unless forceRefresh)
-    // Allow refetch even if loadingTest=true
-    if (
-      currentState.loadingTest &&
-      !forceRefresh &&
-      currentState.currentTest?.id === normalizedId &&
-      currentState._fetchPromise
-    ) {
-      devLog('[fetchTestById] Fetch already in progress for test:', normalizedId);
-      return currentState._fetchPromise;
-    }
+      // Process nested data
+      const sortedParts = [...(nestedTestData.part || [])].sort(
+        (a, b) => (a.part_number ?? 0) - (b.part_number ?? 0)
+      );
 
-    // Abort previous fetch if it exists and we're fetching a different test
-    if (currentState._fetchAbortController && currentState.currentTest?.id !== normalizedId) {
-      devLog('[fetchTestById] Aborting previous fetch for different test');
-      currentState._fetchAbortController.abort();
-    }
+      const parts = sortedParts.map(part => {
+        const questionGroups = (part.question || [])
+          .map(qg => processNestedQuestionGroup(qg))
+          .sort(
+            (a, b) =>
+              (a.questions?.[0]?.question_number ?? 0) -
+              (b.questions?.[0]?.question_number ?? 0)
+          );
 
-    // Create new abort controller for this fetch
-    const abortController = new AbortController();
-    const signal = abortController.signal;
+        const questions = questionGroups
+          .flatMap(qg => qg.questions || [])
+          .sort((a, b) => (a.question_number ?? 0) - (b.question_number ?? 0));
 
-    // Clear previous test data when fetching a new one
-    devLog('[fetchTestById] Setting loading state and starting fetch...');
-    set({ 
-      loadingTest: true, 
-      error: null,
-      _fetchAbortController: abortController,
-      _fetchPromise: null
-    });
-
-    // Create fetch promise
-    const fetchPromise = (async () => {
-      try {
-        // Use new nested query approach
-        devLog('[fetchTestById] Using nested query approach...');
-        const nestedTestData = await fetchTestDataNested(normalizedId, includeCorrectAnswers, undefined, signal);
-
-        // Check if aborted
-        if (signal.aborted) {
-          devLog('[fetchTestById] Fetch aborted');
-          return null;
-        }
-
-        if (!nestedTestData) {
-          throw new Error(`Test with ID ${normalizedId} not found or not active.`);
-        }
-
-        // Check premium access before proceeding (skip if bypassPremiumCheck is true)
-        if (!bypassPremiumCheck && nestedTestData.is_premium && userSubscriptionStatus !== "premium") {
-          const errorMessage = "This test requires a premium subscription";
-          devError('[fetchTestById] Premium access denied:', { testId: normalizedId, userSubscriptionStatus });
-          set({
-            error: errorMessage,
-            loadingTest: false,
-            currentTest: null,
-            _fetchAbortController: null,
-            _fetchPromise: null
-          });
-          throw new Error(errorMessage);
-        }
-
-        // Check if aborted after premium check
-        if (signal.aborted) {
-          devLog('[fetchTestById] Fetch aborted after premium check');
-          return null;
-        }
-
-        // Handle case where no parts exist
-        if (!nestedTestData.part || nestedTestData.part.length === 0) {
-          devLog('[fetchTestById] No parts found for test:', normalizedId);
-          const completeTest = { ...nestedTestData, parts: [] };
-          set({ 
-            currentTest: completeTest, 
-            loadingTest: false, 
-            error: null,
-            _fetchAbortController: null,
-            _fetchPromise: null
-          });
-          return completeTest;
-        }
-
-        devLog('[fetchTestById] Processing nested data structure...', {
-          partsCount: nestedTestData.part?.length || 0
-        });
-
-        // Process nested structure: part -> question -> questions -> options
-        // Ensure parts are sorted by part_number
-        const sortedParts = [...nestedTestData.part].sort((a, b) => {
-          const aNum = a.part_number ?? 0;
-          const bNum = b.part_number ?? 0;
-          return aNum - bNum;
-        });
-
-        const partsWithQuestionGroups = sortedParts.map((part) => {
-          // Process question groups (question array) for this part
-          const partQuestionGroups = (part.question || [])
-            .map((questionGroup) => {
-              // Process the nested question group with its nested questions and options
-              return processNestedQuestionGroup(questionGroup);
-            })
-            // Sort question groups by their first child's question_number
-            .sort((a, b) => {
-              const aFirst = a.questions?.[0]?.question_number ?? Number.MAX_SAFE_INTEGER;
-              const bFirst = b.questions?.[0]?.question_number ?? Number.MAX_SAFE_INTEGER;
-              return aFirst - bFirst;
-            });
-
-          // Ensure questions within each group are sorted
-          partQuestionGroups.forEach(group => {
-            if (group.questions && Array.isArray(group.questions)) {
-              group.questions = group.questions.sort((a, b) => {
-                const aNum = a.question_number ?? 0;
-                const bNum = b.question_number ?? 0;
-                return aNum - bNum;
-              });
-            }
-          });
-
-          // Flatten all individual questions for easy access, sorted by question_number
-          const allQuestions = partQuestionGroups
-            .flatMap((qg) => qg.questions || [])
-            .sort((a, b) => {
-              const aNum = a.question_number ?? 0;
-              const bNum = b.question_number ?? 0;
-              return aNum - bNum;
-            });
-
-          return {
-            id: part.id,
-            test_id: part.test_id,
-            part_number: part.part_number,
-            title: part.title,
-            content: part.content, // For reading tests
-            image_url: part.image_url,
-            listening_url: part.listening_url, // For listening tests
-            questionGroups: partQuestionGroups,
-            questions: allQuestions,
-          };
-        });
-
-        // Check if aborted during processing
-        if (signal.aborted) {
-          devLog('[fetchTestById] Fetch aborted during processing');
-          return null;
-        }
-
-        const completeTest = {
-          id: nestedTestData.id,
-          title: nestedTestData.title,
-          type: nestedTestData.type,
-          difficulty: nestedTestData.difficulty,
-          duration: nestedTestData.duration,
-          question_quantity: nestedTestData.question_quantity,
-          is_premium: nestedTestData.is_premium,
-          is_active: nestedTestData.is_active,
-          created_at: nestedTestData.created_at,
-          parts: partsWithQuestionGroups,
+        return {
+          ...part,
+          questionGroups,
+          questions,
         };
+      });
 
-        // Only update state if not aborted
-        if (!signal.aborted) {
-          set({
-            currentTest: completeTest,
-            loadingTest: false,
-            error: null,
-            _fetchAbortController: null,
-            _fetchPromise: null
-          });
-        }
+      const completeTest = {
+        id: nestedTestData.id,
+        title: nestedTestData.title,
+        type: nestedTestData.type,
+        difficulty: nestedTestData.difficulty,
+        duration: nestedTestData.duration,
+        question_quantity: nestedTestData.question_quantity,
+        is_premium: nestedTestData.is_premium,
+        is_active: nestedTestData.is_active,
+        created_at: nestedTestData.created_at,
+        parts,
+      };
 
-        return completeTest;
-      } catch (error) {
-        // Handle AbortError (cancelled requests)
-        if (error.name === "AbortError" || signal.aborted || error.message?.includes('aborted')) {
-          devLog('[fetchTestById] Request aborted:', normalizedId);
-          set({ 
-            loadingTest: false, 
-            currentTest: null,
-            _fetchAbortController: null,
-            _fetchPromise: null
-          });
-          return null;
-        }
+      set({ currentTest: completeTest, loadingTest: false, error: null });
 
-        // Handle timeout errors
-        if (error.message?.includes('timeout')) {
-          devError('[fetchTestById] Network Timeout:', {
-            testId: normalizedId,
-            error: error.message,
-            suggestion: 'Check network connection or increase timeout duration'
-          });
-        } else {
-          devError('[fetchTestById] Error fetching test by ID:', {
-            testId: normalizedId,
-            errorName: error.name,
-            errorMessage: error.message,
-            errorStack: error.stack,
-            errorCode: error.code,
-            suggestion: 'Verify test ID exists, check RLS policies, and ensure Supabase connection is active'
-          });
-        }
-
-        // Set error state only if not aborted
-        if (!signal.aborted) {
-          set({
-            error: error.message || 'Failed to fetch test. Please check your connection and try again.',
-            currentTest: null,
-            loadingTest: false,
-            _fetchAbortController: null,
-            _fetchPromise: null
-          });
-        }
-
-        throw error;
-      } finally {
-        // CRUCIAL: Always set loading to false to prevent infinite loading states
-        // Only if this is still the current fetch (not aborted or replaced)
-        const currentState = get();
-        if (currentState._fetchAbortController === abortController) {
-          set({ loadingTest: false });
-        }
-      }
-    })();
-
-    // Store the promise so concurrent calls can await it
-    set({ _fetchPromise: fetchPromise });
-
-    return fetchPromise;
+      return completeTest;
+    } catch (error) {
+      set({
+        currentTest: null,
+        loadingTest: false,
+        error: error.message || "Failed to fetch test",
+      });
+      throw error;
+    }
   },
 
-  /**
-   * Clear current test data
-   * @param {boolean} [clearTestList=false] - Whether to also clear test list data
-   */
-  clearCurrentTest: (clearTestList = false) => {
-    // Abort any ongoing fetch
-    const currentState = get();
-    if (currentState._fetchAbortController) {
-      currentState._fetchAbortController.abort();
-    }
-
-    if (clearTestList) {
-      // Clear both currentTest and test list data to force refetch
-      set({
-        currentTest: null,
-        loadingTest: false,
-        error: null,
-        _fetchAbortController: null,
-        _fetchPromise: null
-      });
-    } else {
-      set({
-        currentTest: null,
-        loadingTest: false,
-        error: null,
-        _fetchAbortController: null,
-        _fetchPromise: null
-      });
-    }
+  clearCurrentTest: () => {
+    set({ currentTest: null, loadingTest: false, error: null });
   },
 }));

@@ -5,23 +5,26 @@ import ComingSoonPage from "../ComingSoonPage";
 
 const WritingPage = () => {
 
-  const { writings, loading, fetchWritings } = useWritingStore();
+  // const { writings, loading, fetchWritings } = useWritingStore();
 
-  useEffect(() => {
-    fetchWritings();
-  }, [fetchWritings]);
+  // useEffect(() => {
+  //   fetchWritings();
+  // }, [fetchWritings]);
 
   return (
-    <TestsLibraryPage
-      title="Writing Library"
-      description="Boost your band score with our extensive library of writing tests."
-      testData={writings}
-      testType="writing"
-      loading={loading}
-      fetchTests={fetchWritings}
-      headerAction={"/own-writing"}
-      headerActionText="Practice Now"
-    />
+    // <TestsLibraryPage
+    //   title="Writing Library"
+    //   description="Boost your band score with our extensive library of writing tests."
+    //   testData={writings}
+    //   testType="writing"
+    //   loading={loading}
+    //   fetchTests={fetchWritings}
+    //   headerAction={"/own-writing"}
+    //   headerActionText="Practice Now"
+    // />
+    <div>
+      <ComingSoonPage type="writing" title="Writing Library" description="Boost your band score with our extensive library of writing tests." />
+    </div>
   );
 };
 
