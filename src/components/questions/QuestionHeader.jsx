@@ -119,7 +119,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             className="text-sm"
             style={{ color: themeColors.text, opacity: 0.7 }}
           >
-            ID: {currentTest?.id.slice(0, 8) || id.slice(0, 8)}...
+            {/* ID: {currentTest?.id.slice(0, 8) || id.slice(0, 8)}... */}
           </span>
         </div>
         {/* Show Correct Answers Toggle - only in review mode */}
@@ -151,7 +151,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             >
               {formatTime(timeRemaining)}
             </div>
-            {!isStarted && !hasInteracted ? (
+            {(!isStarted && formatTime(timeRemaining).slice(0, -3) == currentTest?.duration) ? (
               <button
                 onClick={handleStart}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"

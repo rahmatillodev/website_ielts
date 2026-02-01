@@ -7,7 +7,7 @@ import { Mail, Lock, ChevronLeft, ArrowRight } from "lucide-react";
 import { toast } from "react-toastify";
 import LogoDesign from "@/components/LogoDesign";
 import { motion } from "framer-motion";
-import { MdAutoStories, MdInsights } from "react-icons/md";
+import { MdAutoStories } from "react-icons/md";
 import AnimatedPolygonDecoration from "@/components/AnimatedPolygonDecoration";
 
 // Public Login page
@@ -22,10 +22,18 @@ function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
 
+
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Invalid email format");
+      return;
+    }
+
 
     const result = await signIn(email, password);
 
@@ -43,24 +51,33 @@ function LoginPage() {
       {/* Left Panel - Branding with Animation */}
       <AnimatedPolygonDecoration />
       {/* Right Panel - Login Form */}
-      <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center bg-white">
-        {/* Mobile back button */}
-        
+      <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center bg-white relative">
+        {/* Back Button - Responsive */}
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute lg:hidden top-9 left-8 flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors text-sm"
+          aria-label="Go back"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span>Back</span>
+        </button>
 
         <div className="w-full max-w-md">
           {/* Logo - Mobile */}
           <div className="lg:hidden mb-8">
             <LogoDesign
               className="w-fit"
-              iconColor="text-[#1990e6]"
+              iconColor="text-white"
               color="#1990e6"
             />
           </div>
-          <div className="flex items-center gap-2 py-8">
-            <div className="p-2 bg-[#1990e6] rounded-md">
-              <MdAutoStories className="text-2xl text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">IELTSCORE</h1>
+          {/* Logo - Desktop */}
+          <div className="hidden lg:flex items-center gap-2 mb-8">
+            <LogoDesign
+              className="w-fit"
+              iconColor="text-white"
+              color="#1990e6"
+            />
           </div>
           <h1 className="text-3xl font-semibold mb-2 text-gray-900">
             Welcome Back

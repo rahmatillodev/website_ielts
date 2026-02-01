@@ -12,13 +12,6 @@ const WritingPage = () => {
   // }, [fetchWritings]);
 
   return (
-    <div>
-      <ComingSoonPage 
-        title="Writing Library"
-        description="Boost your band score with our extensive library of writing tests."
-        type="writing"
-      />
-    </div>
     // <TestsLibraryPage
     //   title="Writing Library"
     //   description="Boost your band score with our extensive library of writing tests."
@@ -26,8 +19,12 @@ const WritingPage = () => {
     //   testType="writing"
     //   loading={loading}
     //   fetchTests={fetchWritings}
-    //   headerAction={null}
+    //   headerAction={"/own-writing"}
+    //   headerActionText="Practice Now"
     // />
+    <div>
+      <ComingSoonPage type="writing" title="Writing Library" description="Boost your band score with our extensive library of writing tests." />
+    </div>
   );
 };
 

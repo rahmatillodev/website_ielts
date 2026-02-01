@@ -75,11 +75,10 @@ const MultipleAnswers = ({
   }, [currentAnswer]);
 
   // Get correct answer option_keys from groupQuestions (normalized to uppercase)
-  const correctOptionKeys = useMemo(() => {
-    return groupQuestions
-      .map(q => q.correct_answer?.toString().trim().toUpperCase())
-      .filter(Boolean);
-  }, [groupQuestions]);
+  const correctOptionKeys = groupQuestions
+  .map(q => q.correct_answer?.toUpperCase())
+  .filter(Boolean);
+
 
   // Create option key to option object map
   // For multiple_answers, options come from the group-level options table
@@ -132,31 +131,6 @@ const MultipleAnswers = ({
     onAnswerChange(questionId, answerValue);
   };
 
-  // Check if option is correct (for review mode)
-  const isOptionCorrect = (optionKey) => {
-    return correctOptionKeys.includes(optionKey.toString().trim().toUpperCase());
-  };
-
-  // Get review data for individual questions that match this option
-  const getQuestionReviewForOption = (optionKey) => {
-    const key = optionKey.toString().trim().toUpperCase();
-    // Find questions that have this option as correct answer
-    const matchingQuestions = groupQuestions.filter(q => {
-      const correctKey = q.correct_answer?.toString().trim().toUpperCase();
-      return correctKey === key;
-    });
-    
-    // Check review data for these questions
-    for (const question of matchingQuestions) {
-      const questionId = question.id;
-      const questionNumber = question.question_number;
-      const review = reviewData[questionId] || reviewData[questionNumber] || {};
-      if (review.hasOwnProperty('isCorrect')) {
-        return review;
-      }
-    }
-    return null;
-  };
 
   // Check if option was selected and correct/incorrect (for review mode)
   const getOptionReviewStatus = (optionKey) => {
@@ -164,7 +138,7 @@ const MultipleAnswers = ({
     
     const key = optionKey.toString().trim().toUpperCase();
     const wasSelected = selectedOptionKeys.includes(key);
-    const isCorrect = correctOptionKeys.includes(key);
+    const isCorrect = correctOptionKeys.includes(optionKey); // true yoki false
 
     if (wasSelected) {
       return isCorrect ? 'correct' : 'incorrect';
@@ -263,7 +237,7 @@ const MultipleAnswers = ({
         checkIconColor = 'text-green-600';
       }
     } else if (isSelected) {
-      borderColor = '#6366f1'; // Tanlangan (test paytida)
+      borderColor = '#3b82f6'; // Tanlangan (test paytida)
       backgroundColor = 'rgba(99, 102, 241, 0.1)';
       iconBg = 'bg-indigo-600 border-indigo-600';
     }
@@ -290,7 +264,7 @@ const MultipleAnswers = ({
           <span className={`font-semibold text-sm ${
             reviewStatus === 'correct' ? 'text-green-700' : 
             reviewStatus === 'incorrect' ? 'text-red-700' : 
-            isSelected ? 'text-indigo-700' : 'text-gray-500'
+            isSelected ? 'text-blue-700' : 'text-gray-500'
           }`}>
             {optionKey}.
           </span>
@@ -321,7 +295,7 @@ const MultipleAnswers = ({
       }}>
         <div className="flex items-center gap-2">
           <p className="text-sm">
-            <span className="font-bold" style={{ color: '#6366f1' }}>
+            <span className="font-bold" style={{ color: '#3b82f6' }}>
               {selectedOptionKeys.length}
             </span>
             <span className="text-gray-500 mx-1">out of</span>

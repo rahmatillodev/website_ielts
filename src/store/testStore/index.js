@@ -46,8 +46,8 @@ export const useTestStore = create((set, get) => {
     },
 
     // Actions from test detail store
-    fetchTestById: async (testId, forceRefresh = false, includeCorrectAnswers = false, userSubscriptionStatus = "free", bypassPremiumCheck = false) => {
-      const result = await useTestDetailStore.getState().fetchTestById(testId, forceRefresh, includeCorrectAnswers, userSubscriptionStatus, bypassPremiumCheck);
+    fetchTestById: async (testId, forceRefresh = false, includeCorrectAnswers = false,) => {
+      const result = await useTestDetailStore.getState().fetchTestById(testId, forceRefresh, includeCorrectAnswers);
       set(syncState());
       return result;
     },

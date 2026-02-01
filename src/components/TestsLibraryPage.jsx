@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { useLocation } from "react-router-dom";
-import { FaSearch } from "react-icons/fa";
+import { Link, useLocation } from "react-router-dom";
+import { FaArrowRight, FaSearch } from "react-icons/fa";
 import { IoGridOutline, IoListOutline } from "react-icons/io5";
 import { Input } from "@/components/ui/input";
 // import PremiumBanner from "@/components/badges/PremiumBanner";
@@ -11,6 +11,7 @@ import CardLocked from "./cards/CardLocked";
 import CardOpen from "./cards/CardOpen";
 import { motion } from "framer-motion";
 import { LibraryCardShimmer } from "@/components/ui/shimmer";
+import { Button } from "./ui/button";
 
 const TestsLibraryPage = ({
   title,
@@ -26,6 +27,7 @@ const TestsLibraryPage = ({
   emptySearchMessage = "",
   customHeight = "h-[calc(100vh-64px)]",
   headerAction = null,
+  headerActionText = "Practice Now",
 }) => {
   // Log incoming props on every render
   // console.log("[TestsLibraryPage] render", { 
@@ -330,10 +332,22 @@ const TestsLibraryPage = ({
     <div className={`flex flex-col mx-auto bg-gray-50 ${customHeight} overflow-hidden px-3 md:px-8`}>
       {/* Sticky Header */}
       <div className="bg-gray-50 pt-4 pb-2 md:pb-4 shrink-0 sticky top-0 z-10">
-        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">{title}</h1>
-        <p className="text-sm md:text-base text-gray-500 font-medium tracking-tight w-full md:w-8/12">
-          {description}
-        </p>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 md:mt-4 gap-4">
+          <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">
+            <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">{title}</h1>
+            <p className="text-sm md:text-base text-gray-500 font-medium tracking-tight w-full md:w-8/12">
+              {description}
+            </p>
+          </div>
+          {headerAction && (
+            <div className="flex justify-end">
+              <Link to={headerAction} className="text-sm bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-all duration-200 flex items-center gap-2">
+                {headerActionText}
+                <FaArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
+        </div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 md:mt-4 gap-4">
           <div className="flex gap-1.5 md:gap-2 bg-gray-100/80 p-1 md:p-1.5 rounded-xl md:rounded-2xl border border-gray-200 w-full md:w-auto overflow-x-auto">
@@ -349,13 +363,7 @@ const TestsLibraryPage = ({
             ))}
           </div>
 
-          <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">
-            {/* Header Action (e.g., Practice Now button) - above search bar */}
-            {headerAction && (
-              <div className="flex justify-end">
-                {headerAction}
-              </div>
-            )}
+          <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">            
 
             <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
             {/* Search */}

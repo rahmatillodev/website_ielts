@@ -20,7 +20,7 @@ export const useWritingStore = create((set) => ({
         .order("created_at", { ascending: false });
 
       /// writings table
-      /// columns: id, title, duration, difficulty , created_at, updated_at, is_active, is_premium
+      /// columns: id, title, duration, difficulty , created_at, updated_at, feedback, is_active, is_premium
 
       if (error) throw error;
 
@@ -110,3 +110,4 @@ export const useWritingStore = create((set) => ({
     set({ writings: list });
   }
 }));
+

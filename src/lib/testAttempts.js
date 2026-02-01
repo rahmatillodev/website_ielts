@@ -36,10 +36,9 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
     try {
       // Get user subscription status from auth store
       const authStore = useAuthStore.getState();
-      const userSubscriptionStatus = authStore.userProfile?.subscription_status || 'free';
       
       const testDetailStore = useTestDetailStore.getState();
-      const fetchedTest = await testDetailStore.fetchTestById(testId, false, true, userSubscriptionStatus); // Include correct answers
+      const fetchedTest = await testDetailStore.fetchTestById(testId, false, true); // Include correct answers
       if (fetchedTest) {
         testWithCorrectAnswers = fetchedTest;
       }
@@ -323,45 +322,41 @@ const calculateTestScore = (answers, currentTest) => {
 
         // For multiple_answers: parse group-level answer and check each question
         if (isMultipleAnswers) {
-          // Get group-level answer (comma-separated option_keys like "A,B")
+          // Get group-level answer (comma-separated option_keys like "A,C")
           const groupAnswer = answers[questionGroup.id] || '';
           const selectedOptionKeys = groupAnswer
             .split(',')
             .map(key => key.trim().toUpperCase())
             .filter(Boolean);
 
-          // Process each question in the group
+          // Each question stores its own userAnswer individually
           validQuestions.forEach((question) => {
-            const questionId = question.id;
-            const questionNumber = question.question_number;
-            
-            if (!questionId && !questionNumber) return;
-            
+            const questionId = question.id || question.question_number;
             totalQuestions++;
-            
-            // Get correct answer option_key for this question
-            const correctAnswerKey = question.correct_answer?.toString().trim().toUpperCase() || '';
-            const correctAnswer = getCorrectAnswer(question, questionGroup);
-            
-            // Check if the correct answer option_key is in the selected options
-            const isCorrect = correctAnswerKey && selectedOptionKeys.includes(correctAnswerKey);
-            
-            // Format user answer for display (show selected options)
-            const userAnswer = groupAnswer || '';
 
-            if (isCorrect) {
-              correctCount++;
-            }
+            // Correct answer for this question
+            const correctAnswerKey = question.correct_answer?.toString().trim().toUpperCase() || '';
+
+            // Check if user selected this correct option
+            const isCorrect = correctAnswerKey && selectedOptionKeys.includes(correctAnswerKey);
+
+            // Now userAnswer stores **only the option_key relevant for this question**
+            const userAnswerForQuestion = selectedOptionKeys.includes(correctAnswerKey)
+              ? correctAnswerKey
+              : '';
+
+            if (isCorrect) correctCount++;
 
             answerResults.push({
-              questionId: questionId || questionNumber,
-              userAnswer,
-              correctAnswer,
+              questionId,
+              userAnswer: userAnswerForQuestion,
+              correctAnswer: correctAnswerKey,
               isCorrect,
               questionType,
             });
           });
-        } else {
+        } 
+        else {
           // For other question types: process normally
           validQuestions.forEach((question) => {
             // Use questions.id as primary key (from nested structure), fallback to question_number for backward compatibility
@@ -694,4 +689,3 @@ export const deleteTestAttempts = async (testId) => {
     };
   }
 };
-

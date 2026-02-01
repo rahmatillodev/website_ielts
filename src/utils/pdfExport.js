@@ -6,7 +6,6 @@ export const generateTestResultsPDF = async ({
   test,
   stats,
   answerDisplayData,
-  showCorrectAnswers,
   formatDate,
   completedDate,
   testType,
@@ -78,16 +77,14 @@ export const generateTestResultsPDF = async ({
       item.questionNumber.toString(),
       item.isCorrect ? 'Correct' : 'Incorrect',
       item.yourAnswer || 'N/A',
+      item.isCorrect ? item.yourAnswer : (item.correctAnswer || 'N/A')
     ];
-    if (showCorrectAnswers) {
-      row.push(item.isCorrect ? item.yourAnswer : (item.correctAnswer || 'N/A'));
-    }
-    return row;
+  
+    return row; 
   });
+  
 
-  const tableColumns = showCorrectAnswers
-    ? ['#', 'Status', 'Your Answer', 'Correct Answer']
-    : ['#', 'Status', 'Your Answer'];
+  const tableColumns = ['#', 'Status', 'Your Answer', 'Correct Answer'];
 
   // Enhanced table design
   doc.autoTable({
@@ -130,15 +127,13 @@ export const generateTestResultsPDF = async ({
         textColor: [255, 255, 255] // Hide text, show icon
       },
       2: { 
-        cellWidth: showCorrectAnswers ? 70 : 120,
+        cellWidth:  70,
         halign: 'left'
       },
-      ...(showCorrectAnswers && {
-        3: { 
-          cellWidth: 70,
-          halign: 'left'
-        }
-      })
+      3: { 
+        cellWidth: 70,
+        halign: 'left'
+      }
     },
     
     // Draw status icons

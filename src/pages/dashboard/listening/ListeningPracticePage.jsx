@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { LuChevronsLeftRight } from "react-icons/lu";
 import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
-import PrecticeFooter from "@/components/questions/PrecticeFooter";
+import PracticeFooter from "@/components/questions/PracticeFooter";
 import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData, clearAudioPosition } from "@/store/LocalStorage/listeningStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useDashboardStore } from "@/store/dashboardStore";
@@ -113,8 +113,7 @@ const ListeningPracticePageContent = () => {
         }
         const isReviewMode = searchParams.get('mode') === 'review';
         const includeCorrectAnswers = isReviewMode;
-        const userSubscriptionStatus = userProfile?.subscription_status || "free";
-        await fetchTestById(id, false, includeCorrectAnswers, userSubscriptionStatus);
+        await fetchTestById(id, false, includeCorrectAnswers);
 
         if (!isMounted) return;
 
@@ -1221,7 +1220,7 @@ const ListeningPracticePageContent = () => {
         </div>
       </div>
 
-      <PrecticeFooter
+      <PracticeFooter
         currentTest={currentTest}
         currentPart={currentPart}
         handlePartChange={handlePartChange}

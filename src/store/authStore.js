@@ -18,40 +18,47 @@ export const useAuthStore = create(
 
 
       initializeSession: async () => {
-        // Prevent multiple initializations
-        if (get().isInitialized) return;
-
+        if (get().isInitialized) return;  // ❗ authUser ni tekshirma
+      
         try {
           set({ loading: true });
+      
           const { data: { session } } = await supabase.auth.getSession();
-
+      
           if (session?.user) {
             set({ authUser: session.user });
-            // Diqqat: Har doim bazadan tekshiramiz
-            await get().fetchUserProfile(session.user.id);
+            await get().fetchUserProfile(session.user.id, false);
           } else {
             set({ authUser: null, userProfile: null });
           }
-
-          // Auth o'zgarishini kuzatish - only set up once
-          if (!get().isInitialized) {
-            supabase.auth.onAuthStateChange(async (event, session) => {
+      
+          // listener faqat 1 marta
+          if (!get()._authListener) {
+            const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
               if (event === 'SIGNED_IN' && session?.user) {
-                set({ authUser: session.user });
-                await get().fetchUserProfile(session.user.id);
-              } else if (event === 'SIGNED_OUT') {
-                set({ authUser: null, userProfile: null });
+                set({ loading: true, authUser: session.user });
+                try {
+                  await get().fetchUserProfile(session.user.id, false);
+                } finally {
+                  set({ loading: false });
+                }
+              }
+      
+              if (event === 'SIGNED_OUT') {
+                set({ authUser: null, userProfile: null, isInitialized: false, loading: false });
               }
             });
+      
+            set({ _authListener: listener?.subscription });
           }
-
+      
           set({ isInitialized: true });
-        } catch (error) {
-          set({ error: error.message });
         } finally {
           set({ loading: false });
         }
       },
+      
+      
 
       // Kirish (Sign In)
       signIn: async (email, password) => {
@@ -280,8 +287,8 @@ export const useAuthStore = create(
             authUser: null,
             userProfile: null,
             loading: false,
-            // isInitialized: true  ❗ MUHIM: false QILINMAYDI
-          })
+            isInitialized: false
+                    })
       
           // Clear only user-related storage
           try {
