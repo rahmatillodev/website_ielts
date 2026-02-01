@@ -111,7 +111,6 @@ const ReadingPracticePageContent = () => {
         setTimeRemaining(durationInSeconds);
       }
     }
-    console.log(currentTest);
 
 
     return () => {

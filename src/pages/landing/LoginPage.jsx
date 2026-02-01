@@ -55,11 +55,11 @@ function LoginPage() {
         {/* Back Button - Responsive */}
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-4 left-4 lg:top-8 lg:left-8 flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors text-sm"
+          className="absolute lg:hidden top-9 left-8 flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors text-sm"
           aria-label="Go back"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span className="lg:hidden">Back</span>
+          <span>Back</span>
         </button>
 
         <div className="w-full max-w-md">

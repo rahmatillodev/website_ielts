@@ -18,7 +18,7 @@ export const useAuthStore = create(
 
 
       initializeSession: async () => {
-        if (get().isInitialized && get().authUser) return;
+        if (get().isInitialized) return;  // ❗ authUser ni tekshirma
       
         try {
           set({ loading: true });
@@ -27,33 +27,37 @@ export const useAuthStore = create(
       
           if (session?.user) {
             set({ authUser: session.user });
-            await get().fetchUserProfile(session.user.id);
+            await get().fetchUserProfile(session.user.id, false);
           } else {
             set({ authUser: null, userProfile: null });
           }
       
-          if (!get().isInitialized) {
+          // listener faqat 1 marta
+          if (!get()._authListener) {
             const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
               if (event === 'SIGNED_IN' && session?.user) {
-                set({ authUser: session.user });
-                await get().fetchUserProfile(session.user.id);
-              } else if (event === 'SIGNED_OUT') {
-                set({ authUser: null, userProfile: null });
-                set({ isInitialized: false }); // 🔥 important
+                set({ loading: true, authUser: session.user });
+                try {
+                  await get().fetchUserProfile(session.user.id, false);
+                } finally {
+                  set({ loading: false });
+                }
+              }
+      
+              if (event === 'SIGNED_OUT') {
+                set({ authUser: null, userProfile: null, isInitialized: false, loading: false });
               }
             });
       
-            // store unsubscribe if needed later
             set({ _authListener: listener?.subscription });
           }
       
           set({ isInitialized: true });
-        } catch (error) {
-          set({ error: error.message });
         } finally {
           set({ loading: false });
         }
       },
+      
       
 
       // Kirish (Sign In)

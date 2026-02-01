@@ -75,11 +75,10 @@ const MultipleAnswers = ({
   }, [currentAnswer]);
 
   // Get correct answer option_keys from groupQuestions (normalized to uppercase)
-  const correctOptionKeys = useMemo(() => {
-    return groupQuestions
-      .map(q => q.correct_answer?.toString().trim().toUpperCase())
-      .filter(Boolean);
-  }, [groupQuestions]);
+  const correctOptionKeys = groupQuestions
+  .map(q => q.correct_answer?.toUpperCase())
+  .filter(Boolean);
+
 
   // Create option key to option object map
   // For multiple_answers, options come from the group-level options table
@@ -132,31 +131,6 @@ const MultipleAnswers = ({
     onAnswerChange(questionId, answerValue);
   };
 
-  // Check if option is correct (for review mode)
-  const isOptionCorrect = (optionKey) => {
-    return correctOptionKeys.includes(optionKey.toString().trim().toUpperCase());
-  };
-
-  // Get review data for individual questions that match this option
-  const getQuestionReviewForOption = (optionKey) => {
-    const key = optionKey.toString().trim().toUpperCase();
-    // Find questions that have this option as correct answer
-    const matchingQuestions = groupQuestions.filter(q => {
-      const correctKey = q.correct_answer?.toString().trim().toUpperCase();
-      return correctKey === key;
-    });
-    
-    // Check review data for these questions
-    for (const question of matchingQuestions) {
-      const questionId = question.id;
-      const questionNumber = question.question_number;
-      const review = reviewData[questionId] || reviewData[questionNumber] || {};
-      if (review.hasOwnProperty('isCorrect')) {
-        return review;
-      }
-    }
-    return null;
-  };
 
   // Check if option was selected and correct/incorrect (for review mode)
   const getOptionReviewStatus = (optionKey) => {
@@ -164,7 +138,7 @@ const MultipleAnswers = ({
     
     const key = optionKey.toString().trim().toUpperCase();
     const wasSelected = selectedOptionKeys.includes(key);
-    const isCorrect = correctOptionKeys.includes(key);
+    const isCorrect = correctOptionKeys.includes(optionKey); // true yoki false
 
     if (wasSelected) {
       return isCorrect ? 'correct' : 'incorrect';

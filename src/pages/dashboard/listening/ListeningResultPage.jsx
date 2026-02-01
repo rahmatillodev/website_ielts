@@ -73,13 +73,12 @@ const ListeningResultPage = () => {
 
         // On result pages, we should always bypass premium check since results are only shown after completion
         const currentUserProfile = userProfileRef.current;
-        const userSubscriptionStatus = currentUserProfile?.subscription_status || "free";
         
         // Fetch test and attempt in parallel
         // Always bypass premium check on result pages (user can only reach here if they completed the test)
         // Include correct answers so we can display them for unanswered questions
         const [testResult, attemptResult] = await Promise.all([
-          currentFetchTestById(id, false, true, userSubscriptionStatus, true),
+          currentFetchTestById(id, false, true),
           currentAuthUser 
             ? fetchLatestAttempt(currentAuthUser.id, id) 
             : Promise.resolve({ success: true, attempt: null, answers: {} })
@@ -178,6 +177,21 @@ const ListeningResultPage = () => {
     return resultData?.elapsedTime || 0;
   }, [attemptData, resultData]);
 
+  // Helper function to format multiple_answers answer (option_key -> "key. option_text")
+  const formatMultipleAnswersAnswer = useCallback((optionKey, questionGroup) => {
+    if (!optionKey || !questionGroup?.options) return optionKey || '';
+    
+    const key = optionKey.toString().trim().toUpperCase();
+    const option = questionGroup.options.find(
+      (opt) => (opt.option_key || opt.letter || '').toString().trim().toUpperCase() === key
+    );
+    
+    if (option && option.option_text) {
+      return `${key}. ${option.option_text}`;
+    }
+    return key;
+  }, []);
+
   // Helper function to get correct answer from question/questionGroup structure
   const getCorrectAnswerFromTest = useCallback((question, questionGroup) => {
     if (!question || !questionGroup) return '';
@@ -209,19 +223,11 @@ const ListeningResultPage = () => {
       }
     }
     
-    // For multiple_answers: get from question.correct_answer and convert to option_text
+    // For multiple_answers: get from question.correct_answer and format as "key. option_text"
     if (isMultipleAnswers) {
       if (question.correct_answer) {
         const correctAnswerKey = question.correct_answer.toString().trim().toUpperCase();
-        if (questionGroup.options && questionGroup.options.length > 0) {
-          const correctOption = questionGroup.options.find(
-            (opt) => (opt.option_key || opt.letter || '').toString().trim().toUpperCase() === correctAnswerKey
-          );
-          if (correctOption) {
-            return correctOption.option_text || correctAnswerKey;
-          }
-        }
-        return correctAnswerKey;
+        return formatMultipleAnswersAnswer(correctAnswerKey, questionGroup);
       }
     }
     
@@ -315,6 +321,10 @@ const ListeningResultPage = () => {
         // This is a multiple_answers question - split the answer
         const answerParts = userAnswer.split(',').map(a => a.trim().toUpperCase()).filter(Boolean);
         
+        // For multiple_answers, correctAnswerText from DB is now option_key (e.g., "B")
+        // Convert it to display format: "B. option_text"
+        const formattedCorrectAnswer = formatMultipleAnswersAnswer(correctAnswerText, questionGroup);
+        
         // Get the question's correct answer option_key (e.g., "A", "B")
         const correctAnswerKey = question?.correct_answer?.toString().trim().toUpperCase() || '';
         
@@ -322,13 +332,18 @@ const ListeningResultPage = () => {
           // Check if the user selected this question's correct answer option_key
           const userSelectedThisAnswer = answerParts.includes(correctAnswerKey);
           
+          // Format user's selected answer if they selected the correct one
+          let formattedUserAnswer = '';
+          if (userSelectedThisAnswer) {
+            formattedUserAnswer = formatMultipleAnswersAnswer(correctAnswerKey, questionGroup);
+          }
+          
           processedQuestionNumbers.add(normalizedQNum);
           result.push({
             questionNumber: normalizedQNum,
-            // If user selected the correct answer, show the option_text; otherwise show empty
-            yourAnswer: userSelectedThisAnswer ? correctAnswerText : '',
+            yourAnswer: formattedUserAnswer,
             isCorrect: review.isCorrect || false,
-            correctAnswer: correctAnswerText,
+            correctAnswer: formattedCorrectAnswer,
           });
         } else {
           // No correct answer key found, process normally
@@ -337,7 +352,7 @@ const ListeningResultPage = () => {
             questionNumber: normalizedQNum,
             yourAnswer: '',
             isCorrect: review.isCorrect || false,
-            correctAnswer: correctAnswerText,
+            correctAnswer: formattedCorrectAnswer,
           });
         }
       } else {
@@ -374,6 +389,10 @@ const ListeningResultPage = () => {
         // Split comma-separated answers
         const answerParts = answerStr.split(',').map(a => a.trim().toUpperCase()).filter(Boolean);
         
+        // For multiple_answers, correctAnswerText from DB is now option_key (e.g., "B")
+        // Convert it to display format: "B. option_text"
+        const formattedCorrectAnswer = formatMultipleAnswersAnswer(correctAnswerText, questionGroup);
+        
         // Get the question's correct answer option_key (e.g., "A", "B")
         const correctAnswerKey = question?.correct_answer?.toString().trim().toUpperCase() || '';
         
@@ -381,13 +400,18 @@ const ListeningResultPage = () => {
           // Check if the user selected this question's correct answer option_key
           const userSelectedThisAnswer = answerParts.includes(correctAnswerKey);
           
+          // Format user's selected answer if they selected the correct one
+          let formattedUserAnswer = '';
+          if (userSelectedThisAnswer) {
+            formattedUserAnswer = formatMultipleAnswersAnswer(correctAnswerKey, questionGroup);
+          }
+          
           processedQuestionNumbers.add(normalizedKey);
           result.push({
             questionNumber: normalizedKey,
-            // If user selected the correct answer, show the option_text; otherwise show empty
-            yourAnswer: userSelectedThisAnswer ? correctAnswerText : '',
+            yourAnswer: formattedUserAnswer,
             isCorrect: review.isCorrect || false,
-            correctAnswer: correctAnswerText,
+            correctAnswer: formattedCorrectAnswer,
           });
         } else {
           // No correct answer key found, process normally
@@ -396,7 +420,7 @@ const ListeningResultPage = () => {
             questionNumber: normalizedKey,
             yourAnswer: '',
             isCorrect: review.isCorrect || false,
-            correctAnswer: correctAnswerText,
+            correctAnswer: formattedCorrectAnswer,
           });
         }
       } else {
@@ -437,7 +461,7 @@ const ListeningResultPage = () => {
       }
       return String(a.questionNumber).localeCompare(String(b.questionNumber));
     });
-  }, [resultData, currentTest, getCorrectAnswerFromTest]);
+  }, [resultData, currentTest, getCorrectAnswerFromTest, formatMultipleAnswersAnswer]);
 
   // Memoized stats calculations
   const stats = useMemo(() => {

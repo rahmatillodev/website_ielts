@@ -119,7 +119,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             className="text-sm"
             style={{ color: themeColors.text, opacity: 0.7 }}
           >
-            ID: {currentTest?.id.slice(0, 8) || id.slice(0, 8)}...
+            {/* ID: {currentTest?.id.slice(0, 8) || id.slice(0, 8)}... */}
           </span>
         </div>
         {/* Show Correct Answers Toggle - only in review mode */}
