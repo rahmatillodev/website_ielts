@@ -24,7 +24,6 @@ import NetworkModal from "./components/modal/NetworkModal";
 import useNetworkStatus from "./hooks/use_network_status";
 import WritingPage from "./pages/dashboard/writing/WritingPage";
 import SpeakingPage from "./pages/dashboard/SpeakingPage";
-import PricingRoute from "./components/PricingRoute";
 import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
 import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
 import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
@@ -39,6 +38,8 @@ function App() {
     (state) => state.validateSessionAgainstDatabase
   );
   const user = useAuthStore((state) => state.authUser);
+  const loading = useAuthStore((state) => state.loading);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
   const { fetchSettings } = useSettingsStore()
   const { fetchTests } = useTestStore();
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -51,14 +52,32 @@ function App() {
   }, []);
 
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    if (isInitialized && user) {
+      fetchSettings();
+    }
+  }, [fetchSettings, isInitialized, user]);
 
   useEffect(() => {
-    fetchTests();
-  }, [fetchTests])
+    if (isInitialized && user) {
+      fetchTests();
+    }
+  }, [fetchTests, isInitialized, user])
 
   const isPracticePage = location.pathname.includes("/reading-practice") || location.pathname.includes("/listening-practice") || location.pathname.includes("/writing-practice") || location.pathname.includes("/speaking-practice");
+
+  // Show loading state while initializing authentication
+  if (loading && !isInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  console.log(loading);
+  
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -68,14 +87,7 @@ function App() {
           path="/"
           element={user ? <Navigate to="/dashboard" replace /> : <LandingPage />}
         /> */}
-        <Route
-          path="/pricing"
-          element={
-            // <PricingRoute>
-              <PricingPage />
-            // </PricingRoute>
-          }
-        />
+       
         {!user ?
           <Route element={<PublicLayout />}>
 
@@ -95,14 +107,7 @@ function App() {
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/mock-tests" element={<MockTestsPage />} />
             <Route path="/own-writing" element={<OwnWritingPage />} />
-            <Route
-              path="/pricing"
-              element={
-                <PricingRoute>
-                  <PricingPage />
-                </PricingRoute>
-              }
-            />
+            
             <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
             <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
             <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
@@ -118,7 +123,7 @@ function App() {
 
       </Routes>
       <ToastContainer duration={2000} />
-      <NetworkModal isOpen={!useNetworkStatus()} />
+      {/* <NetworkModal isOpen={!useNetworkStatus()} /> */}
       <FeedbackModal isOpen={feedbackOpen} setFeedbackOpen={setFeedbackOpen} />
       {!isPracticePage && <div className='fixed_bottom_right_container'>
 
