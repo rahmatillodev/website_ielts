@@ -1,6 +1,3 @@
-// ✅ WritingPracticePage.jsx
-// Writing practice with sample preview, try practice flow, and submission
-
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import parse from "html-react-parser";
@@ -28,7 +25,6 @@ import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRen
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
 import { PenSquare } from "lucide-react";
 
-/* ================= CONTENT ================= */
 const WritingPracticePageContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -366,24 +362,27 @@ const WritingPracticePageContent = () => {
   };
 
   /* ================= ANNOTATION ================= */
-  const handleHighlight = useCallback((range, text, partId) => {
+  const handleHighlight = useCallback((range, text, partId, sectionType = 'passage', testType = 'writing') => {
     const container = passageRef.current;
     if (!container) return;
 
     const offsets = getTextOffsets(container, range);
     const id = addHighlight({
       text,
-      ...offsets,
+      startOffset: offsets.startOffset,
+      endOffset: offsets.endOffset,
+      containerId: `passage-${partId}`,
       partId,
-      sectionType: "passage",
-      testType: "writing",
+      sectionType,
+      testType,
+      range: range.cloneRange(),
     });
 
     applyHighlight(range, id);
     window.getSelection().removeAllRanges();
   }, [addHighlight]);
 
-  const handleNote = useCallback((range, text, partId) => {
+  const handleNote = useCallback((range, text, partId, sectionType = 'passage', testType = 'writing') => {
     const container = passageRef.current;
     if (!container) return;
 
@@ -391,10 +390,13 @@ const WritingPracticePageContent = () => {
     const id = addNote({
       text,
       note: "",
-      ...offsets,
+      startOffset: offsets.startOffset,
+      endOffset: offsets.endOffset,
+      containerId: `passage-${partId}`,
       partId,
-      sectionType: "passage",
-      testType: "writing",
+      sectionType,
+      testType,
+      range: range.cloneRange(),
     });
 
     applyNote(range, id);
@@ -405,7 +407,6 @@ const WritingPracticePageContent = () => {
     (t) => t.task_type === currentTaskType
   );
 
-  if (loadingCurrentWriting) return <div>Loading...</div>;
   if (errorCurrentWriting) return <div>{errorCurrentWriting}</div>;
   if (!currentTask) return null;
 
@@ -464,7 +465,7 @@ const WritingPracticePageContent = () => {
 
               </div>
             </div>
-            <div className="m-5 p-4 border rounded-lg text-justify">
+            <div className="m-5 p-4 border rounded-lg text-justify" ref={passageRef}>
               <h1 className="text-2xl font-bold">{currentTask.title}</h1>
               <p className="text-sm text-gray-500 my-4">{parse(currentTask.content || "")}</p>
               {/* IMAGE */}
