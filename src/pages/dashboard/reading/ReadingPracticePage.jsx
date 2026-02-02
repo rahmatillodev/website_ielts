@@ -55,6 +55,8 @@ const ReadingPracticePageContent = () => {
   const questionRefs = useRef({});
   const questionsContainerRef = useRef(null);
   const [activeQuestion, setActiveQuestion] = useState(null);
+  const hasAutoSubmittedRef = useRef(false); // Prevent multiple auto-submissions
+  const isSubmittingRef = useRef(false); // Track submission state to prevent race conditions
 
   const [leftWidth, setLeftWidth] = useState(50);
   const containerRef = useRef(null);
@@ -70,12 +72,41 @@ const ReadingPracticePageContent = () => {
   useEffect(() => {
     if (!id) return;
 
+    let isMounted = true;
+
     const loadTestData = async () => {
       try {
         const isReviewMode = status === 'reviewing';
         const includeCorrectAnswers = isReviewMode;
 
         await fetchTestById(id, false, includeCorrectAnswers);
+
+        // Load saved data from localStorage after test data is fetched
+        if (isMounted && !isReviewMode) {
+          const savedData = loadReadingPracticeData(id);
+          if (savedData) {
+            // Restore answers
+            if (savedData.answers && Object.keys(savedData.answers).length > 0) {
+              setAnswers(savedData.answers);
+              setHasInteracted(true);
+            }
+            // Restore bookmarks (convert array back to Set)
+            if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
+              setBookmarks(new Set(savedData.bookmarks));
+            }
+            // Restore time remaining and timer state
+            if (savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
+              setTimeRemaining(savedData.timeRemaining);
+              // On refresh, timer should be paused (not running)
+              setIsStarted(false);
+              setIsPaused(true);
+            }
+            // Restore start time
+            if (savedData.startTime) {
+              setStartTime(savedData.startTime);
+            }
+          }
+        }
       } catch (e) {
         if (e.name !== 'AbortError') {
           console.error('[ReadingPracticePage] fetch error:', e);
@@ -86,6 +117,7 @@ const ReadingPracticePageContent = () => {
     loadTestData();
 
     return () => {
+      isMounted = false;
       // Cleanup: cancel any active fetch requests
       const { clearCurrentTest } = useTestStore.getState();
       clearCurrentTest(false);
@@ -93,25 +125,23 @@ const ReadingPracticePageContent = () => {
   }, [id, status]);
 
 
-  // Initialize timeRemaining from test duration when currentTest loads
+  // Initialize timeRemaining from test duration when currentTest loads (only if not loaded from localStorage)
   useEffect(() => {
     // Component lifecycle management: Track if component is mounted
     let isMounted = true;
 
     if (currentTest && timeRemaining === null && !isStarted && !hasInteracted && isMounted) {
-      const durationInSeconds = convertDurationToSeconds(currentTest.duration);
-
-      setTimeRemaining(durationInSeconds);
-    } else if (currentTest && timeRemaining !== null && !isStarted && !hasInteracted && isMounted) {
-      // If timeRemaining was set from localStorage but we don't have a saved startTime,
-      // update it to use the test duration to ensure consistency
+      // Check if we have saved data first
       const savedData = loadReadingPracticeData(id);
-      if (!savedData?.startTime && isMounted) {
+      if (savedData?.timeRemaining !== undefined && savedData?.timeRemaining !== null) {
+        // Use saved time remaining
+        setTimeRemaining(savedData.timeRemaining);
+      } else {
+        // Use test duration as fallback
         const durationInSeconds = convertDurationToSeconds(currentTest.duration);
         setTimeRemaining(durationInSeconds);
       }
     }
-
 
     return () => {
       isMounted = false;
@@ -332,39 +362,51 @@ const ReadingPracticePageContent = () => {
     // Component lifecycle management: Track if component is mounted
     let isMounted = true;
 
-    if (timeRemaining === 0 && (isStarted || hasInteracted) && status === 'taking' && authUser && id && currentTest && isMounted) {
+    if (
+      timeRemaining === 0 && 
+      (isStarted || hasInteracted) && 
+      status === 'taking' && 
+      authUser && 
+      id && 
+      currentTest && 
+      !hasAutoSubmittedRef.current &&
+      !isSubmittingRef.current &&
+      !isSubmitting
+    ) {
       // Auto-submit the test when timer reaches zero
+      hasAutoSubmittedRef.current = true;
       const autoSubmit = async () => {
         try {
           const result = await handleSubmitTest();
+          console.log('[ReadingPracticePage] Auto-submit result:', result);
+          
           // Only navigate if component is still mounted
-          if (isMounted) {
+        
             if (result.success) {
+              console.log('navigate to result page');
+              
               // Navigate to result page
               navigate(`/reading-result/${id}`);
-            } else {
-              console.error('[ReadingPracticePage] Auto-submit failed:', result.error);
-            }
-          }
+            } 
         } catch (error) {
-          if (isMounted) {
-            console.error('[ReadingPracticePage] Auto-submit error:', error);
-            navigate(`/reading-result/${id}`);
-          }
+          console.error('[ReadingPracticePage] Auto-submit error:', error);
         }
       };
       autoSubmit();
     }
 
+    // Reset the ref when status changes or component unmounts
     return () => {
       isMounted = false;
+      if (status !== 'taking') {
+        hasAutoSubmittedRef.current = false;
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, status]);
+  }, [timeRemaining, status, isStarted, hasInteracted, authUser, id, currentTest, isSubmitting]);
 
   // Save answers to localStorage immediately when they change
   useEffect(() => {
-    if (id && hasInteracted) {
+    if (id && (hasInteracted || isStarted)) {
       // Calculate elapsed time if startTime exists
       const elapsedTime = startTime
         ? Math.floor((Date.now() - startTime) / 1000)
@@ -374,11 +416,11 @@ const ReadingPracticePageContent = () => {
         answers,
         timeRemaining,
         elapsedTime,
-        startTime: startTime || (hasInteracted ? Date.now() : null),
+        startTime: startTime || (hasInteracted || isStarted ? Date.now() : null),
         bookmarks,
       });
     }
-  }, [answers, id, hasInteracted, timeRemaining, startTime, bookmarks]);
+  }, [answers, id, hasInteracted, isStarted, timeRemaining, startTime, bookmarks]);
 
   // Save time remaining and elapsed time to localStorage periodically (every 5 seconds)
   useEffect(() => {
@@ -507,22 +549,40 @@ const ReadingPracticePageContent = () => {
     }
   };
 
-  // Handler for submitting test
-  const handleSubmitTest = async () => {
-    if (isSubmitting) {
+  // Handler for submitting test - memoized to prevent unnecessary re-renders
+  const handleSubmitTest = useCallback(async () => {
+    // Prevent duplicate submissions using ref
+    if (isSubmittingRef.current || isSubmitting) {
       return { success: false, error: 'Submission already in progress' };
     }
     if (!authUser || !id || !currentTest) {
       return { success: false, error: 'Missing required information' };
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
-      // Calculate time taken from startTime
+      // Calculate time taken from startTime and elapsed time
+      // If paused, we need to account for the elapsed time before pause
       let timeTaken = 0;
       if (startTime) {
-        timeTaken = Math.floor((Date.now() - startTime) / 1000);
+        // Calculate elapsed time from start
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        // If paused, we should use the saved elapsed time or calculate from duration
+        if (isPaused && timeRemaining !== null) {
+          const durationInSeconds = convertDurationToSeconds(currentTest.duration);
+          timeTaken = durationInSeconds - timeRemaining;
+        } else {
+          timeTaken = elapsedSeconds;
+        }
+      } else if (timeRemaining !== null) {
+        // Fallback: calculate from remaining time
+        const durationInSeconds = convertDurationToSeconds(currentTest.duration);
+        timeTaken = durationInSeconds - timeRemaining;
       }
+
+      // Ensure timeTaken is non-negative
+      timeTaken = Math.max(0, timeTaken);
 
       // Submit even if answers object is empty - submitTestAttempt handles this
       const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'reading');
@@ -530,6 +590,7 @@ const ReadingPracticePageContent = () => {
       if (result.success) {
         setLatestAttemptId(result.attemptId);
         setStatus('completed');
+        hasAutoSubmittedRef.current = true; // Mark as submitted to prevent auto-submit
         // Clear practice data after successful submission
         if (id) {
           clearReadingPracticeData(id);
@@ -547,9 +608,10 @@ const ReadingPracticePageContent = () => {
       console.error('Error submitting test:', error);
       return { success: false, error: error.message };
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
-  };
+  }, [isSubmitting, authUser, id, currentTest, startTime, answers, fetchDashboardData, isPaused, timeRemaining]);
 
   // Handler for reviewing test
   const handleReviewTest = async () => {
@@ -660,6 +722,9 @@ const ReadingPracticePageContent = () => {
     setCurrentPage(1);
     setLatestAttemptId(null);
     setIsPaused(false); // Reset pause state
+    setIsSubmitting(false); // Reset submitting state
+    hasAutoSubmittedRef.current = false; // Reset auto-submit flag
+    isSubmittingRef.current = false; // Reset submission ref
 
     // Clear localStorage
     clearReadingPracticeData(id);

@@ -12,29 +12,29 @@ import { clearReadingPracticeData, loadReadingPracticeData, saveReadingResultDat
 
 export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, loading = false }) {
   const navigate = useNavigate();
-  
+
   const handleSubmit = async () => {
     try {
       if (onSubmit) {
         const result = await onSubmit();
-        if (result && result.success !== false) {
+        // Only navigate if submission was explicitly successful
+        if (result && result.success === true) {
           onClose();
           navigate(link);
-        } else {
-          if (result && result.error) {
-            alert(`Failed to submit test: ${result.error}`);
-          } else {
-            alert('Failed to submit test. Please try again.');
-          }
+        } else if (result && result.success === false) {
+          // Don't navigate on failure, let the user see the error
+          console.error('Submission failed:', result.error);
+          // The error is already handled in the submit function, just don't navigate
         }
+        // If result is undefined or doesn't have success property, don't navigate
       } else {
         if (testId) {
           const practiceData = loadReadingPracticeData(testId);
           if (practiceData) {
-            const elapsedTime = practiceData.startTime 
+            const elapsedTime = practiceData.startTime
               ? Math.floor((Date.now() - practiceData.startTime) / 1000)
               : 0;
-            
+
             saveReadingResultData(testId, {
               ...practiceData,
               elapsedTime,
@@ -47,7 +47,8 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
       }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
-      alert('An error occurred while submitting the test. Please try again.');
+      // Don't navigate on error, let the user see what happened
+      // The error is already logged, and the modal will stay open
     }
   };
 
@@ -73,8 +74,8 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
             Continue Test
           </Button>
           {/* Yakunlash tugmasi */}
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={loading}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >

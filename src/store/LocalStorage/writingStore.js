@@ -152,7 +152,7 @@ export const clearAllWritingData = () => {
       const key = localStorage.key(i);
       if (key && (
         key.startsWith(STORAGE_KEY_PREFIX) ||
-        key.startsWith(WRITING_RESULT_KEY_PREFIX)
+        key.startsWith(RESULT_KEY_PREFIX)
       )) {
         keysToRemove.push(key);
       }
