@@ -12,11 +12,11 @@ import ComingSoonPage from './ComingSoonPage';
 
 const AnalyticsPage = () => {
 
-  return (
-    <div>
-      <ComingSoonPage title="Analytics" description="Detailed insights into your IELTS preparation journey." type="analytics" />
-    </div>
-  );
+  // return (
+  //   <div>
+  //     <ComingSoonPage title="Analytics" description="Detailed insights into your IELTS preparation journey." type="analytics" />
+  //   </div>
+  // );
 
   const { authUser, userProfile } = useAuthStore();
   const { analyticsData, loading, fetchAnalyticsData } = useAnalyticsStore();
@@ -178,7 +178,7 @@ const AnalyticsPage = () => {
 
         {/* Empty State */}
         {!loading && (!filteredAnalyticsData || filteredAnalyticsData.totalTests === 0) && (
-          <div className="bg-white border border-gray-200 rounded-xl p-12 text-center shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-xl p-12 text-center shadow-sm mt-4">
             <div className="text-gray-400 mb-4">
               <svg
                 className="mx-auto h-24 w-24"

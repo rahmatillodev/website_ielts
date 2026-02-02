@@ -216,7 +216,9 @@ const ProfileModal = ({ open, onOpenChange }) => {
                 className="size-24 border-2 border-gray-100 cursor-pointer"
                 onClick={handleAvatarClick}
               >
-                <AvatarImage src={avatarPreview} alt="Avatar" />
+                  <AvatarImage src={avatarPreview} alt="Avatar"
+                    className="object-cover"
+                  />
                 <AvatarFallback className="bg-gray-100 text-gray-400 text-2xl font-semibold">
                   {getInitials()}
                 </AvatarFallback>
