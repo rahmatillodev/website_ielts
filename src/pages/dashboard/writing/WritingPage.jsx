@@ -25,7 +25,5 @@ const WritingPage = () => {
    
   );
 };
-//  <div>
-{/* <ComingSoonPage type="writing" title="Writing Library" description="Boost your band score with our extensive library of writing tests." headerAction={"/own-writing"} headerActionText="Practice Now" /> */}
-// </div>
+// 
 export default WritingPage;

@@ -8,7 +8,7 @@ import ConfirmModal from '@/components/modal/ConfirmModal'
 import { useAppearance } from '@/contexts/AppearanceContext'
 import { useAnnotation } from '@/contexts/AnnotationContext'
 
-const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, isPaused, handleStart, handlePause, onBack, showCorrectAnswers, onToggleShowCorrect, status, type, showTryPractice = false }) => {
+const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, isPaused, handleStart, handlePause, onBack, showCorrectAnswers, onToggleShowCorrect, status, type, showTryPractice }) => {
   // Immediately check URL for review mode to prevent flickering
   const [searchParams] = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
@@ -144,7 +144,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
 
       {!isReviewMode && (
         <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-1">
-          {showTryPractice ? (
+          {showTryPractice && !isStarted ? (
             // Show "Try practice" button when not in practice mode
             <button
               onClick={handleStart}
@@ -152,44 +152,31 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             >
               Try Practice
             </button>
-          ) : (
+          ) : isStarted && timeRemaining !== null && timeRemaining !== undefined ? (
             // Show timer and pause/resume when in practice mode
             <>
               <div className="flex items-center gap-2">
-                {timeRemaining !== null && (
-                  <div 
-                    className="text-lg font-semibold"
-                    style={{ color: themeColors.text }}
-                  >
-                    {formatTime(timeRemaining)}
-                  </div>
-                )}
-                {(!isStarted && timeRemaining !== null && formatTime(timeRemaining).slice(0, -3) == currentTest?.duration) ? (
-                  <button
-                    onClick={handleStart}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Start
-                  </button>
-                ) : isStarted && (
-                  <button
-                    onClick={handlePause}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    {isPaused ? "Resume" : "Pause"}
-                  </button>
-                )}
-              </div>
-              {timeRemaining !== null && (
-                <p 
-                  className="text-xs text-center"
-                  style={{ color: themeColors.text, opacity: 0.7 }}
+                <div 
+                  className="text-lg font-semibold"
+                  style={{ color: themeColors.text }}
                 >
-                  This test will automatically end when the allotted time expires.
-                </p>
-              )}
+                  {formatTime(timeRemaining)}
+                </div>
+                <button
+                  onClick={handlePause}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                >
+                  {isPaused ? "Resume" : "Pause"}
+                </button>
+              </div>
+              <p 
+                className="text-xs text-center"
+                style={{ color: themeColors.text, opacity: 0.7 }}
+              >
+                This test will automatically end when the allotted time expires.
+              </p>
             </>
-          )}
+          ) : null}
         </div>
       )}
 
