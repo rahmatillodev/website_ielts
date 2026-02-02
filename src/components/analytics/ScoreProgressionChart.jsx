@@ -15,7 +15,7 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
     return (
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Progression</h3>
-        <div className="h-[300px] flex items-center justify-center text-gray-500">No data available</div>
+        <div className="h-[360px] flex items-center justify-center text-gray-500">No data available</div>
       </div>
     );
   }

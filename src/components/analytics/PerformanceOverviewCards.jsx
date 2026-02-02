@@ -22,6 +22,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
     readingAvg,
     listeningAvg,
     totalPracticeHours,
+    totalPracticeMinutes,
     totalTests,
   } = analyticsData;
 
@@ -156,7 +157,9 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         </div>
         <div className="mb-4">
           <div className="text-4xl font-black text-gray-900 mb-2">
-            {totalPracticeHours}h
+            {totalPracticeHours > 0 && `${totalPracticeHours}h`}
+            {totalPracticeMinutes > 0 && `${totalPracticeHours > 0 ? ' ' : ''}${totalPracticeMinutes}m`}
+            {totalPracticeHours === 0 && totalPracticeMinutes === 0 && '0m'}
           </div>
           <div className="text-sm text-gray-500">
             {totalTests} Tests completed

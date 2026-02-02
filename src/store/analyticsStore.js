@@ -41,7 +41,8 @@ const generateMockData = (targetBandScore = 7.5) => {
       id: i.toString(),
       score: score,
       completed_at: completedAt,
-      time_taken: isReading ? 3600 - (i * 10) : 2400 - (i * 5),
+      // time_taken is in minutes: Reading ~60 min, Listening ~30-40 min
+      time_taken: isReading ? 60 - Math.floor(i / 10) : 35 - Math.floor(i / 15),
       test: {
         type: type,
         difficulty: score > 7 ? 'hard' : 'medium'
@@ -109,7 +110,7 @@ export const useAnalyticsStore = create((set, get) => ({
 
     try {
       // TEMPORARY: Use mock data for testing
-      if (USE_MOCK_DATA) {
+      if (!USE_MOCK_DATA) {
         const { allAttempts: mockAttempts, allAnswers: mockAnswers } = generateMockData();
         
         // Fetch user profile for target score
@@ -287,10 +288,10 @@ export function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5)
     : (latestReading !== null ? latestReading : latestListening);
   const overallBand = roundToHalf(overallBandRaw);
 
-  // Calculate total practice time
-  const totalPracticeSeconds = attempts.reduce((sum, a) => sum + (a.time_taken || 0), 0);
-  const totalPracticeHours = Math.floor(totalPracticeSeconds / 3600);
-  const totalPracticeMinutes = Math.floor((totalPracticeSeconds % 3600) / 60);
+  // Calculate total practice time (time_taken is in minutes)
+  const totalPracticeMinutes = attempts.reduce((sum, a) => sum + (a.time_taken || 0), 0);
+  const totalPracticeHours = Math.floor(totalPracticeMinutes / 60);
+  const remainingMinutes = totalPracticeMinutes % 60;
 
   // Get score trends (default to last 5 tests for each type, but can be filtered in UI)
   const scoreTrends = getScoreTrends(readingAttempts, listeningAttempts, 5);
@@ -318,7 +319,8 @@ export function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5)
     readingAvg: readingAvg,
     listeningAvg: listeningAvg,
     totalPracticeHours,
-    totalPracticeMinutes,
+    totalPracticeMinutes: remainingMinutes,
+    totalPracticeMinutesTotal: totalPracticeMinutes,
     scoreTrends,
     allAttempts: {
       reading: readingAttempts,
@@ -385,7 +387,7 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
 
 // ANALYTICS_QUESTION_TYPES: collapsed 7 groups for analytics reporting
 const ANALYTICS_QUESTION_TYPES = [
-  'multiple_choice',
+  'multiple_choice',  // multiple_choice + multiple_answers
   'matching',         // 'table' + 'matching_information'
   'summary',          // 'fill_in_blanks' + 'drag_drop'
   'true_false_not_given',
@@ -398,6 +400,7 @@ const ANALYTICS_QUESTION_TYPES = [
 function analyticsQuestionTypeGroup(type) {
   if (type === 'table' || type === 'matching_information') return 'matching';
   if (type === 'fill_in_blanks' || type === 'drag_drop') return 'summary';
+  if (type === 'multiple_answers') return 'multiple_choice';  
   // direct 1:1 for other types:
   if (ANALYTICS_QUESTION_TYPES.includes(type)) return type;
   return 'other';

@@ -266,7 +266,7 @@ const ProfilePage = () => {
           <div className="flex flex-col gap-8">
             {/* Avatar Section */}
             <motion.div
-              className="flex justify-between"
+              className="flex justify-between items-center md:flex-row flex-col gap-10 md:gap-0"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
@@ -293,6 +293,7 @@ const ProfilePage = () => {
                       <AvatarImage
                         src={userProfile?.avatar_image}
                         alt="User Avatar"
+                        className="object-cover"
                       />
                       <AvatarFallback className="bg-gray-100 text-gray-400 text-3xl font-semibold">
                         {initials}
@@ -488,7 +489,7 @@ const ProfilePage = () => {
               >
                 <motion.div
                   className="p-2.5 bg-blue-50 text-blue-500 rounded-xl"
-                  whileHover={{ rotate: 360, scale: 1.1 }}
+                  whileHover={{ scale: 1.1 }}
                   transition={{ duration: 0.5 }}
                 >
                   <LuUserRound size={22} />

@@ -743,7 +743,7 @@ const ListeningResultPage = () => {
                 className="text-slate-500 w-full sm:w-auto hover:text-black bg-blue-100 hover:bg-blue-200 font-semibold transition-all flex items-center gap-2 px-6 h-12 rounded-xl"
               >
                 <HiOutlineHome className="text-xl" />
-                Go To Home
+                Go Home
               </Button>
             </Link>
 

@@ -63,7 +63,7 @@ function App() {
     }
   }, [fetchTests, isInitialized, user])
 
-  const isPracticePage = location.pathname.includes("/reading-practice") || location.pathname.includes("/listening-practice") || location.pathname.includes("/writing-practice") || location.pathname.includes("/speaking-practice");
+  const isPracticePage = location.pathname.includes("/reading-practice") || location.pathname.includes("/listening-practice") || location.pathname.includes("/writing-practice") || location.pathname.includes("/speaking-practice") || location.pathname.includes("/own-writing");
 
   // Show loading state while initializing authentication
   if (loading && !isInitialized) {
@@ -76,7 +76,6 @@ function App() {
       </div>
     );
   }
-  console.log(loading);
   
 
   return (
