@@ -561,11 +561,37 @@ const ReadingPracticePageContent = () => {
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
-    
-    // Do not submit to backend - just keep loading state
-    // Main content will be hidden, only header and footer will be visible
-    return { success: true };
-  }, [isSubmitting, authUser, id, currentTest]);
+
+    try {
+      // Calculate time taken in seconds
+      const timeTaken = startTime
+        ? Math.floor((Date.now() - startTime) / 1000)
+        : null;
+
+      // Submit test attempt to backend
+      const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'reading');
+
+      if (result.success) {
+        // Clear practice data on successful submission
+        if (id) {
+          clearReadingPracticeData(id);
+        }
+        return { success: true, attemptId: result.attemptId, score: result.score };
+      } else {
+        // Reset submission state on failure
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+        console.error('[ReadingPracticePage] Submission failed:', result.error);
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('[ReadingPracticePage] Error submitting test:', error);
+      // Reset submission state on error
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+      return { success: false, error: error.message };
+    }
+  }, [isSubmitting, authUser, id, currentTest, answers, startTime]);
 
   // Handler for reviewing test
   const handleReviewTest = async () => {
@@ -859,7 +885,7 @@ const ReadingPracticePageContent = () => {
       />
 
       {/* Main Content - Universal Container for all selectable content */}
-      {!isSubmitting && (
+      {!isSubmitting ?(
       <div
         className="flex flex-1 overflow-hidden p-3"
         ref={containerRef}
@@ -1212,6 +1238,10 @@ const ReadingPracticePageContent = () => {
           )}
         </div>
       </div>
+      ): (
+        <div className="text-gray-500 flex items-center justify-center h-full">
+          {LoadingTest ? "Loading test..." : "No questions available"}
+        </div>
       )}
 
       {/* Footer */}

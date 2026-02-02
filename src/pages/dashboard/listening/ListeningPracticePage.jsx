@@ -429,10 +429,41 @@ const ListeningPracticePageContent = () => {
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
-    
-    // Do not submit to backend - just keep loading state
-    // Main content will be hidden, only header and footer will be visible
-    return { success: true };
+
+    try {
+      // Calculate time taken in seconds
+      const timeTaken = startTime
+        ? Math.floor((Date.now() - startTime) / 1000)
+        : null;
+
+      // Submit test attempt to backend
+      const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'listening');
+
+      if (result.success) {
+        // Clear audio position and practice data on successful submission
+        if (id) {
+          clearAudioPosition(id);
+          clearListeningPracticeData(id);
+          if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
+            audioPlayerRef.current.clearPosition();
+          }
+        }
+        return { success: true, attemptId: result.attemptId, score: result.score };
+      } else {
+        // Reset submission state on failure
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+        toast.error(result.error || 'Failed to submit test attempt');
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('[ListeningPracticePage] Error submitting test:', error);
+      // Reset submission state on error
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+      toast.error(error.message || 'An error occurred while submitting your test');
+      return { success: false, error: error.message };
+    }
   };
 
   const handleReviewTest = async () => {
@@ -847,7 +878,7 @@ const ListeningPracticePageContent = () => {
         type="Listening"
       />
 
-      {!isSubmitting && (
+      {!isSubmitting ? (
       <div
         className="flex flex-1 overflow-hidden p-3 transition-all duration-300"
         ref={containerRef}
@@ -1217,6 +1248,10 @@ const ListeningPracticePageContent = () => {
           )}
         </div>
       </div>
+      ) : (
+        <div className="text-gray-500 flex items-center justify-center h-full">
+          {loading ? "Loading questions..." : "No questions available"}
+        </div>
       )}
 
       <PracticeFooter

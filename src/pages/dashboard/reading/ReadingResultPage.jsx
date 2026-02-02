@@ -8,7 +8,7 @@ import { FaCheckCircle, FaSpinner, FaTimesCircle } from "react-icons/fa";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { HiOutlineHome, HiOutlineRefresh } from "react-icons/hi";
 import { useTestStore } from "@/store/testStore";
-import { fetchLatestAttempt, deleteTestAttempts, fetchAttemptAnswers } from "@/lib/testAttempts";
+import { fetchLatestAttempt, fetchAttemptAnswers } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { generateTestResultsPDF } from "@/utils/pdfExport";
