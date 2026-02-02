@@ -63,6 +63,8 @@ const ListeningPracticePageContent = () => {
   const questionRefs = useRef({});
   const questionsContainerRef = useRef(null);
   const [activeQuestion, setActiveQuestion] = useState(null);
+  const hasAutoSubmittedRef = useRef(false); // Prevent multiple auto-submissions
+  const isSubmittingRef = useRef(false); // Track submission state to prevent race conditions
 
   const [leftWidth, setLeftWidth] = useState(50);
   const containerRef = useRef(null);
@@ -243,8 +245,13 @@ const ListeningPracticePageContent = () => {
       authUser &&
       id &&
       currentTest &&
+      !hasAutoSubmittedRef.current &&
+      !isSubmittingRef.current &&
+      !isSubmitting &&
       isMounted
     ) {
+      // Auto-submit the test when timer reaches zero
+      hasAutoSubmittedRef.current = true;
       const autoSubmit = async () => {
         try {
           if (id) {
@@ -254,12 +261,22 @@ const ListeningPracticePageContent = () => {
             }
           }
           const result = await handleSubmitTest();
-          if (isMounted) {
+          console.log('[ListeningPracticePage] Auto-submit result:', result);
+          
+          // Only navigate if component is still mounted and submission was successful
+          if (isMounted && result && result.success) {
+            console.log('[ListeningPracticePage] Navigating to result page');
             navigate(`/listening-result/${id}`);
+          } else if (isMounted && result && !result.success) {
+            console.error('[ListeningPracticePage] Auto-submit failed:', result.error);
+            // Reset the flag so user can try again
+            hasAutoSubmittedRef.current = false;
           }
         } catch (error) {
+          console.error('[ListeningPracticePage] Auto-submit error:', error);
+          // Reset the flag on error
           if (isMounted) {
-            navigate(`/listening-result/${id}`);
+            hasAutoSubmittedRef.current = false;
           }
         }
       };
@@ -267,9 +284,12 @@ const ListeningPracticePageContent = () => {
     }
     return () => {
       isMounted = false;
+      if (status !== 'taking') {
+        hasAutoSubmittedRef.current = false;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, status]);
+  }, [timeRemaining, status, isStarted, hasInteracted, authUser, id, currentTest, isSubmitting]);
 
   // persist data on change
   useEffect(() => {
@@ -399,25 +419,45 @@ const ListeningPracticePageContent = () => {
   };
 
   const handleSubmitTest = async () => {
-    if (isSubmitting) {
+    // Prevent duplicate submissions using ref
+    if (isSubmittingRef.current || isSubmitting) {
       return { success: false, error: 'Submission already in progress' };
     }
     if (!authUser || !id || !currentTest) {
       return { success: false, error: 'Missing required information' };
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
+      // Calculate time taken from startTime and elapsed time
+      // If paused, we need to account for the elapsed time before pause
       let timeTaken = 0;
       if (startTime && timeRemaining != null) {
+        // If paused, calculate from duration and remaining time
+        if (isPaused) {
+          const dur = convertDurationToSeconds(currentTest.duration);
+          timeTaken = dur - timeRemaining;
+        } else {
+          // Calculate elapsed time from start
+          const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+          timeTaken = elapsedSeconds;
+        }
+      } else if (timeRemaining != null) {
+        // Fallback: calculate from remaining time
         const dur = convertDurationToSeconds(currentTest.duration);
         timeTaken = dur - timeRemaining;
       }
+
+      // Ensure timeTaken is non-negative
+      timeTaken = Math.max(0, timeTaken);
+
       const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'listening');
 
       if (result.success) {
         setLatestAttemptId(result.attemptId);
         setStatus('completed');
+        hasAutoSubmittedRef.current = true; // Mark as submitted to prevent auto-submit
         if (id) {
           clearListeningPracticeData(id);
           clearAudioPosition(id);
@@ -437,6 +477,7 @@ const ListeningPracticePageContent = () => {
       console.error('Error submitting test:', error);
       return { success: false, error: error.message };
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -540,6 +581,9 @@ const ListeningPracticePageContent = () => {
     setCurrentPart(1);
     setLatestAttemptId(null);
     setShouldAutoPlay(true);
+    setIsSubmitting(false); // Reset submitting state
+    hasAutoSubmittedRef.current = false; // Reset auto-submit flag
+    isSubmittingRef.current = false; // Reset submission ref
 
     clearListeningPracticeData(id);
     clearAudioPosition(id);

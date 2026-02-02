@@ -350,13 +350,14 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
             <button
               disabled={isSubmitting}
               className="flex items-center gap-1 transition-colors hover:opacity-80 p-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
                 if (isSubmitting) return;
                 if (onFinish) {
                   onFinish();
                 }
               }}
-              title="Finish"
+              title={isSubmitting ? 'Submitting...' : 'Finish'}
             >
               <div className="rounded-sm flex items-center justify-center text-sm bg-black text-white gap-2 p-2" >
                 <FaCheck className="w-4 h-4"  /> {isSubmitting ? 'Submitting...' : 'Submit'}
