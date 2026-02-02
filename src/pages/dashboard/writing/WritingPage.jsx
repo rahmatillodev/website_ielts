@@ -23,7 +23,7 @@ const WritingPage = () => {
     //   headerActionText="Practice Now"
     // />
     <div>
-      <ComingSoonPage type="writing" title="Writing Library" description="Boost your band score with our extensive library of writing tests." headerAction={"/own-writing"} headerActionText="Practice Now" />
+      <ComingSoonPage type="writing" title="Writing Library" description="Boost your band score with our extensive library of writing tests." headerAction="/own-writing" headerActionText="Practice Now" />
     </div>
   );
 };

@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 import QuestionHeader from "@/components/questions/QuestionHeader";
 import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip";
 import NoteSidebar from "@/components/sidebar/NoteSidebar";
-import FinishModal from "@/components/modal/FinishModal";
+import WritingFinishModal from "@/components/modal/WritingFinishModal";
 import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
 
 import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
@@ -63,6 +63,7 @@ const WritingPracticePageContent = () => {
   const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const containerRef = useRef(null);
   const universalContentRef = useRef(null);
@@ -205,10 +206,8 @@ const WritingPracticePageContent = () => {
   }, []);
 
   const handleSubmitFinish = async () => {
-
-    
-     
     setIsFinishModalOpen(false);
+    setIsSaving(true);
 
     try {
       // Calculate time taken before resetting state
@@ -248,9 +247,11 @@ const WritingPracticePageContent = () => {
         newSearchParams.delete('mode');
         setSearchParams(newSearchParams, { replace: true });
 
-        // Show success modal
+        // Show success modal after saving completes
+        setIsSaving(false);
         setIsSuccessModalOpen(true);
       } else {
+        setIsSaving(false);
         toast.error(result.error || 'Failed to save writing attempt');
         // Resume practice mode if save failed
         setIsPaused(false);
@@ -258,6 +259,7 @@ const WritingPracticePageContent = () => {
       }
     } catch (error) {
       console.error('Error finishing writing:', error);
+      setIsSaving(false);
       toast.error('An error occurred while saving your writing');
       // Resume practice mode if save failed
       setIsPaused(false);
@@ -432,7 +434,7 @@ const WritingPracticePageContent = () => {
         onBack={() => navigate(-1)}
         type="Writing"
         status="taking"
-        showTryPractice={!isPracticeMode} // Show "Try practice" button when not in practice mode
+        showTryPractice={!isPracticeMode && !isStarted} // Show "Try practice" button when not in practice mode
       />
 
       <div className="flex flex-1 overflow-hidden" ref={containerRef}>
@@ -606,7 +608,7 @@ const WritingPracticePageContent = () => {
           <div className="flex justify-end ml-auto fixed right-5 bottom-1">
             <button
               onClick={handleFinish}
-              disabled={savingAttempt}
+              disabled={savingAttempt || isSaving}
               className="bg-green-600 p-2 text-white rounded-lg font-bold hover:bg-green-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Finish Writing
@@ -616,10 +618,11 @@ const WritingPracticePageContent = () => {
       </footer>
 
       {/* LOADING OVERLAY */}
-      {savingAttempt && (
+      {(savingAttempt || isSaving) && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)' }}
+          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto"
+          style={{ backgroundColor: 'rgba(128, 128, 128, 0.5)' }}
+          onClick={(e) => e.stopPropagation()}
         >
           <div
             className="rounded-2xl p-12 flex flex-col items-center gap-6 shadow-2xl"
@@ -689,12 +692,11 @@ const WritingPracticePageContent = () => {
       )}
 
       {/* FINISH MODAL */}
-      <FinishModal
+      <WritingFinishModal
         isOpen={isFinishModalOpen}
         onClose={() => setIsFinishModalOpen(false)}
-        onSubmit={handleSubmitFinish}
-        loading={savingAttempt}
-        link="/writing"
+        onConfirm={handleSubmitFinish}
+        loading={savingAttempt || isSaving}
       />
 
       {/* SUCCESS MODAL */}

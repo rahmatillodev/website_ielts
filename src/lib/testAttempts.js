@@ -153,20 +153,21 @@ export const fetchAttemptAnswers = async (attemptId) => {
 export const fetchLatestAttempt = async (userId, testId) => {
   try {
     // Get user id from localStorage
-    const authenticatedUserId = getUserIdFromLocalStorage();
-    if (!authenticatedUserId) {
-      throw new Error('User not authenticated');
+    if (!userId) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
     }
-
     // Fetch latest attempt
     const { data: attemptData, error: attemptError } = await supabase
       .from('user_attempts')
       .select('id, user_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
-      .eq('user_id', authenticatedUserId)
+      .eq('user_id', userId)
       .eq('test_id', testId)
       .order('completed_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (attemptError) {
       // No attempts found - this is okay
@@ -182,6 +183,8 @@ export const fetchLatestAttempt = async (userId, testId) => {
 
     // Fetch answers for this attempt
     const answersResult = await fetchAttemptAnswers(attemptData.id);
+
+    console.log('answersResult', answersResult);
 
     return {
       success: true,
@@ -329,6 +332,10 @@ const calculateTestScore = (answers, currentTest) => {
             .map(key => key.trim().toUpperCase())
             .filter(Boolean);
 
+          // Track which selected options have been assigned to questions
+          // This helps map user selections to questions even if they're incorrect
+          const assignedOptions = new Set();
+
           // Each question stores its own userAnswer individually
           validQuestions.forEach((question) => {
             const questionId = question.id || question.question_number;
@@ -340,10 +347,29 @@ const calculateTestScore = (answers, currentTest) => {
             // Check if user selected this correct option
             const isCorrect = correctAnswerKey && selectedOptionKeys.includes(correctAnswerKey);
 
-            // Now userAnswer stores **only the option_key relevant for this question**
-            const userAnswerForQuestion = selectedOptionKeys.includes(correctAnswerKey)
-              ? correctAnswerKey
-              : '';
+            // Determine userAnswer for this question:
+            // 1. If user selected the correct answer, use that
+            // 2. Otherwise, if user selected any option that hasn't been assigned yet, use the first unassigned one
+            // 3. Otherwise, save empty string (user didn't select anything for this question)
+            let userAnswerForQuestion = '';
+            
+            if (isCorrect) {
+              // User selected the correct answer
+              userAnswerForQuestion = correctAnswerKey;
+              assignedOptions.add(correctAnswerKey);
+            } else {
+              // User didn't select the correct answer
+              // Find the first unassigned selected option to map to this question
+              // This ensures we save incorrect selections
+              for (const selectedKey of selectedOptionKeys) {
+                if (!assignedOptions.has(selectedKey)) {
+                  userAnswerForQuestion = selectedKey;
+                  assignedOptions.add(selectedKey);
+                  break;
+                }
+              }
+              // If no unassigned options remain, userAnswerForQuestion stays empty
+            }
 
             if (isCorrect) correctCount++;
 
@@ -628,64 +654,4 @@ const calculateBandScore = (correctCount, totalQuestions, type) => {
   }
 
   throw new Error('Invalid test type');
-};
-
-/**
- * Delete all attempts for a specific test by a user
- * @param {string|number} testId - The test ID
- * @returns {Promise<{success: boolean, deletedCount?: number, error?: string}>}
- */
-export const deleteTestAttempts = async (testId) => {
-  try {
-    const authenticatedUserId = getUserIdFromLocalStorage();
-    if (!authenticatedUserId) {
-      throw new Error('User not authenticated');
-    }
-
-    // First, get all attempt IDs for this test
-    const { data: attempts, error: fetchError } = await supabase
-      .from('user_attempts')
-      .select('id')
-      .eq('user_id', authenticatedUserId)
-      .eq('test_id', testId);
-
-    if (fetchError) throw fetchError;
-
-    if (!attempts || attempts.length === 0) {
-      return {
-        success: true,
-        deletedCount: 0,
-      };
-    }
-
-    const attemptIds = attempts.map(a => a.id);
-
-    // Delete all user_answers for these attempts
-    const { error: answersError } = await supabase
-      .from('user_answers')
-      .delete()
-      .in('attempt_id', attemptIds);
-
-    if (answersError) throw answersError;
-
-    // Delete all user_attempts
-    const { error: attemptsError } = await supabase
-      .from('user_attempts')
-      .delete()
-      .eq('user_id', authenticatedUserId)
-      .eq('test_id', testId);
-
-    if (attemptsError) throw attemptsError;
-
-    return {
-      success: true,
-      deletedCount: attempts.length,
-    };
-  } catch (error) {
-    console.error('Error deleting test attempts:', error);
-    return {
-      success: false,
-      error: error.message,
-    };
-  }
 };
