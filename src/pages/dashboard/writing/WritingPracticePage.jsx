@@ -1,0 +1,723 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import parse from "html-react-parser";
+import { LuChevronsLeftRight } from "react-icons/lu";
+import { toast } from "react-toastify";
+
+import QuestionHeader from "@/components/questions/QuestionHeader";
+import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip";
+import NoteSidebar from "@/components/sidebar/NoteSidebar";
+import FinishModal from "@/components/modal/FinishModal";
+import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
+
+import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
+import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext";
+import { useWritingStore } from "@/store/WritingStore";
+import { useWritingCompletedStore } from "@/store/WritingCompletedStore";
+import {
+  saveWritingPracticeData,
+  loadWritingPracticeData,
+  clearWritingPracticeData,
+  saveWritingResultData
+} from "@/store/LocalStorage/writingStore";
+import { convertDurationToSeconds } from "@/utils/testDuration";
+import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
+import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
+import { PenSquare } from "lucide-react";
+
+const WritingPracticePageContent = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { themeColors, fontSizeValue, settings, theme } = useAppearance();
+
+  const {
+    currentWriting,
+    fetchWritingById,
+    loadingCurrentWriting,
+    errorCurrentWriting,
+  } = useWritingStore();
+
+  const { submitWritingAttempt, loading: savingAttempt } = useWritingCompletedStore();
+
+  const {
+    addHighlight,
+    addNote,
+    highlights,
+    notes,
+  } = useAnnotation();
+
+  const [currentTaskType, setCurrentTaskType] = useState(null);
+  const [answers, setAnswers] = useState({});
+  const [leftWidth, setLeftWidth] = useState(50);
+
+  // Practice flow states
+  const [isPracticeMode, setIsPracticeMode] = useState(false); // When user clicks "Try practice"
+  const [isStarted, setIsStarted] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [startTime, setStartTime] = useState(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Modal states
+  const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
+
+  const containerRef = useRef(null);
+  const universalContentRef = useRef(null);
+  const passageRef = useRef(null);
+
+  /* ================= FETCH & INITIALIZE ================= */
+  useEffect(() => {
+    if (id) fetchWritingById(id);
+  }, [id, fetchWritingById]);
+
+  useEffect(() => {
+    if (!currentWriting?.writing_tasks?.length) return;
+
+    const tasks = currentWriting.writing_tasks;
+    setCurrentTaskType(tasks[0].task_type);
+
+    // Check URL parameter for practice mode
+    const urlPracticeMode = searchParams.get('mode') === 'practice';
+
+    // Load saved data from localStorage
+    const savedData = loadWritingPracticeData(id);
+    if (savedData) {
+      setAnswers(savedData.answers || {});
+      setTimeRemaining(savedData.timeRemaining || convertDurationToSeconds(currentWriting.duration));
+      setElapsedTime(savedData.elapsedTime || 0);
+      setStartTime(savedData.startTime || null);
+
+      // Restore practice mode from URL or localStorage
+      const shouldBeInPracticeMode = urlPracticeMode || savedData.isPracticeMode || false;
+      setIsPracticeMode(shouldBeInPracticeMode);
+      setIsStarted(savedData.isStarted || shouldBeInPracticeMode);
+
+      // If practice mode was active, restore it
+      if (shouldBeInPracticeMode) {
+        setIsStarted(true);
+      }
+    } else {
+      // Initialize fresh
+      const init = {};
+      tasks.forEach((t) => (init[t.task_type] = ""));
+      setAnswers(init);
+      setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+
+      // Check if URL has practice mode parameter
+      if (urlPracticeMode) {
+        setIsPracticeMode(true);
+        setIsStarted(true);
+        setStartTime(Date.now());
+      }
+    }
+  }, [currentWriting, id, searchParams]);
+
+  /* ================= TIMER ================= */
+  useEffect(() => {
+    if (!isPracticeMode || !isStarted || isPaused || timeRemaining <= 0 || savingAttempt) return;
+
+    const interval = setInterval(() => {
+      setTimeRemaining((t) => {
+        if (t <= 1) {
+          clearInterval(interval);
+          toast.info("Time is up");
+          handleFinish();
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPracticeMode, isStarted, isPaused, timeRemaining, savingAttempt]);
+
+  // Update elapsed time
+  useEffect(() => {
+    if (!isPracticeMode || !isStarted || isPaused || !startTime || savingAttempt) return;
+
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setElapsedTime(elapsed);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPracticeMode, isStarted, isPaused, startTime, savingAttempt]);
+
+  /* ================= LOCALSTORAGE PERSISTENCE ================= */
+  useEffect(() => {
+    if (!id || !isPracticeMode) return;
+
+    // Save every 5 seconds
+    const interval = setInterval(() => {
+      saveWritingPracticeData(id, {
+        answers,
+        timeRemaining,
+        elapsedTime,
+        startTime: startTime || Date.now(),
+        isPracticeMode: true,
+        isStarted,
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted]);
+
+  /* ================= HANDLERS ================= */
+  const handleTryPractice = () => {
+    setIsPracticeMode(true);
+    setIsStarted(true);
+    setStartTime(Date.now());
+    setElapsedTime(0);
+
+    // Update URL to include practice mode parameter
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('mode', 'practice');
+    setSearchParams(newSearchParams, { replace: true });
+
+    // Save to localStorage
+    saveWritingPracticeData(id, {
+      answers,
+      timeRemaining,
+      elapsedTime: 0,
+      startTime: Date.now(),
+      isPracticeMode: true,
+      isStarted: true,
+    });
+  };
+
+  const handleTextChange = (e) => {
+    if (!isPracticeMode) {
+      // If not in practice mode, clicking textarea should trigger try practice
+      handleTryPractice();
+      return;
+    }
+
+    if (isPaused) setIsPaused(false);
+    setAnswers((p) => ({ ...p, [currentTaskType]: e.target.value }));
+  };
+
+  const handleFinish = useCallback(() => {
+      setIsFinishModalOpen(true);
+   
+  }, []);
+
+  const handleSubmitFinish = async () => {
+
+    
+     
+    setIsFinishModalOpen(false);
+
+    try {
+      // Calculate time taken before resetting state
+      const timeTaken = startTime
+        ? Math.floor((Date.now() - startTime) / 1000)
+        : elapsedTime;
+
+      // Save to database
+      const result = await submitWritingAttempt(id, answers, timeTaken);
+
+      if (result.success) {
+        // Save result data
+        saveWritingResultData(id, {
+          answers,
+          timeRemaining,
+          elapsedTime: timeTaken,
+          startTime,
+        });
+
+        // Clear practice data
+        clearWritingPracticeData(id);
+
+        // Reset to initial state (sample preview mode)
+        setIsPracticeMode(false);
+        setIsStarted(false);
+        setIsPaused(false);
+        setStartTime(null);
+        setElapsedTime(0);
+
+        // Reset timer to full duration
+        if (currentWriting) {
+          setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+        }
+
+        // Remove practice mode from URL
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('mode');
+        setSearchParams(newSearchParams, { replace: true });
+
+        // Show success modal
+        setIsSuccessModalOpen(true);
+      } else {
+        toast.error(result.error || 'Failed to save writing attempt');
+        // Resume practice mode if save failed
+        setIsPaused(false);
+        setIsStarted(true);
+      }
+    } catch (error) {
+      console.error('Error finishing writing:', error);
+      toast.error('An error occurred while saving your writing');
+      // Resume practice mode if save failed
+      setIsPaused(false);
+      setIsStarted(true);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!currentWriting) return;
+
+    setIsPdfLoading(true);
+    try {
+      // Prepare tasks data for PDF
+      const tasks = {};
+
+      // Load images if needed
+      const loadImage = async (url) => {
+        if (!url) return null;
+        try {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          return new Promise((resolve, reject) => {
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = reject;
+            img.src = url;
+          });
+        } catch (error) {
+          console.warn('Failed to load image for PDF:', error);
+          return null;
+        }
+      };
+
+      for (const task of currentWriting.writing_tasks) {
+        const taskKey = task.task_type === "Task 1" ? "task1" : "task2";
+        const imageData = task.image_url ? await loadImage(task.image_url) : null;
+
+        tasks[taskKey] = {
+          question: task.content || "",
+          answer: answers[task.task_type] || "",
+          image: imageData,
+        };
+      }
+
+      const totalTime = formatTime(elapsedTime);
+      await generateWritingPDF(tasks, totalTime, settings);
+      toast.success('PDF downloaded successfully');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF');
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  };
+
+  // Word count function
+  const countWords = (text) => {
+    if (!text || text.trim() === '') return 0;
+
+    const cleaned = text.replace(/[\u2018\u2019']/g, "'");
+    const words = cleaned
+      .trim()
+      .split(/\s+/)
+      .flatMap(word => {
+        if (word.includes('-')) return word.split('-');
+        return [word];
+      });
+
+    return words.filter(w => /[a-zA-Z0-9]/.test(w)).length;
+  };
+
+  /* ================= RESIZE ================= */
+  const startResize = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = leftWidth;
+
+    const onMove = (ev) => {
+      const delta = ((ev.clientX - startX) / window.innerWidth) * 100;
+      setLeftWidth(Math.min(Math.max(startWidth + delta, 20), 80));
+    };
+
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  /* ================= ANNOTATION ================= */
+  const handleHighlight = useCallback((range, text, partId, sectionType = 'passage', testType = 'writing') => {
+    const container = passageRef.current;
+    if (!container) return;
+
+    const offsets = getTextOffsets(container, range);
+    const id = addHighlight({
+      text,
+      startOffset: offsets.startOffset,
+      endOffset: offsets.endOffset,
+      containerId: `passage-${partId}`,
+      partId,
+      sectionType,
+      testType,
+      range: range.cloneRange(),
+    });
+
+    applyHighlight(range, id);
+    window.getSelection().removeAllRanges();
+  }, [addHighlight]);
+
+  const handleNote = useCallback((range, text, partId, sectionType = 'passage', testType = 'writing') => {
+    const container = passageRef.current;
+    if (!container) return;
+
+    const offsets = getTextOffsets(container, range);
+    const id = addNote({
+      text,
+      note: "",
+      startOffset: offsets.startOffset,
+      endOffset: offsets.endOffset,
+      containerId: `passage-${partId}`,
+      partId,
+      sectionType,
+      testType,
+      range: range.cloneRange(),
+    });
+
+    applyNote(range, id);
+    window.getSelection().removeAllRanges();
+  }, [addNote]);
+
+  const currentTask = currentWriting?.writing_tasks?.find(
+    (t) => t.task_type === currentTaskType
+  );
+
+  if (errorCurrentWriting) return <div>{errorCurrentWriting}</div>;
+  if (!currentTask) return null;
+
+  /* ================= RENDER ================= */
+  return (
+    <div className="flex flex-col h-screen" style={{ background: themeColors.background }}>
+      <TextSelectionTooltip
+        universalContentRef={universalContentRef}
+        partId={currentTaskType}
+        onHighlight={handleHighlight}
+        onNote={handleNote}
+        testType="writing"
+      />
+
+      <QuestionHeader
+        currentTest={currentWriting}
+        id={id}
+        timeRemaining={isPracticeMode ? timeRemaining : null} // Hide timer if not in practice mode
+        isStarted={isStarted}
+        isPaused={isPaused}
+        handleStart={handleTryPractice}
+        handlePause={() => setIsPaused((p) => !p)}
+        onBack={() => navigate(-1)}
+        type="Writing"
+        status="taking"
+        showTryPractice={!isPracticeMode} // Show "Try practice" button when not in practice mode
+      />
+
+      <div className="flex flex-1 overflow-hidden" ref={containerRef}>
+        <div className="flex w-full items-stretch p-4 gap-2 overflow-hidden" ref={universalContentRef}>
+          {/* LEFT */}
+          <div
+            className="border overflow-y-auto rounded-2xl px-4 pt-1 pb-10 h-full scrollbar-hide"
+            style={{ width: `${leftWidth}%`, borderColor: themeColors.border }}
+          >
+            <div
+              className="m-5 p-4 border rounded-lg"
+              style={{
+                backgroundColor: theme === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
+                borderColor: themeColors.border
+              }}
+            >
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <PenSquare
+                    className="w-5 h-5 shrink-0 mb-0.5"
+                    style={{ color: themeColors.text }}
+                  />
+                  <span
+                    className="text-base font-bold"
+                    style={{ color: themeColors.text }}
+                  >
+                    IELTS Writing Practice - {currentTask.title}
+                  </span>
+                </div>
+
+              </div>
+            </div>
+            <div className="m-5 p-4 border rounded-lg text-justify" ref={passageRef}>
+              <h1 className="text-2xl font-bold">{currentTask.title}</h1>
+              <p className="text-sm text-gray-500 my-4">{parse(currentTask.content || "")}</p>
+              {/* IMAGE */}
+              {currentTask.image_url && (
+                <div className="p-6 border-t border-gray-300 w-full">
+                  <img
+                    src={currentTask.image_url}
+                    alt={currentTask.title}
+                    className="w-full max-h-[500px] object-contain rounded-2xl"
+                  />
+                </div>
+              )}
+
+              {/* feedback */}
+              {currentTask.feedback && (
+                <div className="p-6 border-t border-gray-300 w-full">
+                  <h3 className="text-xl font-semibold mb-4">Feedback</h3>
+                  {parse(currentTask.feedback || "")}
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* RESIZER */}
+          <div className="relative w-[14px] flex justify-center">
+            <div
+              onMouseDown={startResize}
+              className="absolute inset-y-0 w-[4px] cursor-col-resize"
+              style={{ backgroundColor: themeColors.border }}
+            />
+            <div
+              onMouseDown={startResize}
+              className="absolute top-1/2 left-1/2 w-6 h-6 rounded-2xl flex items-center justify-center border-2 cursor-col-resize"
+              style={{
+                backgroundColor: themeColors.background,
+                borderColor: themeColors.border,
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              <LuChevronsLeftRight />
+            </div>
+          </div>
+
+          {/* RIGHT */}
+          <div
+            className="border flex flex-col rounded-2xl overflow-hidden h-full"
+           style={{ width: `${100 - leftWidth}%`, borderColor: themeColors.border }}
+          >
+            {isPracticeMode ? (
+              // Practice mode: show textarea for user input
+              <>
+                <textarea
+                  className="flex-1 p-8 resize-none outline-none"
+                  placeholder="Write your answer here..."
+                  value={answers[currentTaskType] || ""}
+                  onChange={handleTextChange}
+                  disabled={isPaused}
+                  style={{
+                    fontSize: `${fontSizeValue.base}px`,
+                    backgroundColor: themeColors.background,
+                    color: themeColors.text,
+                  }}
+                />
+                
+              </>
+            ) : (
+              // Preview mode: show sample
+              <div className="flex-1 p-8 overflow-y-auto">
+                <div
+                  style={{
+                    fontSize: `${fontSizeValue.base}px`,
+                    color: themeColors.text,
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {currentTask.sample || "Sample answer will appear here..."}
+                </div>
+              </div>
+            )}
+            <div className="px-6 py-4 border-t flex justify-between text-sm font-semibold">
+                  <span>WORD COUNT: { isPracticeMode ? countWords(answers[currentTaskType] || "") : countWords(currentTask.sample || "")}</span>
+                  <span className="text-red-500">
+                    MINIMUM: {currentTaskType === "Task 1" ? 150 : 250} WORDS
+                  </span>
+                </div>
+          </div>
+        </div>
+      </div>
+
+      {/* WRITING FOOTER */}
+      <footer
+        className="relative h-14 border-t flex items-center shrink-0"
+        style={{
+          borderColor: themeColors.border,
+          backgroundColor: themeColors.background,
+        }}
+      >
+        {/* TASK SWITCHER */}
+        <div className="flex justify-center items-center w-full h-full">
+          {currentWriting.writing_tasks.length > 1 ? (
+            currentWriting.writing_tasks.map((task) => {
+              const isActive = currentTaskType === task.task_type;
+
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => setCurrentTaskType(task.task_type)}
+                  className={`relative flex flex-col items-center justify-center gap-1 h-full transition-all transform w-full cursor-pointer`}
+                  style={{
+                    backgroundColor: isActive ? '#E0E0E0' : themeColors.background,
+                    color: themeColors.text,
+                  }}
+                >
+                  <span
+                    className="text-base font-semibold transition-all whitespace-nowrap"
+                    style={{
+                      opacity: isActive ? 1 : 0.5,
+                    }}
+                  >
+                    {task.task_type}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            <div
+              className="px-4 py-2 text-xs font-bold uppercase tracking-widest"
+              style={{ color: themeColors.text, opacity: 0.5 }}
+            >
+              {currentTaskType}
+            </div>
+          )}
+        </div>
+
+        {/* FINISH BUTTON - Only show in practice mode */}
+        {isPracticeMode && (
+          <div className="flex justify-end ml-auto fixed right-5 bottom-1">
+            <button
+              onClick={handleFinish}
+              disabled={savingAttempt}
+              className="bg-green-600 p-2 text-white rounded-lg font-bold hover:bg-green-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Finish Writing
+            </button>
+          </div>
+        )}
+      </footer>
+
+      {/* LOADING OVERLAY */}
+      {savingAttempt && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)' }}
+        >
+          <div
+            className="rounded-2xl p-12 flex flex-col items-center gap-6 shadow-2xl"
+            style={{
+              minWidth: '420px',
+              maxWidth: '520px',
+              backgroundColor: themeColors.background,
+              border: `2px solid ${themeColors.border}`,
+            }}
+          >
+            <div className="relative">
+              <div
+                className="animate-spin rounded-full h-24 w-24 border-4"
+                style={{
+                  borderColor: `${themeColors.border}40`,
+                  borderTopColor: '#3b82f6',
+                }}
+              ></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-center space-y-3">
+              <h3
+                className="text-2xl font-bold"
+                style={{ color: themeColors.text }}
+              >
+                Saving Your Writing
+              </h3>
+              <p
+                className="text-lg font-medium"
+                style={{ color: themeColors.text, opacity: 0.8 }}
+              >
+                Please wait while we save your work...
+              </p>
+              <div className="space-y-2 mt-4">
+                <p
+                  className="text-sm"
+                  style={{ color: themeColors.text, opacity: 0.7 }}
+                >
+                  Your writing is being securely saved to the database.
+                </p>
+                <p
+                  className="text-sm"
+                  style={{ color: themeColors.text, opacity: 0.7 }}
+                >
+                  You'll see your results in just a moment!
+                </p>
+              </div>
+            </div>
+            <div
+              className="w-full rounded-full h-2.5 overflow-hidden mt-2"
+              style={{ backgroundColor: `${themeColors.border}40` }}
+            >
+              <div
+                className="h-2.5 rounded-full animate-pulse"
+                style={{
+                  width: '100%',
+                  backgroundColor: '#3b82f6',
+                }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FINISH MODAL */}
+      <FinishModal
+        isOpen={isFinishModalOpen}
+        onClose={() => setIsFinishModalOpen(false)}
+        onSubmit={handleSubmitFinish}
+        loading={savingAttempt}
+        link="/writing"
+      />
+
+      {/* SUCCESS MODAL */}
+      <WritingSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        onDownloadPDF={handleDownloadPDF}
+        pdfLoading={isPdfLoading}
+        writingId={id}
+      />
+
+      <NoteSidebar />
+    </div>
+  );
+};
+
+/* ================= PROVIDER ================= */
+const WritingPracticePage = () => (
+  <AppearanceProvider>
+    <AnnotationProvider>
+      <WritingPracticePageContent />
+    </AnnotationProvider>
+  </AppearanceProvider>
+);
+
+export default WritingPracticePage;

@@ -3,6 +3,8 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import supabase from '@/lib/supabase'
+import { clearAllReadingData } from '@/store/LocalStorage/readingStorage'
+import { clearAllListeningData } from '@/store/LocalStorage/listeningStorage'
 
 export const useAuthStore = create(
   persist(
@@ -12,91 +14,175 @@ export const useAuthStore = create(
       userProfile: null,
       loading: false,
       error: null,
-      isInitialized: false, 
+      isInitialized: false,
 
 
       initializeSession: async () => {
-        // initialized bo'lsa ham sessiyani tekshirish kerak bo'lishi mumkin
+        if (get().isInitialized) {
+          // If already initialized but loading is stuck, reset it
+          if (get().loading) {
+            set({ loading: false });
+          }
+          return;
+        }
+      
         try {
           set({ loading: true });
+      
           const { data: { session } } = await supabase.auth.getSession();
       
           if (session?.user) {
             set({ authUser: session.user });
-            // Diqqat: Har doim bazadan tekshiramiz
-            await get().fetchUserProfile(session.user.id);
+            try {
+              await get().fetchUserProfile(session.user.id, false);
+            } catch (error) {
+              console.error('Error fetching profile during initialization:', error);
+              // Don't block initialization if profile fetch fails
+            }
           } else {
             set({ authUser: null, userProfile: null });
           }
       
-          // Auth o'zgarishini kuzatish
-          supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' && session?.user) {
-              set({ authUser: session.user });
-              await get().fetchUserProfile(session.user.id);
-            } else if (event === 'SIGNED_OUT') {
-              set({ authUser: null, userProfile: null });
-            }
-          });
+          // listener faqat 1 marta
+          if (!get()._authListener) {
+            const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+              if (event === 'SIGNED_IN' && session?.user) {
+                set({ loading: true, authUser: session.user });
+                try {
+                  await get().fetchUserProfile(session.user.id, false);
+                } catch (error) {
+                  console.error('Error fetching profile on sign in:', error);
+                } finally {
+                  set({ loading: false });
+                }
+              }
+      
+              if (event === 'SIGNED_OUT') {
+                set({ authUser: null, userProfile: null, isInitialized: false, loading: false });
+              }
+            });
+      
+            set({ _authListener: listener?.subscription });
+          }
       
           set({ isInitialized: true });
         } catch (error) {
+          console.error('Error initializing session:', error);
           set({ error: error.message });
         } finally {
           set({ loading: false });
         }
       },
+      
+      
 
       // Kirish (Sign In)
       signIn: async (email, password) => {
         set({ loading: true, error: null })
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
-        if (error) {
-          set({ error: error.message, loading: false })
-          return { success: false, error: error.message }
+          if (error) {
+            set({ error: error.message, loading: false })
+            return { success: false, error: error.message }
+          }
+
+          set({ authUser: data.user })
+          // Fetch profile - if it fails, don't block the login
+          try {
+            await get().fetchUserProfile(data.user.id, false)
+          } catch (profileError) {
+            console.error('Error fetching user profile:', profileError)
+            // Continue with login even if profile fetch fails
+          }
+          set({ loading: false })
+          return { success: true }
+        } catch (error) {
+          const message = error?.message || 'Failed to sign in. Please try again.'
+          set({ error: message, loading: false })
+          return { success: false, error: message }
         }
-
-        set({ authUser: data.user })
-        await get().fetchUserProfile(data.user.id)
-        set({ loading: false })
-        return { success: true }
       },
 
       // Ro'yxatdan o'tish (Sign Up)
       signUp: async (email, password, fullName) => {
         set({ loading: true, error: null })
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: fullName || "User" } }
-        })
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { full_name: fullName || "User" } }
+          })
 
-        if (error) {
-          set({ error: error.message, loading: false })
-          return { success: false, error: error.message }
+          if (error) {
+            set({ error: error.message, loading: false })
+            return { success: false, error: error.message }
+          }
+
+          set({ authUser: data.user })
+
+          // Try to fetch profile - if it doesn't exist yet (e.g., waiting for DB trigger), 
+          // that's okay, the onAuthStateChange listener will handle it later
+          if (data.user) {
+            try {
+              // Don't force logout if profile is missing (common for new signups)
+              await get().fetchUserProfile(data.user.id, false)
+            } catch (profileError) {
+              console.log('Profile not available yet, will be fetched by auth state listener')
+              // Continue - profile will be fetched by onAuthStateChange or created by trigger
+            }
+          }
+
+          set({ loading: false })
+          return { success: true }
+        } catch (error) {
+          const message = error?.message || 'Failed to sign up. Please try again.'
+          set({ error: message, loading: false })
+          return { success: false, error: message }
         }
-
-        set({ authUser: data.user, loading: false })
-        // Trigger ishga tushishi uchun biroz kutish yoki profilni keyinroq olish mumkin
-        return { success: true }
       },
 
       // Profilni olish
-      fetchUserProfile: async (userId) => {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle(); // Xato bermay null qaytaradi
-      
-        if (error || !data) {
-          console.error("User profile missing in Database. Logging out...");
-          await get().forceSignOutToLogin('Unauthorized: Profile not found.');
-          return;
+      fetchUserProfile: async (userId, shouldLogoutOnMissing = true) => {
+        try {
+          // Add timeout to prevent hanging
+          const timeoutId = setTimeout(() => {
+            console.warn('Profile fetch taking too long, continuing anyway...');
+          }, 10000);
+
+          const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle(); // Xato bermay null qaytaradi
+
+          clearTimeout(timeoutId);
+
+          if (error) {
+            console.error("Error fetching user profile:", error);
+            if (shouldLogoutOnMissing) {
+              await get().forceSignOutToLogin('Error fetching profile.');
+            }
+            return null;
+          }
+
+          if (!data) {
+            console.warn("User profile missing in Database.");
+            if (shouldLogoutOnMissing) {
+              await get().forceSignOutToLogin('Unauthorized: Profile not found.');
+            }
+            return null;
+          }
+
+          set({ userProfile: data });
+          return data;
+        } catch (error) {
+          console.error("Exception in fetchUserProfile:", error);
+          if (shouldLogoutOnMissing) {
+            await get().forceSignOutToLogin('Error fetching profile.');
+          }
+          return null;
         }
-      
-        set({ userProfile: data });
       },
 
       // Sessiya bor bo'lsa ham DB'da user borligini tekshirish
@@ -192,7 +278,7 @@ export const useAuthStore = create(
         if (!userId) return { success: false, error: 'User not authenticated' };
 
         set({ loading: true, error: null });
-        
+
         const { data, error } = await supabase
           .from('users')
           .update(profileData)
@@ -215,35 +301,68 @@ export const useAuthStore = create(
         try {
           const { error } = await supabase.auth.signOut()
           if (error) {
-            set({ error: error.message })
+            set({ error: error.message, loading: false })
             return { success: false, error: error.message }
           }
-          set({ authUser: null, userProfile: null })
-          return { success: true }
+      
+          // Clear Zustand state
+          set({
+            authUser: null,
+            userProfile: null,
+            loading: false,
+            isInitialized: false
+                    })
+      
+          // Clear only user-related storage
+          try {
+            clearAllReadingData()
+            clearAllListeningData()
+            localStorage.removeItem('auth-storage')
+      
+            const keysToRemove = []
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i)
+              if (!key) continue
+      
+              const isUserData =
+                key.startsWith('reading_') ||
+                key.startsWith('listening_') ||
+                key.includes('practice_') ||
+                key.includes('result_') ||
+                key.includes('audio_position_')
+      
+              if (isUserData) keysToRemove.push(key)
+            }
+      
+            keysToRemove.forEach(k => localStorage.removeItem(k))
+          } catch (e) {
+            console.warn('Storage cleanup error:', e)
+          }
+      
+          return { success: true, redirectTo: '/' }
         } catch (error) {
           const message = error?.message || 'Failed to log out. Please try again.'
-          set({ error: message })
+          set({ error: message, loading: false })
           return { success: false, error: message }
-        } finally {
-          set({ loading: false })
         }
       },
+      
 
-      // Xavfsizlik uchun logout va login sahifasiga yo'naltirish
       forceSignOutToLogin: async (reason) => {
         set({ loading: true, error: reason || null })
         try {
-          await supabase.auth.signOut()
+          await supabase.auth.signOut();
+          localStorage.clear();
+          set({ authUser: null, userProfile: null, isInitialized: false, loading: false })
         } catch (error) {
           const message = error?.message || reason || 'Failed to log out.'
           set({ error: message })
         } finally {
-          set({ authUser: null, userProfile: null, loading: false })
-          if (typeof window !== 'undefined') {
-            if (window.location.pathname !== '/') {
-              window.location.assign('/')
-            }
-          }
+          // Clear Zustand state
+          set({ authUser: null, userProfile: null, isInitialized: false, loading: false })
+
+          // Clear all user-specific localStorage data
+          
         }
       },
 
@@ -252,8 +371,8 @@ export const useAuthStore = create(
     {
       name: 'auth-storage', // localStorage dagi kalit nomi
       storage: createJSONStorage(() => localStorage), // Ma'lumotni qayerga saqlash
-      partialize: (state) => ({ 
-        authUser: state.authUser, 
+      partialize: (state) => ({
+        authUser: state.authUser,
         userProfile: state.userProfile,
       }), // Faqat kerakli qismlarni localStoragega saqlaymiz (loading saqlanmaydi)
     }

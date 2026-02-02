@@ -28,7 +28,7 @@ const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', re
         {isBookmarked ? (
           <FaBookmark className="w-5 h-5 text-red-500" />
         ) : (
-          <FaRegBookmark className="w-4 h-4 text-gray-400 hover:text-red-500" />
+          <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
         )}
       </button>
       {["TRUE", "FALSE", "NOT GIVEN"].map((option) => {
@@ -73,12 +73,12 @@ const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', re
                 Wrong
               </span>
             )}
-            {isSelected && showWrong && correctAnswer && (
+            {isSelected && showWrong && correctAnswer && showCorrectAnswers && (
               <span className="text-xs text-green-600 font-medium ml-2">
                 Correct: {correctAnswer}
               </span>
             )}
-            {isCorrectOption && isReviewMode && !isSelected && correctAnswer && (
+            {isCorrectOption && isReviewMode && !isSelected && correctAnswer && showCorrectAnswers && (
               <span className="text-xs text-green-700 font-medium">Correct Answer</span>
             )}
           </label>

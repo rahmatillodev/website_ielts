@@ -141,3 +141,85 @@ export const clearListeningResultData = (testId) => {
   }
 };
 
+/**
+ * Audio Position Storage
+ * Stores the current playback position for audio persistence
+ */
+const AUDIO_POSITION_KEY_PREFIX = 'listening_audio_position_';
+
+const getAudioPositionKey = (testId) => `${AUDIO_POSITION_KEY_PREFIX}${testId}`;
+
+/**
+ * Save audio playback position to localStorage
+ * @param {string|number} testId - The test ID
+ * @param {number} currentTime - Current playback time in seconds
+ */
+export const saveAudioPosition = (testId, currentTime) => {
+  try {
+    const key = getAudioPositionKey(testId);
+    const storageData = {
+      testId,
+      currentTime: currentTime || 0,
+      lastSaved: Date.now(),
+    };
+    localStorage.setItem(key, JSON.stringify(storageData));
+  } catch (error) {
+    console.error('Error saving audio position:', error);
+  }
+};
+
+/**
+ * Load audio playback position from localStorage
+ * @param {string|number} testId - The test ID
+ * @returns {number|null} Saved playback time in seconds, or null if not found
+ */
+export const loadAudioPosition = (testId) => {
+  try {
+    const key = getAudioPositionKey(testId);
+    const data = localStorage.getItem(key);
+    if (!data) return null;
+    
+    const parsed = JSON.parse(data);
+    return parsed.currentTime || null;
+  } catch (error) {
+    console.error('Error loading audio position:', error);
+    return null;
+  }
+};
+
+/**
+ * Clear audio playback position from localStorage
+ * @param {string|number} testId - The test ID
+ */
+export const clearAudioPosition = (testId) => {
+  try {
+    const key = getAudioPositionKey(testId);
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.error('Error clearing audio position:', error);
+  }
+};
+
+/**
+ * Clear all listening-related data from localStorage
+ * This includes all practice data, result data, and audio positions
+ */
+export const clearAllListeningData = () => {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.startsWith(STORAGE_KEY_PREFIX) ||
+        key.startsWith(RESULT_KEY_PREFIX) ||
+        key.startsWith(AUDIO_POSITION_KEY_PREFIX)
+      )) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  } catch (error) {
+    console.error('Error clearing all listening data:', error);
+  }
+};
+

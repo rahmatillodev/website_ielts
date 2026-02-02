@@ -36,7 +36,7 @@ const DashboardNavbar = ({ onMenuClick }) => {
     const result = await signOut();
     if (result?.success) {
       toast.success('Logged out successfully');
-      navigate('/login');
+      navigate('/');
     } else {
       toast.error(result?.error || 'Failed to log out');
     }
@@ -102,7 +102,7 @@ const DashboardNavbar = ({ onMenuClick }) => {
             </div>
 
             <div className="px-2 pb-2">
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild className="hover:bg-gray-50">
                 <Link
                   to="/profile"
                   className="flex items-center gap-3 px-3 py-2 rounded-xl"
@@ -112,23 +112,13 @@ const DashboardNavbar = ({ onMenuClick }) => {
                 </Link>
               </DropdownMenuItem>
 
-              <DropdownMenuItem asChild>
-                <Link
-                  to="/pricing"
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl"
-                >
-                  <LuCreditCard className="w-5 h-5" />
-                  Billing & Plan
-                </Link>
-              </DropdownMenuItem>
-
               <LogoutModal onConfirm={handleLogout}>
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
-                  className="text-red-600"
+                  className="text-red-600 font-semibold p-2 px-4 hover:text-red-600 rounded-xl"
                 >
-                  <LuLogOut className="w-5 h-5 mr-2" />
-                  Log out
+                  <LuLogOut className="w-5 h-5 mr-2 text-red-600 hover:text-red-600 rounded-xl" />
+                  <span className="text-red-600 hover:text-red-600 rounded-xl">Log out</span>
                 </DropdownMenuItem>
               </LogoutModal>
             </div>

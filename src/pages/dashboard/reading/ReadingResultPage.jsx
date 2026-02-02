@@ -4,32 +4,39 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { FaArrowLeft } from "react-icons/fa6";
 import { IoPrint } from "react-icons/io5";
 import { LuTimer } from "react-icons/lu";
-import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import { FaCheckCircle, FaSpinner, FaTimesCircle } from "react-icons/fa";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { HiOutlineHome, HiOutlineRefresh } from "react-icons/hi";
 import { useTestStore } from "@/store/testStore";
-import { fetchLatestAttempt, deleteTestAttempts } from "@/lib/testAttempts";
+import { fetchLatestAttempt, deleteTestAttempts, fetchAttemptAnswers } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
+import { useDashboardStore } from "@/store/dashboardStore";
 import { generateTestResultsPDF } from "@/utils/pdfExport";
 import ResultBanner from "@/components/badges/ResultBanner";
 import { useSettingsStore } from "@/store/systemStore";
+import { toast } from "react-toastify";
+import { clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
+
 
 const ReadingResultPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentTest, fetchTestById } = useTestStore();
-  const { authUser } = useAuthStore();
+  const { authUser, userProfile } = useAuthStore();
+  const attempts = useDashboardStore((state) => state.attempts);
   const [resultData, setResultData] = useState(null);
   const [attemptData, setAttemptData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   // Use refs to track loaded state and prevent unnecessary re-fetches
   const lastLoadedIdRef = useRef(null);
   const isLoadingRef = useRef(false);
   const fetchTestByIdRef = useRef(fetchTestById);
   const authUserRef = useRef(authUser);
+  const userProfileRef = useRef(userProfile);
   const settings = useSettingsStore((state) => state.settings);
   // Update refs when values change (but don't trigger re-fetch)
   useEffect(() => {
@@ -39,6 +46,10 @@ const ReadingResultPage = () => {
   useEffect(() => {
     authUserRef.current = authUser;
   }, [authUser]);
+
+  useEffect(() => {
+    userProfileRef.current = userProfile;
+  }, [userProfile]);
 
   // Load data only when id changes, not on re-renders or tab focus
   useEffect(() => {
@@ -65,25 +76,108 @@ const ReadingResultPage = () => {
         const currentAuthUser = authUserRef.current;
         const currentFetchTestById = fetchTestByIdRef.current;
 
-        // Fetch test and attempt in parallel
-        const [testResult, attemptResult] = await Promise.all([
-          currentFetchTestById(id),
-          currentAuthUser
-            ? fetchLatestAttempt(currentAuthUser.id, id)
-            : Promise.resolve({ success: true, attempt: null, answers: {} })
-        ]);
+        // Check if the latest attempt is already in dashboardStore
+        const testId = id ? String(id) : null;
+        const attemptsForTest = attempts.filter((a) => String(a.test_id) === testId);
+        const latestAttemptFromStore = attemptsForTest.length > 0
+          ? attemptsForTest.sort((a, b) => {
+            const aDate = new Date(a.completed_at || a.created_at || 0).getTime();
+            const bDate = new Date(b.completed_at || b.created_at || 0).getTime();
+            return bDate - aDate; // Descending order
+          })[0]
+          : null;
+
+        // On result pages, we should always bypass premium check since results are only shown after completion
+        // First, try to get attempt from store or fetch it
+        let attemptResult;
+        let testResult = null; // Declare testResult outside if/else blocks
+        const currentUserProfile = userProfileRef.current;
+
+        if (latestAttemptFromStore && currentAuthUser) {
+          // Use attempt from store and only fetch answers
+          // Fetch test data and answers in parallel
+          // Always bypass premium check on result pages
+          // Include correct answers so we can display them for unanswered questions
+          const [fetchedTestResult, answersResult] = await Promise.all([
+            currentFetchTestById(id, false, true),
+            fetchAttemptAnswers(latestAttemptFromStore.id)
+          ]);
+          testResult = fetchedTestResult; // Store testResult for later use
+
+          if (answersResult.success) {
+            attemptResult = {
+              success: true,
+              attempt: {
+                id: latestAttemptFromStore.id,
+                user_id: latestAttemptFromStore.user_id,
+                test_id: latestAttemptFromStore.test_id,
+                score: latestAttemptFromStore.score,
+                total_questions: latestAttemptFromStore.total_questions,
+                correct_answers: latestAttemptFromStore.correct_answers,
+                time_taken: latestAttemptFromStore.time_taken,
+                completed_at: latestAttemptFromStore.completed_at,
+                created_at: latestAttemptFromStore.created_at,
+              },
+              answers: answersResult.answers || {}, // Keep original answers with question_id keys, will map later
+            };
+          } else {
+            // Fallback to fetchLatestAttempt if fetching answers fails
+            attemptResult = await fetchLatestAttempt(currentAuthUser.id, id);
+          }
+        } else {
+          // Fetch test and attempt in parallel
+          // Always bypass premium check on result pages (user can only reach here if they completed the test)
+          // Include correct answers so we can display them for unanswered questions
+          const [fetchedTestResult, fetchedAttemptResult] = await Promise.all([
+            currentFetchTestById(id, false, true),
+            currentAuthUser
+              ? fetchLatestAttempt(currentAuthUser.id, id)
+              : Promise.resolve({ success: true, attempt: null, answers: {} })
+          ]);
+          testResult = fetchedTestResult; // Store testResult for later use
+          attemptResult = fetchedAttemptResult;
+        }
 
         if (attemptResult.success && attemptResult.attempt && attemptResult.answers) {
           setAttemptData(attemptResult.attempt);
+
+          // Get test data - use testResult if available (from parallel fetch), otherwise use currentTest from store
+          const testDataForMapping = testResult || currentTest;
+
+          // Map question_id (questions.id) back to question_number for display
+          // Build a mapping from questions.id to question_number from the test data
+          const questionIdToNumberMap = {};
+          if (testDataForMapping?.parts) {
+            testDataForMapping.parts.forEach((part) => {
+              if (part.questionGroups) {
+                part.questionGroups.forEach((questionGroup) => {
+                  if (questionGroup.questions) {
+                    questionGroup.questions.forEach((question) => {
+                      if (question.id && question.question_number) {
+                        questionIdToNumberMap[question.id] = question.question_number;
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          }
+
           // Convert answers to the format expected by the component
+          // Use question_number as key for display, but keep question_id mapping for review data
           const answersObj = {};
+          const reviewDataObj = {};
           Object.keys(attemptResult.answers).forEach((questionId) => {
-            answersObj[questionId] = attemptResult.answers[questionId].userAnswer;
+            // questionId is now questions.id (UUID), map it to question_number
+            const questionNumber = questionIdToNumberMap[questionId] || questionId;
+            answersObj[questionNumber] = attemptResult.answers[questionId].userAnswer;
+            reviewDataObj[questionNumber] = attemptResult.answers[questionId];
           });
+
           setResultData({
             answers: answersObj,
             attempt: attemptResult.attempt,
-            reviewData: attemptResult.answers,
+            reviewData: reviewDataObj,
           });
         } else {
           setResultData(null);
@@ -100,7 +194,8 @@ const ReadingResultPage = () => {
     };
 
     loadData();
-  }, [id]); // Only depend on id, not on other values
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]); // Only depend on id - attempts is read from store when effect runs
 
   // Format time from seconds - ensure never negative
   const formatTime = useCallback((seconds) => {
@@ -137,35 +232,292 @@ const ReadingResultPage = () => {
     return resultData?.elapsedTime || 0;
   }, [attemptData, resultData]);
 
-  // Get answer display data - memoized for performance
-  const answerDisplayData = useMemo(() => {
-    if (!resultData || !resultData.answers) return [];
+  // Helper function to format multiple_answers answer (option_key -> "key. option_text")
+  const formatMultipleAnswersAnswer = useCallback((optionKey, questionGroup) => {
+    if (!optionKey || !questionGroup?.options) return optionKey || '';
+    
+    const key = optionKey.toString().trim().toUpperCase();
+    const option = questionGroup.options.find(
+      (opt) => (opt.option_key || opt.letter || '').toString().trim().toUpperCase() === key
+    );
+    
+    if (option && option.option_text) {
+      return `${key}. ${option.option_text}`;
+    }
+    return key;
+  }, []);
 
-    const answers = resultData.answers || {};
-    const reviewData = resultData.reviewData || {};
-    const answerEntries = Object.entries(answers);
-
-    return answerEntries
-      .filter(([key, value]) => value && value.toString().trim() !== '')
-      .map(([key, value]) => {
-        const review = reviewData[key] || {};
-        return {
-          questionNumber: key,
-          yourAnswer: value.toString(),
-          isCorrect: review.isCorrect || false,
-          correctAnswer: review.correctAnswer || '',
-        };
-      })
-      .sort((a, b) => {
-        // Sort by question number if numeric, otherwise by string
-        const aNum = Number(a.questionNumber);
-        const bNum = Number(b.questionNumber);
-        if (!isNaN(aNum) && !isNaN(bNum)) {
-          return aNum - bNum;
+  // Helper function to get correct answer from question/questionGroup structure
+  const getCorrectAnswerFromTest = useCallback((question, questionGroup) => {
+    if (!question || !questionGroup) return '';
+    
+    const groupType = (questionGroup.type || '').toLowerCase();
+    const isMultipleChoice = groupType.includes('multiple_choice');
+    const isMultipleAnswers = groupType === 'multiple_answers';
+    
+    // For multiple_choice: try to get from question.correct_answer or find correct option
+    if (isMultipleChoice) {
+      if (question.correct_answer) {
+        const correctAnswerKey = question.correct_answer.toString().trim();
+        if (question.options && question.options.length > 0) {
+          const correctOption = question.options.find(
+            (opt) => (opt.letter || opt.option_key || '').toLowerCase() === correctAnswerKey.toLowerCase() ||
+                     opt.is_correct === true
+          );
+          if (correctOption) {
+            return correctOption.option_text || correctAnswerKey;
+          }
         }
-        return a.questionNumber.localeCompare(b.questionNumber);
+        return correctAnswerKey;
+      }
+      if (question.options && question.options.length > 0) {
+        const correctOption = question.options.find((opt) => opt.is_correct === true);
+        if (correctOption) {
+          return correctOption.option_text || '';
+        }
+      }
+    }
+    
+    // For multiple_answers: get from question.correct_answer and format as "key. option_text"
+    if (isMultipleAnswers) {
+      if (question.correct_answer) {
+        const correctAnswerKey = question.correct_answer.toString().trim().toUpperCase();
+        return formatMultipleAnswersAnswer(correctAnswerKey, questionGroup);
+      }
+    }
+    
+    // For other types: try question.correct_answer first
+    if (question.correct_answer) {
+      const correctAnswer = question.correct_answer.toString().trim();
+      // Try to convert option_key to option_text if options available
+      if (questionGroup.options && questionGroup.options.length > 0) {
+        const matchingOption = questionGroup.options.find(
+          (opt) => (opt.option_key || opt.letter || '').toLowerCase() === correctAnswer.toLowerCase()
+        );
+        if (matchingOption) {
+          return matchingOption.option_text || correctAnswer;
+        }
+      }
+      return correctAnswer;
+    }
+    
+    // Try to find correct option from question or group options
+    if (question.options && question.options.length > 0) {
+      const correctOption = question.options.find((opt) => opt.is_correct);
+      if (correctOption) {
+        return correctOption.option_text || correctOption.letter || correctOption.option_key || '';
+      }
+    }
+    
+    if (questionGroup.options && questionGroup.options.length > 0) {
+      const correctOption = questionGroup.options.find(
+        (opt) => opt.is_correct && opt.question_number === question.question_number
+      );
+      if (correctOption) {
+        return correctOption.option_text || correctOption.letter || correctOption.option_key || '';
+      }
+    }
+    
+    return '';
+  }, []);
+
+  // Get answer display data - memoized for performance
+  // Now includes ALL questions from the test, even if unanswered
+  const answerDisplayData = useMemo(() => {
+    if (!currentTest) return [];
+
+    const answers = resultData?.answers || {};
+    const reviewData = resultData?.reviewData || {};
+    const result = [];
+    const processedQuestionNumbers = new Set(); // Track processed question numbers to avoid duplicates (as strings)
+
+    // Build a map of all questions from the test
+    const allQuestionsMap = new Map(); // question_number -> { question, questionId, questionGroup }
+    
+    if (currentTest?.parts) {
+      currentTest.parts.forEach((part) => {
+        if (part.questionGroups) {
+          part.questionGroups.forEach((questionGroup) => {
+            if (questionGroup.questions) {
+              questionGroup.questions.forEach((question) => {
+                if (question.question_number != null) {
+                  // Normalize question_number to string for consistent key matching
+                  const qNum = String(question.question_number);
+                  allQuestionsMap.set(qNum, {
+                    question,
+                    questionId: question.id,
+                    questionGroup,
+                  });
+                }
+              });
+            }
+          });
+        }
       });
-  }, [resultData]);
+    }
+
+    // First, process review data to get individual question entries
+    Object.entries(reviewData).forEach(([questionNum, review]) => {
+      // Normalize question number to string for consistent comparison
+      const normalizedQNum = String(questionNum);
+      if (processedQuestionNumbers.has(normalizedQNum)) return;
+      
+      const userAnswer = (review.userAnswer || '').toString().trim();
+      const correctAnswerText = (review.correctAnswer || '').toString().trim();
+      
+      // Get question data from test to access correct_answer (option_key)
+      const questionData = allQuestionsMap.get(normalizedQNum);
+      const question = questionData?.question;
+      const questionGroup = questionData?.questionGroup;
+      const isMultipleAnswers = questionGroup && (questionGroup.type || '').toLowerCase() === 'multiple_answers';
+      
+      // Check if answer contains commas (multiple answers like "D,B")
+      if (userAnswer.includes(',') && isMultipleAnswers) {
+        // This is a multiple_answers question - split the answer
+        const answerParts = userAnswer.split(',').map(a => a.trim().toUpperCase()).filter(Boolean);
+        
+        // For multiple_answers, correctAnswerText from DB is now option_key (e.g., "B")
+        // Convert it to display format: "B. option_text"
+        const formattedCorrectAnswer = formatMultipleAnswersAnswer(correctAnswerText, questionGroup);
+        
+        // Get the question's correct answer option_key (e.g., "A", "B")
+        const correctAnswerKey = question?.correct_answer?.toString().trim().toUpperCase() || '';
+        
+        if (correctAnswerKey) {
+          // Check if the user selected this question's correct answer option_key
+          const userSelectedThisAnswer = answerParts.includes(correctAnswerKey);
+          
+          // Format user's selected answer if they selected the correct one
+          let formattedUserAnswer = '';
+          if (userSelectedThisAnswer) {
+            formattedUserAnswer = formatMultipleAnswersAnswer(correctAnswerKey, questionGroup);
+          }
+          
+          processedQuestionNumbers.add(normalizedQNum);
+          result.push({
+            questionNumber: normalizedQNum,
+            yourAnswer: formattedUserAnswer,
+            isCorrect: review.isCorrect || false,
+            correctAnswer: formattedCorrectAnswer,
+          });
+        } else {
+          // No correct answer key found, process normally
+          processedQuestionNumbers.add(normalizedQNum);
+          result.push({
+            questionNumber: normalizedQNum,
+            yourAnswer: '',
+            isCorrect: review.isCorrect || false,
+            correctAnswer: formattedCorrectAnswer,
+          });
+        }
+      } else {
+        // Single answer - process normally (include even if empty)
+        processedQuestionNumbers.add(normalizedQNum);
+        result.push({
+          questionNumber: normalizedQNum,
+          yourAnswer: userAnswer || '',
+          isCorrect: review.isCorrect || false,
+          correctAnswer: correctAnswerText || '',
+        });
+      }
+    });
+
+    // Also process answers object for any entries not in review data
+    // This handles cases where review data might not be available
+    Object.entries(answers).forEach(([key, value]) => {
+      // Normalize question number to string for consistent comparison
+      const normalizedKey = String(key);
+      if (processedQuestionNumbers.has(normalizedKey)) return;
+      
+      const answerStr = (value || '').toString().trim();
+      const review = reviewData[key] || {};
+      const correctAnswerText = (review.correctAnswer || '').toString().trim();
+      
+      // Get question data from test to access correct_answer (option_key)
+      const questionData = allQuestionsMap.get(normalizedKey);
+      const question = questionData?.question;
+      const questionGroup = questionData?.questionGroup;
+      const isMultipleAnswers = questionGroup && (questionGroup.type || '').toLowerCase() === 'multiple_answers';
+      
+      // Check if answer contains commas (multiple answers like "D,B")
+      if (answerStr.includes(',') && isMultipleAnswers) {
+        // Split comma-separated answers
+        const answerParts = answerStr.split(',').map(a => a.trim().toUpperCase()).filter(Boolean);
+        
+        // For multiple_answers, correctAnswerText from DB is now option_key (e.g., "B")
+        // Convert it to display format: "B. option_text"
+        const formattedCorrectAnswer = formatMultipleAnswersAnswer(correctAnswerText, questionGroup);
+        
+        // Get the question's correct answer option_key (e.g., "A", "B")
+        const correctAnswerKey = question?.correct_answer?.toString().trim().toUpperCase() || '';
+        
+        if (correctAnswerKey) {
+          // Check if the user selected this question's correct answer option_key
+          const userSelectedThisAnswer = answerParts.includes(correctAnswerKey);
+          
+          // Format user's selected answer if they selected the correct one
+          let formattedUserAnswer = '';
+          if (userSelectedThisAnswer) {
+            formattedUserAnswer = formatMultipleAnswersAnswer(correctAnswerKey, questionGroup);
+          }
+          
+          processedQuestionNumbers.add(normalizedKey);
+          result.push({
+            questionNumber: normalizedKey,
+            yourAnswer: formattedUserAnswer,
+            isCorrect: review.isCorrect || false,
+            correctAnswer: formattedCorrectAnswer,
+          });
+        } else {
+          // No correct answer key found, process normally
+          processedQuestionNumbers.add(normalizedKey);
+          result.push({
+            questionNumber: normalizedKey,
+            yourAnswer: '',
+            isCorrect: review.isCorrect || false,
+            correctAnswer: formattedCorrectAnswer,
+          });
+        }
+      } else {
+        // Single answer (include even if empty)
+        processedQuestionNumbers.add(normalizedKey);
+        result.push({
+          questionNumber: normalizedKey,
+          yourAnswer: answerStr || '',
+          isCorrect: review.isCorrect || false,
+          correctAnswer: correctAnswerText || '',
+        });
+      }
+    });
+
+    // Add all unanswered questions from the test
+    allQuestionsMap.forEach(({ question, questionId, questionGroup }, questionNumber) => {
+      // questionNumber is already a string from the Map key
+      if (!processedQuestionNumbers.has(questionNumber)) {
+        // Get correct answer for this question using helper function
+        // This already handles multiple_answers formatting via getCorrectAnswerFromTest
+        const correctAnswer = getCorrectAnswerFromTest(question, questionGroup);
+        
+        processedQuestionNumbers.add(questionNumber);
+        result.push({
+          questionNumber: questionNumber,
+          yourAnswer: '', // Empty answer
+          isCorrect: false,
+          correctAnswer: correctAnswer,
+        });
+      }
+    });
+
+    return result.sort((a, b) => {
+      // Sort by question number if numeric, otherwise by string
+      const aNum = Number(a.questionNumber);
+      const bNum = Number(b.questionNumber);
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum;
+      }
+      return String(a.questionNumber).localeCompare(String(b.questionNumber));
+    });
+  }, [resultData, currentTest, getCorrectAnswerFromTest, formatMultipleAnswersAnswer]);
 
   // Memoized stats calculations
   const stats = useMemo(() => {
@@ -189,39 +541,30 @@ const ReadingResultPage = () => {
 
   // PDF Export function
   const downloadPDF = useCallback(async () => {
+    if (answerDisplayData.length === 0) {
+      toast.error('No answers submitted');
+      return;
+    }
+    setPdfLoading(true);
     await generateTestResultsPDF({
       test: currentTest,
       stats,
       answerDisplayData,
-      showCorrectAnswers,
       formatDate,
       completedDate: attemptData?.completed_at || resultData?.completedAt,
       testType: 'Reading',
       defaultTestTitle: 'Academic Reading Practice Test',
       settings
     });
-  }, [currentTest, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDate]);
+    setPdfLoading(false);
+    toast.success('PDF is generated successfully');
+  }, [currentTest, resultData, answerDisplayData, stats, attemptData, formatDate]);
 
   // Handle retake - delete previous attempts
   const handleRetake = useCallback(async () => {
     if (!authUser || !id) return;
-
-    setIsDeleting(true);
-    try {
-      const result = await deleteTestAttempts(id);
-      if (result.success) {
-        // Navigate to practice page to retake the test
-        navigate(`/reading-practice/${id}`);
-      } else {
-        console.error('Failed to delete attempts:', result.error);
-        alert('Failed to clear previous attempts. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error deleting attempts:', error);
-      alert('An error occurred while clearing attempts.');
-    } finally {
-      setIsDeleting(false);
-    }
+    clearReadingPracticeData(id);
+    navigate(`/reading-practice/${id}`);
   }, [authUser, id, navigate]);
 
   if (loading) {
@@ -274,15 +617,23 @@ const ReadingResultPage = () => {
               variant="outline"
               className="border-gray-200 text-gray-700 shadow-sm flex gap-2 h-9 px-4 sm:px-6"
               onClick={downloadPDF}
+              disabled={pdfLoading}
             >
-              <IoPrint className="text-base" /> <span className="hidden sm:inline">Print</span>
+              {pdfLoading ? (
+                <FaSpinner className="text-base animate-spin" />
+              ) : (
+                <>
+                  <IoPrint className="text-base" /> <span className="hidden sm:inline">Print</span>
+                </>
+              )}
+              {/* <IoPrint className="text-base" /> <span className="hidden sm:inline">Print</span> */}
             </Button>
           </div>
         </div>
 
         <hr className="border-gray-200 mb-10" />
 
-      
+
 
         {/* Stats Cards - Redesigned */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
@@ -351,8 +702,8 @@ const ReadingResultPage = () => {
             </div>
           </div>
         </div>
-          {/* Performance Banner */}
-          <ResultBanner score={stats.score} testType="Reading" />
+        {/* Performance Banner */}
+        <ResultBanner score={stats.score} testType="Reading" />
 
         {/* Detailed Answer Review Section */}
         <div className="mt-12">
@@ -430,7 +781,7 @@ const ReadingResultPage = () => {
                         </td>
                         <td className="p-4">
                           <span className={answerItem.isCorrect ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                            {answerItem.yourAnswer || "N/A"}
+                            {answerItem.yourAnswer || "-"}
                           </span>
                         </td>
                         {showCorrectAnswers && (
@@ -464,7 +815,7 @@ const ReadingResultPage = () => {
                 className="text-slate-500 w-full sm:w-auto hover:text-black bg-blue-100 hover:bg-blue-200 font-semibold transition-all flex items-center gap-2 px-6 h-12 rounded-xl"
               >
                 <HiOutlineHome className="text-xl" />
-                Go To Home
+                Go Home
               </Button>
             </Link>
 

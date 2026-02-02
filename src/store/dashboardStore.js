@@ -8,6 +8,7 @@ export const useDashboardStore = create((set, get) => ({
   scores: { listening: null, reading: null, average: null },
   loading: false,
   error: null,
+  lastFetched: null, // Timestamp of last successful fetch
 
   // Fetch all dashboard data in one optimized query with join
   fetchDashboardData: async (userId, forceRefresh = false) => {
@@ -20,11 +21,15 @@ export const useDashboardStore = create((set, get) => ({
         scores: { listening: null, reading: null, average: null },
         loading: false,
         error: null,
+        lastFetched: null,
       });
       return;
     }
 
-    const shouldFetch = forceRefresh || state.attempts.length === 0;
+    // Check if data is stale (more than 3 minutes old)
+    const fiveMinutesAgo = Date.now() - 3 * 60 * 1000;
+    const isStale = !state.lastFetched || state.lastFetched < fiveMinutesAgo;
+    const shouldFetch = forceRefresh || state.attempts.length === 0 || isStale;
     if (!shouldFetch && !state.loading) {
       return {
         attempts: state.attempts,
@@ -41,6 +46,16 @@ export const useDashboardStore = create((set, get) => ({
         scores: state.scores,
       };
     }
+    /**
+ * IELTS ballarini standart bo'yicha yaxlitlash
+ * 0.25 dan kichik bo'lsa -> .0
+ * 0.25 va 0.75 orasida bo'lsa -> .5
+ * 0.75 dan yuqori bo'lsa -> keyingi butun songa
+ */
+    const roundIELTS = (score) => {
+      if (score === null || score === undefined) return null;
+      return Math.round(score * 2) / 2;
+    };
 
     try {
       set({ loading: true, error: null });
@@ -59,6 +74,7 @@ export const useDashboardStore = create((set, get) => ({
           completions: {},
           loading: false,
           scores: { listening: null, reading: null, average: null },
+          lastFetched: null,
         });
         return {
           attempts: [],
@@ -102,7 +118,7 @@ export const useDashboardStore = create((set, get) => ({
           if (
             !completions[testId] ||
             new Date(attempt.completed_at || attempt.created_at) >
-              new Date(completions[testId].attempt.completed_at || completions[testId].attempt.created_at)
+            new Date(completions[testId].attempt.completed_at || completions[testId].attempt.created_at)
           ) {
             completions[testId] = {
               isCompleted: true,
@@ -136,9 +152,19 @@ export const useDashboardStore = create((set, get) => ({
       const lastListening = listeningAttempts[0]?.score ?? null;
       const lastReading = readingAttempts[0]?.score ?? null;
 
-      const latestScores = [lastListening, lastReading].filter((s) => s !== null && s !== undefined);
-      const averageScore =
-        latestScores.length > 0 ? latestScores.reduce((a, b) => a + b, 0) / latestScores.length : null;
+      // Mavjud ballarni yig'ish
+      const latestScores = [lastListening, lastReading].filter(
+        (s) => s !== null && s !== undefined
+      );
+
+      // Oddiy o'rtachani hisoblash
+      const rawAverage =
+        latestScores.length > 0
+          ? latestScores.reduce((a, b) => a + b, 0) / latestScores.length
+          : null;
+
+      // IELTS qoidasi bo'yicha yaxlitlangan o'rtacha ball
+      const averageScore = roundIELTS(rawAverage);
 
       const scores = {
         listening: lastListening,
@@ -152,6 +178,7 @@ export const useDashboardStore = create((set, get) => ({
         scores,
         loading: false,
         error: null,
+        lastFetched: Date.now(),
       });
 
       return { attempts: attemptsWithType, completions, scores };
@@ -163,6 +190,7 @@ export const useDashboardStore = create((set, get) => ({
         loading: false,
         scores: { listening: null, reading: null, average: null },
         error: error.message,
+        lastFetched: null,
       });
       return {
         attempts: [],
@@ -186,6 +214,7 @@ export const useDashboardStore = create((set, get) => ({
       scores: { listening: null, reading: null, average: null },
       loading: false,
       error: null,
+      lastFetched: null,
     });
   },
 }));

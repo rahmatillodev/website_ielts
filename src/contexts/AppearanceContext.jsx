@@ -17,10 +17,10 @@ const themes = {
     backgroundColor: '#1a2632',
   },
   'high-contrast': {
-    text: '#ffff00', // yellow
-    background: '#000000',
-    border: '#ffff00',
-    backgroundColor: '#1a2632',
+    text: '#FFD700',      // ← YANGILANDI: yellow → gold (ko'z uchun yaxshiroq)
+    background: '#000000', // ← SAQLAB QOLINDI: qora
+    border: '#FFD700',     // ← YANGILANDI: yellow → gold
+    backgroundColor: '#000000', // ← YANGILANDI: ko'k-kulrang → qora
   },
 };
 
@@ -96,4 +96,3 @@ export const useAppearance = () => {
   }
   return context;
 };
-

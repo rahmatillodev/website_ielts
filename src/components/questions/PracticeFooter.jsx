@@ -1,12 +1,14 @@
-import React from 'react'
-import { FaCheck, FaChevronLeft, FaChevronRight, FaBookmark } from 'react-icons/fa';
+import React, { useState } from 'react'
+import { FaCheck, FaChevronLeft, FaChevronRight, FaBookmark, FaRedo } from 'react-icons/fa';
 import { useSearchParams } from 'react-router-dom';
 import { useAppearance } from '@/contexts/AppearanceContext';
+import ConfirmModal from '@/components/modal/ConfirmModal';
 
-const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false }) => {
+const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false }) => {
   // Immediately check URL for review mode to prevent flickering
   const [searchParams] = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
+  const [isRetakeModalOpen, setIsRetakeModalOpen] = useState(false);
   
   // Try to use appearance context, but don't fail if not available
   const appearance = useAppearance();
@@ -123,12 +125,6 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
     }
   };
 
-  // // Check if a part is fully completed
-  // const isPartCompleted = (partQuestions) => {
-  //   if (!partQuestions || partQuestions.length === 0) return false;
-  //   const answeredCount = getPartAnsweredCount(partQuestions);
-  //   return answeredCount === partQuestions.length;
-  // };
 
   return (
     <footer
@@ -136,7 +132,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
       style={{
         backgroundColor: themeColors.backgroundColor }}
     >
-      <div className="flex items-center justify-between h-full ">
+      <div className="flex items-center justify-between h-20 ">
 
 
         {/* Center: All Parts with Progress */}
@@ -152,14 +148,13 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
               return (
                 <div
                   key={part.id}
-                  className="flex flex-col items-center w-full h-full "
-                  style={isActive ? {
-                    backgroundColor: themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)'
-                  } : {}}
+                  className="flex flex-col items-center w-full h-full"
+                  style={{ backgroundColor: themeColors.background }}
+                  
                 >
                   {isActive ? (
                     // Active part: Show Part label and question numbers
-                    <div>
+                    <div className='w-full h-20' style={{ backgroundColor: themeColors.backgroundColor !== '#000000' ? '#E0E0E0' : themeColors.backgroundColor }}>
                       <div
                         className="font-semibold text-md text-center"
                         style={{ color: themeColors.text }}
@@ -180,9 +175,23 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                 const questionNumber = q.question_number;
                                 if (!questionNumber) return null;
 
-                                const answerKey = questionNumber || q.id;
-                                const answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
-
+                                const questionId = q.id;
+                                // Check both question.id (UUID) and question_number for answer
+                                // Most components use question.id as the primary key
+                                let answered = false;
+                                
+                                // First check by question.id (UUID) - this is what most components use
+                                if (questionId && answers[questionId] && answers[questionId].toString().trim() !== '') {
+                                  answered = true;
+                                }
+                                
+                                // Then check by question_number - for backward compatibility
+                                if (!answered && questionNumber && answers[questionNumber] && answers[questionNumber].toString().trim() !== '') {
+                                  answered = true;
+                                }
+                                
+                                // For multiple_answers: each question stores its own answer individually
+                                // So we don't need to check group-level answers - the check above is sufficient
 
                                 // Determine line color: only answered questions are green, default is gray
                                 let lineColor = "bg-gray-300 dark:bg-gray-600";
@@ -210,13 +219,32 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                               .map((q) => {
                                 const questionNumber = q.question_number;
                                 if (!questionNumber) return null;
-                                const answerKey = questionNumber || q.id;
-                                const answered = answers[answerKey] && answers[answerKey].toString().trim() !== '';
+                                
+                                const questionId = q.id;
+                                // Check both question.id (UUID) and question_number for answer
+                                // Most components use question.id as the primary key
+                                let answered = false;
+                                
+                                // First check by question.id (UUID) - this is what most components use
+                                if (questionId && answers[questionId] && answers[questionId].toString().trim() !== '') {
+                                  answered = true;
+                                }
+                                
+                                // Then check by question_number - for backward compatibility
+                                if (!answered && questionNumber && answers[questionNumber] && answers[questionNumber].toString().trim() !== '') {
+                                  answered = true;
+                                }
+                                
+                                // For multiple_answers: each question stores its own answer individually
+                                // So we don't need to check group-level answers - the check above is sufficient
+                                
+                                // Get the actual answer value for display (check both keys)
+                                const answerValue = (questionId && answers[questionId]) || (questionNumber && answers[questionNumber]) || '';
+                                
                                 // Ensure type consistency for comparison
                                 const active = activeQuestion != null && Number(activeQuestion) === Number(questionNumber);
                                 // Check bookmarks: some components use question_number, others use id
                                 // Handle type mismatches by checking both number and string versions
-                                const questionId = q.id;
                                 const isBookmarked = bookmarks.has(questionNumber) ||
                                   bookmarks.has(Number(questionNumber)) ||
                                   bookmarks.has(String(questionNumber)) ||
@@ -245,7 +273,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                       onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = themeColors.background;
                                       }}
-                                      title={answered ? `Answered: ${answers[answerKey]}` : `Question ${questionNumber}`}
+                                      title={answered ? `Answered: ${answerValue}` : `Question ${questionNumber}`}
                                     >
                                       {questionNumber}
                                     </button>
@@ -338,7 +366,7 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
         </div>
         {isReviewMode && onRetake && (
           <button
-            onClick={onRetake}
+            onClick={() => setIsRetakeModalOpen(true)}
             className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium"
           >
             Redo Test
@@ -346,8 +374,27 @@ const PrecticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
         )}
       </div>
 
+      {/* Retake Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isRetakeModalOpen}
+        onClose={() => setIsRetakeModalOpen(false)}
+        onConfirm={() => {
+          setIsRetakeModalOpen(false);
+          if (onRetake) {
+            onRetake();
+          }
+        }}
+        title="Start New Test Attempt"
+        description="Are you ready to start a fresh test? Your current review will be reset and you'll begin a new practice session."
+        cancelLabel="Cancel"
+        confirmLabel="Yes, Start Test"
+        icon={FaRedo}
+        iconBgColor="bg-blue-50"
+        iconColor="text-blue-500"
+      />
+
     </footer>
   )
 }
 
-export default PrecticeFooter
+export default PracticeFooter

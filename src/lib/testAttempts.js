@@ -4,6 +4,8 @@
  */
 
 import supabase from './supabase';
+import { useTestDetailStore } from '@/store/testStore/testDetailStore';
+import { useAuthStore } from '@/store/authStore';
 
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
 const getUserIdFromLocalStorage = () => {
@@ -28,8 +30,25 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
       throw new Error('User not authenticated');
     }
 
-    // Calculate score and correctness
-    const { correctCount, totalQuestions, answerResults } = calculateTestScore(answers, currentTest);
+    // Fetch test with correct answers to ensure we have correct_answer data for scoring
+    // This is necessary because currentTest might not have correct_answer fields
+    let testWithCorrectAnswers = currentTest;
+    try {
+      // Get user subscription status from auth store
+      const authStore = useAuthStore.getState();
+      
+      const testDetailStore = useTestDetailStore.getState();
+      const fetchedTest = await testDetailStore.fetchTestById(testId, false, true); // Include correct answers
+      if (fetchedTest) {
+        testWithCorrectAnswers = fetchedTest;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch test with correct answers, using provided currentTest:', error);
+      // Continue with currentTest if fetch fails
+    }
+
+    // Calculate score and correctness using test with correct answers
+    const { correctCount, totalQuestions, answerResults } = calculateTestScore(answers, testWithCorrectAnswers);
 
     // Calculate band score (IELTS 0-9 scale based on percentage)
     const bandScore = calculateBandScore(correctCount, totalQuestions, type);
@@ -65,6 +84,7 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
       user_answer: result.userAnswer || '',
       is_correct: result.isCorrect,
       correct_answer: result.correctAnswer || '',
+      question_type: result.questionType || 'multiple_choice', // Include question type
     }));
 
     if (answersToInsert.length > 0) {
@@ -221,6 +241,52 @@ export const checkTestCompleted = async (testId) => {
 };
 
 /**
+ * Map question group type to standardized question type enum
+ * Valid enum values: multiple_choice, fill_in_blanks, matching_information, 
+ * true_false_not_given, table, drag_drop, yes_no_not_given, map, table_completion
+ * @param {string} groupType - Question group type
+ * @returns {string} Standardized question type enum value
+ */
+const mapQuestionType = (groupType) => {
+  const normalizedType = (groupType || '').toLowerCase();
+  
+  // Map to exact enum values from Supabase
+  if (normalizedType.includes('multiple_choice')) {
+    return 'multiple_choice';
+  }
+  if (normalizedType === 'fill_in_blanks' || normalizedType.includes('fill_in_blank')) {
+    return 'fill_in_blanks';
+  }
+  if (normalizedType === 'table_completion') {
+    return 'table_completion';
+  }
+  if (normalizedType.includes('drag') || normalizedType.includes('drop') || normalizedType.includes('summary_completion')) {
+    return 'drag_drop';
+  }
+  if (normalizedType.includes('matching_information')) {
+    return 'matching_information';
+  }
+  if (normalizedType.includes('matching_headings') || (normalizedType.includes('table') && !normalizedType.includes('completion'))) {
+    return 'table'; // matching_headings maps to 'table' enum value
+  }
+  if (normalizedType.includes('map')) {
+    return 'map';
+  }
+  if (normalizedType.includes('true_false_not_given')) {
+    return 'true_false_not_given';
+  }
+  if (normalizedType.includes('yes_no_not_given')) {
+    return 'yes_no_not_given';
+  }
+  if (normalizedType.includes('multiple_answers')) {
+    return 'multiple_answers';
+  }
+
+  // Default fallback
+  return 'multiple_choice';
+};
+
+/**
  * Calculate test score by comparing user answers with correct answers
  * @param {object} answers - User answers { [questionId]: answer }
  * @param {object} currentTest - Test data with parts and questions
@@ -234,6 +300,7 @@ const calculateTestScore = (answers, currentTest) => {
   const answerResults = [];
   let correctCount = 0;
   let totalQuestions = 0;
+  
 
   // Iterate through all parts and questions
   currentTest.parts.forEach((part) => {
@@ -242,38 +309,91 @@ const calculateTestScore = (answers, currentTest) => {
         const groupQuestions = questionGroup.questions || [];
         const groupType = (questionGroup.type || '').toLowerCase();
         const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
+        const isMultipleAnswers = groupType === 'multiple_answers';
+        
+        // Map question group type to standardized question type
+        const questionType = mapQuestionType(questionGroup.type);
 
         // For drag and drop, only process questions with question_number (exclude word bank entries)
         const validQuestions = isDragAndDrop
           ? groupQuestions.filter(q => q.question_number != null)
           : groupQuestions;
 
-        validQuestions.forEach((question) => {
-          // Use question_number as primary key (consistent with DragAndDrop component)
-          const questionKey = question.question_number;
-          if (!questionKey) return;
 
-          totalQuestions++;
-          const userAnswer = answers[questionKey]?.toString().trim() || '';
-          const correctAnswer = getCorrectAnswer(question, questionGroup);
+        // For multiple_answers: parse group-level answer and check each question
+        if (isMultipleAnswers) {
+          // Get group-level answer (comma-separated option_keys like "A,C")
+          const groupAnswer = answers[questionGroup.id] || '';
+          const selectedOptionKeys = groupAnswer
+            .split(',')
+            .map(key => key.trim().toUpperCase())
+            .filter(Boolean);
 
-          // Normalize answers for comparison
-          const normalizedUserAnswer = normalizeAnswer(userAnswer);
-          const normalizedCorrectAnswer = normalizeAnswer(correctAnswer);
+          // Each question stores its own userAnswer individually
+          validQuestions.forEach((question) => {
+            const questionId = question.id || question.question_number;
+            totalQuestions++;
 
-          const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer && normalizedUserAnswer !== '';
+            // Correct answer for this question
+            const correctAnswerKey = question.correct_answer?.toString().trim().toUpperCase() || '';
 
-          if (isCorrect) {
-            correctCount++;
-          }
+            // Check if user selected this correct option
+            const isCorrect = correctAnswerKey && selectedOptionKeys.includes(correctAnswerKey);
 
-          answerResults.push({
-            questionId: questionKey,
-            userAnswer,
-            correctAnswer,
-            isCorrect,
+            // Now userAnswer stores **only the option_key relevant for this question**
+            const userAnswerForQuestion = selectedOptionKeys.includes(correctAnswerKey)
+              ? correctAnswerKey
+              : '';
+
+            if (isCorrect) correctCount++;
+
+            answerResults.push({
+              questionId,
+              userAnswer: userAnswerForQuestion,
+              correctAnswer: correctAnswerKey,
+              isCorrect,
+              questionType,
+            });
           });
-        });
+        } 
+        else {
+          // For other question types: process normally
+          validQuestions.forEach((question) => {
+            // Use questions.id as primary key (from nested structure), fallback to question_number for backward compatibility
+            const questionId = question.id; // This is questions.id from the nested structure
+            const questionNumber = question.question_number;
+            
+            // Try to get answer using questions.id first, then fallback to question_number
+            const userAnswer = (questionId && answers[questionId]?.toString().trim()) || 
+                              (questionNumber && answers[questionNumber]?.toString().trim()) || 
+                              '';
+            
+            // Skip if no answer found and no question ID/number
+            if (!questionId && !questionNumber) return;
+            
+            totalQuestions++;
+            const correctAnswer = getCorrectAnswer(question, questionGroup);
+
+            // Normalize answers for comparison
+            const normalizedUserAnswer = normalizeAnswer(userAnswer);
+            const normalizedCorrectAnswer = normalizeAnswer(correctAnswer);
+
+            const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer && normalizedUserAnswer !== '';
+
+            if (isCorrect) {
+              correctCount++;
+            }
+
+            // Use questions.id as questionId for database storage, fallback to question_number
+            answerResults.push({
+              questionId: questionId || questionNumber, // Use questions.id if available, otherwise question_number
+              userAnswer,
+              correctAnswer,
+              isCorrect,
+              questionType, // Include question type for analytics
+            });
+          });
+        }
       });
     }
   });
@@ -289,48 +409,136 @@ const calculateTestScore = (answers, currentTest) => {
  */
 const getCorrectAnswer = (question, questionGroup) => {
   const groupType = (questionGroup.type || '').toLowerCase();
-  const isMultipleChoice = groupType.includes('multiple') || groupType.includes('choice');
+  const isMultipleChoice = groupType.includes('multiple_choice');
+  const isMultipleAnswers = groupType === 'multiple_answers';
   const isTableType = groupType.includes('table');
+  const isMatchingInformation = groupType.includes('matching_information') || groupType.includes('matching');
+  const isMatchingHeadings = groupType.includes('matching_headings');
+  
 
-  // For multiple_choice and table types: use options table with is_correct
-  if (isMultipleChoice || isTableType) {
-    // For multiple_choice: find correct option in question's options
-    if (isMultipleChoice && question.options && question.options.length > 0) {
+  // For multiple_choice: use options table with is_correct
+  if (isMultipleChoice) {
+    // First try to get from question.correct_answer (might be letter like "A")
+    if (question.correct_answer) {
+      const correctAnswerKey = question.correct_answer.toString().trim();
+      // Try to find option_text that matches this letter
+      if (question.options && question.options.length > 0) {
+        const correctOption = question.options.find(
+          (opt) => (opt.letter || opt.option_key || '').toLowerCase() === correctAnswerKey.toLowerCase() ||
+                   opt.is_correct === true
+        );
+        if (correctOption) {
+          return correctOption.option_text || correctAnswerKey;
+        }
+      }
+      // Fallback to the letter if no option found
+      return correctAnswerKey;
+    }
+    // Fallback: find correct option in question's options
+    if (question.options && question.options.length > 0) {
       const correctOption = question.options.find((opt) => opt.is_correct === true);
       if (correctOption) {
         // Use option_text as the answer value (not letter)
-        return correctOption.option_text || '';
-      }
-    }
-
-    // For table: try to get from question.correct_answer first (stored in testStore)
-    if (isTableType && question.correct_answer) {
-      return question.correct_answer;
-    }
-
-    // For table: find correct option in group options matching question_number
-    if (isTableType && questionGroup.options && questionGroup.options.length > 0) {
-      const correctOption = questionGroup.options.find(
-        (opt) => opt.is_correct === true && opt.question_number === question.question_number
-      );
-      if (correctOption) {
-        // Use option_text as the answer value (not letter)
-        return correctOption.option_text || '';
-      }
-    }
-
-    // Fallback: check question's options for table (in case options are stored per question)
-    if (isTableType && question.options && question.options.length > 0) {
-      const correctOption = question.options.find((opt) => opt.is_correct === true);
-      if (correctOption) {
         return correctOption.option_text || '';
       }
     }
   }
 
-  // For other question types: try to get correct answer from question's correct_answer field
+  // For multiple_answers: correct_answer is stored as option_key (e.g., "A"), convert to option_text
+  if (isMultipleAnswers) {
+    if (question.correct_answer) {
+      const correctAnswerKey = question.correct_answer.toString().trim().toUpperCase();
+      // Try to find option_text from group-level options that matches this option_key
+      if (questionGroup.options && questionGroup.options.length > 0) {
+        const correctOption = questionGroup.options.find(
+          (opt) => (opt.option_key || opt.letter || '').toString().trim().toUpperCase() === correctAnswerKey
+        );
+        if (correctOption) {
+          // Return option_text for display
+          return correctOption.option_text || correctAnswerKey;
+        }
+      }
+      // Fallback: return the key if no matching option found
+      return correctAnswerKey;
+    }
+  }
+
+  // For matching_information: correct_answer is stored as option_key (e.g., "A"), but we need option_text
+  if (isMatchingInformation) {
+    if (question.correct_answer) {
+      const correctAnswerKey = question.correct_answer.toString().trim();
+      // Try to find option_text from group-level options that matches this option_key
+      if (questionGroup.options && questionGroup.options.length > 0) {
+        const correctOption = questionGroup.options.find(
+          (opt) => (opt.option_key || opt.letter || '').toLowerCase() === correctAnswerKey.toLowerCase()
+        );
+        if (correctOption) {
+          // Return option_text for matching
+          return correctOption.option_text || correctAnswerKey;
+        }
+      }
+      // Fallback: return the key if no matching option found
+      return correctAnswerKey;
+    }
+  }
+
+  // For matching_headings: similar to matching_information
+  if (isMatchingHeadings) {
+    if (question.correct_answer) {
+      const correctAnswerKey = question.correct_answer.toString().trim();
+      // Try to find option_text from group-level options
+      if (questionGroup.options && questionGroup.options.length > 0) {
+        const correctOption = questionGroup.options.find(
+          (opt) => (opt.option_key || opt.letter || '').toLowerCase() === correctAnswerKey.toLowerCase() ||
+                   opt.is_correct === true && opt.question_number === question.question_number
+        );
+        if (correctOption) {
+          return correctOption.option_text || correctAnswerKey;
+        }
+      }
+      return correctAnswerKey;
+    }
+  }
+
+  // For table type: correct_answer is stored directly on the question
+  // Options are group-level (question_number is null) and shared by all questions
+  if (isTableType) {
+    // Get correct answer directly from question.correct_answer (e.g., "A", "B", "C")
+    if (question.correct_answer) {
+      // The correct_answer is stored as a letter (e.g., "A"), but we need to match it
+      // to the option_text from group-level options
+      const correctAnswerLetter = question.correct_answer.toString().trim();
+      
+      // Try to find the option_text that matches this letter from group-level options
+      if (questionGroup.options && questionGroup.options.length > 0) {
+        const correctOption = questionGroup.options.find(
+          (opt) => (opt.letter || opt.option_key || '').toLowerCase() === correctAnswerLetter.toLowerCase() ||
+                   (opt.option_text || '').toLowerCase() === correctAnswerLetter.toLowerCase()
+        );
+        if (correctOption) {
+          // Return option_text if available, otherwise return the letter
+          return correctOption.option_text || correctAnswerLetter;
+        }
+      }
+      
+      // Fallback: return the letter directly if no matching option found
+      return correctAnswerLetter;
+    }
+  }
+
+  // For other question types: try to get correct answer from question's correct_answer field first
   if (question.correct_answer) {
-    return question.correct_answer.toString().trim();
+    const correctAnswer = question.correct_answer.toString().trim();
+    // For types that might have option_key stored, try to convert to option_text
+    if (questionGroup.options && questionGroup.options.length > 0) {
+      const matchingOption = questionGroup.options.find(
+        (opt) => (opt.option_key || opt.letter || '').toLowerCase() === correctAnswer.toLowerCase()
+      );
+      if (matchingOption) {
+        return matchingOption.option_text || correctAnswer;
+      }
+    }
+    return correctAnswer;
   }
 
   // For other types with options: find correct option
@@ -338,7 +546,7 @@ const getCorrectAnswer = (question, questionGroup) => {
     const correctOption = question.options.find((opt) => opt.is_correct);
     if (correctOption) {
       // For other types, prefer option_text but fallback to letter
-      return correctOption.option_text || correctOption.letter || '';
+      return correctOption.option_text || correctOption.letter || correctOption.option_key || '';
     }
   }
 
@@ -348,7 +556,7 @@ const getCorrectAnswer = (question, questionGroup) => {
       (opt) => opt.is_correct && opt.question_number === question.question_number
     );
     if (correctOption) {
-      return correctOption.option_text || correctOption.letter || '';
+      return correctOption.option_text || correctOption.letter || correctOption.option_key || '';
     }
   }
 
@@ -481,4 +689,3 @@ export const deleteTestAttempts = async (testId) => {
     };
   }
 };
-

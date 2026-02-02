@@ -15,7 +15,7 @@ import { LuLogOut } from "react-icons/lu";
 const LogoutModal = ({ children, onConfirm }) => {
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>
+      <AlertDialogTrigger asChild className="w-full hover:bg-red-50">
         {children}
       </AlertDialogTrigger>
       

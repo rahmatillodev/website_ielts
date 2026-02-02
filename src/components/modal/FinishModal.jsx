@@ -5,76 +5,75 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { clearReadingPracticeData, loadReadingPracticeData, saveReadingResultData } from "@/store/LocalStorage/readingStorage";
 
-export default function FinishModal({ isOpen, onClose, link, testId, onSubmit,loading = false }) {
+export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, loading = false }) {
   const navigate = useNavigate();
-  
+
   const handleSubmit = async () => {
     try {
-      // If onSubmit callback is provided, use it (this will handle test submission)
       if (onSubmit) {
         const result = await onSubmit();
-        // Only navigate if submission was successful
         if (result && result.success !== false) {
-          onClose(); // Close modal first
+          onClose();
           navigate(link);
-        } else {
-          // Show error message if submission failed
-          if (result && result.error) {
-            alert(`Failed to submit test: ${result.error}`);
-          } else {
-            alert('Failed to submit test. Please try again.');
-          }
-          // Modal stays open so user can try again
         }
       } else {
-        // Legacy behavior: Save result data before clearing practice data
         if (testId) {
           const practiceData = loadReadingPracticeData(testId);
           if (practiceData) {
-            // Calculate elapsed time
-            const elapsedTime = practiceData.startTime 
+            const elapsedTime = practiceData.startTime
               ? Math.floor((Date.now() - practiceData.startTime) / 1000)
               : 0;
-            
-            // Save to result storage
+
             saveReadingResultData(testId, {
               ...practiceData,
               elapsedTime,
             });
           }
-          // Clear practice data
           clearReadingPracticeData(testId);
         }
-        onClose(); // Close modal
+        onClose();
         navigate(link);
       }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
       alert('An error occurred while submitting the test. Please try again.');
-      // Don't navigate on error, modal stays open
     }
   };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Test Finished</DialogTitle>
+          {/* Sarlavha o'zgartirildi */}
+          <DialogTitle>Finish Test?</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-gray-700 dark:text-gray-300">
-          You have completed the test! Your answers have been submitted
-          successfully.
-        </p>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Close
+        {/* Matn ko'rinishi o'zgartirildi */}
+        <div className="py-2">
+          <p className="text-base text-gray-700 dark:text-gray-300">
+            Are you sure you want to finish the test?
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            You can still go back and review your answers if you have time left.
+          </p>
+        </div>
+        <DialogFooter className="flex gap-2">
+          {/* Davom etish tugmasi */}
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Continue Test
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>{loading ? 'Submitting...' : 'Submit'}</Button>
+          {/* Yakunlash tugmasi */}
+          <Button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {loading ? 'Submitting...' : 'Yes, Finish'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

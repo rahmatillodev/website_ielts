@@ -5,7 +5,7 @@ import { LuPenTool } from 'react-icons/lu';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-const ComingSoonPage = ({ title, description, type }) => {
+const ComingSoonPage = ({ title, description, type, headerAction, headerActionText }) => {
   const mockData = [
     {
       id: "1",
@@ -169,10 +169,10 @@ const ComingSoonPage = ({ title, description, type }) => {
           </motion.p>
         </div>
         <motion.div variants={itemVariants}>
-          {type === "writing" && <Link to="/writing-practice">
+          {type === "writing" && <Link to={headerAction}>
             <Button>
               <LuPenTool className='w-4 h-4' />
-              <span>Practice Now</span>
+              <span>{headerActionText}</span>
             </Button>
           </Link>}
         </motion.div>

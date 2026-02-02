@@ -3,17 +3,12 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Mail,
-  Lock,
-  ChevronLeft,
-  BookOpen,
-  Headphones,
-  PenTool,
-  ArrowRight,
-} from "lucide-react";
+import { Mail, Lock, ChevronLeft, ArrowRight } from "lucide-react";
 import { toast } from "react-toastify";
 import LogoDesign from "@/components/LogoDesign";
+import { motion } from "framer-motion";
+import { MdAutoStories } from "react-icons/md";
+import AnimatedPolygonDecoration from "@/components/AnimatedPolygonDecoration";
 
 // Public Login page
 function LoginPage() {
@@ -27,10 +22,18 @@ function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
 
+
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Invalid email format");
+      return;
+    }
+
 
     const result = await signIn(email, password);
 
@@ -42,166 +45,129 @@ function LoginPage() {
     }
   };
 
+
   return (
-    <div className="min-h-screen flex bg-white justify-center items-center">
-      {/* Left Panel */}
-      <div className="hidden lg:flex lg:w-2/5 text-white flex-col justify-between p-12 bg-primary min-h-screen">
-        <div>
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 mb-5 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-300 group"
-          >
-            <ChevronLeft className="w-4 h-4 text-white group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-medium text-white">
-              Back to Home
-            </span>
-          </button>
-
-          {/* LOGO */}
-          <div className="mb-12">
-            <LogoDesign className="w-fit text-white" iconColor="text-[#1990e6]" color="white" />
-          </div>
-
-
-          {/* Headline */}
-          <h2 className="text-4xl font-semibold mb-6">
-            Achieve your dream band score.
-          </h2>
-
-          {/* Description */}
-          <p className="text-white/90 text-lg leading-relaxed">
-            Access premium reading, listening, and writing simulations designed
-            to mirror the exact computer-delivered IELTS interface.
-          </p>
-        </div>
-
-        {/* Features Card */}
-        <div className="bg-gradient-to-br from-white/15 to-white/5 shadow-lg shadow-primary/30 backdrop-blur-sm rounded-lg p-6 max-w-sm">
-          <p className="text-sm text-white/70 mb-4 font-medium">WHAT'S INCLUDED</p>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 rounded-lg p-2.5">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  Reading Practice
-                </p>
-                <p className="text-xs text-white/70">
-                  Full-length simulations
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 rounded-lg p-2.5">
-                <Headphones className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  Listening Practice
-                </p>
-                <p className="text-xs text-white/70">
-                  Audio-based exercises
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 rounded-lg p-2.5">
-                <PenTool className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  Writing Practice
-                </p>
-                <p className="text-xs text-white/70">
-                  Task 1 & 2 simulations
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel */}
-      <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center">
+    <div className="min-h-screen flex bg-white">
+      {/* Left Panel - Branding with Animation */}
+      <AnimatedPolygonDecoration />
+      {/* Right Panel - Login Form */}
+      <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center bg-white relative">
+        {/* Back Button - Responsive */}
         <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-300 lg:hidden group"
+          onClick={() => navigate(-1)}
+          className="absolute lg:hidden top-9 left-8 flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors text-sm"
+          aria-label="Go back"
         >
-          <ChevronLeft className="w-4 h-4 text-gray-700 group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm font-medium text-gray-700">Back</span>
+          <ChevronLeft className="w-4 h-4" />
+          <span>Back</span>
         </button>
 
-        <div className="w-full max-w-md mt-9">
-          <h1 className="text-3xl font-semibold mb-2">Welcome back</h1>
+        <div className="w-full max-w-md">
+          {/* Logo - Mobile */}
+          <div className="lg:hidden mb-8">
+            <LogoDesign
+              className="w-fit"
+              iconColor="text-white"
+              color="#1990e6"
+            />
+          </div>
+          {/* Logo - Desktop */}
+          <div className="hidden lg:flex items-center gap-2 mb-8">
+            <LogoDesign
+              className="w-fit"
+              iconColor="text-white"
+              color="#1990e6"
+            />
+          </div>
+          <h1 className="text-3xl font-semibold mb-2 text-gray-900">
+            Welcome Back
+          </h1>
           <p className="text-gray-600 mb-8">
             Please enter your details to sign in.
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            {/* Email */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="email"
-                  placeholder="name@example.com"
-                  className="pl-10 bg-gray-50 border-gray-200"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="password"
-                  placeholder="••••••"
-                  className="pl-10 bg-gray-50 border-gray-200"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full bg-primary hover:bg-primary-dark text-white h-11 text-base font-medium"
-              disabled={loading}
+          {/* Tab Switcher */}
+          <div className="flex items-center gap-1 mb-8 bg-gray-100 rounded-lg p-1">
+            <button
+              className="flex-1 px-4 py-2 rounded-md bg-white text-gray-900 font-medium text-sm shadow-sm transition-all"
             >
-              {loading ? "Logging in..." : "Log In"}
-            </Button>
-          </form>
-
-          {/* Sign up */}
-          <div className="mt-6 p-4 bg-linear-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
-            <p className="text-sm text-gray-700 text-center mb-3">
-              New to IELTS?
-            </p>
-            <Link to="/signup">
-              <Button
-                variant="outline"
-                className="w-full border-primary/30 text-primary hover:bg-primary hover:text-white transition-all duration-300 group"
-              >
-                Create an Account
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              Sign In
+            </button>
+            <Link
+              to="/signup"
+              className="flex-1 px-4 py-2 rounded-md text-gray-600 font-medium text-sm hover:text-gray-900 transition-all text-center"
+            >
+              Sign Up
             </Link>
           </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+
+
+            <form onSubmit={handleLogin} className="space-y-6">
+              {/* Email */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    type="email"
+                    placeholder="name@company.com"
+                    className="pl-10 bg-gray-50 border-gray-200 h-11"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    type="password"
+                    placeholder="•••••••••"
+                    className="pl-10 bg-gray-50 border-gray-200 h-11"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full bg-[#136dec] hover:bg-[#136dec]-dark text-white h-11 text-base font-medium"
+                disabled={loading}
+              >
+                {loading ? "Signing in..." : "Sign In"}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </form>
+
+            {/* Sign Up Link */}
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{" "}
+                <Link
+                  to="/signup"
+                  className="text-[#136dec] hover:text-[#136dec]-dark font-medium"
+                >
+                  Sign Up
+                </Link>
+              </p>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>

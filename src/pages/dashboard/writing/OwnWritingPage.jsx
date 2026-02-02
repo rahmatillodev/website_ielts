@@ -15,6 +15,7 @@ import { AppearanceProvider, useAppearance } from '@/contexts/AppearanceContext'
 import AppearanceSettingsModal from '@/components/modal/AppearanceSettingsModal';
 import { toast } from "react-toastify";
 import { useSettingsStore } from '@/store/systemStore';
+import { useWritingStore } from '@/store/WritingStore';
 
 const OwnWritingPageContent = () => {
   const navigate = useNavigate();
@@ -308,7 +309,6 @@ const OwnWritingPageContent = () => {
           }}
         >
           <div className="p-6 space-y-4">
-            {/* Первый элемент - Информационный блок */}
             <div 
               className="mx-2 px-4 py-4 border rounded-lg"
               style={{
@@ -338,13 +338,11 @@ const OwnWritingPageContent = () => {
               </div>
             </div>
 
-            {/* Второй элемент - Форма с input'ами */}
             <div 
               className="mx-2 px-4 py-4 border-2 rounded-lg transition-colors"
               style={{ borderColor: themeColors.border }}
             >
               <div className="space-y-4 overflow-y-auto">
-                {/* Textarea для письма */}
                 <textarea
                   value={currentTask.question}
                   disabled={isSubmitted}
@@ -553,7 +551,7 @@ Tip: You can drag & drop image`
             disabled={isSubmitted}
             className="ml-3 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-default"
           >
-            {isSubmitted ? "Submitted" : "Submit"}
+            {isSubmitted ? "Saved" : "Save"}
           </button>
         </div>
       </footer>
@@ -569,4 +567,4 @@ const OwnWritingPage = () => {
   );
 };
 
-export default OwnWritingPage
+export default OwnWritingPage; 

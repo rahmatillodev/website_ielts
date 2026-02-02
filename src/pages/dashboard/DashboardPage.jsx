@@ -32,7 +32,6 @@ const CircularProgress = ({ progress, size = 80, strokeWidth = 8 }) => {
         width={size}
         height={size}
       >
-        {/* Background circle */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -41,7 +40,6 @@ const CircularProgress = ({ progress, size = 80, strokeWidth = 8 }) => {
           strokeWidth={strokeWidth}
           fill="none"
         />
-        {/* Progress circle */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -399,7 +397,7 @@ const SimpleCalendar = ({ userAttempts = [] }) => {
                 )}
                 {/* Hover tooltip */}
                 {c.hasActivity && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
+                  <div className="absolute bottom-full left-1/2 z-50 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ">
                     {c.count} test{c.count !== 1 ? 's' : ''} completed
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                   </div>
@@ -523,7 +521,7 @@ const DashboardPage = () => {
         iconColor: 'text-blue-500',
         bgColor: 'bg-blue-50',
         borderColor: 'border-blue-200',
-        isActive: scores.listening !== null,
+        isActive: true,
       },
       {
         label: 'Reading',
@@ -532,7 +530,7 @@ const DashboardPage = () => {
         iconColor: 'text-orange-500',
         bgColor: 'bg-orange-50',
         borderColor: 'border-orange-200',
-        isActive: scores.reading !== null,
+        isActive: true,
       },
       {
         label: 'Writing',

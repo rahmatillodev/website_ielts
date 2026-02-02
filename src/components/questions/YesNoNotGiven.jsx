@@ -2,15 +2,22 @@ import React from "react";
 import { FaRegBookmark, FaBookmark } from "react-icons/fa";
 
 const YesNoNotGiven = ({ question, answer, onAnswerChange, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {} }) => {
+  const questionId = question.id;
   const questionNumber = question.question_number || question.id;
   const isReviewMode = mode === 'review';
-  const isBookmarked = bookmarks.has(questionNumber);
-  const review = reviewData[questionNumber] || {};
+  // Try both question.id (UUID) and question_number for review data lookup
+  const review = reviewData[questionId] ||
+                 reviewData[String(questionId)] ||
+                 reviewData[questionNumber] ||
+                 reviewData[String(questionNumber)] ||
+                 {};
   const isCorrect = review.isCorrect;
   const correctAnswer = review.correctAnswer || '';
+  // Use review.userAnswer if available, otherwise use the answer prop
   const userAnswer = review.userAnswer || answer;
-  const showWrong = isReviewMode && !isCorrect;
-  const showCorrect = isReviewMode && isCorrect;
+  const showWrong = isReviewMode && review.hasOwnProperty('isCorrect') && review.isCorrect === false;
+  const showCorrect = isReviewMode && review.isCorrect === true;
+  const isBookmarked = bookmarks.has(questionId) || bookmarks.has(questionNumber);
   
   return (
     <div className="space-y-2 group relative">
@@ -58,7 +65,8 @@ const YesNoNotGiven = ({ question, answer, onAnswerChange, mode = 'test', review
               checked={isSelected}
               onChange={() => {
                 if (mode !== 'review') {
-                  onAnswerChange(questionNumber, option);
+                  // Use question.id (UUID) as primary key, fallback to question_number
+                  onAnswerChange(questionId || questionNumber, option);
                 }
               }}
               disabled={mode === 'review'}
@@ -73,12 +81,12 @@ const YesNoNotGiven = ({ question, answer, onAnswerChange, mode = 'test', review
                 Wrong
               </span>
             )}
-            {isSelected && showWrong && correctAnswer && (
+            {isSelected && showWrong && correctAnswer && showCorrectAnswers && (
               <span className="text-xs text-green-600 font-medium ml-2">
                 Correct: {correctAnswer}
               </span>
             )}
-            {isCorrectOption && isReviewMode && !isSelected && correctAnswer && (
+            {isCorrectOption && isReviewMode && !isSelected && correctAnswer && showCorrectAnswers && (
               <span className="text-xs text-green-700 font-medium">Correct Answer</span>
             )}
           </label>

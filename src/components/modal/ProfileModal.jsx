@@ -23,12 +23,13 @@ const ProfileModal = ({ open, onOpenChange }) => {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const fileInputRef = useRef(null);
-  
+
   const [formData, setFormData] = useState({
     full_name: userProfile?.full_name || '',
     telegram_username: userProfile?.telegram_username || '',
     phone_number: userProfile?.phone_number || '',
     avatar_image: userProfile?.avatar_image || null,
+    target_band_score: userProfile?.target_band_score || 7.5,
   });
 
   useEffect(() => {
@@ -37,6 +38,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
         full_name: userProfile.full_name || '',
         telegram_username: userProfile.telegram_username || '',
         phone_number: userProfile.phone_number || '',
+        target_band_score: userProfile.target_band_score || 7.5,
       });
       setAvatarPreview(userProfile.avatar_image || null);
     }
@@ -45,12 +47,38 @@ const ProfileModal = ({ open, onOpenChange }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === 'phone_number') {
+      setFormData((prev) => ({ ...prev, [name]: formatUzPhone(value) }));
+    } else if (name === 'target_band_score') {
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue) && numValue >= 0 && numValue <= 9) {
+        setFormData((prev) => ({ ...prev, [name]: numValue }));
+      } else if (value === '') {
+        setFormData((prev) => ({ ...prev, [name]: '' }));
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+  // Telefon raqamini formatlash funksiyasi
+  const formatUzPhone = (value) => {
+    // Faqat raqamlarni qoldiramiz
+    const numbers = value.replace(/\D/g, '');
+
+    // Agar +998 bilan boshlanmasa, uni qo'shamiz
+    let result = '';
+    if (numbers.startsWith('998')) {
+      result = '+' + numbers;
+    } else {
+      result = '+998' + numbers;
+    }
+
+    // Maksimal uzunlikni cheklash (+998 va 9 ta raqam = 13 ta belgi)
+    return result.substring(0, 13);
   };
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
-
   };
 
   const handleFileChange = (e) => {
@@ -110,30 +138,54 @@ const ProfileModal = ({ open, onOpenChange }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
+    // Validate phone number format only if provided
+    const phoneNumber = formData.phone_number.trim();
+    if (phoneNumber && phoneNumber.length !== 13) {
+      toast.error("Iltimos, telefon raqamini to'liq kiriting (+998XXXXXXXXX)");
+      setLoading(false);
+      return;
+    }
+
     try {
       let avatarUrl = userProfile?.avatar_image;
-      
+
       // Upload avatar if new file selected
       if (avatarFile) {
         const uploadResult = await uploadAvatar(avatarFile);
         if (!uploadResult.success) {
           const errorMessage = uploadResult.error || 'Failed to upload image. Please try again later.';
           toast.error(errorMessage);
+          setLoading(false);
           return;
         }
         avatarUrl = uploadResult.url;
       }
-      
-      // Update user profile
-      const result = await updateUserProfile({
-        ...formData,
+
+      // Validate target band score
+      const targetScore = formData.target_band_score;
+      if (targetScore !== '' && (isNaN(targetScore) || targetScore < 0 || targetScore > 9)) {
+        toast.error('Target band score must be between 0 and 9');
+        setLoading(false);
+        return;
+      }
+
+      // Prepare profile data - only include phone_number if it's provided and properly formatted
+      const profileData = {
+        full_name: formData.full_name.trim() || null,
+        telegram_username: formData.telegram_username.trim() || null,
+        phone_number: phoneNumber || null,
         avatar_image: avatarUrl,
-      });
-      
+        target_band_score: targetScore !== '' ? parseFloat(targetScore) : 7.5,
+      };
+
+      // Update user profile
+      const result = await updateUserProfile(profileData);
+
       if (!result.success) {
         const errorMessage = result.error || 'Failed to update profile. Please try again.';
         toast.error(errorMessage);
+        setLoading(false);
         return;
       }
 
@@ -148,22 +200,25 @@ const ProfileModal = ({ open, onOpenChange }) => {
     }
   };
 
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-black">Edit Profile</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Avatar Upload */}
           <div className="flex justify-center">
             <div className="relative">
-              <Avatar 
+              <Avatar
                 className="size-24 border-2 border-gray-100 cursor-pointer"
                 onClick={handleAvatarClick}
               >
-                <AvatarImage src={avatarPreview} alt="Avatar" />
+                  <AvatarImage src={avatarPreview} alt="Avatar"
+                    className="object-cover"
+                  />
                 <AvatarFallback className="bg-gray-100 text-gray-400 text-2xl font-semibold">
                   {getInitials()}
                 </AvatarFallback>
@@ -195,7 +250,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
               className="rounded-xl h-11"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-gray-500">Telegram Username</Label>
             <Input
@@ -206,18 +261,37 @@ const ProfileModal = ({ open, onOpenChange }) => {
               className="rounded-xl h-11"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-gray-500">Phone Number</Label>
             <Input
               name="phone_number"
               value={formData.phone_number}
               onChange={handleChange}
+              maxLength={13}
               placeholder="+998 90 123 45 67"
               className="rounded-xl h-11"
             />
           </div>
-          
+
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold text-gray-500">Target Band Score</Label>
+            <Input
+              type="number"
+              name="target_band_score"
+              value={formData.target_band_score}
+              onChange={handleChange}
+              min="0"
+              max="9"
+              step="0.5"
+              placeholder="7.5"
+              className="rounded-xl h-11"
+            />
+            <p className="text-xs text-gray-400">
+              Set your target IELTS band score (0-9)
+            </p>
+          </div>
+
           <DialogFooter className="pt-4">
             <Button
               type="button"

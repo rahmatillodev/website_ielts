@@ -141,3 +141,25 @@ export const clearReadingResultData = (testId) => {
   }
 };
 
+/**
+ * Clear all reading-related data from localStorage
+ * This includes all practice data and result data
+ */
+export const clearAllReadingData = () => {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.startsWith(STORAGE_KEY_PREFIX) ||
+        key.startsWith(RESULT_KEY_PREFIX)
+      )) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  } catch (error) {
+    console.error('Error clearing all reading data:', error);
+  }
+};
+

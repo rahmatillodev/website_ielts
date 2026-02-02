@@ -11,6 +11,7 @@ import Table from "./Table";
 import TableCompletion from "./TableCompletion";
 
 import TypeMap from "./TypeMap";
+import MultipleAnswers from "./MultipleAnswers";
 
 /**
  * Smart QuestionRenderer - Routes to appropriate component based on question type
@@ -32,10 +33,11 @@ const QuestionRenderer = ({
   const questionType = question.type;
   const normalizedType = questionType.toLowerCase().trim();
 
-  // Fill-in-the-Blanks - inline inputs with ___ placeholders from question_text
+  // Fill-in-the-Blanks - inline inputs with ___ placeholders from question_text  
   if (
     normalizedType.includes('fill_in_blank') 
   ) {
+
     return (
       <CompletionGapFill
         question={question}
@@ -111,6 +113,23 @@ const QuestionRenderer = ({
     );
   }
 
+  // Multiple Answers - must be checked before Multiple Choice to avoid conflicts
+  if (normalizedType.includes('multiple_answers')) {
+    return (
+      <MultipleAnswers
+        question={question}
+        groupQuestions={groupQuestions}
+        answers={answers}
+        onAnswerChange={onAnswerChange}
+        mode={mode}
+        reviewData={reviewData}
+        showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
+      />
+    );
+  }
+
   // Multiple Choice
   if (
     normalizedType.includes('multiple') ||
@@ -170,7 +189,10 @@ const QuestionRenderer = ({
   }
 
   // Map - with image_url, instruction, and table matching interface
+  
   if (normalizedType.includes('map')) {
+    console.log(question)
+    console.log(groupQuestions)
     return (
       <TypeMap
         question={question}
@@ -229,6 +251,9 @@ const QuestionRenderer = ({
       question={question}
       answer={answer}
       onAnswerChange={onAnswerChange}
+      mode={mode}
+      reviewData={reviewData}
+      showCorrectAnswers={showCorrectAnswers}
       bookmarks={bookmarks}
       toggleBookmark={toggleBookmark}
     />

@@ -2,6 +2,7 @@ import React from "react";
 import { MdLock, MdQuiz, MdStar, MdTimer, MdCheckCircle } from "react-icons/md";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import UpgradeModal from "../modal/UpgradeModal";
 
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
@@ -141,7 +142,7 @@ const CardLocked = ({
           </div>
 
           {/* Unlock Button - Always show for locked tests, even if completed */}
-          <Link to="/pricing">
+          <UpgradeModal>
             <button className={`mt-4 md:mt-6 py-2.5 md:py-3 font-black rounded-lg md:rounded-xl transition-all w-full flex items-center justify-center gap-2 text-xs md:text-sm ${is_premium
               ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 shadow-md'
               : 'border-2 border-amber-300 text-amber-600 hover:bg-amber-50'
@@ -149,7 +150,7 @@ const CardLocked = ({
               <MdLock className="text-sm md:text-base" />
               Unlock Test
             </button>
-          </Link>
+          </UpgradeModal>
         </div>
       </motion.div>
     );
@@ -177,12 +178,12 @@ const CardLocked = ({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <div className="flex items-start gap-2 mb-2 flex-wrap">
             <h3 className="text-base md:text-lg font-semibold text-gray-900 line-clamp-1 overflow-hidden text-ellipsis">
               {title}
             </h3>
             {!isCompleted && (
-              <span className={`ml-2 md:ml-4 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 shrink-0 ${is_premium
+              <span className={`ml-2 md:ml-4 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 shrink-0 self-start ${is_premium
                 ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
                 : "bg-green-500 text-white border-0 shadow-md"
                 }`}>
@@ -232,7 +233,7 @@ const CardLocked = ({
               <span className="text-xl md:text-2xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
             </div>
           ) : (
-            <Link to="/pricing">
+            <UpgradeModal>
 
               <button className={`py-2 md:py-3 flex items-center gap-2 px-4 md:px-8 font-black rounded-lg md:rounded-xl transition-all shrink-0 text-xs md:text-sm ${is_premium
                 ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 shadow-md'
@@ -241,7 +242,7 @@ const CardLocked = ({
                 <MdLock className="text-sm md:text-base" />
                 Unlock Test
               </button>
-            </Link>
+            </UpgradeModal>
           )}
         </div>
       </motion.div>
