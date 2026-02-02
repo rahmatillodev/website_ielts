@@ -31,6 +31,7 @@ import MockTestsPage from "./pages/dashboard/MockTestsPage";
 import "./App.css";
 import FeedbackModal from "./components/modal/FeedbackModal";
 import WritingPracticePage from "./pages/dashboard/writing/WritingPracticePage";
+import WritingHistoryPage from "./pages/dashboard/writing/WritingHistoryPage";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -106,7 +107,7 @@ function App() {
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/mock-tests" element={<MockTestsPage />} />
             <Route path="/own-writing" element={<OwnWritingPage />} />
-            
+            <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
             <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
             <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
             <Route path="/writing-practice/:id" element={<WritingPracticePage />} />

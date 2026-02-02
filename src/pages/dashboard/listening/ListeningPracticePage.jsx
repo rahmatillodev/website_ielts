@@ -429,57 +429,10 @@ const ListeningPracticePageContent = () => {
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
-    try {
-      // Calculate time taken from startTime and elapsed time
-      // If paused, we need to account for the elapsed time before pause
-      let timeTaken = 0;
-      if (startTime && timeRemaining != null) {
-        // If paused, calculate from duration and remaining time
-        if (isPaused) {
-          const dur = convertDurationToSeconds(currentTest.duration);
-          timeTaken = dur - timeRemaining;
-        } else {
-          // Calculate elapsed time from start
-          const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-          timeTaken = elapsedSeconds;
-        }
-      } else if (timeRemaining != null) {
-        // Fallback: calculate from remaining time
-        const dur = convertDurationToSeconds(currentTest.duration);
-        timeTaken = dur - timeRemaining;
-      }
-
-      // Ensure timeTaken is non-negative
-      timeTaken = Math.max(0, timeTaken);
-
-      const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'listening');
-
-      if (result.success) {
-        setLatestAttemptId(result.attemptId);
-        setStatus('completed');
-        hasAutoSubmittedRef.current = true; // Mark as submitted to prevent auto-submit
-        if (id) {
-          clearListeningPracticeData(id);
-          clearAudioPosition(id);
-          if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
-            audioPlayerRef.current.clearPosition();
-          }
-        }
-        if (authUser?.id) {
-          await fetchDashboardData(authUser.id, true);
-        }
-        return { success: true };
-      } else {
-        console.error('Failed to submit test:', result.error);
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error submitting test:', error);
-      return { success: false, error: error.message };
-    } finally {
-      isSubmittingRef.current = false;
-      setIsSubmitting(false);
-    }
+    
+    // Do not submit to backend - just keep loading state
+    // Main content will be hidden, only header and footer will be visible
+    return { success: true };
   };
 
   const handleReviewTest = async () => {
@@ -894,6 +847,7 @@ const ListeningPracticePageContent = () => {
         type="Listening"
       />
 
+      {!isSubmitting && (
       <div
         className="flex flex-1 overflow-hidden p-3 transition-all duration-300"
         ref={containerRef}
@@ -1263,6 +1217,7 @@ const ListeningPracticePageContent = () => {
           )}
         </div>
       </div>
+      )}
 
       <PracticeFooter
         currentTest={currentTest}

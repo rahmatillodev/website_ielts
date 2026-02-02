@@ -561,57 +561,11 @@ const ReadingPracticePageContent = () => {
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
-    try {
-      // Calculate time taken from startTime and elapsed time
-      // If paused, we need to account for the elapsed time before pause
-      let timeTaken = 0;
-      if (startTime) {
-        // Calculate elapsed time from start
-        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-        // If paused, we should use the saved elapsed time or calculate from duration
-        if (isPaused && timeRemaining !== null) {
-          const durationInSeconds = convertDurationToSeconds(currentTest.duration);
-          timeTaken = durationInSeconds - timeRemaining;
-        } else {
-          timeTaken = elapsedSeconds;
-        }
-      } else if (timeRemaining !== null) {
-        // Fallback: calculate from remaining time
-        const durationInSeconds = convertDurationToSeconds(currentTest.duration);
-        timeTaken = durationInSeconds - timeRemaining;
-      }
-
-      // Ensure timeTaken is non-negative
-      timeTaken = Math.max(0, timeTaken);
-
-      // Submit even if answers object is empty - submitTestAttempt handles this
-      const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'reading');
-
-      if (result.success) {
-        setLatestAttemptId(result.attemptId);
-        setStatus('completed');
-        hasAutoSubmittedRef.current = true; // Mark as submitted to prevent auto-submit
-        // Clear practice data after successful submission
-        if (id) {
-          clearReadingPracticeData(id);
-        }
-        if (authUser?.id) {
-          await fetchDashboardData(authUser.id, true);
-        }
-        // Return success to allow modal to navigate
-        return { success: true };
-      } else {
-        console.error('Failed to submit test:', result.error);
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error submitting test:', error);
-      return { success: false, error: error.message };
-    } finally {
-      isSubmittingRef.current = false;
-      setIsSubmitting(false);
-    }
-  }, [isSubmitting, authUser, id, currentTest, startTime, answers, fetchDashboardData, isPaused, timeRemaining]);
+    
+    // Do not submit to backend - just keep loading state
+    // Main content will be hidden, only header and footer will be visible
+    return { success: true };
+  }, [isSubmitting, authUser, id, currentTest]);
 
   // Handler for reviewing test
   const handleReviewTest = async () => {
@@ -905,6 +859,7 @@ const ReadingPracticePageContent = () => {
       />
 
       {/* Main Content - Universal Container for all selectable content */}
+      {!isSubmitting && (
       <div
         className="flex flex-1 overflow-hidden p-3"
         ref={containerRef}
@@ -1257,6 +1212,7 @@ const ReadingPracticePageContent = () => {
           )}
         </div>
       </div>
+      )}
 
       {/* Footer */}
       <PracticeFooter

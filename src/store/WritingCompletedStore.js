@@ -111,5 +111,45 @@ export const useWritingCompletedStore = create((set) => ({
       };
     }
   },
+
+
+  getWritingAttempts: async () => {
+    const userId = getUserIdFromLocalStorage();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      // Fetch attempts with writing_id and join with writings table to get writing details
+      const { data, error } = await supabase
+        .from('user_attempts')
+        .select(`
+          *,
+          writings (
+            id,
+            title,
+            difficulty,
+            duration
+          )
+        `)
+        .eq('user_id', userId)
+        .not('writing_id', 'is', null)
+        .order('completed_at', { ascending: false });
+
+      if (error) {
+        // If writing_id column doesn't exist, return empty array
+        if (error.message.includes('writing_id') || error.code === '42703') {
+          console.warn('writing_id column not found in user_attempts table');
+          return [];
+        }
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching writing attempts:', error);
+      throw error;
+    }
+  },
 }));
 
