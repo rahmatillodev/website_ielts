@@ -12,7 +12,7 @@ import { clearReadingPracticeData, loadReadingPracticeData, saveReadingResultDat
 
 export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, loading = false }) {
   const navigate = useNavigate();
-  
+
   const handleSubmit = async () => {
     try {
       if (onSubmit) {
@@ -20,21 +20,15 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
         if (result && result.success !== false) {
           onClose();
           navigate(link);
-        } else {
-          if (result && result.error) {
-            alert(`Failed to submit test: ${result.error}`);
-          } else {
-            alert('Failed to submit test. Please try again.');
-          }
         }
       } else {
         if (testId) {
           const practiceData = loadReadingPracticeData(testId);
           if (practiceData) {
-            const elapsedTime = practiceData.startTime 
+            const elapsedTime = practiceData.startTime
               ? Math.floor((Date.now() - practiceData.startTime) / 1000)
               : 0;
-            
+
             saveReadingResultData(testId, {
               ...practiceData,
               elapsedTime,
@@ -73,8 +67,8 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
             Continue Test
           </Button>
           {/* Yakunlash tugmasi */}
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={loading}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >

@@ -60,10 +60,10 @@ export const useWritingStore = create((set) => ({
       //   "updated_at": "...",
       //   "is_active": true,
       //   "is_premium": false,
+      //    This can only be Task 1 or Task 2, sometimes there will be 2.      //     { "id": "task-id-1", 
       //   "writing_tasks": [
-      //     { "id": "task-id-1", 
       //       "writing_id": "writing-id-1",
-      //       "task_type": "Task 1", only TASK_1, TASK_2 are available
+      //       "task_type": "Task 1", only Task 1, Task 2 are available
       //       "title": "...",
       //       "image_url": "...", only for TASK_1
       //       "content": "...",

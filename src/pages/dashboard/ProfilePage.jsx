@@ -157,37 +157,34 @@ const ProfilePage = () => {
   // Feedback submit handler with attachment support and toast
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!message.trim()) {
+      toast.error("Please enter a message before submitting.");
+      return;
+    }
+    
     setLoading(true);
 
-    let result = { success: false, error: null };
-
-    if (attachment) {
-      // If there's an attachment, upload with message as FormData
-      const formData = new FormData();
-      formData.append("message", message);
-      formData.append("attachment", attachment);
-
-      try {
-        // Here you should send formData (depends on addFeedback implementation)
-        result = await addFeedback(formData, { isFormData: true }); // This interface may need to be adapted!
-      } catch (error) {
-        toast.error("Failed to send feedback with attachment");
-      }
-    } else {
-      result = await addFeedback({
+    try {
+      const result = await addFeedback({
         message: message,
       });
-    }
 
-    if (result.success) {
-      toast.success("Feedback sent successfully");
-      setMessage("");
-      setAttachment(null);
-    } else if (result.error) {
-      toast.error(result.error);
+      if (result.success) {
+        toast.success("Feedback sent successfully");
+        setMessage("");
+        setAttachment(null);
+      } else if (result.error) {
+        toast.error(result.error || "Failed to send feedback. Please try again.");
+      } else {
+        toast.error("Failed to send feedback. Please try again.");
+      }
+    } catch (error) {
+      console.error('[handleSubmit] Unexpected error:', error);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   // Handle file attachment input and show toast
