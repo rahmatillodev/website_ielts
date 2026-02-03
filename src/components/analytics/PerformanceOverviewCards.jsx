@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { LuBookOpen, LuHeadphones, LuClock } from 'react-icons/lu';
 import { FaArrowUp, FaChartSimple } from 'react-icons/fa6';
 import {  FaExclamationTriangle } from 'react-icons/fa';
@@ -49,10 +50,43 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
     ? 'Focus on Section 3 & 4'
     : null;
 
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    visible: (i) => ({
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.5,
+        ease: [0.6, -0.05, 0.01, 0.99],
+      },
+    }),
+  };
+
+  const progressBarVariants = {
+    hidden: { width: 0 },
+    visible: {
+      width: `${Math.min(overallProgress, 100)}%`,
+      transition: {
+        duration: 1,
+        delay: 0.5,
+        ease: [0.6, -0.05, 0.01, 0.99],
+      },
+    },
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Est. Overall Band */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <motion.div
+        className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        custom={0}
+        whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <FaChartSimple className="text-blue-600 text-xl" />
@@ -69,21 +103,30 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
             Target: {targetBandScore}
           </div>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-          <div
-            className={`h-2.5 rounded-full transition-all duration-500 ${
+        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2 overflow-hidden">
+          <motion.div
+            className={`h-2.5 rounded-full ${
               needsImprovement ? 'bg-orange-500' : 'bg-blue-600'
             }`}
-            style={{ width: `${Math.min(overallProgress, 100)}%` }}
-          ></div>
+            variants={progressBarVariants}
+            initial="hidden"
+            animate="visible"
+          ></motion.div>
         </div>
         <div className="text-xs font-semibold text-gray-500">
           {needsImprovement ? 'Needs Improvement' : 'On Track'}
         </div>
-      </div>
+      </motion.div>
 
       {/* Reading Avg */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <motion.div
+        className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        custom={1}
+        whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <LuBookOpen className="text-green-600 text-xl" />
@@ -117,10 +160,17 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         <div className="text-xs font-semibold text-gray-500">
           {readingAvg && readingAvg >= 7.0 ? 'Consistent performance' : 'Keep practicing'}
         </div>
-      </div>
+      </motion.div>
 
       {/* Listening Avg */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <motion.div
+        className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        custom={2}
+        whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <LuHeadphones className="text-red-600 text-xl" />
@@ -143,10 +193,17 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         <div className="text-xs font-semibold text-gray-500">
           {listeningRecommendation || listeningStatus}
         </div>
-      </div>
+      </motion.div>
 
       {/* Total Practice */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <motion.div
+        className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        custom={3}
+        whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <LuClock className="text-purple-600 text-xl" />
@@ -166,7 +223,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
           </div>
         </div>
        
-      </div>
+      </motion.div>
     </div>
   );
 };

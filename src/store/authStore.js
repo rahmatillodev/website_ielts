@@ -65,6 +65,21 @@ export const useAuthStore = create(
         }
       },
 
+      signUp: async (email, password, username) => {
+        set({ loading: true, error: null });
+        try {
+          const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: username } } });
+          if (error) throw error;
+          set({ authUser: data.user });
+          await get().fetchUserProfile(data.user.id, false);
+          set({ loading: false });
+          return { success: true };
+        } catch (error) {
+          set({ error: error.message, loading: false });
+          return { success: false, error: error.message };
+        }
+      },
+
       fetchUserProfile: async (userId, shouldLogoutOnMissing = true) => {
         try {
           const { data, error } = await supabase
@@ -79,6 +94,10 @@ export const useAuthStore = create(
             await get().forceSignOutToLogin('Profil topilmadi.');
             return null;
           }
+          if (data.subscription_status === 'vip') {
+            data.subscription_status = 'premium';
+          }
+          /// 
 
           set({ userProfile: data });
           return data;
