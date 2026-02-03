@@ -53,10 +53,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isInitialized && user) {
       fetchSettings();
-    }
-  }, [fetchSettings, isInitialized, user]);
+    
+  }, [fetchSettings]);
 
   useEffect(() => {
     if (isInitialized && user) {

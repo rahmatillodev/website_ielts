@@ -140,25 +140,29 @@ export const useAnalyticsStore = create((set, get) => ({
 
       // Fetch all attempts with test metadata
       const { data: attemptsData, error: attemptsError } = await supabase
-        .from('user_attempts')
-        .select(`
+      .from('user_attempts')
+      .select(`
+        id,
+        test_id,
+        score,
+        total_questions,
+        correct_answers,
+        time_taken,
+        completed_at,
+        created_at,
+        test:test_id (
           id,
-          test_id,
-          score,
-          total_questions,
-          correct_answers,
-          time_taken,
-          completed_at,
-          created_at,
-          test:test_id (
-            id,
-            title,
-            type,
-            difficulty
-          )
-        `)
-        .eq('user_id', userId)
-        .order('completed_at', { ascending: false });
+          title,
+          type,
+          difficulty
+        )
+      `)
+      .eq('user_id', userId)
+      .not('test_id', 'is', null) 
+      .order('completed_at', { ascending: false });
+    
+
+       console.log(attemptsData);
 
       if (attemptsError) throw attemptsError;
 
@@ -336,52 +340,115 @@ export function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5)
 }
 
 /**
- * Get score trends for last N tests
- * Returns separate arrays for reading and listening, each with up to limit tests
- * Attempts are ordered newest first, so we take first N and reverse for chronological display
+ * Format date to "day.month" format (e.g., "01.01", "15.03")
+ */
+export function formatDateToDayMonth(dateString) {
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}.${month}`;
+}
+
+/**
+ * Get date key for grouping (YYYY-MM-DD format)
+ */
+export function getDateKey(dateString) {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Get score trends grouped by day
+ * For each day, gets the best (highest) score for reading and listening separately
+ * Returns data with dates in "day.month" format
  */
 function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
-  // Take last N attempts for each type (first N from DESC sorted array = most recent N)
-  const recentReading = readingAttempts.slice(0, limit);
-  const recentListening = listeningAttempts.slice(0, limit);
-  
-  // Reverse to get chronological order (oldest to newest)
-  const readingReversed = recentReading.reverse();
-  const listeningReversed = recentListening.reverse();
-  
-  // Create separate arrays for reading and listening
-  const readingTrends = readingReversed.map((attempt, index) => ({
-    testNumber: index + 1,
-    score: attempt.score,
-  }));
-
-  const listeningTrends = listeningReversed.map((attempt, index) => ({
-    testNumber: index + 1,
-    score: attempt.score,
-  }));
-
-  // Also create combined format for backward compatibility
-  const maxLength = Math.max(readingReversed.length, listeningReversed.length);
-  const combinedTrends = [];
-
-  for (let i = 0; i < maxLength; i++) {
-    const readingScore = readingReversed[i]?.score || null;
-    const listeningScore = listeningReversed[i]?.score || null;
-    
-    // Only add if at least one score exists
-    if (readingScore !== null || listeningScore !== null) {
-      combinedTrends.push({
-        testNumber: i + 1,
-        reading: readingScore,
-        listening: listeningScore,
-      });
+  // Group reading attempts by day and get best score per day
+  const readingByDay = {};
+  readingAttempts.forEach(attempt => {
+    if (!attempt.completed_at) return;
+    const dateKey = getDateKey(attempt.completed_at);
+    if (!readingByDay[dateKey] || attempt.score > readingByDay[dateKey].score) {
+      readingByDay[dateKey] = {
+        date: attempt.completed_at,
+        score: attempt.score,
+      };
     }
-  }
+  });
+
+  // Group listening attempts by day and get best score per day
+  const listeningByDay = {};
+  listeningAttempts.forEach(attempt => {
+    if (!attempt.completed_at) return;
+    const dateKey = getDateKey(attempt.completed_at);
+    if (!listeningByDay[dateKey] || attempt.score > listeningByDay[dateKey].score) {
+      listeningByDay[dateKey] = {
+        date: attempt.completed_at,
+        score: attempt.score,
+      };
+    }
+  });
+
+  // Get all unique dates and sort them (oldest to newest)
+  const allDates = new Set([
+    ...Object.keys(readingByDay),
+    ...Object.keys(listeningByDay),
+  ]);
+  const sortedDates = Array.from(allDates).sort((a, b) => a.localeCompare(b));
+
+  // Apply limit: take last N days if limit is specified
+  const datesToShow = limit === 'all' || limit >= sortedDates.length
+    ? sortedDates
+    : sortedDates.slice(-limit);
+
+  // Create separate arrays for reading and listening
+  const readingTrends = datesToShow.map((dateKey, index) => {
+    const dayData = readingByDay[dateKey];
+    return {
+      testNumber: index + 1,
+      date: dayData?.date || null,
+      dateKey: dateKey,
+      dateLabel: formatDateToDayMonth(dayData?.date || dateKey),
+      score: dayData?.score || null,
+    };
+  });
+
+  const listeningTrends = datesToShow.map((dateKey, index) => {
+    const dayData = listeningByDay[dateKey];
+    return {
+      testNumber: index + 1,
+      date: dayData?.date || null,
+      dateKey: dateKey,
+      dateLabel: formatDateToDayMonth(dayData?.date || dateKey),
+      score: dayData?.score || null,
+    };
+  });
+
+  // Create combined format with dates
+  const combinedTrends = datesToShow.map((dateKey, index) => {
+    const readingDayData = readingByDay[dateKey];
+    const listeningDayData = listeningByDay[dateKey];
+    
+    // Use the date from whichever exists, or fallback to dateKey
+    const date = readingDayData?.date || listeningDayData?.date || dateKey;
+    
+    return {
+      testNumber: index + 1,
+      date: date,
+      dateKey: dateKey,
+      dateLabel: formatDateToDayMonth(date),
+      reading: readingDayData?.score || null,
+      listening: listeningDayData?.score || null,
+    };
+  });
 
   return {
     reading: readingTrends,
     listening: listeningTrends,
-    combined: combinedTrends, // For backward compatibility
+    combined: combinedTrends,
   };
 }
 

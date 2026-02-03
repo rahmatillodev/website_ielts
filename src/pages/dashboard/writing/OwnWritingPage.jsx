@@ -252,7 +252,6 @@ const OwnWritingPageContent = () => {
           </button>
         </div>
 
-        {/* Правая часть - PDF, Fullscreen и Settings */}
         <div className="flex items-center gap-3">
           <button
             onClick={toggleFullscreen}

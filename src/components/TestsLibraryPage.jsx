@@ -32,15 +32,8 @@ const TestsLibraryPage = ({
 
   // Load view preference from localStorage, default to list view (false)
   const getInitialViewState = () => {
-    try {
-      const savedView = localStorage.getItem(`testsLibraryView`);
-      if (savedView !== null) {
-        return savedView === "grid";
-      }
-    } catch (error) {
-      console.error("Error reading from localStorage:", error);
-    }
-    return false; // Default to list view
+    const savedView = localStorage.getItem(`testsLibraryView`);
+    return savedView === "grid" ? true : false;
   };
 
   const [isGridView, setIsGridView] = useState(getInitialViewState);
@@ -127,7 +120,7 @@ const TestsLibraryPage = ({
 
       const matchesTab =
         activeTab === "All Tests" ||
-        (activeTab === "premium" && test.is_premium === true) ||  
+        (activeTab === "premium" && test.is_premium === true) ||
         (activeTab === "free" && test.is_premium === false);
 
       return matchesSearch && matchesTab;
@@ -137,22 +130,9 @@ const TestsLibraryPage = ({
   }, [allTests, searchQuery, activeTab]);
 
   const handleViewChange = (value) => {
-    if (value === "grid") {
-      setIsGridView(true);
-      try {
-        localStorage.setItem(`testsLibraryView_${testType}`, "grid");
-      } catch (error) {
-        console.error("Error saving to localStorage:", error);
-      }
-    } else if (value === "list") {
-      setIsGridView(false);
-      try {
-        localStorage.setItem(`testsLibraryView_${testType}`, "list");
-      } catch (error) {
-        console.error("Error saving to localStorage:", error);
-      }
-    }
-    //  console.log("[TestsLibraryPage] handleViewChange", value);
+   
+    localStorage.setItem('testsLibraryView', value);
+    setIsGridView(value === 'grid' ? true : false);
   };
 
   // Lazy loading: Get items to display
@@ -316,9 +296,9 @@ const TestsLibraryPage = ({
   }, [loading]);
 
   // Additional logging after currentItems calculated
-    // useEffect(() => {
-    //   console.log("[TestsLibraryPage] Post-calc: currentItems", currentItems);
-    // }, [currentItems]);
+  // useEffect(() => {
+  //   console.log("[TestsLibraryPage] Post-calc: currentItems", currentItems);
+  // }, [currentItems]);
 
   return (
     <div className={`flex flex-col mx-auto bg-gray-50 ${customHeight} overflow-hidden px-3 md:px-8`}>
@@ -332,24 +312,24 @@ const TestsLibraryPage = ({
             </p>
           </div>
           <div className="flex justify-end gap-2">
-          {
-            testType === "writing" && (
+            {
+              testType === "writing" && (
+                <div className="flex justify-end">
+                  <Link to="/writing/writing-history" className="text-sm bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-all duration-200 flex items-center gap-2">
+                    <FaHistory className="w-4 h-4" />
+                    Writing History
+                  </Link>
+                </div>
+              )
+            }
+            {headerAction && (
               <div className="flex justify-end">
-                <Link to="/writing/writing-history" className="text-sm bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-all duration-200 flex items-center gap-2">
-                  <FaHistory className="w-4 h-4" />
-                  Writing History
+                <Link to={headerAction} className="text-sm bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-all duration-200 flex items-center gap-2">
+                  {headerActionText}
+                  <FaArrowRight className="w-4 h-4" />
                 </Link>
               </div>
-            )
-          }
-          {headerAction && (
-            <div className="flex justify-end">
-              <Link to={headerAction} className="text-sm bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-all duration-200 flex items-center gap-2">
-                {headerActionText}
-                <FaArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          )}
+            )}
           </div>
 
         </div>
@@ -368,47 +348,47 @@ const TestsLibraryPage = ({
             ))}
           </div>
 
-          <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">            
+          <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">
 
             <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
-            {/* Search */}
-            <div className="relative flex-1 md:w-80">
-              <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm md:text-base" />
-              <Input
-                value={searchQuery}
-                onChange={handleSearchChange}
-                className="pl-10 md:pl-12 bg-white border-gray-200 rounded-xl md:rounded-2xl h-10 md:h-12 shadow-sm focus:ring-2 focus:ring-blue-100 transition-all text-sm md:text-base"
-                placeholder="Search by title..."
-              />
-            </div>
-            <ToggleGroup
-              type="single"
-              value={isGridView ? "grid" : "list"}
-              onValueChange={handleViewChange}
-              className="flex items-center bg-gray-100/80 p-1 rounded-xl border border-gray-200 shrink-0 gap-1"
-            >
-              <ToggleGroupItem
-                value="list"
-                aria-label="List view"
-                className="flex items-center justify-center p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all duration-200 
+              {/* Search */}
+              <div className="relative flex-1 md:w-80">
+                <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm md:text-base" />
+                <Input
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="pl-10 md:pl-12 bg-white border-gray-200 rounded-xl md:rounded-2xl h-10 md:h-12 shadow-sm focus:ring-2 focus:ring-blue-100 transition-all text-sm md:text-base"
+                  placeholder="Search by title..."
+                />
+              </div>
+              <ToggleGroup
+                type="single"
+                value={isGridView ? "grid" : "list"}
+                onValueChange={handleViewChange}
+                className="flex items-center bg-gray-100/80 p-1 rounded-xl border border-gray-200 shrink-0 gap-1"
+              >
+                <ToggleGroupItem
+                  value="list"
+                  aria-label="List view"
+                  className="flex items-center justify-center p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all duration-200 
                data-[state=on]:bg-white data-[state=on]:text-black data-[state=on]:shadow-sm
                data-[state=off]:text-gray-400 hover:text-gray-600 
                [&:not(:first-child)]:rounded-lg [&:not(:last-child)]:rounded-lg"
-              >
-                <IoListOutline size={20} className="md:w-6 md:h-6" />
-              </ToggleGroupItem>
+                >
+                  <IoListOutline size={20} className="md:w-6 md:h-6" />
+                </ToggleGroupItem>
 
-              <ToggleGroupItem
-                value="grid"
-                aria-label="Grid view"
-                className="flex items-center justify-center p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all duration-200 
+                <ToggleGroupItem
+                  value="grid"
+                  aria-label="Grid view"
+                  className="flex items-center justify-center p-2 md:p-2.5 rounded-lg md:rounded-xl transition-all duration-200 
                data-[state=on]:bg-white data-[state=on]:text-black data-[state=on]:shadow-sm
                data-[state=off]:text-gray-400 hover:text-gray-600
                [&:not(:first-child)]:rounded-lg [&:not(:last-child)]:rounded-lg"
-              >
-                <IoGridOutline size={20} className="md:w-6 md:h-6" />
-              </ToggleGroupItem>
-            </ToggleGroup>
+                >
+                  <IoGridOutline size={20} className="md:w-6 md:h-6" />
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
           </div>
         </div>
@@ -430,129 +410,129 @@ const TestsLibraryPage = ({
             </div>
           </>
         ) : /* Second Priority: Empty State - Show empty message when not loading and no data */
-        !loading && !dashboardLoading && allTests.length === 0 ? (
-          <>
-            {/* {console.log("[TestsLibraryPage] [RENDER] State=not loading && not dashboardLoading && allTests.length===0", { loading, dashboardLoading, allTests })} */}
-            <div className="flex flex-1 items-center justify-center min-h-[300px]">
-              {emptyStateMessage ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, ease: "easeOut" }}
-                  className="flex flex-col items-center text-center gap-2 py-16"
-                >
-                  <div className="text-gray-700 font-semibold text-base md:text-lg whitespace-pre-line">
-                    {emptyStateMessage}
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, ease: "easeOut" }}
-                  className="flex flex-col items-center text-center gap-2 py-16"
-                >
-                  <div className="text-gray-700 font-semibold text-base md:text-lg">
-                    We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
-                  </div>
-                  <div className="text-gray-400 text-sm md:text-base">
-                    Please check back later or try again soon.
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          </>
-        ) : /* Third Priority: No Search Results - Show message when data exists but filtered results are empty */
-        allTests.length > 0 && filteredData.length === 0 ? (
-          <>
-            {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab })} */}
-            <div className="flex flex-1 items-center justify-center min-h-[300px]">
-              <div className="py-20 text-center text-gray-400 font-semibold w-full whitespace-pre-line">
-                {searchQuery.trim() !== "" && emptySearchMessage ? (
-                  emptySearchMessage
-                ) : activeTab === "free" && emptyFreeMessage ? (
-                  emptyFreeMessage
-                ) : activeTab === "premium" && emptyPremiumMessage ? (
-                  emptyPremiumMessage
-                ) : searchQuery.trim() !== "" ? (
-                  "No results match your search."
-                ) : activeTab === "free" ? (
-                  "No free tests available."
-                ) : activeTab === "premium" ? (
-                  "No premium tests available."
+          !loading && !dashboardLoading && allTests.length === 0 ? (
+            <>
+              {/* {console.log("[TestsLibraryPage] [RENDER] State=not loading && not dashboardLoading && allTests.length===0", { loading, dashboardLoading, allTests })} */}
+              <div className="flex flex-1 items-center justify-center min-h-[300px]">
+                {emptyStateMessage ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                    className="flex flex-col items-center text-center gap-2 py-16"
+                  >
+                    <div className="text-gray-700 font-semibold text-base md:text-lg whitespace-pre-line">
+                      {emptyStateMessage}
+                    </div>
+                  </motion.div>
                 ) : (
-                  "No results found."
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                    className="flex flex-col items-center text-center gap-2 py-16"
+                  >
+                    <div className="text-gray-700 font-semibold text-base md:text-lg">
+                      We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
+                    </div>
+                    <div className="text-gray-400 text-sm md:text-base">
+                      Please check back later or try again soon.
+                    </div>
+                  </motion.div>
                 )}
               </div>
-            </div>
-          </>
-        ) : /* Fourth Priority: Show Data - Only show cards when not loading and we have items */
-        currentItems.length > 0 ? (
-          <>
-            {/* {console.log("[TestsLibraryPage] [RENDER] State=Show Data", { loading, dashboardLoading, currentItems, filteredData, allTests })} */}
-            <motion.div
-              className={
-                isGridView
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16"
-                  : "flex flex-col gap-1 mb-16"
-              }
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              key={`${activeTab}-${searchQuery}-${isGridView}`}
-            >
-              {currentItems.map((test, index) => {
-                const subscriptionStatus = userProfile?.subscription_status ?? "free";
-                const canAccess = subscriptionStatus === "premium" || !test.is_premium;
-
-                return (
-                  <motion.div
-                    key={test.id}
-                    variants={itemVariants}
-                    layout
-                  >
-                    {canAccess ? (
-                      <CardOpen
-                        {...test}
-                        isGridView={isGridView}
-                        testType={testType}
-                      />
+            </>
+          ) : /* Third Priority: No Search Results - Show message when data exists but filtered results are empty */
+            allTests.length > 0 && filteredData.length === 0 ? (
+              <>
+                {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab })} */}
+                <div className="flex flex-1 items-center justify-center min-h-[300px]">
+                  <div className="py-20 text-center text-gray-400 font-semibold w-full whitespace-pre-line">
+                    {searchQuery.trim() !== "" && emptySearchMessage ? (
+                      emptySearchMessage
+                    ) : activeTab === "free" && emptyFreeMessage ? (
+                      emptyFreeMessage
+                    ) : activeTab === "premium" && emptyPremiumMessage ? (
+                      emptyPremiumMessage
+                    ) : searchQuery.trim() !== "" ? (
+                      "No results match your search."
+                    ) : activeTab === "free" ? (
+                      "No free tests available."
+                    ) : activeTab === "premium" ? (
+                      "No premium tests available."
                     ) : (
-                      <CardLocked
-                        {...test}
-                        isGridView={isGridView}
-                      />
+                      "No results found."
                     )}
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-
-            {/* Loading indicator when loading more */}
-            {hasMoreItems && (
-              <div className="flex justify-center items-center py-8">
-                <div className="text-sm text-gray-400 font-medium">
-                  Loading more...
+                  </div>
                 </div>
-              </div>
-            )}
-          </>
-        ) : (
-          (() => {
-            console.log(
-              "[TestsLibraryPage] [RENDER] State=null catchall",
-              {
-                loading,
-                dashboardLoading,
-                currentItems,
-                filteredData,
-                allTests,
-                reason: "All other render branches failed"
-              }
-            );
-            return null;
-          })()
-        )}
+              </>
+            ) : /* Fourth Priority: Show Data - Only show cards when not loading and we have items */
+              currentItems.length > 0 ? (
+                <>
+                  {/* {console.log("[TestsLibraryPage] [RENDER] State=Show Data", { loading, dashboardLoading, currentItems, filteredData, allTests })} */}
+                  <motion.div
+                    className={
+                      isGridView
+                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16"
+                        : "flex flex-col gap-1 mb-16"
+                    }
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    key={`${activeTab}-${searchQuery}-${isGridView}`}
+                  >
+                    {currentItems.map((test, index) => {
+                      const subscriptionStatus = userProfile?.subscription_status ?? "free";
+                      const canAccess = subscriptionStatus === "premium" || !test.is_premium;
+
+                      return (
+                        <motion.div
+                          key={test.id}
+                          variants={itemVariants}
+                          layout
+                        >
+                          {canAccess ? (
+                            <CardOpen
+                              {...test}
+                              isGridView={isGridView}
+                              testType={testType}
+                            />
+                          ) : (
+                            <CardLocked
+                              {...test}
+                              isGridView={isGridView}
+                            />
+                          )}
+                        </motion.div>
+                      );
+                    })}
+                  </motion.div>
+
+                  {/* Loading indicator when loading more */}
+                  {hasMoreItems && (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="text-sm text-gray-400 font-medium">
+                        Loading more...
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                (() => {
+                  console.log(
+                    "[TestsLibraryPage] [RENDER] State=null catchall",
+                    {
+                      loading,
+                      dashboardLoading,
+                      currentItems,
+                      filteredData,
+                      allTests,
+                      reason: "All other render branches failed"
+                    }
+                  );
+                  return null;
+                })()
+              )}
       </div>
     </div>
   );
