@@ -79,6 +79,10 @@ export const useAuthStore = create(
             await get().forceSignOutToLogin('Profil topilmadi.');
             return null;
           }
+          if (data.subscription_status === 'vip') {
+            data.subscription_status = 'premium';
+          }
+          /// 
 
           set({ userProfile: data });
           return data;
