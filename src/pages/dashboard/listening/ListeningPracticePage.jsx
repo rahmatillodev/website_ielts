@@ -26,7 +26,7 @@ const ListeningPracticePageContent = () => {
   const navigate = useNavigate();
   const { currentTest, fetchTestById, loadingTest, error: testError } = useTestStore();
   const loading = loadingTest;
-  const { authUser, userProfile } = useAuthStore();
+  const { authUser } = useAuthStore();
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const [fetchError, setFetchError] = useState(null);
@@ -38,7 +38,7 @@ const ListeningPracticePageContent = () => {
     return mode === 'review' ? 'reviewing' : 'taking';
   });
   const [currentPart, setCurrentPart] = useState(1);
-  // "timeRemaining" is always stopped if stored "isPaused" on refresh
+  // "timeRemaining" is always stopped if stored "isPaused" on refresh 
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [isStarted, setIsStarted] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -105,6 +105,11 @@ const ListeningPracticePageContent = () => {
 
     let isMounted = true;
     setFetchError(null);
+
+    // Cancel any previous request and clear current test
+    const { cancelFetch, clearCurrentTest } = useTestStore.getState();
+    cancelFetch();
+    clearCurrentTest();
 
     const loadTestData = async () => {
       try {
@@ -176,7 +181,9 @@ const ListeningPracticePageContent = () => {
 
     return () => {
       isMounted = false;
-      const { clearCurrentTest } = useTestStore.getState();
+      // Cancel any in-flight request when component unmounts
+      const { cancelFetch, clearCurrentTest } = useTestStore.getState();
+      cancelFetch();
       clearCurrentTest(false);
     };
     // eslint-disable-next-line
@@ -584,11 +591,25 @@ const ListeningPracticePageContent = () => {
 
   const handleInputInteraction = () => {
     if (!hasInteracted && !isStarted) {
+      // Start the timer when user first focuses on a question
+      const newStartTime = startTime || Date.now();
+      setIsStarted(true);
+      setIsPaused(false);
+      setStartTime(newStartTime);
       setHasInteracted(true);
+      // Persist started state
+      if (id) {
+        saveListeningPracticeData(id, {
+          answers,
+          timeRemaining,
+          startTime: newStartTime,
+          bookmarks,
+        });
+      }
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPart(1);
   }, [currentTest]);
 
@@ -608,31 +629,8 @@ const ListeningPracticePageContent = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, authUser, id, currentTest]);
 
-  // Auto-start test when page loads (if not in review/retake mode and no saved progress)
-  useEffect(() => {
-    const mode = searchParams.get('mode');
-    const isReviewOrRetake = mode === 'review' || mode === 'retake';
-
-    // Only auto-start if:
-    // 1. Test is loaded
-    // 2. Not in review/retake mode
-    // 3. Not already started
-    // 4. Not already interacted
-    // 5. No saved data (meaning fresh start)
-    // 6. No startTime set (which would indicate saved progress was loaded)
-    if (
-      currentTest &&
-      !isReviewOrRetake &&
-      !isStarted &&
-      !hasInteracted &&
-      !startTime &&
-      !loadListeningPracticeData(id)
-    ) {
-      handleStart();
-      setShouldAutoPlay(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTest, searchParams, isStarted, hasInteracted, startTime]);
+  // Timer now starts when user focuses on a question (via handleInputInteraction)
+  // No auto-start on page load - user must interact with a question to start
 
   // ========== Annotation handlers ==========
   const handleHighlight = useCallback((range, text, partId, sectionType = 'passage', testType = 'listening') => {
@@ -769,9 +767,22 @@ const ListeningPracticePageContent = () => {
   const getPartAnsweredCount = (partQuestions) => {
     if (!partQuestions) return 0;
     return partQuestions.filter(q => {
-      // Use questions.id as primary key, fallback to question_number for backward compatibility
-      const answerKey = q.id || q.question_number;
-      return answerKey && answers[answerKey] && answers[answerKey].toString().trim() !== '';
+      // Check both question.id (UUID) and question_number for answer
+      // Some components use question.id, others use question_number
+      const questionId = q.id;
+      const questionNumber = q.question_number;
+      
+      // First check by question.id (UUID) - this is what most components use
+      if (questionId && answers[questionId] && answers[questionId].toString().trim() !== '') {
+        return true;
+      }
+      
+      // Then check by question_number - for backward compatibility and matching_information type
+      if (questionNumber && answers[questionNumber] && answers[questionNumber].toString().trim() !== '') {
+        return true;
+      }
+      
+      return false;
     }).length;
   };
 
@@ -838,6 +849,7 @@ const ListeningPracticePageContent = () => {
       window.removeEventListener("mouseup", stopResize);
     };
   }, []);
+  
 
   // Calculate font size in rem (base 16px = 1rem)
   const baseFontSize = fontSizeValue.base / 16;
@@ -1051,6 +1063,12 @@ const ListeningPracticePageContent = () => {
                     onVolumeChange={setVolume}
                     autoPlay={shouldAutoPlay && status === 'taking' && !isPaused}
                     testId={id}
+                    onPlay={status === 'taking' ? () => {
+                      // Start the timer when audio begins playing (if not already started)
+                      if (!isStarted) {
+                        handleStart();
+                      }
+                    } : undefined}
                     onAudioEnded={status === 'taking' ? () => {
                       if (id) {
                         clearAudioPosition(id);

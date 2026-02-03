@@ -8,15 +8,43 @@ import { processNestedQuestionGroup } from "./utils/questionTransformers";
 /**
  * Zustand store
  */
-export const useTestDetailStore = create((set, get) => ({
-  currentTest: null,
-  loadingTest: false,
-  error: null,
+export const useTestDetailStore = create((set, get) => {
+  // Track current abort controller for cancellation
+  let currentAbortController = null;
 
-  fetchTestById: async (testId, forceRefresh = false, includeCorrectAnswers = false) => {
-    set({ loadingTest: true, error: null });
+  return {
+    currentTest: null,
+    loadingTest: false,
+    error: null,
 
-    try {
+    // Cancel any in-flight request
+    cancelFetch: () => {
+      if (currentAbortController) {
+        currentAbortController.abort();
+        currentAbortController = null;
+      }
+    },
+
+    fetchTestById: async (testId, forceRefresh = false, includeCorrectAnswers = false) => {
+      // Cancel any previous request
+      if (currentAbortController) {
+        currentAbortController.abort();
+      }
+
+      // Create new abort controller for this request
+      const abortController = new AbortController();
+      currentAbortController = abortController;
+
+      set({ loadingTest: true, error: null });
+
+      // Helper to check if request was aborted
+      const checkAborted = () => {
+        if (abortController.signal.aborted) {
+          throw new Error('Request cancelled');
+        }
+      };
+
+      try {
       // Validate inputs
       if (!testId) {
         throw new Error('Test ID is required');
@@ -47,6 +75,7 @@ export const useTestDetailStore = create((set, get) => ({
       let useNestedQuery = false;
       console.log("testId", testId);
       
+      checkAborted();
 
       try {
         // Build the query and execute it immediately
@@ -69,6 +98,8 @@ export const useTestDetailStore = create((set, get) => ({
 
         console.log("Executing nested query for testId:", testId);
         console.log("Supabase client:", supabase ? 'available' : 'missing');
+        console.log(nestedQueryPromise);
+        
         
         // Supabase query builders return thenables (objects with .then() method)
         // which can be awaited, but may not be native Promises
@@ -77,15 +108,28 @@ export const useTestDetailStore = create((set, get) => ({
         // Create timeout that can be cancelled
         const timeout = createTimeout(30000, 'Request timeout: Test fetch took longer than 30 seconds');
         
-        // Race the query against timeout
+        // Race the query against timeout and abort signal
         let nestedResult;
         try {
-          nestedResult = await Promise.race([nestedQueryPromise, timeout]);
+          // Check if aborted before starting
+          checkAborted();
+          
+          // Create abort promise that rejects when aborted
+          const abortPromise = new Promise((_, reject) => {
+            abortController.signal.addEventListener('abort', () => {
+              reject(new Error('Request cancelled'));
+            });
+          });
+          
+          nestedResult = await Promise.race([nestedQueryPromise, timeout, abortPromise]);
+          console.log(nestedResult);
           timeout.cancel(); // Cancel timeout if query completes
+          checkAborted(); // Check again after completion
           const queryDuration = Date.now() - queryStartTime;
           console.log(`Nested query completed in ${queryDuration}ms`);
         } catch (error) {
           timeout.cancel(); // Always cancel timeout
+          checkAborted(); // Check if this was an abort
           const queryDuration = Date.now() - queryStartTime;
           console.error(`Nested query failed after ${queryDuration}ms:`, error.message);
           // Re-throw the error to be caught by outer catch
@@ -123,6 +167,7 @@ export const useTestDetailStore = create((set, get) => ({
 
       // If nested query didn't work or returned no data, use step-by-step approach
       if (!testData || !useNestedQuery) {
+        checkAborted();
         console.log('Using step-by-step approach for testId:', testId);
         
         // Step 1: Fetch test metadata
@@ -137,10 +182,19 @@ export const useTestDetailStore = create((set, get) => ({
         const metadataTimeout = createTimeout(30000, 'Request timeout: Metadata fetch took longer than 30 seconds');
         let metadataResult;
         try {
-          metadataResult = await Promise.race([metadataQuery, metadataTimeout]);
+          // Create abort promise
+          const abortPromise = new Promise((_, reject) => {
+            abortController.signal.addEventListener('abort', () => {
+              reject(new Error('Request cancelled'));
+            });
+          });
+          
+          metadataResult = await Promise.race([metadataQuery, metadataTimeout, abortPromise]);
           metadataTimeout.cancel();
+          checkAborted();
         } catch (error) {
           metadataTimeout.cancel();
+          checkAborted();
           throw error;
         }
 
@@ -153,31 +207,61 @@ export const useTestDetailStore = create((set, get) => ({
 
         if (!testMetadata) {
           set({ currentTest: null, loadingTest: false, error: null });
+          currentAbortController = null;
           return null;
         }
 
+        checkAborted();
+
         // Step 2: Fetch parts
-        const { data: parts, error: partsError } = await supabase
+        const partsAbortPromise = new Promise((_, reject) => {
+          abortController.signal.addEventListener('abort', () => {
+            reject(new Error('Request cancelled'));
+          });
+        });
+        
+        const partsQuery = supabase
           .from("part")
           .select("id, test_id, part_number, title, content, image_url, listening_url")
           .eq("test_id", testId)
           .order("part_number", { ascending: true });
+        
+        const { data: parts, error: partsError } = await Promise.race([
+          partsQuery,
+          partsAbortPromise
+        ]);
 
+        checkAborted();
         if (partsError) throw new Error(`Failed to fetch parts: ${partsError.message}`);
         if (!parts || parts.length === 0) {
           const emptyTest = { ...testMetadata, part: [] };
           set({ currentTest: emptyTest, loadingTest: false, error: null });
+          currentAbortController = null;
           return emptyTest;
         }
 
         const partIds = parts.map(p => p.id);
 
+        checkAborted();
+
         // Step 3: Fetch question groups
-        const { data: questionGroups, error: groupsError } = await supabase
+        const groupsAbortPromise = new Promise((_, reject) => {
+          abortController.signal.addEventListener('abort', () => {
+            reject(new Error('Request cancelled'));
+          });
+        });
+        
+        const groupsQuery = supabase
           .from("question")
           .select("id, test_id, part_id, type, question_range, instruction, question_text, image_url")
           .in("part_id", partIds);
+        
+        const { data: questionGroups, error: groupsError } = await Promise.race([
+          groupsQuery,
+          groupsAbortPromise
+        ]);
 
+        checkAborted();
         if (groupsError) throw new Error(`Failed to fetch question groups: ${groupsError.message}`);
         if (!questionGroups || questionGroups.length === 0) {
           const testWithEmptyQuestions = { 
@@ -185,29 +269,56 @@ export const useTestDetailStore = create((set, get) => ({
             part: parts.map(p => ({ ...p, question: [] })) 
           };
           set({ currentTest: testWithEmptyQuestions, loadingTest: false, error: null });
+          currentAbortController = null;
           return testWithEmptyQuestions;
         }
 
         const groupIds = questionGroups.map(g => g.id);
 
+        checkAborted();
+
         // Step 4: Fetch questions
-        const { data: questions, error: questionsError } = await supabase
+        const questionsAbortPromise = new Promise((_, reject) => {
+          abortController.signal.addEventListener('abort', () => {
+            reject(new Error('Request cancelled'));
+          });
+        });
+        
+        const questionsQuery = supabase
           .from("questions")
           .select(
             "id, test_id, question_id, part_id, question_number, question_text, correct_answer, explanation, is_correct"
           )
           .in("question_id", groupIds)
           .order("question_number", { ascending: true });
+        
+        const { data: questions, error: questionsError } = await Promise.race([
+          questionsQuery,
+          questionsAbortPromise
+        ]);
 
+        checkAborted();
         if (questionsError) throw new Error(`Failed to fetch questions: ${questionsError.message}`);
 
         // Step 5: Fetch options
-        const { data: options, error: optionsError } = await supabase
+        const optionsAbortPromise = new Promise((_, reject) => {
+          abortController.signal.addEventListener('abort', () => {
+            reject(new Error('Request cancelled'));
+          });
+        });
+        
+        const optionsQuery = supabase
           .from("options")
           .select("id, test_id, question_id, part_id, question_number, option_text, option_key, is_correct")
           .in("question_id", groupIds)
           .order("option_text");
+        
+        const { data: options, error: optionsError } = await Promise.race([
+          optionsQuery,
+          optionsAbortPromise
+        ]);
 
+        checkAborted();
         if (optionsError) throw new Error(`Failed to fetch options: ${optionsError.message}`);
 
         // Step 6: Structure nested data
@@ -300,10 +411,21 @@ export const useTestDetailStore = create((set, get) => ({
         parts: processedParts,
       };
 
+      // Clear abort controller on success
+      currentAbortController = null;
       set({ currentTest: completeTest, loadingTest: false, error: null });
 
       return completeTest;
     } catch (error) {
+      // Clear abort controller on error
+      currentAbortController = null;
+      
+      // Don't set error state if request was cancelled (user-initiated)
+      if (error.message === 'Request cancelled') {
+        set({ loadingTest: false });
+        return null;
+      }
+      
       set({
         currentTest: null,
         loadingTest: false,
@@ -314,6 +436,12 @@ export const useTestDetailStore = create((set, get) => ({
   },
 
   clearCurrentTest: () => {
+    // Cancel any in-flight request when clearing
+    if (currentAbortController) {
+      currentAbortController.abort();
+      currentAbortController = null;
+    }
     set({ currentTest: null, loadingTest: false, error: null });
   },
-}));
+  };
+});

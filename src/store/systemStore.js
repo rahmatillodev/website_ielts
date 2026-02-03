@@ -5,6 +5,7 @@ export const useSettingsStore = create((set, get) => ({
   settings: {},
   loading: false,
   error: null,
+  loaded: false,
 
   fetchSettings: async () => {
     if (get().loaded) return;
@@ -17,7 +18,7 @@ export const useSettingsStore = create((set, get) => ({
       
       if (error) throw error;
       
-      set({ settings: data || {}, loading: false });
+      set({ settings: data || {}, loading: false, loaded: true });
       return data;
     } catch (error) {
   if (error.name === 'AbortError') {

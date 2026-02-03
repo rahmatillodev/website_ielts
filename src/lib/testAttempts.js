@@ -184,8 +184,6 @@ export const fetchLatestAttempt = async (userId, testId) => {
     // Fetch answers for this attempt
     const answersResult = await fetchAttemptAnswers(attemptData.id);
 
-    console.log('answersResult', answersResult);
-
     return {
       success: true,
       attempt: attemptData,

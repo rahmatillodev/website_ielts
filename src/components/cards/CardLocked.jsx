@@ -250,4 +250,4 @@ const CardLocked = ({
   }
 };
 
-export default React.memo(CardLocked);
+export default CardLocked;

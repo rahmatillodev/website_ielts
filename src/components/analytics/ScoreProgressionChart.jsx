@@ -21,8 +21,9 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
   }
 
   const chartData = scoreTrends.map((trend) => ({
-    test: `T${trend.testNumber}`, // X-axis'da joy tejash uchun qisqartma
-    fullTestName: `Test ${trend.testNumber}`,
+    test: trend.dateLabel || `T${trend.testNumber}`, // Display date in "day.month" format
+    fullTestName: trend.dateLabel || `Test ${trend.testNumber}`, // Use dateLabel for tooltip
+    date: trend.date || null, // Store full date for reference
     Reading: trend.reading !== null ? Number(trend.reading.toFixed(1)) : null,
     Listening: trend.listening !== null ? Number(trend.listening.toFixed(1)) : null,
   }));
@@ -65,10 +66,10 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
         </div>
         </div>
         </div>
-        { testLimit !== 'all' && <p className="text-sm text-gray-500 italic">Showing last {testLimit} tests</p> }
+        { testLimit !== 'all' && <p className="text-sm text-gray-500 italic">Show the best results for the last {testLimit} days</p> }
        
         { testLimit == 'all' && <p className="text-sm text-gray-500 italic">
-          Scroll horizontally to see history →
+          show best results Scroll horizontally for more history →
         </p> }
       </div>
 
