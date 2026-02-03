@@ -129,7 +129,8 @@ export const useWritingCompletedStore = create((set) => ({
             id,
             title,
             difficulty,
-            duration
+            duration,
+            is_premium
           )
         `)
         .eq('user_id', userId)

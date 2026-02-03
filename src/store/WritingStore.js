@@ -14,7 +14,10 @@ export const useWritingStore = create((set) => ({
   fetchWritings: async () => {
     set({ loadingWritings: true, errorWritings: null });
     try {
-      const { data, error } = await supabase
+      const { data,
+        
+        
+        error } = await supabase
         .from("writings")
         .select("*")
         .order("created_at", { ascending: false });
