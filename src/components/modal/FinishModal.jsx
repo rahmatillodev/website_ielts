@@ -17,10 +17,16 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
     try {
       if (onSubmit) {
         const result = await onSubmit();
-        if (result && result.success !== false) {
+        // Only navigate if submission was explicitly successful
+        if (result && result.success === true) {
           onClose();
           navigate(link);
+        } else if (result && result.success === false) {
+          // Don't navigate on failure, let the user see the error
+          console.error('Submission failed:', result.error);
+          // The error is already handled in the submit function, just don't navigate
         }
+        // If result is undefined or doesn't have success property, don't navigate
       } else {
         if (testId) {
           const practiceData = loadReadingPracticeData(testId);
@@ -41,7 +47,8 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
       }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
-      alert('An error occurred while submitting the test. Please try again.');
+      // Don't navigate on error, let the user see what happened
+      // The error is already logged, and the modal will stay open
     }
   };
 

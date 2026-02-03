@@ -63,6 +63,8 @@ const ListeningPracticePageContent = () => {
   const questionRefs = useRef({});
   const questionsContainerRef = useRef(null);
   const [activeQuestion, setActiveQuestion] = useState(null);
+  const hasAutoSubmittedRef = useRef(false); // Prevent multiple auto-submissions
+  const isSubmittingRef = useRef(false); // Track submission state to prevent race conditions
 
   const [leftWidth, setLeftWidth] = useState(50);
   const containerRef = useRef(null);
@@ -243,8 +245,13 @@ const ListeningPracticePageContent = () => {
       authUser &&
       id &&
       currentTest &&
+      !hasAutoSubmittedRef.current &&
+      !isSubmittingRef.current &&
+      !isSubmitting &&
       isMounted
     ) {
+      // Auto-submit the test when timer reaches zero
+      hasAutoSubmittedRef.current = true;
       const autoSubmit = async () => {
         try {
           if (id) {
@@ -254,12 +261,22 @@ const ListeningPracticePageContent = () => {
             }
           }
           const result = await handleSubmitTest();
-          if (isMounted) {
+          console.log('[ListeningPracticePage] Auto-submit result:', result);
+          
+          // Only navigate if component is still mounted and submission was successful
+          if (isMounted && result && result.success) {
+            console.log('[ListeningPracticePage] Navigating to result page');
             navigate(`/listening-result/${id}`);
+          } else if (isMounted && result && !result.success) {
+            console.error('[ListeningPracticePage] Auto-submit failed:', result.error);
+            // Reset the flag so user can try again
+            hasAutoSubmittedRef.current = false;
           }
         } catch (error) {
+          console.error('[ListeningPracticePage] Auto-submit error:', error);
+          // Reset the flag on error
           if (isMounted) {
-            navigate(`/listening-result/${id}`);
+            hasAutoSubmittedRef.current = false;
           }
         }
       };
@@ -267,9 +284,12 @@ const ListeningPracticePageContent = () => {
     }
     return () => {
       isMounted = false;
+      if (status !== 'taking') {
+        hasAutoSubmittedRef.current = false;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, status]);
+  }, [timeRemaining, status, isStarted, hasInteracted, authUser, id, currentTest, isSubmitting]);
 
   // persist data on change
   useEffect(() => {
@@ -399,45 +419,50 @@ const ListeningPracticePageContent = () => {
   };
 
   const handleSubmitTest = async () => {
-    if (isSubmitting) {
+    // Prevent duplicate submissions using ref
+    if (isSubmittingRef.current || isSubmitting) {
       return { success: false, error: 'Submission already in progress' };
     }
     if (!authUser || !id || !currentTest) {
       return { success: false, error: 'Missing required information' };
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
+
     try {
-      let timeTaken = 0;
-      if (startTime && timeRemaining != null) {
-        const dur = convertDurationToSeconds(currentTest.duration);
-        timeTaken = dur - timeRemaining;
-      }
+      // Calculate time taken in seconds
+      const timeTaken = startTime
+        ? Math.floor((Date.now() - startTime) / 1000)
+        : null;
+
+      // Submit test attempt to backend
       const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'listening');
 
       if (result.success) {
-        setLatestAttemptId(result.attemptId);
-        setStatus('completed');
+        // Clear audio position and practice data on successful submission
         if (id) {
-          clearListeningPracticeData(id);
           clearAudioPosition(id);
+          clearListeningPracticeData(id);
           if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
             audioPlayerRef.current.clearPosition();
           }
         }
-        if (authUser?.id) {
-          await fetchDashboardData(authUser.id, true);
-        }
-        return { success: true };
+        return { success: true, attemptId: result.attemptId, score: result.score };
       } else {
-        console.error('Failed to submit test:', result.error);
+        // Reset submission state on failure
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+        toast.error(result.error || 'Failed to submit test attempt');
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('Error submitting test:', error);
-      return { success: false, error: error.message };
-    } finally {
+      console.error('[ListeningPracticePage] Error submitting test:', error);
+      // Reset submission state on error
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
+      toast.error(error.message || 'An error occurred while submitting your test');
+      return { success: false, error: error.message };
     }
   };
 
@@ -540,6 +565,9 @@ const ListeningPracticePageContent = () => {
     setCurrentPart(1);
     setLatestAttemptId(null);
     setShouldAutoPlay(true);
+    setIsSubmitting(false); // Reset submitting state
+    hasAutoSubmittedRef.current = false; // Reset auto-submit flag
+    isSubmittingRef.current = false; // Reset submission ref
 
     clearListeningPracticeData(id);
     clearAudioPosition(id);
@@ -850,6 +878,7 @@ const ListeningPracticePageContent = () => {
         type="Listening"
       />
 
+      {!isSubmitting ? (
       <div
         className="flex flex-1 overflow-hidden p-3 transition-all duration-300"
         ref={containerRef}
@@ -1219,6 +1248,11 @@ const ListeningPracticePageContent = () => {
           )}
         </div>
       </div>
+      ) : (
+        <div className="text-gray-500 flex items-center justify-center h-full">
+          {loading ? "Loading questions..." : "No questions available"}
+        </div>
+      )}
 
       <PracticeFooter
         currentTest={currentTest}

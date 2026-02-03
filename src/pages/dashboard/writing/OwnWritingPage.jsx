@@ -1,105 +1,81 @@
-import React, { useEffect, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FaArrowLeft,
   FaExpand,
   FaCompress,
   FaDownload,
   FaFileAlt,
-  FaBars
+  FaBars,
 } from "react-icons/fa";
 import { LuChevronsLeftRight } from "react-icons/lu";
 import { PenSquare, X } from "lucide-react";
-import { generateWritingPDF } from '@/utils/exportOwnWritingPdf';
-import { AppearanceProvider, useAppearance } from '@/contexts/AppearanceContext';
-import AppearanceSettingsModal from '@/components/modal/AppearanceSettingsModal';
+import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
+import AppearanceSettingsModal from "@/components/modal/AppearanceSettingsModal";
+import WritingFinishModal from "@/components/modal/WritingFinishModal";
+import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
 import { toast } from "react-toastify";
-import { useSettingsStore } from '@/store/systemStore';
-import { useWritingStore } from '@/store/WritingStore';
-
+import { useSettingsStore } from "@/store/systemStore";
 
 const OwnWritingPageContent = () => {
   const navigate = useNavigate();
-  const { theme, themeColors, fontSizeValue } = useAppearance();
-  const settings = useSettingsStore((state) => state.settings);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
+  const { themeColors, fontSizeValue } = useAppearance();
+  const settings = useSettingsStore((s) => s.settings);
+
   const [activeTask, setActiveTask] = useState("task1");
-  const [draggedImage, setDraggedImage] = useState(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [tasks, setTasks] = useState({
-    task1: {
-      question: "",
-      answer: ""
-    },
-    task2: {
-      question: "",
-      answer: ""
-    }
-  });
-  const currentTask = tasks[activeTask];
+  const [elapsedTime, setElapsedTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const [leftWidth, setLeftWidth] = useState(50);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [leftWidth, setLeftWidth] = useState(45);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isFinishOpen, setIsFinishOpen] = useState(false);
+
   const containerRef = useRef(null);
   const isResizing = useRef(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const questionTextareaRef = useRef(null);
 
-  // Modal states
-  const [isWritingFinishModalOpen, setIsWritingFinishModalOpen] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [tasks, setTasks] = useState({
+    task1: { question: "", answer: "", image: null },
+    task2: { question: "", answer: "", image: null },
+  });
 
+  const currentTask = tasks[activeTask];
   const baseFontSize = fontSizeValue.base / 16;
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
+  /* ================= TIMER ================= */
+  useEffect(() => {
+    if (!isRunning) return;
+    const timer = setInterval(() => setElapsedTime((t) => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, [isRunning]);
 
-  const handleAnswerFocus = () => {
-    if (!isRunning && !isSubmitted) {
-      setIsRunning(true);
-    }
-  };
+  const formatTime = (s) =>
+    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(
+      2,
+      "0"
+    )}`;
 
-  const startResize = () => {
-    isResizing.current = true;
-  };
+  /* ================= RESIZE ================= */
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!isResizing.current || !containerRef.current) return;
+      const w = containerRef.current.offsetWidth;
+      const percent = (e.clientX / w) * 100;
+      if (percent > 25 && percent < 75) setLeftWidth(percent);
+    };
 
-  const stopResize = () => {
-    isResizing.current = false;
-  };
+    const stop = () => (isResizing.current = false);
 
-  const wordCount = currentTask.answer
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", stop);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", stop);
+    };
+  }, []);
 
-  const minWords = activeTask === "task1" ? 150 : 250;
-  const isEnoughWords = wordCount >= minWords;
-
-  const task1Complete = tasks.task1.question.trim().length > 0 && tasks.task1.answer.trim().length > 0;
-  const task2Complete = tasks.task2.question.trim().length > 0 && tasks.task2.answer.trim().length > 0;
-  const hasAtLeastOneTaskFilled = task1Complete || task2Complete;
-
-  // Word count helper
-  const countWords = (text) => {
-    if (!text || text.trim() === '') return 0;
-    return text.trim().split(/\s+/).filter(Boolean).length;
-  };
-
-  const handleResize = (e) => {
-    if (!isResizing.current || !containerRef.current) return;
-    const containerWidth = containerRef.current.offsetWidth;
-    const newLeftWidth = (e.clientX / containerWidth) * 100;
-    if (newLeftWidth > 20 && newLeftWidth < 80) {
-      setLeftWidth(newLeftWidth);
-    }
-  };
-
+  /* ================= FULLSCREEN ================= */
   const toggleFullscreen = async () => {
     try {
       if (!document.fullscreenElement) {
@@ -109,521 +85,311 @@ const OwnWritingPageContent = () => {
         await document.exitFullscreen();
         setIsFullscreen(false);
       }
-    } catch (err) {
-      console.error("Fullscreen error:", err);
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  const handleDropImage = (e) => {
-    if (isSubmitted) return;
+  const wordCount = currentTask.answer.trim().split(/\s+/).filter(Boolean).length;
+  const minWords = activeTask === "task1" ? 150 : 250;
+
+  const handleDownloadPDF = async () => {
+    try {
+      await generateWritingPDF(tasks, formatTime(elapsedTime), settings);
+      toast.success("PDF saved successfully");
+    } catch {
+      toast.error("Failed to save PDF");
+    }
+  };
+
+  /* ================= QUESTION TEXTAREA AUTO-GROW (scroll in wrapper, not page) ================= */
+  const autosizeQuestionTextarea = (el) => {
+    if (!el) return;
+    el.style.height = "auto";
+    const MIN_PX = 200;
+    const nextHeight = Math.max(el.scrollHeight, MIN_PX);
+    const MAX_PX = 500;
+    const clampedHeight = Math.min(nextHeight, MAX_PX);
+    el.style.height = `${clampedHeight}px`;
+    // After max height, allow internal textarea scroll (still inside writing area)
+    el.style.overflowY = nextHeight > MAX_PX ? "auto" : "hidden";
+  };
+
+  useEffect(() => {
+    autosizeQuestionTextarea(questionTextareaRef.current);
+  }, [activeTask, currentTask.question]);
+
+  /* ================= IMAGE DRAG & DROP (TASK 1 ONLY) ================= */
+  const handleQuestionDragOver = (e) => {
     e.preventDefault();
+  };
+
+  const handleQuestionDrop = (e) => {
+    e.preventDefault();
+
+    // Only Task 1 accepts image drop
     if (activeTask !== "task1") return;
 
-    const file = e.dataTransfer.files[0];
-    if (!file || !file.type.startsWith("image/")) return;
+    const file = e.dataTransfer?.files?.[0];
+    if (!file || !file.type?.startsWith("image/")) return;
 
     const reader = new FileReader();
     reader.onload = () => {
-      setDraggedImage(reader.result);
-      setTasks(prev => ({
-        ...prev,
+      const base64 = reader.result;
+      setTasks((p) => ({
+        ...p,
         task1: {
-          ...prev.task1,
-          image: reader.result
-        }
+          ...p.task1,
+          image: base64,
+        },
       }));
     };
     reader.readAsDataURL(file);
   };
 
-  const handleDragOver = (e) => e.preventDefault();
-
-  useEffect(() => {
-    if (!isRunning) return;
-
-    const interval = setInterval(() => {
-      setElapsedTime((prev) => prev + 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isRunning]);
-
-  useEffect(() => {
-    const handleChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener("fullscreenchange", handleChange);
-    return () => document.removeEventListener("fullscreenchange", handleChange);
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener("mousemove", handleResize);
-    window.addEventListener("mouseup", stopResize);
-    return () => {
-      window.removeEventListener("mousemove", handleResize);
-      window.removeEventListener("mouseup", stopResize);
-    };
-  }, []);
-
-  useEffect(() => {
-    const styleId = 'own-writing-placeholder-styles';
-    let styleElement = document.getElementById(styleId);
-    
-    if (!styleElement) {
-      styleElement = document.createElement('style');
-      styleElement.id = styleId;
-      document.head.appendChild(styleElement);
-    }
-
-    const placeholderColor = theme === 'light' 
-      ? 'rgba(0, 0, 0, 0.4)' 
-      : theme === 'dark'
-      ? 'rgba(255, 255, 255, 0.4)'
-      : 'rgba(255, 255, 0, 0.5)';
-
-    styleElement.textContent = `
-      .own-writing-textarea::placeholder {
-        color: ${placeholderColor} !important;
-        opacity: 1 !important;
-      }
-    `;
-
-    return () => {
-      const element = document.getElementById(styleId);
-      if (element) {
-        element.remove();
-      }
-    };
-  }, [theme]);
-
-  const toggleTimer = () => {
-    setIsRunning((prev) => !prev);
-  };
-
-  // ==================== SAVE BUTTON - FAQAT VALIDATION ====================
-  const handleSave = () => {
-    // Agar allaqachon submitted bo'lsa, hech narsa qilma
-    if (isSubmitted) {
-      return;
-    }
-
-    // Validation: Check if at least one task is filled
-    if (!hasAtLeastOneTaskFilled) {
-      toast.error("Please fill both question and answer in at least one task before submitting", {
-        position: "top-center",
-        autoClose: 3000,
-      });
-      return;
-    }
-
-    // Validation: Check word counts
-    if (task1Complete) {
-      const task1Words = countWords(tasks.task1.answer);
-      if (task1Words < 150) {
-        toast.error(`Task 1 requires minimum 150 words. Current: ${task1Words} words`, {
-          position: "top-center",
-          autoClose: 3000,
-        });
-        return;
-      }
-    }
-
-    if (task2Complete) {
-      const task2Words = countWords(tasks.task2.answer);
-      if (task2Words < 250) {
-        toast.error(`Task 2 requires minimum 250 words. Current: ${task2Words} words`, {
-          position: "top-center",
-          autoClose: 3000,
-        });
-        return;
-      }
-    }
-
-    // Agar hammasi to'g'ri bo'lsa - FAQAT modal ochiladi, boshqa hech narsa
-    setIsFinishModalOpen(true);
-  };
-
-  // ==================== FINISH MODAL - Faqat modal yopilganda ====================
-  const handleFinishConfirm = () => {
-    // Timer to'xtatish
-    setIsRunning(false);
-    
-    // Submitted qilish
-    setIsSubmitted(true);
-    
-    // Modal yopish
-    setIsFinishModalOpen(false);
-    
-    // Success modal ochish (biroz kutib)
-    setTimeout(() => {
-      setIsSuccessModalOpen(true);
-    }, 300);
-  };
-
-  // ==================== DOWNLOAD PDF HANDLER ====================
-  const handleDownloadPDF = async () => {
-    setIsPdfLoading(true);
-    try {
-      await generateWritingPDF(tasks, formatTime(elapsedTime), settings);
-      toast.success('PDF downloaded successfully');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error('Failed to generate PDF');
-    } finally {
-      setIsPdfLoading(false);
-    }
+  const handleRemoveQuestionImage = () => {
+    // Only Task 1 image is removable here
+    setTasks((p) => ({
+      ...p,
+      task1: {
+        ...p.task1,
+        image: null,
+      },
+    }));
   };
 
   return (
-    <div 
-      className="flex flex-col h-screen"
-      style={{ 
-        backgroundColor: themeColors.backgroundColor,
+    <div
+      className="flex flex-col h-screen overflow-hidden"
+      style={{
+        background: themeColors.background,
         color: themeColors.text,
         fontSize: `${baseFontSize}rem`,
-        transition: 'font-size 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out'
       }}
     >
-      <header 
-        className="border-b px-6 py-4 flex items-center justify-between relative"
-        style={{ 
-          backgroundColor: themeColors.background,
-          borderColor: themeColors.border
-        }}
+      {/* ================= HEADER ================= */}
+      <header
+        className="shrink-0 border-b px-6 py-4 flex items-center justify-between"
+        style={{ borderColor: themeColors.border }}
       >
+        <button
+          onClick={() => navigate("/writing")}
+          className="flex items-center gap-2 px-4 py-1 bg-gray-200 rounded"
+        >
+          <FaArrowLeft /> Back
+        </button>
+
         <div className="flex items-center gap-4">
+          <span className="font-bold text-lg">{formatTime(elapsedTime)}</span>
           <button
-            onClick={() => navigate("/writing")}
-            className="flex items-center gap-2 hover:text-primary transition-colors cursor-pointer bg-gray-200 p-1 rounded-sm px-4"
-            style={{ 
-              color: theme === 'dark' ? '#000000' : themeColors.text 
-            }}
-          >
-            <FaArrowLeft className="w-4 h-4" />
-            <span>Back</span>
-          </button>
-          <div className="flex items-center gap-3">
-            <span 
-              className="text-xl font-bold"
-              style={{ color: themeColors.text }}
-            >
-              IELTS | Writing
-            </span>
-          </div>
-        </div>
-
-        <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-4">
-          <div 
-            className="text-lg font-semibold"
-            style={{ color: themeColors.text }}
-          >
-            {formatTime(elapsedTime)}
-          </div>
-
-          <button
-            onClick={toggleTimer}
+            onClick={() => setIsRunning((p) => !p)}
             disabled={isSubmitted}
-            className="px-4 py-2 bg-[#4A90E2] text-white rounded hover:bg-[#4a6de2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-blue-500 text-white rounded"
           >
             {isRunning ? "Pause" : "Start"}
           </button>
         </div>
 
         <div className="flex items-center gap-3">
+          <button onClick={toggleFullscreen}>
+            {isFullscreen ? <FaCompress /> : <FaExpand />}
+          </button>
+          <button onClick={() => setIsSettingsOpen(true)}>
+            <FaBars />
+          </button>
           <button
-            onClick={toggleFullscreen}
-            className="p-2 rounded transition-colors"
-            style={{ color: themeColors.text }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = theme === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.1)'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-          >
-            {isFullscreen ? (
-              <FaCompress className="w-5 h-5" />
-            ) : (
-              <FaExpand className="w-5 h-5" />
-            )}
-          </button>
-          <button 
-            onClick={() => setIsSettingsModalOpen(true)}
-            className="p-2 rounded transition-colors"
-            style={{ color: themeColors.text }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = theme === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.1)'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-            title="Settings"
-          >
-            <FaBars className="w-5 h-5" />
-          </button>
-          <button 
-            className="flex items-center gap-2 cursor-pointer px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium"
             onClick={handleDownloadPDF}
+            className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded"
           >
-            <FaDownload className="w-4 h-4" />
-            <span>save as PDF</span>
+            <FaDownload /> save as PDF
           </button>
         </div>
-
-        <AppearanceSettingsModal 
-          isOpen={isSettingsModalOpen} 
-          onClose={() => setIsSettingsModalOpen(false)} 
-        />
       </header>
 
-      <div className="flex flex-1 overflow-hidden p-3 gap-3" ref={containerRef}>
+      {/* ================= CONTENT ================= */}
+      <div
+        ref={containerRef}
+        className="flex flex-1 overflow-hidden p-3 gap-2"
+      >
+        {/* ===== LEFT (STATIC HEIGHT) ===== */}
         <div
-          className="border border-t border-b rounded-2xl overflow-y-auto transition-opacity duration-300 ease-in-out"
-          style={{ 
+          className="border rounded-2xl p-6 flex flex-col flex-none relative z-0 h-full overflow-hidden"
+          style={{
             width: `${leftWidth}%`,
-            backgroundColor: themeColors.background,
             borderColor: themeColors.border,
-            transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out'
+            backgroundColor: themeColors.background,
           }}
         >
-          <div className="p-6 space-y-4">
-            <div 
-              className="mx-2 px-4 py-4 border rounded-lg"
-              style={{
-                backgroundColor: theme === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
-                borderColor: themeColors.border
-              }}
-            >
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <PenSquare 
-                    className="w-5 h-5 shrink-0" 
-                    style={{ color: themeColors.text }}
-                  />
-                  <span 
-                    className="text-base font-bold"
-                    style={{ color: themeColors.text }}
+          {/* TOP INFO CARD */}
+          <div className="shrink-0 rounded-xl border border-slate-200 bg-slate-100 p-4 mb-4">
+            <div className="flex items-center gap-2">
+              <PenSquare className="w-5 h-5" />
+              <span className="text-base font-bold">
+                IELTS Writing Practice - {activeTask === "task1" ? "Task 1" : "Task 2"}
+              </span>
+            </div>
+            <div className="text-sm text-slate-600 mt-1">
+              Create your own writing task and practice at your own pace
+            </div>
+          </div>
+
+          {/* WRITING BLOCK (single scroll container: textarea + image) */}
+          <div className="w-full  h-full rounded-lg overflow-auto p-2 relative">
+            <textarea
+              ref={questionTextareaRef}
+              className="w-full h-64 border resize-none border-gray-300 rounded-lg p-2 relative"
+              placeholder={
+                activeTask === "task1"
+                  ? "Type your writing task question here...\n\nTip: You can drag & drop image"
+                  : "Type your writing task question here..."
+              }
+              value={currentTask.question}
+              style={{ backgroundColor: themeColors.background }}
+              onDragOver={activeTask === "task1" ? handleQuestionDragOver : undefined}
+              onDrop={activeTask === "task1" ? handleQuestionDrop : undefined}
+              onChange={(e) =>
+                (autosizeQuestionTextarea(e.currentTarget),
+                setTasks((p) => ({
+                  ...p,
+                  [activeTask]: {
+                    ...p[activeTask],
+                    question: e.target.value,
+                  },
+                })))
+              }
+            />
+
+            {/* IMAGE PREVIEW (Task 1 only) */}
+            {activeTask === "task1" && tasks.task1.image && (
+              <div className="rounded-xl border border-gray-200 overflow-hidden bg-white max-w-full">
+                <div className="flex justify-end p-2">
+                  <button
+                    type="button"
+                    onClick={handleRemoveQuestionImage}
+                    className="w-8 h-8 rounded-full bg-white hover:bg-gray-50 border border-gray-200 flex items-center justify-center"
+                    title="Remove image"
                   >
-                    IELTS Writing Practice - {activeTask === "task1" ? "Task 1" : "Task 2"}
-                  </span>
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <span 
-                  className="text-sm"
-                  style={{ color: themeColors.text, opacity: 0.7 }}
-                >
-                  Create your own writing task and practice at your own pace
-                </span>
-              </div>
-            </div>
-
-            <div 
-              className="mx-2 px-4 py-4 border-2 rounded-lg transition-colors"
-              style={{ borderColor: themeColors.border }}
-            >
-              <div className="space-y-4 overflow-y-auto">
-                <textarea
-                  value={currentTask.question}
-                  disabled={isSubmitted}
-                  onChange={(e) =>
-                    setTasks(prev => ({
-                      ...prev,
-                      [activeTask]: {
-                        ...prev[activeTask],
-                        question: e.target.value
-                      }
-                    }))
-                  }
-                  placeholder={
-                    activeTask === "task1"
-                      ? `Type your writing task question here... 
-                      
-Tip: You can drag & drop image`
-                      : "Type your writing task question here..."
-                  }
-                  className="w-full min-h-[200px] bg-transparent resize-none focus:outline-none own-writing-textarea"
-                  style={{ 
-                    color: themeColors.text,
-                    transition: 'color 0.3s ease-in-out, border-color 0.3s ease-in-out'
-                  }}
-                  onFocus={(e) => {
-                    e.target.parentElement.parentElement.style.borderColor = '#4A90E2';
-                  }}
-                  onBlur={(e) => {
-                    e.target.parentElement.parentElement.style.borderColor = themeColors.border;
-                  }}
-                  onDrop={handleDropImage}
-                  onDragOver={handleDragOver}
+                <img
+                  src={tasks.task1.image}
+                  alt="Dropped preview"
+                  className="block w-full max-w-full max-h-[260px] object-contain"
                 />
-              </div>
-            </div>
-
-            {activeTask === "task1" && draggedImage && (
-              <div 
-                className="mt-3 relative p-2 border rounded-lg flex justify-center"
-                style={{
-                  borderColor: themeColors.border,
-                  backgroundColor: theme === 'light' ? '#f9fafb' : 'rgba(255,255,255,0.05)'
-                }}
-              >
-                <button
-                  disabled={isSubmitted}
-                  onClick={() => {
-                    setDraggedImage(null);
-                    setTasks(prev => ({
-                      ...prev,
-                      task1: {
-                        ...prev.task1,
-                        image: null
-                      }
-                    }));
-                  }}
-                  className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                  title="Remove image"
-                >
-                  <X size={15} />
-                </button>
-
-                <img src={draggedImage} alt="Dropped" className="max-h-48 object-contain" />
               </div>
             )}
           </div>
         </div>
 
-        <div>
+        {/* ===== RESIZER ===== */}
+        <div
+          onMouseDown={() => (isResizing.current = true)}
+          className="relative z-50 overflow-visible flex items-center justify-center cursor-col-resize"
+          style={{ width: "20px", zIndex: 50 }}
+        >
           <div
-            onMouseDown={startResize}
-            className="w-0.5 cursor-col-resize h-full flex justify-center items-center relative"
-            style={{ backgroundColor: themeColors.border }}
-            title="Drag to resize"
+            className="absolute inset-y-0 left-1/2 -translate-x-1/2 h-full z-50"
+            style={{ width: "4px", backgroundColor: themeColors.border }}
+          />
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-60 w-6 h-6 rounded-2xl flex items-center justify-center border-2 bg-white shadow-md"
+            style={{ borderColor: themeColors.border }}
           >
-            <div 
-              className="w-6 h-6 rounded-2xl flex items-center justify-center absolute border-2"
-              style={{ 
-                backgroundColor: themeColors.background,
-                borderColor: themeColors.border
-              }}
-            >
-              <LuChevronsLeftRight style={{ color: themeColors.text }} />
-            </div>
+            <LuChevronsLeftRight size={16} />
           </div>
         </div>
 
+        {/* ===== RIGHT (FULL HEIGHT) ===== */}
         <div
-          className="space-y-1 overflow-y-auto p-6 border rounded-2xl"
-          style={{ 
+          className="flex flex-col border border-[color:var(--panel-border)] rounded-2xl p-6 overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 relative z-0"
+          style={{
             width: `${100 - leftWidth}%`,
-            backgroundColor: themeColors.background,
-            borderColor: themeColors.border,
-            transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out'
+            "--panel-border": themeColors.border,
           }}
         >
           <textarea
-            disabled={isSubmitted}
-            value={currentTask.answer}
-            onChange={(e) => {
-              setTasks(prev => ({
-                ...prev,
-                [activeTask]: {
-                  ...prev[activeTask],
-                  answer: e.target.value
-                }
-              }));
-              handleAnswerFocus();
-            }}
+            className="flex-1 resize-none outline-none bg-transparent p-4"
             placeholder="Write your answer here..."
-            className="w-full min-h-[320px] p-4 bg-transparent border-2 rounded-xl resize-none focus:outline-none own-writing-textarea"
-            style={{ 
-              color: themeColors.text,
-              borderColor: themeColors.border,
-              transition: 'color 0.3s ease-in-out, border-color 0.3s ease-in-out'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#4A90E2';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = themeColors.border;
-            }}
+            value={currentTask.answer}
+            onChange={(e) =>
+              setTasks((p) => ({
+                ...p,
+                [activeTask]: {
+                  ...p[activeTask],
+                  answer: e.target.value,
+                },
+              }))
+            }
+            onFocus={() => !isRunning && setIsRunning(true)}
           />
 
-          <div className="flex items-center justify-between mt-3 text-sm">
-            <div 
-              className="flex items-center gap-2"
-              style={{ color: themeColors.text, opacity: 0.7 }}
+          <div
+            className="shrink-0 flex justify-between text-sm mt-3 pt-3 border-t"
+            style={{ borderColor: themeColors.border }}
+          >
+            <span>
+              <FaFileAlt className="inline mr-1" />
+              Words: {wordCount}
+            </span>
+            <span
+              className={
+                wordCount >= minWords ? "text-green-600" : "text-red-600"
+              }
             >
-              <FaFileAlt className="w-4 h-4" />
-              <span>Words: {wordCount}</span>
-            </div>
-
-            <div
-              className={`font-medium ${isEnoughWords ? "text-green-600" : "text-red-600"}`}
-            >
-              Minimum: {minWords} words
-            </div>
+              Minimum: {minWords}
+            </span>
           </div>
         </div>
       </div>
 
-      <footer 
-        className="w-full border-t"
-        style={{
-          backgroundColor: theme === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.1)',
-          borderColor: themeColors.border,
-          transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out'
-        }}
+      {/* ================= FOOTER ================= */}
+      <footer
+        className="shrink-0 border-t flex items-center"
+        style={{ borderColor: themeColors.border }}
       >
-        <div className="flex items-stretch justify-between w-full max-w-full px-3">
-          <div className="flex flex-1">
-            {["task1", "task2"].map((task) => {
-              const isActive = activeTask === task;
-              return (
-                <button
-                  key={task}
-                  onClick={() => setActiveTask(task)}
-                  className="flex-1 flex justify-center items-center font-semibold text-sm transition-colors duration-200"
-                  style={{
-                    backgroundColor: isActive 
-                      ? (theme === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.2)')
-                      : 'transparent',
-                    color: themeColors.text
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.backgroundColor = theme === 'light' ? '#d1d5db' : 'rgba(255,255,255,0.15)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  {task === "task1" ? "Task 1" : "Task 2"}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={handleSave}
-            disabled={isSubmitted}
-            className="ml-3 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitted ? "Saved" : "Save"}
-          </button>
+        <div className="flex flex-1">
+          {["task1", "task2"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setActiveTask(t)}
+              className="flex-1 py-3 font-semibold"
+              style={{
+                background: activeTask === t ? "#e5e7eb" : "transparent",
+              }}
+            >
+              {t === "task1" ? "Task 1" : "Task 2"}
+            </button>
+          ))}
         </div>
+
+        <button
+          onClick={() => setIsFinishOpen(true)}
+          className="mr-4 px-6 py-2 bg-green-600 text-white rounded"
+        >
+          Save
+        </button>
       </footer>
 
-      {/* MODALS */}
+      {/* ================= MODALS ================= */}
+      <AppearanceSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+
       <WritingFinishModal
-        isOpen={isWritingFinishModalOpen}
-        onClose={() => setWritingFinishModalOpen(false)}
-            onSubmit={handleWritingFinishConfirm}
-        loading={false}
+        isOpen={isFinishOpen}
+        onClose={() => setIsFinishOpen(false)}
+        onSubmit={() => setIsSubmitted(true)}
       />
     </div>
-  )
-}
+  );
+};
 
-const OwnWritingPage = () => {
+export default function OwnWritingPage() {
   return (
     <AppearanceProvider>
       <OwnWritingPageContent />
     </AppearanceProvider>
   );
-};
-
-export default OwnWritingPage;
+}

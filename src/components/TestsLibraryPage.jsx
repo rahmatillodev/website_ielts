@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FaArrowRight, FaSearch } from "react-icons/fa";
+import { FaArrowRight, FaHistory, FaSearch } from "react-icons/fa";
 import { IoGridOutline, IoListOutline } from "react-icons/io5";
 import { Input } from "@/components/ui/input";
 // import PremiumBanner from "@/components/badges/PremiumBanner";
@@ -331,6 +331,17 @@ const TestsLibraryPage = ({
               {description}
             </p>
           </div>
+          <div className="flex justify-end gap-2">
+          {
+            testType === "writing" && (
+              <div className="flex justify-end">
+                <Link to="/writing/writing-history" className="text-sm bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-all duration-200 flex items-center gap-2">
+                  <FaHistory className="w-4 h-4" />
+                  Writing History
+                </Link>
+              </div>
+            )
+          }
           {headerAction && (
             <div className="flex justify-end">
               <Link to={headerAction} className="text-sm bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-all duration-200 flex items-center gap-2">
@@ -339,6 +350,8 @@ const TestsLibraryPage = ({
               </Link>
             </div>
           )}
+          </div>
+
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 md:mt-4 gap-4">
