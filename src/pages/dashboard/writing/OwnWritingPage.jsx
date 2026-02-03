@@ -17,13 +17,14 @@ import { toast } from "react-toastify";
 import { useSettingsStore } from '@/store/systemStore';
 import { useWritingStore } from '@/store/WritingStore';
 
+
 const OwnWritingPageContent = () => {
   const navigate = useNavigate();
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const settings = useSettingsStore((state) => state.settings);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [activeTask, setActiveTask] = useState("task1"); // "task1" | "task2"
+  const [activeTask, setActiveTask] = useState("task1");
   const [draggedImage, setDraggedImage] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [tasks, setTasks] = useState({
@@ -43,8 +44,12 @@ const OwnWritingPageContent = () => {
   const isResizing = useRef(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
-  // Calculate font size in rem (base 16px = 1rem)
-  const baseFontSize = fontSizeValue.base / 16; // Convert px to rem
+  // Modal states
+  const [isWritingFinishModalOpen, setIsWritingFinishModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
+
+  const baseFontSize = fontSizeValue.base / 16;
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -53,7 +58,6 @@ const OwnWritingPageContent = () => {
       .toString()
       .padStart(2, "0")}`;
   };
-
 
   const handleAnswerFocus = () => {
     if (!isRunning && !isSubmitted) {
@@ -77,10 +81,15 @@ const OwnWritingPageContent = () => {
   const minWords = activeTask === "task1" ? 150 : 250;
   const isEnoughWords = wordCount >= minWords;
 
-  // Check if at least one task has both question and answer filled
   const task1Complete = tasks.task1.question.trim().length > 0 && tasks.task1.answer.trim().length > 0;
   const task2Complete = tasks.task2.question.trim().length > 0 && tasks.task2.answer.trim().length > 0;
   const hasAtLeastOneTaskFilled = task1Complete || task2Complete;
+
+  // Word count helper
+  const countWords = (text) => {
+    if (!text || text.trim() === '') return 0;
+    return text.trim().split(/\s+/).filter(Boolean).length;
+  };
 
   const handleResize = (e) => {
     if (!isResizing.current || !containerRef.current) return;
@@ -108,14 +117,14 @@ const OwnWritingPageContent = () => {
   const handleDropImage = (e) => {
     if (isSubmitted) return;
     e.preventDefault();
-    if (activeTask !== "task1") return; // только для task1
+    if (activeTask !== "task1") return;
 
     const file = e.dataTransfer.files[0];
     if (!file || !file.type.startsWith("image/")) return;
 
     const reader = new FileReader();
     reader.onload = () => {
-      setDraggedImage(reader.result); // base64 для превью
+      setDraggedImage(reader.result);
       setTasks(prev => ({
         ...prev,
         task1: {
@@ -139,7 +148,6 @@ const OwnWritingPageContent = () => {
     return () => clearInterval(interval);
   }, [isRunning]);
 
-
   useEffect(() => {
     const handleChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -158,7 +166,6 @@ const OwnWritingPageContent = () => {
     };
   }, []);
 
-  // Add dynamic styles for placeholder
   useEffect(() => {
     const styleId = 'own-writing-placeholder-styles';
     let styleElement = document.getElementById(styleId);
@@ -169,12 +176,11 @@ const OwnWritingPageContent = () => {
       document.head.appendChild(styleElement);
     }
 
-    // Calculate placeholder color based on theme
     const placeholderColor = theme === 'light' 
       ? 'rgba(0, 0, 0, 0.4)' 
       : theme === 'dark'
       ? 'rgba(255, 255, 255, 0.4)'
-      : 'rgba(255, 255, 0, 0.5)'; // high-contrast
+      : 'rgba(255, 255, 0, 0.5)';
 
     styleElement.textContent = `
       .own-writing-textarea::placeholder {
@@ -184,7 +190,6 @@ const OwnWritingPageContent = () => {
     `;
 
     return () => {
-      // Cleanup on unmount
       const element = document.getElementById(styleId);
       if (element) {
         element.remove();
@@ -196,6 +201,79 @@ const OwnWritingPageContent = () => {
     setIsRunning((prev) => !prev);
   };
 
+  // ==================== SAVE BUTTON - FAQAT VALIDATION ====================
+  const handleSave = () => {
+    // Agar allaqachon submitted bo'lsa, hech narsa qilma
+    if (isSubmitted) {
+      return;
+    }
+
+    // Validation: Check if at least one task is filled
+    if (!hasAtLeastOneTaskFilled) {
+      toast.error("Please fill both question and answer in at least one task before submitting", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+      return;
+    }
+
+    // Validation: Check word counts
+    if (task1Complete) {
+      const task1Words = countWords(tasks.task1.answer);
+      if (task1Words < 150) {
+        toast.error(`Task 1 requires minimum 150 words. Current: ${task1Words} words`, {
+          position: "top-center",
+          autoClose: 3000,
+        });
+        return;
+      }
+    }
+
+    if (task2Complete) {
+      const task2Words = countWords(tasks.task2.answer);
+      if (task2Words < 250) {
+        toast.error(`Task 2 requires minimum 250 words. Current: ${task2Words} words`, {
+          position: "top-center",
+          autoClose: 3000,
+        });
+        return;
+      }
+    }
+
+    // Agar hammasi to'g'ri bo'lsa - FAQAT modal ochiladi, boshqa hech narsa
+    setIsFinishModalOpen(true);
+  };
+
+  // ==================== FINISH MODAL - Faqat modal yopilganda ====================
+  const handleFinishConfirm = () => {
+    // Timer to'xtatish
+    setIsRunning(false);
+    
+    // Submitted qilish
+    setIsSubmitted(true);
+    
+    // Modal yopish
+    setIsFinishModalOpen(false);
+    
+    // Success modal ochish (biroz kutib)
+    setTimeout(() => {
+      setIsSuccessModalOpen(true);
+    }, 300);
+  };
+
+  // ==================== DOWNLOAD PDF HANDLER ====================
+  const handleDownloadPDF = async () => {
+    setIsPdfLoading(true);
+    try {
+      await generateWritingPDF(tasks, formatTime(elapsedTime), settings);
+      toast.success('PDF downloaded successfully');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF');
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
 
   return (
     <div 
@@ -246,13 +324,12 @@ const OwnWritingPageContent = () => {
           <button
             onClick={toggleTimer}
             disabled={isSubmitted}
-            className="px-4 py-2 bg-[#4A90E2] text-white rounded hover:bg-[#4a6de2] transition-colors"
+            className="px-4 py-2 bg-[#4A90E2] text-white rounded hover:bg-[#4a6de2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRunning ? "Pause" : "Start"}
           </button>
         </div>
 
-        {/* Правая часть - PDF, Fullscreen и Settings */}
         <div className="flex items-center gap-3">
           <button
             onClick={toggleFullscreen}
@@ -280,17 +357,13 @@ const OwnWritingPageContent = () => {
           </button>
           <button 
             className="flex items-center gap-2 cursor-pointer px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium"
-            onClick={() => {
-              setIsRunning(false);
-              generateWritingPDF(tasks, formatTime(elapsedTime), settings);
-            }}
+            onClick={handleDownloadPDF}
           >
             <FaDownload className="w-4 h-4" />
             <span>save as PDF</span>
           </button>
         </div>
 
-        {/* Appearance Settings Modal */}
         <AppearanceSettingsModal 
           isOpen={isSettingsModalOpen} 
           onClose={() => setIsSettingsModalOpen(false)} 
@@ -298,7 +371,6 @@ const OwnWritingPageContent = () => {
       </header>
 
       <div className="flex flex-1 overflow-hidden p-3 gap-3" ref={containerRef}>
-        {/* Left Panel */}
         <div
           className="border border-t border-b rounded-2xl overflow-y-auto transition-opacity duration-300 ease-in-out"
           style={{ 
@@ -376,10 +448,9 @@ Tip: You can drag & drop image`
                   onDrop={handleDropImage}
                   onDragOver={handleDragOver}
                 />
-
               </div>
             </div>
-            {/* Превью изображения под textarea */}
+
             {activeTask === "task1" && draggedImage && (
               <div 
                 className="mt-3 relative p-2 border rounded-lg flex justify-center"
@@ -388,7 +459,6 @@ Tip: You can drag & drop image`
                   backgroundColor: theme === 'light' ? '#f9fafb' : 'rgba(255,255,255,0.05)'
                 }}
               >
-                {/* Кнопка закрытия */}
                 <button
                   disabled={isSubmitted}
                   onClick={() => {
@@ -410,11 +480,8 @@ Tip: You can drag & drop image`
                 <img src={draggedImage} alt="Dropped" className="max-h-48 object-contain" />
               </div>
             )}
-
           </div>
         </div>
-
-        {/* Resizable Divider */}
 
         <div>
           <div
@@ -435,7 +502,6 @@ Tip: You can drag & drop image`
           </div>
         </div>
 
-        {/* Right Panel */}
         <div
           className="space-y-1 overflow-y-auto p-6 border rounded-2xl"
           style={{ 
@@ -474,7 +540,6 @@ Tip: You can drag & drop image`
           />
 
           <div className="flex items-center justify-between mt-3 text-sm">
-            {/* Words counter */}
             <div 
               className="flex items-center gap-2"
               style={{ color: themeColors.text, opacity: 0.7 }}
@@ -483,10 +548,8 @@ Tip: You can drag & drop image`
               <span>Words: {wordCount}</span>
             </div>
 
-            {/* Minimum words */}
             <div
-              className={`font-medium ${isEnoughWords ? "text-green-600" : "text-red-600"
-                }`}
+              className={`font-medium ${isEnoughWords ? "text-green-600" : "text-red-600"}`}
             >
               Minimum: {minWords} words
             </div>
@@ -503,7 +566,6 @@ Tip: You can drag & drop image`
         }}
       >
         <div className="flex items-stretch justify-between w-full max-w-full px-3">
-          {/* Переключатели в стиле Part */}
           <div className="flex flex-1">
             {["task1", "task2"].map((task) => {
               const isActive = activeTask === task;
@@ -535,26 +597,23 @@ Tip: You can drag & drop image`
             })}
           </div>
 
-          {/* Submit с отступом слева */}
           <button
-            onClick={() => {
-              if (!hasAtLeastOneTaskFilled) {
-                toast.error("Please fill both question and answer in at least one task before submitting");
-                return;
-              }
-              if (isSubmitted) {
-                return;
-              }
-              setIsRunning(false); // Stop timer on submit
-              setIsSubmitted(true);
-            }}
+            onClick={handleSave}
             disabled={isSubmitted}
-            className="ml-3 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-default"
+            className="ml-3 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitted ? "Saved" : "Save"}
           </button>
         </div>
       </footer>
+
+      {/* MODALS */}
+      <WritingFinishModal
+        isOpen={isWritingFinishModalOpen}
+        onClose={() => setWritingFinishModalOpen(false)}
+            onSubmit={handleWritingFinishConfirm}
+        loading={false}
+      />
     </div>
   )
 }
@@ -567,4 +626,4 @@ const OwnWritingPage = () => {
   );
 };
 
-export default OwnWritingPage; 
+export default OwnWritingPage;
