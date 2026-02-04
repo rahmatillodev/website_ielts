@@ -35,6 +35,8 @@ export const useAuthStore = create(
 
         if (!get()._authListener) {
           const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log('event', event);
+            console.log('session', session);
             // Minimal holatni yangilash
             if ((event === 'SIGNED_IN' || event === "TOKEN_REFRESHED") && session?.user) {
               set({ authUser: session.user });
