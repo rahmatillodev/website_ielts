@@ -21,22 +21,27 @@ export const useAuthStore = create(
 
         // 1. Joriy sessiyani tekshirish
         const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          set({ authUser: session.user });
-          await get().fetchUserProfile(session.user.id, false);
+
+        // 2. Sessiyani yangilash (kickstart)
+        const { data: refreshData, error } = await supabase.auth.refreshSession();
+
+        // Yangilangan sessiyani ishlatish, agar mavjud bo'lsa
+        const activeSession = refreshData?.session || session;
+
+        if (activeSession?.user) {
+          set({ authUser: activeSession.user });
+          await get().fetchUserProfile(activeSession.user.id, false);
         }
 
-        // 2. Auth listenerni o'rnatish (faqat bir marta)
         if (!get()._authListener) {
-          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' && session?.user || event === "TOKEN_REFRESHED" && session?.user) {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            // Minimal holatni yangilash
+            if ((event === 'SIGNED_IN' || event === "TOKEN_REFRESHED") && session?.user) {
               set({ authUser: session.user });
-              await get().fetchUserProfile(session.user.id, false);
+              // DB so‘rovini tashqaridan trigger qilamiz
             }
 
             if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-              // Store-ni tozalash, lekin isInitialized true qoladi
               set({ authUser: null, userProfile: null });
               get().clearUserLocalData();
             }
@@ -48,6 +53,34 @@ export const useAuthStore = create(
         }
       },
 
+      updateUserProfile: async (update) => {
+        const userId = get().authUser?.id;
+        if (!userId) {
+          set({ error: 'User not authenticated', loading: false });
+          return { success: false, error: 'User not authenticated' };
+        }
+
+        set({ loading: true, error: null });
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .update(update)
+            .eq('id', userId)
+            .select()
+            .single();
+
+          if (error) throw error;
+
+
+
+          set({ userProfile: data, loading: false });
+          return { success: true, data };
+        } catch (error) {
+          set({ error: error.message, loading: false });
+          return { success: false, error: error.message };
+        }
+      },
+
       signIn: async (email, password) => {
         set({ loading: true, error: null });
         try {
@@ -56,7 +89,7 @@ export const useAuthStore = create(
 
           set({ authUser: data.user });
           await get().fetchUserProfile(data.user.id, false);
-          
+
           set({ loading: false });
           return { success: true };
         } catch (error) {
@@ -113,7 +146,7 @@ export const useAuthStore = create(
           clearAllReadingData();
           clearAllListeningData();
           localStorage.removeItem('auth-storage'); // Zustand persist kaliti
-          
+
           const keysToRemove = [];
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -149,9 +182,9 @@ export const useAuthStore = create(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ 
-        authUser: state.authUser, 
-        userProfile: state.userProfile 
+      partialize: (state) => ({
+        authUser: state.authUser,
+        userProfile: state.userProfile
       }),
     }
   )
