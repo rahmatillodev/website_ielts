@@ -19,6 +19,7 @@ export default function WritingSuccessModal({
   onClose, 
   onDownloadPDF,
   pdfLoading = false,
+  onGoToHistory,
 }) {
   const navigate = useNavigate();
   const { themeColors } = useAppearance();
@@ -26,6 +27,13 @@ export default function WritingSuccessModal({
   const handleGoToWriting = () => {
     onClose();
     navigate("/writing");
+  };
+
+  const handleGoToHistory = () => {
+    if (onGoToHistory) {
+      onClose();
+      onGoToHistory();
+    }
   };
 
   return (
@@ -70,11 +78,12 @@ export default function WritingSuccessModal({
             Go to Writing
           </AlertDialogAction>
 
-          {/* Tarix tugmasi (Hozircha o'chirilgan) */}
+          {/* History button - enabled when route is available */}
           <Button 
-            disabled={true}
+            onClick={handleGoToHistory}
+            disabled={!onGoToHistory}
             variant="outline"
-            className="flex-1 h-11 opacity-50 cursor-not-allowed"
+            className={`flex-1 h-11 ${!onGoToHistory ? 'opacity-50 cursor-not-allowed' : ''}`}
             style={{ 
               borderColor: themeColors.border,
               color: themeColors.text 

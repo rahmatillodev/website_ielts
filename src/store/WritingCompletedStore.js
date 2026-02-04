@@ -129,7 +129,8 @@ export const useWritingCompletedStore = create((set) => ({
             id,
             title,
             difficulty,
-            duration
+            duration,
+            is_premium
           )
         `)
         .eq('user_id', userId)
@@ -149,6 +150,90 @@ export const useWritingCompletedStore = create((set) => ({
     } catch (error) {
       console.error('Error fetching writing attempts:', error);
       throw error;
+    }
+  },
+
+  /**
+   * Fetch latest writing attempt for review mode
+   * @param {string} writingId - The writing ID
+   * @returns {Promise<{success: boolean, attempt?: object, answers?: object, error?: string}>}
+   */
+  getLatestWritingAttempt: async (writingId) => {
+    const userId = getUserIdFromLocalStorage();
+    if (!userId) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
+    }
+
+    try {
+      // Try with writing_id first
+      let { data: attemptData, error: attemptError } = await supabase
+        .from('user_attempts')
+        .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
+        .eq('user_id', userId)
+        .eq('writing_id', writingId)
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // If writing_id doesn't exist, try with test_id
+      if (attemptError && (attemptError.message.includes('writing_id') || attemptError.code === '42703')) {
+        const { data: retryData, error: retryError } = await supabase
+          .from('user_attempts')
+          .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
+          .eq('user_id', userId)
+          .eq('test_id', writingId)
+          .order('completed_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (retryError && retryError.code !== 'PGRST116') {
+          throw retryError;
+        }
+        attemptData = retryData;
+        attemptError = retryError;
+      }
+
+      if (attemptError && attemptError.code !== 'PGRST116') {
+        throw attemptError;
+      }
+
+      if (!attemptData) {
+        return {
+          success: true,
+          attempt: null,
+          answers: {},
+        };
+      }
+
+      // Parse answers from correct_answers field
+      // Format: "Task 1: [answer]\n\nTask 2: [answer]"
+      const answers = {};
+      if (attemptData.correct_answers) {
+        const tasks = attemptData.correct_answers.split('\n\n');
+        tasks.forEach((task) => {
+          const match = task.match(/^(Task \d+):\s*(.+)$/s);
+          if (match) {
+            const taskType = match[1];
+            const answer = match[2].trim();
+            answers[taskType] = answer;
+          }
+        });
+      }
+
+      return {
+        success: true,
+        attempt: attemptData,
+        answers,
+      };
+    } catch (error) {
+      console.error('Error fetching latest writing attempt:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
     }
   },
 }));

@@ -14,6 +14,7 @@ import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext"
 import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext";
 import { useWritingStore } from "@/store/WritingStore";
 import { useWritingCompletedStore } from "@/store/WritingCompletedStore";
+import { useAuthStore } from "@/store/authStore";
 import {
   saveWritingPracticeData,
   loadWritingPracticeData,
@@ -38,7 +39,8 @@ const WritingPracticePageContent = () => {
     errorCurrentWriting,
   } = useWritingStore();
 
-  const { submitWritingAttempt, loading: savingAttempt } = useWritingCompletedStore();
+  const { submitWritingAttempt, loading: savingAttempt, getLatestWritingAttempt } = useWritingCompletedStore();
+  const { authUser } = useAuthStore();
 
   const {
     addHighlight,
@@ -50,6 +52,12 @@ const WritingPracticePageContent = () => {
   const [currentTaskType, setCurrentTaskType] = useState(null);
   const [answers, setAnswers] = useState({});
   const [leftWidth, setLeftWidth] = useState(50);
+
+  // Status: 'taking', 'reviewing'
+  const [status, setStatus] = useState(() => {
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    return mode === 'review' ? 'reviewing' : 'taking';
+  });
 
   // Practice flow states
   const [isPracticeMode, setIsPracticeMode] = useState(false); // When user clicks "Try practice"
@@ -64,10 +72,34 @@ const WritingPracticePageContent = () => {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAutoSubmitting, setIsAutoSubmitting] = useState(false);
 
   const containerRef = useRef(null);
   const universalContentRef = useRef(null);
   const passageRef = useRef(null);
+
+  /* ================= HANDLERS ================= */
+  const handleReviewWriting = useCallback(async () => {
+    if (!authUser || !id || !currentWriting) {
+      return;
+    }
+
+    try {
+      const result = await getLatestWritingAttempt(id);
+      if (result.success && result.attempt && result.answers) {
+        // Set answers from attempt
+        setAnswers(result.answers);
+        setStatus('reviewing');
+        setIsPracticeMode(false); // Don't show practice mode in review
+      } else {
+        // No attempt found, stay in taking mode
+        setStatus('taking');
+      }
+    } catch (error) {
+      console.error('Error loading review data:', error);
+      setStatus('taking');
+    }
+  }, [authUser, id, currentWriting, getLatestWritingAttempt]);
 
   /* ================= FETCH & INITIALIZE ================= */
   useEffect(() => {
@@ -80,21 +112,44 @@ const WritingPracticePageContent = () => {
     const tasks = currentWriting.writing_tasks;
     setCurrentTaskType(tasks[0].task_type);
 
-    // Check URL parameter for practice mode
+    // Check URL parameter for review mode
+    const isReviewMode = searchParams.get('mode') === 'review';
     const urlPracticeMode = searchParams.get('mode') === 'practice';
 
-    // Load saved data from localStorage
+    // If review mode, load attempt data
+    if (isReviewMode && authUser && id) {
+      handleReviewWriting();
+      return;
+    }
+
+    // Load saved data from localStorage (only if not in review mode)
     const savedData = loadWritingPracticeData(id);
     if (savedData) {
       setAnswers(savedData.answers || {});
-      setTimeRemaining(savedData.timeRemaining || convertDurationToSeconds(currentWriting.duration));
-      setElapsedTime(savedData.elapsedTime || 0);
-      setStartTime(savedData.startTime || null);
+      
+      // Restore time remaining - if startTime exists and practice was active (not paused), calculate remaining time
+      if (savedData.startTime && savedData.isPracticeMode && savedData.isStarted && !savedData.isPaused && savedData.lastSaved) {
+        // Calculate time elapsed since last save
+        const timeSinceSave = Math.floor((Date.now() - savedData.lastSaved) / 1000);
+        const totalElapsed = (savedData.elapsedTime || 0) + timeSinceSave;
+        const totalDuration = convertDurationToSeconds(currentWriting.duration);
+        const remaining = Math.max(0, totalDuration - totalElapsed);
+        setTimeRemaining(remaining);
+        setElapsedTime(totalElapsed);
+        // Keep original startTime for accurate time calculation
+        setStartTime(savedData.startTime);
+      } else {
+        // If paused or no startTime, use saved values
+        setTimeRemaining(savedData.timeRemaining || convertDurationToSeconds(currentWriting.duration));
+        setElapsedTime(savedData.elapsedTime || 0);
+        setStartTime(savedData.startTime || null);
+      }
 
       // Restore practice mode from URL or localStorage
       const shouldBeInPracticeMode = urlPracticeMode || savedData.isPracticeMode || false;
       setIsPracticeMode(shouldBeInPracticeMode);
       setIsStarted(savedData.isStarted || shouldBeInPracticeMode);
+      setIsPaused(savedData.isPaused || false);
 
       // If practice mode was active, restore it
       if (shouldBeInPracticeMode) {
@@ -114,18 +169,35 @@ const WritingPracticePageContent = () => {
         setStartTime(Date.now());
       }
     }
-  }, [currentWriting, id, searchParams]);
+  }, [currentWriting, id, searchParams, authUser, handleReviewWriting]);
+
+  // Check URL params for mode (review) - after functions are defined
+  useEffect(() => {
+    let isMounted = true;
+
+    const mode = searchParams.get('mode');
+    if (isMounted) {
+      if (mode === 'review' && authUser && id && currentWriting) {
+        handleReviewWriting();
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, authUser, id, currentWriting]);
 
   /* ================= TIMER ================= */
   useEffect(() => {
-    if (!isPracticeMode || !isStarted || isPaused || timeRemaining <= 0 || savingAttempt) return;
+    if (!isPracticeMode || !isStarted || isPaused || timeRemaining <= 0 || savingAttempt || isAutoSubmitting) return;
 
     const interval = setInterval(() => {
       setTimeRemaining((t) => {
         if (t <= 1) {
           clearInterval(interval);
-          toast.info("Time is up");
-          handleFinish();
+          // Auto-submit when time runs out (no loading overlay)
+          handleAutoSubmit();
           return 0;
         }
         return t - 1;
@@ -133,11 +205,11 @@ const WritingPracticePageContent = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPracticeMode, isStarted, isPaused, timeRemaining, savingAttempt]);
+  }, [isPracticeMode, isStarted, isPaused, timeRemaining, savingAttempt, isAutoSubmitting]);
 
   // Update elapsed time
   useEffect(() => {
-    if (!isPracticeMode || !isStarted || isPaused || !startTime || savingAttempt) return;
+    if (!isPracticeMode || !isStarted || isPaused || !startTime || savingAttempt || isAutoSubmitting) return;
 
     const interval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -145,13 +217,28 @@ const WritingPracticePageContent = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPracticeMode, isStarted, isPaused, startTime, savingAttempt]);
+  }, [isPracticeMode, isStarted, isPaused, startTime, savingAttempt, isAutoSubmitting]);
 
   /* ================= LOCALSTORAGE PERSISTENCE ================= */
   useEffect(() => {
     if (!id || !isPracticeMode) return;
 
-    // Save every 5 seconds
+    // Save immediately when answers change
+    saveWritingPracticeData(id, {
+      answers,
+      timeRemaining,
+      elapsedTime,
+      startTime: startTime || Date.now(),
+      isPracticeMode: true,
+      isStarted,
+      isPaused,
+    });
+  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused]);
+
+  // Also save periodically to ensure time updates are captured
+  useEffect(() => {
+    if (!id || !isPracticeMode) return;
+
     const interval = setInterval(() => {
       saveWritingPracticeData(id, {
         answers,
@@ -160,13 +247,13 @@ const WritingPracticePageContent = () => {
         startTime: startTime || Date.now(),
         isPracticeMode: true,
         isStarted,
+        isPaused,
       });
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted]);
+  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused]);
 
-  /* ================= HANDLERS ================= */
   const handleTryPractice = () => {
     setIsPracticeMode(true);
     setIsStarted(true);
@@ -186,6 +273,7 @@ const WritingPracticePageContent = () => {
       startTime: Date.now(),
       isPracticeMode: true,
       isStarted: true,
+      isPaused: false,
     });
   };
 
@@ -198,12 +286,111 @@ const WritingPracticePageContent = () => {
 
     if (isPaused) setIsPaused(false);
     setAnswers((p) => ({ ...p, [currentTaskType]: e.target.value }));
+    
+    // Save immediately on text change
+    if (id) {
+      saveWritingPracticeData(id, {
+        answers: { ...answers, [currentTaskType]: e.target.value },
+        timeRemaining,
+        elapsedTime,
+        startTime: startTime || Date.now(),
+        isPracticeMode: true,
+        isStarted,
+        isPaused: false,
+      });
+    }
   };
 
+
   const handleFinish = useCallback(() => {
-      setIsFinishModalOpen(true);
-   
-  }, []);
+    if (!currentWriting || !currentWriting.writing_tasks) return;
+  
+    const taskWordCounts = currentWriting.writing_tasks.map((task) => {
+      const answer = answers[task.task_type] || "";
+      return {
+        taskType: task.task_type,
+        wordCount: countWords(answer),
+      };
+    });
+  
+    // Check if each task has at least one word
+    for (const task of taskWordCounts) {
+      if (task.wordCount === 0) {
+        toast.error(`Please write at least one word in ${task.taskType} before finishing.`);
+        return; 
+      }
+    }
+  
+    setIsFinishModalOpen(true);
+  }, [answers, currentWriting]);
+
+  // Auto-submit function (no loading overlay, no modal)
+  const handleAutoSubmit = useCallback(async () => {
+    if (!currentWriting || !currentWriting.writing_tasks || isAutoSubmitting) return;
+
+    setIsAutoSubmitting(true);
+    toast.info("Time is up! Auto-submitting your writing...");
+
+    try {
+      // Calculate time taken
+      const timeTaken = startTime
+        ? Math.floor((Date.now() - startTime) / 1000)
+        : elapsedTime;
+
+      // Save to database (silently, no loading overlay)
+      const result = await submitWritingAttempt(id, answers, timeTaken);
+
+      if (result.success) {
+        // Save result data
+        saveWritingResultData(id, {
+          answers,
+          timeRemaining: 0,
+          elapsedTime: timeTaken,
+          startTime,
+        });
+
+        // Clear practice data
+        clearWritingPracticeData(id);
+
+        // Reset to initial state (sample preview mode)
+        setIsPracticeMode(false);
+        setIsStarted(false);
+        setIsPaused(false);
+        setStartTime(null);
+        setElapsedTime(0);
+
+        // Reset timer to full duration
+        if (currentWriting) {
+          setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+        }
+
+        // Remove practice mode from URL
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('mode');
+        setSearchParams(newSearchParams, { replace: true });
+
+        // Show success modal after saving completes
+        setIsAutoSubmitting(false);
+        setIsSuccessModalOpen(true);
+        toast.success("Your writing has been auto-submitted successfully!");
+      } else {
+        setIsAutoSubmitting(false);
+        toast.error(result.error || 'Failed to auto-submit writing attempt');
+        // Resume practice mode if save failed
+        setIsPaused(false);
+        setIsStarted(true);
+      }
+    } catch (error) {
+      console.error('Error auto-submitting writing:', error);
+      setIsAutoSubmitting(false);
+      toast.error('An error occurred while auto-submitting your writing');
+      // Resume practice mode if save failed
+      setIsPaused(false);
+      setIsStarted(true);
+    }
+  }, [currentWriting, answers, startTime, elapsedTime, id, searchParams, setSearchParams, submitWritingAttempt, isAutoSubmitting]);
+  
+  // If all tasks have at least one word, open the finish modal and save the writing
 
   const handleSubmitFinish = async () => {
     setIsFinishModalOpen(false);
@@ -433,8 +620,8 @@ const WritingPracticePageContent = () => {
         handlePause={() => setIsPaused((p) => !p)}
         onBack={() => navigate(-1)}
         type="Writing"
-        status="taking"
-        showTryPractice={!isPracticeMode && !isStarted} // Show "Try practice" button when not in practice mode
+        status={status}
+        showTryPractice={!isPracticeMode && !isStarted && status === 'taking'} // Show "Try practice" button when not in practice mode and not reviewing
       />
 
       <div className="flex flex-1 overflow-hidden" ref={containerRef}>
@@ -525,7 +712,7 @@ const WritingPracticePageContent = () => {
                   placeholder="Write your answer here..."
                   value={answers[currentTaskType] || ""}
                   onChange={handleTextChange}
-                  disabled={isPaused}
+                  disabled={isPaused || status === 'reviewing'}
                   style={{
                     fontSize: `${fontSizeValue.base}px`,
                     backgroundColor: themeColors.background,
@@ -534,6 +721,19 @@ const WritingPracticePageContent = () => {
                 />
                 
               </>
+            ) : status === 'reviewing' ? (
+              // Review mode: show user's saved answer
+              <div className="flex-1 p-8 overflow-y-auto">
+                <div
+                  style={{
+                    fontSize: `${fontSizeValue.base}px`,
+                    color: themeColors.text,
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {answers[currentTaskType] || "No answer submitted for this task."}
+                </div>
+              </div>
             ) : (
               // Preview mode: show sample
               <div className="flex-1 p-8 overflow-y-auto">
@@ -549,7 +749,13 @@ const WritingPracticePageContent = () => {
               </div>
             )}
             <div className="px-6 py-4 border-t flex justify-between text-sm font-semibold">
-                  <span>WORD COUNT: { isPracticeMode ? countWords(answers[currentTaskType] || "") : countWords(currentTask.sample || "")}</span>
+                  <span>WORD COUNT: { 
+                    isPracticeMode 
+                      ? countWords(answers[currentTaskType] || "") 
+                      : status === 'reviewing'
+                        ? countWords(answers[currentTaskType] || "")
+                        : countWords(currentTask.sample || "")
+                  }</span>
                   <span className="text-red-500">
                     MINIMUM: {currentTaskType === "Task 1" ? 150 : 250} WORDS
                   </span>
@@ -603,12 +809,12 @@ const WritingPracticePageContent = () => {
           )}
         </div>
 
-        {/* FINISH BUTTON - Only show in practice mode */}
-        {isPracticeMode && (
+        {/* FINISH BUTTON - Only show in practice mode and not in review */}
+        {isPracticeMode && status === 'taking' && !isAutoSubmitting && (
           <div className="flex justify-end ml-auto fixed right-5 bottom-1">
             <button
               onClick={handleFinish}
-              disabled={savingAttempt || isSaving}
+              disabled={savingAttempt || isSaving || isAutoSubmitting}
               className="bg-green-600 p-2 text-white rounded-lg font-bold hover:bg-green-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Finish Writing
@@ -617,11 +823,11 @@ const WritingPracticePageContent = () => {
         )}
       </footer>
 
-      {/* LOADING OVERLAY */}
-      {(savingAttempt || isSaving) && (
+      {/* LOADING OVERLAY - Exclude auto-submit */}
+      {(savingAttempt || isSaving) && !isAutoSubmitting && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto"
-          style={{ backgroundColor: 'rgba(128, 128, 128, 0.5)' }}
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
           onClick={(e) => e.stopPropagation()}
         >
           <div
@@ -661,6 +867,12 @@ const WritingPracticePageContent = () => {
                 Please wait while we save your work...
               </p>
               <div className="space-y-2 mt-4">
+                <p
+                  className="text-sm font-semibold text-red-500"
+                  style={{ color: '#ef4444' }}
+                >
+                  ⚠️ Do not close or refresh this page!
+                </p>
                 <p
                   className="text-sm"
                   style={{ color: themeColors.text, opacity: 0.7 }}
@@ -706,6 +918,7 @@ const WritingPracticePageContent = () => {
         onDownloadPDF={handleDownloadPDF}
         pdfLoading={isPdfLoading}
         writingId={id}
+        onGoToHistory={() => navigate("/writing-history")}
       />
 
       <NoteSidebar />

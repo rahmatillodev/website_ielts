@@ -24,6 +24,9 @@ export const saveWritingPracticeData = (testId, data) => {
       timeRemaining: data.timeRemaining || 0,
       elapsedTime: data.elapsedTime || 0,
       startTime: data.startTime || Date.now(),
+      isPracticeMode: data.isPracticeMode !== undefined ? data.isPracticeMode : false,
+      isStarted: data.isStarted !== undefined ? data.isStarted : false,
+      isPaused: data.isPaused !== undefined ? data.isPaused : false,
       bookmarks: data.bookmarks || new Set(),
       lastSaved: Date.now(),
     };
