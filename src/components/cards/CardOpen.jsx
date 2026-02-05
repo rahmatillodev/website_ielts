@@ -111,7 +111,7 @@ const CardOpen = ({
 
   // Container classes with green border for completed tests
   const containerClass = isGridView
-    ? `bg-white border ${hasCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-blue-500'} rounded-2xl md:rounded-[32px] p-4 md:p-7 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
+    ? `bg-white border ${hasCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-blue-500'} rounded-2xl md:rounded-[32px] p-2 md:p-7 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
     : `bg-white border border-l-4 ${hasCompleted ? 'border-l-green-500' : is_premium ? 'border-l-amber-400' : 'border-l-blue-500'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 mb-4 relative`;
 
   // Animation variants for hover effect
