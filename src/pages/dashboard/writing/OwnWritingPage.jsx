@@ -13,6 +13,7 @@ import { PenSquare, X } from "lucide-react";
 import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
 import AppearanceSettingsModal from "@/components/modal/AppearanceSettingsModal";
 import WritingFinishModal from "@/components/modal/WritingFinishModal";
+import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
 import { toast } from "react-toastify";
 import { useSettingsStore } from "@/store/systemStore";
@@ -31,6 +32,8 @@ const OwnWritingPageContent = () => {
   const [leftWidth, setLeftWidth] = useState(45);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFinishOpen, setIsFinishOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   const containerRef = useRef(null);
   const isResizing = useRef(false);
@@ -192,7 +195,7 @@ const OwnWritingPageContent = () => {
           <button
             onClick={() => setIsRunning((p) => !p)}
             disabled={isSubmitted}
-            className="px-4 py-2 bg-blue-500 text-white rounded"
+            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRunning ? "Pause" : "Start"}
           </button>
@@ -317,9 +320,10 @@ const OwnWritingPageContent = () => {
           }}
         >
           <textarea
-            className="flex-1 p-5 resize-none outline-none bg-transparent focus:ring-0 focus:border-blue-500 "
+            className="flex-1 p-5 resize-none outline-none bg-transparent focus:ring-0 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Write your answer here..."
             value={currentTask.answer}
+            disabled={isSubmitted}
             style={{ backgroundColor: themeColors.background }}
             onChange={(e) =>
               setTasks((p) => ({
@@ -330,7 +334,7 @@ const OwnWritingPageContent = () => {
                 },
               }))
             }
-            onFocus={() => !isRunning && setIsRunning(true)}
+            onFocus={() => !isRunning && !isSubmitted && setIsRunning(true)}
           />
 
           <div
@@ -362,7 +366,8 @@ const OwnWritingPageContent = () => {
             <button
               key={t}
               onClick={() => setActiveTask(t)}
-              className="flex-1 py-3 font-semibold"
+              disabled={isSubmitted}
+              className="flex-1 py-3 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 background: activeTask === t ? "#e5e7eb" : "transparent",
               }}
@@ -374,7 +379,8 @@ const OwnWritingPageContent = () => {
 
         <button
           onClick={() => setIsFinishOpen(true)}
-          className="mr-4 px-6 py-2 bg-green-600 text-white rounded"
+          disabled={isSubmitted || isSaving}
+          className="mr-4 px-6 py-2 bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Save
         </button>
@@ -389,7 +395,57 @@ const OwnWritingPageContent = () => {
       <WritingFinishModal
         isOpen={isFinishOpen}
         onClose={() => setIsFinishOpen(false)}
-        onSubmit={() => setIsSubmitted(true)}
+        onConfirm={async () => {
+          // Close modal first
+          setIsFinishOpen(false);
+          
+          // Stop timer and disable button
+          setIsRunning(false);
+          setIsSubmitted(true);
+
+          try {
+            // Check if at least one task has content
+            const hasTask1 = tasks.task1.answer && tasks.task1.answer.trim();
+            const hasTask2 = tasks.task2.answer && tasks.task2.answer.trim();
+            
+            if (!hasTask1 && !hasTask2) {
+              toast.error('Please write at least one word in either Task 1 or Task 2 before generating PDF.');
+              setIsSubmitted(false);
+              setIsRunning(true);
+              return;
+            }
+
+            // Show success modal which will allow PDF download
+            setIsSuccessModalOpen(true);
+          } catch (error) {
+            console.error('Error preparing PDF:', error);
+            setIsSubmitted(false);
+            setIsRunning(true);
+            toast.error('An error occurred while preparing your writing');
+          }
+        }}
+        loading={false}
+      />
+
+
+      {/* SUCCESS MODAL */}
+      <WritingSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        onDownloadPDF={async () => {
+          setIsPdfLoading(true);
+          try {
+            await generateWritingPDF(tasks, formatTime(elapsedTime), settings);
+            toast.success('PDF downloaded successfully');
+          } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast.error('Failed to generate PDF');
+          } finally {
+            setIsPdfLoading(false);
+          }
+        }}
+        pdfLoading={isPdfLoading}
+        onGoToHistory={null}
       />
     </div>
   );

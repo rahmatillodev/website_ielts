@@ -261,6 +261,8 @@ const CardOpen = ({
           ) : (
             testType === 'listening' ? (
               <MdHeadset className="text-2xl md:text-3xl" />
+            ) : testType === 'writing' ? (
+              <FaPencilAlt className="text-2xl md:text-3xl" />
             ) : (
               <IoBookOutline className="text-2xl md:text-3xl" />
             )

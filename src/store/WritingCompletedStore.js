@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
 import { toast } from "react-toastify";
-
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
 const getUserIdFromLocalStorage = () => {
   try {
@@ -24,7 +23,7 @@ export const useWritingCompletedStore = create((set) => ({
    * Save writing attempt to user_attempts table
    * @param {string} writingId - The writing ID
    * @param {object} answers - User answers object { "Task 1": "...", "Task 2": "..." }
-   * @param {number} timeTaken - Time taken in seconds
+   * @param {number} timeTaken - Time taken in seconds (will be converted to minutes, minimum 1 minute)
    * @returns {Promise<{success: boolean, attemptId?: string, error?: string}>}
    */
   submitWritingAttempt: async (writingId, answers, timeTaken) => {
@@ -40,10 +39,10 @@ export const useWritingCompletedStore = create((set) => ({
         throw new Error('Writing ID is required');
       }
 
-      // Calculate total time taken
-      const timeTakenSeconds = timeTaken !== null && timeTaken !== undefined
-        ? Math.max(0, Math.floor(timeTaken))
-        : 0;
+      // Convert time_taken from seconds to minutes (minimum 1 minute)
+      const timeTakenMinutes = timeTaken !== null && timeTaken !== undefined
+        ? Math.max(1, Math.ceil(timeTaken / 60))
+        : 1;
 
       // Combine all task answers into a single string for correct_answers field
       // Format: "Task 1: [answer]\n\nTask 2: [answer]"
@@ -61,7 +60,7 @@ export const useWritingCompletedStore = create((set) => ({
           score: null, // Writing doesn't have automated scoring
           total_questions: 1, // Constant as per requirements
           correct_answers: correctAnswersText, // User's written text
-          time_taken: timeTakenSeconds,
+          time_taken: timeTakenMinutes,
           completed_at: new Date().toISOString(),
         })
         .select()
@@ -78,7 +77,7 @@ export const useWritingCompletedStore = create((set) => ({
               score: null,
               total_questions: 1,
               correct_answers: correctAnswersText,
-              time_taken: timeTakenSeconds,
+              time_taken: timeTakenMinutes,
               completed_at: new Date().toISOString(),
             })
             .select()
@@ -120,8 +119,8 @@ export const useWritingCompletedStore = create((set) => ({
     }
 
     try {
-      // Fetch attempts with writing_id and join with writings table to get writing details
-      const { data, error } = await supabase
+      // Fetch attempts with writing_id (regular writings) and join with writings table
+      const { data: regularAttempts, error: regularError } = await supabase
         .from('user_attempts')
         .select(`
           *,
@@ -137,16 +136,11 @@ export const useWritingCompletedStore = create((set) => ({
         .not('writing_id', 'is', null)
         .order('completed_at', { ascending: false });
 
-      if (error) {
-        // If writing_id column doesn't exist, return empty array
-        if (error.message.includes('writing_id') || error.code === '42703') {
-          console.warn('writing_id column not found in user_attempts table');
-          return [];
-        }
-        throw error;
+      if (regularError && !(regularError.message.includes('writing_id') || regularError.code === '42703')) {
+        throw regularError;
       }
 
-      return data || [];
+      return regularAttempts || [];
     } catch (error) {
       console.error('Error fetching writing attempts:', error);
       throw error;
@@ -236,5 +230,6 @@ export const useWritingCompletedStore = create((set) => ({
       };
     }
   },
+
 }));
 

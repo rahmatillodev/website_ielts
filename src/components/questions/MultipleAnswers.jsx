@@ -187,7 +187,7 @@ const MultipleAnswers = ({
       </button>
 
       {/* Instruction */}
-      {instruction && (
+      {/* {instruction && (
         <div 
           className="text-sm leading-relaxed mb-2"
           data-selectable="true"
@@ -195,7 +195,7 @@ const MultipleAnswers = ({
         >
           {parse(instruction, { allowDangerousHtml: true })}
         </div>
-      )}
+      )} */}
 
       {/* Main Question Text */}
       {questionText && (

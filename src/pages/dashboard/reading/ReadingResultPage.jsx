@@ -218,9 +218,10 @@ const ReadingResultPage = () => {
 
   // Calculate elapsed time - use time_taken from database if available, otherwise calculate from timestamps
   const elapsedTime = useMemo(() => {
-    // Prefer time_taken from database (in seconds)
+    // Prefer time_taken from database (stored in minutes, convert to seconds for display)
     if (attemptData?.time_taken !== null && attemptData?.time_taken !== undefined) {
-      return Math.max(0, attemptData.time_taken);
+      // Convert minutes to seconds
+      return Math.max(0, attemptData.time_taken * 60);
     }
     // Fallback to calculating from timestamps
     if (attemptData?.created_at && attemptData?.completed_at) {

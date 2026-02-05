@@ -30,15 +30,12 @@ const ComplatedCard = ({
   isGridView,
   is_premium,
   testType = 'reading', // 'reading' or 'listening'
+  isOwnWriting = false, // For own writings, hide retake button
 }) => {
   const navigate = useNavigate();
 
   // Get completion status from dashboardStore (no API call needed)
-  const completionData = useDashboardStore((state) => state.getCompletion(id));
 
-  const attemptData = useMemo(() => {
-    return completionData?.attempt || null;
-  }, [completionData]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -71,9 +68,7 @@ const ComplatedCard = ({
       }
     }
     // Navigate using navigate to ensure localStorage is cleared first
-    const practiceLink = testType === 'listening'
-      ? `/listening-practice/${id}`
-      : (testType === 'reading' ? `/reading-practice/${id}` : `/writing-practice/${id}`);
+    const practiceLink =  `/writing-practice/${id}`;
     navigate(practiceLink);
   };
 
@@ -207,19 +202,21 @@ const ComplatedCard = ({
 
         {/* Actions */}
         {isCompleted ? (
-          <div className="mt-4 md:mt-6 flex gap-2 md:gap-3 w-full">
+          <div className={`mt-4 md:mt-6 flex gap-2 md:gap-3 w-full ${isOwnWriting ? 'justify-center' : ''}`}>
             <button
               onClick={handleReview}
-              className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs md:text-sm font-semibold rounded-lg md:rounded-xl transition-all"
+              className={`${isOwnWriting ? 'flex-1 max-w-xs' : 'flex-1'} py-2.5 md:py-3 px-3 md:px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs md:text-sm font-semibold rounded-lg md:rounded-xl transition-all`}
             >
               Review
             </button>
-            <button
-              onClick={handleRetake}
-              className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
-            >
-              Retake <HiOutlinePlay className="text-sm md:text-base" />
-            </button>
+            {!isOwnWriting && (
+              <button
+                onClick={handleRetake}
+                className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
+              >
+                Retake <HiOutlinePlay className="text-sm md:text-base" />
+              </button>
+            )}
           </div>
         ) : (
           <button
@@ -249,6 +246,8 @@ const ComplatedCard = ({
           ) : (
             testType === 'listening' ? (
               <MdHeadset className="text-2xl md:text-3xl" />
+            ) : testType === 'writing' ? (
+              <FaPencilAlt className="text-2xl md:text-3xl" />
             ) : (
               <IoBookOutline className="text-2xl md:text-3xl" />
             )
@@ -308,12 +307,14 @@ const ComplatedCard = ({
                 >
                   Review
                 </button>
-                <button
-                  onClick={handleRetake}
-                  className="py-1 text-xs md:text-sm font-semibold text-blue-400 hover:text-blue-700 transition-all text-left"
-                >
-                  Retake Test
-                </button>
+                {!isOwnWriting && (
+                  <button
+                    onClick={handleRetake}
+                    className="py-1 text-xs md:text-sm font-semibold text-blue-400 hover:text-blue-700 transition-all text-left"
+                  >
+                    Retake Test
+                  </button>
+                )}
               </div>
             </>
           ) : (

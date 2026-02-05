@@ -47,7 +47,7 @@ export default function WritingSuccessModal({
             Writing Saved Successfully!
           </AlertDialogTitle>
           <AlertDialogDescription style={{ color: themeColors.text }} className="text-base pt-4">
-            Your writing has been saved successfully. You can download the PDF version or return to the writing page.
+            Your writing is ready! You can download the PDF version or return to the writing page.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

@@ -10,6 +10,8 @@ const WritingPage = () => {
     fetchWritings();
   }, [fetchWritings]);
 
+  console.log("[WritingPage] writings", writings);
+
   return (
     <TestsLibraryPage
       title="Writing Library"

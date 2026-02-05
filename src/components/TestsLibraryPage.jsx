@@ -11,7 +11,6 @@ import CardLocked from "./cards/CardLocked";
 import CardOpen from "./cards/CardOpen";
 import { motion } from "framer-motion";
 import { LibraryCardShimmer } from "@/components/ui/shimmer";
-import { Button } from "./ui/button";
 
 const TestsLibraryPage = ({
   title,
@@ -76,22 +75,16 @@ const TestsLibraryPage = ({
 
   // Ensure allTests is always an array
   const allTests = Array.isArray(testData) ? testData : [];
-  // useEffect(() => {
-  //   console.log("[TestsLibraryPage] testData prop changed:", testData);
-  //   console.log("[TestsLibraryPage] allTests calculated:", allTests);
-  // }, [testData]);
+
 
   // Ensure tests are fetched when component mounts or route changes
   // Only fetch on initial mount or route change, not when data is empty
   useEffect(() => {
-    // console.log("[TestsLibraryPage] useEffect: route/fetchTests changed", { pathname: location.pathname, fetchTestsPresent: !!fetchTests, loading });
     if (!fetchTests) return;
 
     // Only fetch if we haven't fetched yet for this route
-    // Don't re-fetch just because data is empty - that's a valid state
     if (!hasFetchedRef.current && !loading) {
       hasFetchedRef.current = true;
-      // console.log("[TestsLibraryPage] Fetching tests (initial load or route change)");
       fetchTests(false); // Don't force refresh on initial load
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,12 +93,10 @@ const TestsLibraryPage = ({
   // Reset fetch flag when route changes to allow fresh fetch
   useEffect(() => {
     hasFetchedRef.current = false;
-    // console.log("[TestsLibraryPage] Route changed, reset hasFetchedRef to false");
   }, [location.pathname]);
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(allTests) || allTests.length === 0) {
-      // console.log("[TestsLibraryPage] filteredData computes [] because allTests is falsy or empty", { allTests });
       return [];
     }
     const filtered = allTests.filter((test) => {
@@ -125,7 +116,6 @@ const TestsLibraryPage = ({
 
       return matchesSearch && matchesTab;
     });
-    // console.log("[TestsLibraryPage] filteredData calculation", { filtered, searchQuery, activeTab, allTestsLength: allTests.length });
     return filtered;
   }, [allTests, searchQuery, activeTab]);
 
@@ -138,7 +128,6 @@ const TestsLibraryPage = ({
   // Lazy loading: Get items to display
   const currentItems = useMemo(() => {
     const items = filteredData.slice(0, displayedItems);
-    // console.log("[TestsLibraryPage] currentItems calculation", { len: items.length, displayedItems, filteredDataLen: filteredData.length });
     return items;
   }, [filteredData, displayedItems]);
 
@@ -166,7 +155,6 @@ const TestsLibraryPage = ({
         setTimeout(() => {
           isLoadingMoreRef.current = false;
         }, 300);
-        // console.log("[TestsLibraryPage] Lazy loading more items on scroll", { prev, newValue, filteredDataLen: filteredData.length });
         return newValue;
       });
     }
@@ -177,10 +165,8 @@ const TestsLibraryPage = ({
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll);
-      // console.log("[TestsLibraryPage] Added scroll event listener");
       return () => {
         container.removeEventListener('scroll', handleScroll);
-        // console.log("[TestsLibraryPage] Removed scroll event listener");
       };
     }
   }, [handleScroll]);
@@ -189,7 +175,6 @@ const TestsLibraryPage = ({
   useEffect(() => {
     setDisplayedItems(9);
     isLoadingMoreRef.current = false; // Reset loading flag when filters change
-    // Scroll to top when filter/search changes
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
@@ -403,7 +388,7 @@ const TestsLibraryPage = ({
         {(loading || dashboardLoading) && allTests.length === 0 ? (
           <>
             {/* {console.log("[TestsLibraryPage] [RENDER] State=loading/dashboardLoading && allTests.length===0", { loading, dashboardLoading, allTests })} */}
-            <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
+            <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
               {Array.from({ length: 9 }).map((_, index) => (
                 <LibraryCardShimmer key={index} isGridView={isGridView} />
               ))}
@@ -433,7 +418,7 @@ const TestsLibraryPage = ({
                     className="flex flex-col items-center text-center gap-2 py-16"
                   >
                     <div className="text-gray-700 font-semibold text-base md:text-lg">
-                      We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
+                      We couldn't find any {testType} materials at the moment.
                     </div>
                     <div className="text-gray-400 text-sm md:text-base">
                       Please check back later or try again soon.
@@ -473,7 +458,7 @@ const TestsLibraryPage = ({
                   <motion.div
                     className={
                       isGridView
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16"
+                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-16"
                         : "flex flex-col gap-1 mb-16"
                     }
                     variants={containerVariants}

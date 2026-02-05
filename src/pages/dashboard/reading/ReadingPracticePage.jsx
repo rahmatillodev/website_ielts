@@ -1085,7 +1085,7 @@ const ReadingPracticePageContent = () => {
                       >
                         Questions {questionRange}
                       </h3>
-                      {questionGroup.instruction && questionGroup.type !== 'matching_information' && (
+                      {/* {questionGroup.instruction && questionGroup.type !== 'matching_information' && ( */}
                         <p
                           className="text-sm leading-relaxed"
                           data-selectable="true"
@@ -1095,7 +1095,7 @@ const ReadingPracticePageContent = () => {
                         >
                           {parse(questionGroup.instruction, { allowDangerousHtml: true })}
                         </p>
-                      )}
+                      {/* )} */}
                     </div>
                     {questionGroup.type === 'matching_information' && (
                       <div className="space-y-3">
