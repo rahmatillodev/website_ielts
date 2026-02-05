@@ -379,7 +379,7 @@ const OwnWritingPageContent = () => {
 
         <button
           onClick={() => setIsFinishOpen(true)}
-          disabled={isSubmitted || isSaving}
+          disabled={isSubmitted}
           className="mr-4 px-6 py-2 bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Save
