@@ -4,6 +4,7 @@
 
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
+import { useQuestionTypeStore } from "./questionTypeStore";
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
@@ -93,19 +94,41 @@ export const useTestListStore = create((set, get) => ({
         (test) => test.type === "listening"
       );
 
+      // Fetch question types for all tests
+      const allTestIds = tests.map(test => test.id);
+      let questionTypesMap = {};
+      
+      try {
+        questionTypesMap = await useQuestionTypeStore.getState().fetchQuestionTypesForTests(allTestIds);
+      } catch (error) {
+        console.warn('[testListStore] Error fetching question types, continuing without them:', error);
+        // Continue without question types - tests will still work
+      }
+
+      // Enrich tests with question types
+      const enriched_reading = filtered_data_reading.map(test => ({
+        ...test,
+        question_types: questionTypesMap[test.id] || new Set(),
+      }));
+
+      const enriched_listening = filtered_data_listening.map(test => ({
+        ...test,
+        question_types: questionTypesMap[test.id] || new Set(),
+      }));
+
       // IMPORTANT: Set loaded to true even if arrays are empty
       // Empty arrays are a valid state (e.g., no listening tests exist)
       // This prevents infinite loading states in the UI
       set({
-        test_reading: filtered_data_reading,
-        test_listening: filtered_data_listening,
+        test_reading: enriched_reading,
+        test_listening: enriched_listening,
         loaded: true, // Always set to true after successful fetch, even with empty data
         error: null,
       });
 
       return {
-        test_reading: filtered_data_reading,
-        test_listening: filtered_data_listening,
+        test_reading: enriched_reading,
+        test_listening: enriched_listening,
       };
     } catch (error) {
       // Handle AbortError (cancelled requests)

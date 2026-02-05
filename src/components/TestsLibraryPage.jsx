@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 // import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { QUESTION_TYPE_GROUPS, getQuestionTypeDisplayName } from "@/store/testStore/utils/questionTypeUtils";
 import CardLocked from "./cards/CardLocked";
 import CardOpen from "./cards/CardOpen";
 import { motion } from "framer-motion";
@@ -38,6 +40,7 @@ const TestsLibraryPage = ({
   const [isGridView, setIsGridView] = useState(getInitialViewState);
   const [activeTab, setActiveTab] = useState("All Tests");
   const [searchQuery, setSearchQuery] = useState("");
+  const [questionType, setQuestionType] = useState("all"); // Filter by question type
   const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
   const itemsPerLoad = 9; // Items to load per scroll
   const scrollContainerRef = useRef(null);
@@ -114,13 +117,21 @@ const TestsLibraryPage = ({
         (activeTab === "premium" && test.is_premium === true) ||
         (activeTab === "free" && test.is_premium === false);
 
-      return matchesSearch && matchesTab;
+      // Filter by question type
+      // Handle both Set and Array for backward compatibility
+      const matchesQuestionType = questionType === "all" ||
+        (test.question_types && (
+          (test.question_types instanceof Set && test.question_types.has(questionType)) ||
+          (Array.isArray(test.question_types) && test.question_types.includes(questionType))
+        ));
+
+      return matchesSearch && matchesTab && matchesQuestionType;
     });
     return filtered;
-  }, [allTests, searchQuery, activeTab]);
+  }, [allTests, searchQuery, activeTab, questionType]);
 
   const handleViewChange = (value) => {
-   
+
     localStorage.setItem('testsLibraryView', value);
     setIsGridView(value === 'grid' ? true : false);
   };
@@ -178,8 +189,8 @@ const TestsLibraryPage = ({
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
-    // console.log("[TestsLibraryPage] activeTab/searchQuery changed, reset displayedItems to 9", { activeTab, searchQuery });
-  }, [activeTab, searchQuery]);
+    // console.log("[TestsLibraryPage] activeTab/searchQuery/questionType changed, reset displayedItems to 9", { activeTab, searchQuery, questionType });
+  }, [activeTab, searchQuery, questionType]);
 
   // Check if we need to load more items initially or after filter changes
   // This handles cases where initial content doesn't fill the viewport
@@ -335,7 +346,34 @@ const TestsLibraryPage = ({
 
           <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">
 
-            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto ">
+              {/* filter question_type */}
+              {(testType === "reading" || testType === "listening") && (
+                <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto h-20 ">
+                  <Select
+                  className="h-28"
+                    value={questionType}
+                    onValueChange={setQuestionType}
+                  >
+                    <SelectTrigger
+                      className="w-full md:w-60 px-4 rounded-2xl bg-white border border-gray-200 shadow-sm text-base focus:ring-2 focus:ring-blue-100 transition-all "
+                      style={{
+                        height: "40px",
+                      }}
+                    >
+                      <SelectValue placeholder="All Question Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Question Types</SelectItem>
+                      {QUESTION_TYPE_GROUPS.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {getQuestionTypeDisplayName(type)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               {/* Search */}
               <div className="relative flex-1 md:w-80">
                 <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm md:text-base" />
@@ -430,10 +468,12 @@ const TestsLibraryPage = ({
           ) : /* Third Priority: No Search Results - Show message when data exists but filtered results are empty */
             allTests.length > 0 && filteredData.length === 0 ? (
               <>
-                {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab })} */}
+                {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab, questionType })} */}
                 <div className="flex flex-1 items-center justify-center min-h-[300px]">
                   <div className="py-20 text-center text-gray-400 font-semibold w-full whitespace-pre-line">
-                    {searchQuery.trim() !== "" && emptySearchMessage ? (
+                    {questionType !== "all" ? (
+                      `No tests found with question type "${getQuestionTypeDisplayName(questionType)}".`
+                    ) : searchQuery.trim() !== "" && emptySearchMessage ? (
                       emptySearchMessage
                     ) : activeTab === "free" && emptyFreeMessage ? (
                       emptyFreeMessage
@@ -464,7 +504,7 @@ const TestsLibraryPage = ({
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    key={`${activeTab}-${searchQuery}-${isGridView}`}
+                    key={`${activeTab}-${searchQuery}-${questionType}-${isGridView}`}
                   >
                     {currentItems.map((test, index) => {
                       const subscriptionStatus = userProfile?.subscription_status ?? "free";

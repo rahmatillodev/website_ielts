@@ -555,24 +555,6 @@ function calculateListeningPartPerformance(listeningAttempts, userAnswers) {
 }
 
 /**
- * Calculate reading breakdown by analytics question type
- */
-function calculateReadingBreakdown(readingAttempts, userAnswers) {
-  const readingAttemptIds = new Set(readingAttempts.map(a => a.id));
-  const readingAnswers = userAnswers.filter(a => readingAttemptIds.has(a.attempt_id));
-  return calculateAnalyticsQuestionTypePerformance(readingAnswers);
-}
-
-/**
- * Calculate listening breakdown by analytics question type (same as reading)
- */
-function calculateListeningBreakdown(listeningAttempts, userAnswers) {
-  const listeningAttemptIds = new Set(listeningAttempts.map(a => a.id));
-  const listeningAnswers = userAnswers.filter(a => listeningAttemptIds.has(a.attempt_id));
-  return calculateAnalyticsQuestionTypePerformance(listeningAnswers);
-}
-
-/**
  * Generate insights (strongest area and needs focus), using analytics groupings
  */
 // analyticsStore.js ichidagi generateInsights funksiyasini almashtiring:
