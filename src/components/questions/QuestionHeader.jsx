@@ -107,7 +107,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
         <button
           onClick={handleBackClick}
           className="flex items-center gap-2 hover:text-primary transition-colors bg-gray-200 p-1 rounded-sm px-4"
-          style={{ color: themeColors.text }}
+          style={{ color: themeColors.text, backgroundColor: themeColors.backgroundColor }}
         >
           <FaArrowLeft className="w-4 h-4" />
           <span>Back</span>

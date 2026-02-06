@@ -7,6 +7,7 @@ import {
   FaDownload,
   FaFileAlt,
   FaBars,
+  FaCheck,
 } from "react-icons/fa";
 import { LuChevronsLeftRight } from "react-icons/lu";
 import { PenSquare, X } from "lucide-react";
@@ -18,6 +19,7 @@ import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
 import { toast } from "react-toastify";
 import { useSettingsStore } from "@/store/systemStore";
 import { Button } from "@/components/ui/button";
+import ConfirmModal from "@/components/modal/ConfirmModal";
 
 const OwnWritingPageContent = () => {
   const navigate = useNavigate();
@@ -29,11 +31,12 @@ const OwnWritingPageContent = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [leftWidth, setLeftWidth] = useState(45);
+  const [leftWidth, setLeftWidth] = useState(50);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFinishOpen, setIsFinishOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [isConfirmExitOpen, setIsConfirmExitOpen] = useState(false);
 
   const containerRef = useRef(null);
   const isResizing = useRef(false);
@@ -169,6 +172,28 @@ const OwnWritingPageContent = () => {
     }));
   };
 
+  /* ================= BACK HANDLER ================= */
+  const handleBack = () => {
+    // Check if user has started (timer is running, elapsed time > 0, or has content)
+    const hasStarted = isRunning || elapsedTime > 0 || 
+      (tasks.task1.answer && tasks.task1.answer.trim()) || 
+      (tasks.task2.answer && tasks.task2.answer.trim()) ||
+      (tasks.task1.question && tasks.task1.question.trim()) ||
+      (tasks.task2.question && tasks.task2.question.trim()) ||
+      tasks.task1.image;
+
+    if (hasStarted) {
+      setIsConfirmExitOpen(true);
+    } else {
+      navigate("/writing");
+    }
+  };
+
+  const handleConfirmExit = () => {
+    setIsConfirmExitOpen(false);
+    navigate("/writing");
+  };
+
   return (
     <div
       className="flex flex-col h-screen overflow-hidden"
@@ -184,7 +209,7 @@ const OwnWritingPageContent = () => {
         style={{ borderColor: themeColors.border }}
       >
         <button
-          onClick={() => navigate("/writing")}
+          onClick={handleBack}
           className="flex items-center gap-2 px-4 py-1 bg-gray-200 rounded"
         >
           <FaArrowLeft /> Back
@@ -361,12 +386,11 @@ const OwnWritingPageContent = () => {
         className="shrink-0 border-t flex items-center"
         style={{ borderColor: themeColors.border }}
       >
-        <div className="flex flex-1">
+        <div className="flex flex-1 ">
           {["task1", "task2"].map((t) => (
             <button
               key={t}
               onClick={() => setActiveTask(t)}
-              disabled={isSubmitted}
               className="flex-1 py-3 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 background: activeTask === t ? "#e5e7eb" : "transparent",
@@ -380,9 +404,9 @@ const OwnWritingPageContent = () => {
         <button
           onClick={() => setIsFinishOpen(true)}
           disabled={isSubmitted}
-          className="mr-4 px-6 py-2 bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Save
+          className="absolute right-2 w-24 rounded-sm flex items-center justify-center text-sm bg-black text-white gap-2 p-2" >
+        
+          <FaCheck className="w-4 h-4"  /> Save
         </button>
       </footer>
 
@@ -427,25 +451,12 @@ const OwnWritingPageContent = () => {
         loading={false}
       />
 
-
-      {/* SUCCESS MODAL */}
-      <WritingSuccessModal
-        isOpen={isSuccessModalOpen}
-        onClose={() => setIsSuccessModalOpen(false)}
-        onDownloadPDF={async () => {
-          setIsPdfLoading(true);
-          try {
-            await generateWritingPDF(tasks, formatTime(elapsedTime), settings);
-            toast.success('PDF downloaded successfully');
-          } catch (error) {
-            console.error('Error generating PDF:', error);
-            toast.error('Failed to generate PDF');
-          } finally {
-            setIsPdfLoading(false);
-          }
-        }}
-        pdfLoading={isPdfLoading}
-        onGoToHistory={() => navigate("/writing/writing-history")}
+      <ConfirmModal
+        isOpen={isConfirmExitOpen}
+        onClose={() => setIsConfirmExitOpen(false)}
+        onConfirm={handleConfirmExit}
+        title="Exit Writing Practice?"
+        description="Are you sure you want to exit? Your progress may be lost."
       />
     </div>
   );

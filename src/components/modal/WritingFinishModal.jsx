@@ -37,10 +37,13 @@ const WritingFinishModal = ({
             Finish Writing?
           </AlertDialogTitle>
           <AlertDialogDescription 
-            className="font-medium pt-2"
+            className="font-medium pt-2 text-center"
             style={{ color: themeColors.text, opacity: 0.8 }}
           >
-            Are you sure you want to finish your writing? You can download it as PDF.
+            Are you sure you want to finish writing?<br />
+            <span className="font-bold text-red-600">
+              Your data will <u>not</u> be saved and you will <u>not</u> be able to write again.
+            </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
         

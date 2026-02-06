@@ -138,7 +138,12 @@ export const useAuthStore = create(
           if (error) throw error;
 
           if (!data && shouldLogoutOnMissing) {
-            await get().forceSignOutToLogin('Profil topilmadi.');
+            await get().forceSignOutToLogin('Profile not found.');
+            return null;
+          }
+
+          if (!data) {
+            set({ userProfile: null });
             return null;
           }
 
@@ -148,6 +153,10 @@ export const useAuthStore = create(
           }
           // End of subscription status to premium
 
+          // Check if premium_until is past the current date
+          if (data.premium_until && new Date(data.premium_until) < new Date()) {
+            data.subscription_status = 'free';
+          }
 
           set({ userProfile: data });
           return data;

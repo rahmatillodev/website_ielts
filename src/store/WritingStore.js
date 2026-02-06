@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
 import { toast } from "react-toastify";
+import { useWritingTaskTypeStore } from "./testStore/writingTaskTypeStore";
 
-export const useWritingStore = create((set) => ({
+export const useWritingStore = create((set, get) => ({
   writings: [],
   currentWriting: null, // writing + tasks ichma-ich
   loadingWritings: false,
@@ -14,22 +15,40 @@ export const useWritingStore = create((set) => ({
   fetchWritings: async () => {
     set({ loadingWritings: true, errorWritings: null });
     try {
-      const { data,
-        
-        
-        error } = await supabase
+      const { data, error } = await supabase
         .from("writings")
         .select("*")
+        .eq("is_active", true)
         .order("created_at", { ascending: false });
 
-        console.log("[useWritingStore] fetchWritings data", data);
+      console.log("[useWritingStore] fetchWritings data", data);
 
       /// writings table
       /// columns: id, title, duration, difficulty , created_at, updated_at, feedback, is_active, is_premium
 
       if (error) throw error;
 
-      set({ writings: data || [], loadingWritings: false });
+      // Ensure data is an array
+      const writings = Array.isArray(data) ? data : [];
+
+      // Fetch task types for all writings
+      const allWritingIds = writings.map(writing => writing.id);
+      let taskTypesMap = {};
+      
+      try {
+        taskTypesMap = await useWritingTaskTypeStore.getState().fetchTaskTypesForWritings(allWritingIds);
+      } catch (error) {
+        console.warn('[WritingStore] Error fetching task types, continuing without them:', error);
+        // Continue without task types - writings will still work
+      }
+
+      // Enrich writings with task types
+      const enrichedWritings = writings.map(writing => ({
+        ...writing,
+        task_types: taskTypesMap[writing.id] || new Set(),
+      }));
+
+      set({ writings: enrichedWritings, loadingWritings: false });
     } catch (err) {
       toast.error(err.message);
       set({ errorWritings: err.message, loadingWritings: false });

@@ -771,9 +771,21 @@ const WritingPracticePageContent = () => {
   }
   
   console.log("[WritingPracticePage] currentTask", taskToDisplay, "currentTaskType", currentTaskType, "effectiveTaskType", effectiveTaskType, "status", status, "answers", answers);
+  
+  // Calculate font size in rem (base 16px = 1rem) for consistent scaling
+  const baseFontSize = fontSizeValue.base / 16;
+  
   /* ================= RENDER ================= */
   return (
-    <div className="flex flex-col h-screen" style={{ background: themeColors.background }}>
+    <div 
+      className="flex flex-col h-screen" 
+      style={{ 
+        background: themeColors.background,
+        color: themeColors.text,
+        fontSize: `${baseFontSize}rem`,
+        transition: 'font-size 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out'
+      }}
+    >
       <TextSelectionTooltip
         universalContentRef={universalContentRef}
         partId={taskToDisplay.task_name}
@@ -821,7 +833,10 @@ const WritingPracticePageContent = () => {
                   />
                   <span
                     className="text-base font-bold"
-                    style={{ color: themeColors.text }}
+                    style={{ 
+                      color: themeColors.text,
+                      fontSize: `${fontSizeValue.base}px`
+                    }}
                   >
                     IELTS Writing Practice - {taskToDisplay.title}
                   </span>
@@ -829,13 +844,33 @@ const WritingPracticePageContent = () => {
 
               </div>
             </div>
-            <div className="border rounded-lg text-justify" ref={passageRef}>
+            <div className="border rounded-lg text-justify" ref={passageRef} style={{ borderColor: themeColors.border }}>
               <div className="p-6 m-5">
-              <h1 className="text-2xl font-bold">{taskToDisplay.title}</h1>
-              <p className="text-sm text-gray-500 my-4">{parse(taskToDisplay.content || "")}</p>
+              <h1 
+                className="text-2xl font-bold"
+                style={{ 
+                  color: themeColors.text,
+                  fontSize: `${fontSizeValue.base * 1.5}px`
+                }}
+              >
+                {taskToDisplay.title}
+              </h1>
+              <div 
+                className="text-sm my-4"
+                style={{ 
+                  color: themeColors.text,
+                  opacity: 0.7,
+                  fontSize: `${fontSizeValue.base}px`
+                }}
+              >
+                {parse(taskToDisplay.content || "")}
+              </div>
               {/* IMAGE */}
               {taskToDisplay.image_url && (
-                <div className="p-6 border-t border-gray-300 w-full">
+                <div 
+                  className="p-6 border-t w-full"
+                  style={{ borderColor: themeColors.border }}
+                >
                   <img
                     src={taskToDisplay.image_url}
                     alt={taskToDisplay.title}
@@ -846,11 +881,46 @@ const WritingPracticePageContent = () => {
               </div>
 
               {/* feedback */}
-              {taskToDisplay.feedback && (
-                <div className="p-6 border-t border-gray-300 w-full">
-                  <h3 className="text-xl font-semibold mb-4">Feedback</h3>
-                  {parse(taskToDisplay.feedback || "")}
-                </div>
+              {!isPracticeMode ? (
+                taskToDisplay.feedback && (
+                  <div 
+                    className="p-6 border-t w-full"
+                    style={{ borderColor: themeColors.border }}
+                  >
+                    <h3 
+                      className="text-xl font-semibold mb-4"
+                      style={{ 
+                        color: themeColors.text,
+                        fontSize: `${fontSizeValue.base * 1.25}px`
+                      }}
+                    >
+                      Feedback
+                    </h3>
+                    <div
+                      style={{ 
+                        color: themeColors.text,
+                        fontSize: `${fontSizeValue.base}px`
+                      }}
+                    >
+                      {parse(taskToDisplay.feedback || "")}
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div 
+                  className="p-6 border-t w-full"
+                  style={{ borderColor: themeColors.border }}
+                >
+                <p 
+                  style={{ 
+                    color: themeColors.text,
+                    opacity: 0.7,
+                    fontSize: `${fontSizeValue.base}px`
+                  }}
+                >
+                  Feedback is not available yet. In the future, you will receive personalized feedback for every piece of writing you submit.
+                </p>
+              </div>
               )}
             </div>
 
@@ -904,7 +974,14 @@ const WritingPracticePageContent = () => {
               <div className="flex-1 p-8 overflow-y-auto">
                 {isLoadingReview ? (
                   <div className="flex items-center justify-center h-full">
-                    <div style={{ color: themeColors.text }}>Loading your answer...</div>
+                    <div 
+                      style={{ 
+                        color: themeColors.text,
+                        fontSize: `${fontSizeValue.base}px`
+                      }}
+                    >
+                      Loading your answer...
+                    </div>
                   </div>
                 ) : (
                   <div
@@ -932,7 +1009,14 @@ const WritingPracticePageContent = () => {
                 </div>
               </div>
             )}
-            <div className="px-6 py-4 border-t flex justify-between text-sm font-semibold">
+            <div 
+              className="px-6 py-4 border-t flex justify-between text-sm font-semibold"
+              style={{ 
+                borderColor: themeColors.border,
+                color: themeColors.text,
+                fontSize: `${fontSizeValue.base}px`
+              }}
+            >
               <span>WORD COUNT: {
                 isPracticeMode
                   ? countWords(answers[effectiveTaskType] || "")
@@ -940,7 +1024,7 @@ const WritingPracticePageContent = () => {
                     ? countWords(answers[effectiveTaskType] || "")
                     : countWords(taskToDisplay.sample || "")
               }</span>
-              <span className="text-red-500">
+              <span style={{ color: '#ef4444' }}>
                 MINIMUM: {effectiveTaskType === "Task 1" ? 150 : 250} WORDS
               </span>
             </div>
@@ -961,6 +1045,13 @@ const WritingPracticePageContent = () => {
           {displayWriting?.writing_tasks && displayWriting.writing_tasks.length > 1 ? (
             displayWriting.writing_tasks.map((task) => {
               const isActive = effectiveTaskType === task.task_name;
+              
+              // Theme-aware active background color
+              const getActiveBackground = () => {
+                if (theme === 'light') return '#e5e7eb'; // gray-200
+                if (theme === 'dark') return 'rgba(255,255,255,0.15)';
+                return 'rgba(255, 215, 0, 0.15)'; // yellow overlay for high-contrast
+              };
 
               return (
                 <div
@@ -968,7 +1059,7 @@ const WritingPracticePageContent = () => {
                   onClick={() => setCurrentTaskType(task.task_name)}
                   className={`relative flex flex-col items-center justify-center gap-1 h-full transition-all transform w-full cursor-pointer`}
                   style={{
-                    backgroundColor: isActive ? '#E0E0E0' : themeColors.background,
+                    backgroundColor: isActive ? getActiveBackground() : themeColors.background,
                     color: themeColors.text,
                   }}
                 >
@@ -976,6 +1067,8 @@ const WritingPracticePageContent = () => {
                     className="text-base font-semibold transition-all whitespace-nowrap"
                     style={{
                       opacity: isActive ? 1 : 0.5,
+                      color: themeColors.text,
+                      fontSize: `${fontSizeValue.base}px`
                     }}
                   >
                     {task.task_name}
@@ -986,7 +1079,11 @@ const WritingPracticePageContent = () => {
           ) : (
             <div
               className="px-4 py-2 text-xs font-bold uppercase tracking-widest"
-              style={{ color: themeColors.text, opacity: 0.5 }}
+              style={{ 
+                color: themeColors.text, 
+                opacity: 0.5,
+                fontSize: `${fontSizeValue.base * 0.75}px`
+              }}
             >
               {effectiveTaskType}
             </div>
@@ -999,7 +1096,7 @@ const WritingPracticePageContent = () => {
             <button
               onClick={handleFinish}
               disabled={savingAttempt || isSaving || isAutoSubmitting}
-              className="bg-green-600 p-2 text-white rounded-lg font-bold hover:bg-green-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-black p-2 text-white rounded-lg font-bold hover:bg-black/80 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Finish Writing
             </button>

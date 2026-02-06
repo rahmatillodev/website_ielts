@@ -3,11 +3,14 @@ import { motion } from 'framer-motion';
 import { LuBookOpen, LuHeadphones, LuClock } from 'react-icons/lu';
 import { FaArrowUp, FaChartSimple } from 'react-icons/fa6';
 import {  FaExclamationTriangle } from 'react-icons/fa';
+import { useResponsiveGridCols } from '@/hooks/useResponsiveGridCols';
 
 const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
+  const cols = useResponsiveGridCols();
+
   if (!analyticsData) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid ${cols} gap-4`}>
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="bg-white border border-gray-200 rounded-xl p-6 animate-pulse">
             <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
@@ -30,6 +33,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
   // Calculate progress to target
   const overallProgress = overallBand ? (overallBand / targetBandScore) * 100 : 0;
   const needsImprovement = overallBand && overallBand < targetBandScore;
+
 
   // Calculate reading trend (compare last 2 tests)
   const readingTrends = analyticsData.scoreTrends?.reading || [];
@@ -77,7 +81,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className={`grid ${cols} gap-4`}>
       {/* Est. Overall Band */}
       <motion.div
         className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm"
