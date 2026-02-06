@@ -1114,7 +1114,7 @@ const WritingPracticePageContent = () => {
         onDownloadPDF={handleDownloadPDF}
         pdfLoading={isPdfLoading}
         writingId={id}
-        onGoToHistory={() => navigate("/writing-history")}
+        onGoToHistory={() => navigate("/writing/writing-history")}
       />
 
       <NoteSidebar />

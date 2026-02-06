@@ -445,7 +445,7 @@ const OwnWritingPageContent = () => {
           }
         }}
         pdfLoading={isPdfLoading}
-        onGoToHistory={null}
+        onGoToHistory={() => navigate("/writing/writing-history")}
       />
     </div>
   );
