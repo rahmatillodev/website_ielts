@@ -426,7 +426,7 @@ const TestsLibraryPage = ({
         {(loading || dashboardLoading) && allTests.length === 0 ? (
           <>
             {/* {console.log("[TestsLibraryPage] [RENDER] State=loading/dashboardLoading && allTests.length===0", { loading, dashboardLoading, allTests })} */}
-            <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
+            <div className={isGridView ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
               {Array.from({ length: 9 }).map((_, index) => (
                 <LibraryCardShimmer key={index} isGridView={isGridView} />
               ))}
@@ -498,7 +498,7 @@ const TestsLibraryPage = ({
                   <motion.div
                     className={
                       isGridView
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-16"
+                        ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-16"
                         : "flex flex-col gap-1 mb-16"
                     }
                     variants={containerVariants}

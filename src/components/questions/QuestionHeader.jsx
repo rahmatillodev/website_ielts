@@ -127,7 +127,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
           </span>
         </div>
         {/* Show Correct Answers Toggle - only in review mode */}
-        {isReviewMode && (
+        {isReviewMode && !isWriting && (
           <div className="flex items-center gap-2 ml-4">
             <Label htmlFor="show-correct-answers" className="flex items-center gap-2 cursor-pointer">
               <span 

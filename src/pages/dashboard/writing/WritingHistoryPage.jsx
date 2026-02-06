@@ -227,6 +227,7 @@ const WritingHistoryPage = () => {
               >
                 <ComplatedCard
                   id={writingId}
+                  attemptId={attempt.id}
                   title={writingTitle}
                   difficulty={difficulty}
                   duration={attempt.time_taken}

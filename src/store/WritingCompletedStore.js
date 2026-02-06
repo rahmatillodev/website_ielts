@@ -23,7 +23,7 @@ export const useWritingCompletedStore = create((set) => ({
    * Save writing attempt to user_attempts table
    * @param {string} writingId - The writing ID
    * @param {object} answers - User answers object { "Task 1": "...", "Task 2": "..." }
-   * @param {number} timeTaken - Time taken in seconds (will be converted to minutes, minimum 1 minute)
+   * @param {number} timeTaken - Time taken in seconds (stored as seconds, minimum 1 second)
    * @returns {Promise<{success: boolean, attemptId?: string, error?: string}>}
    */
   submitWritingAttempt: async (writingId, answers, timeTaken) => {
@@ -39,9 +39,9 @@ export const useWritingCompletedStore = create((set) => ({
         throw new Error('Writing ID is required');
       }
 
-      // Convert time_taken from seconds to minutes (minimum 1 minute)
-      const timeTakenMinutes = timeTaken !== null && timeTaken !== undefined
-        ? Math.max(1, Math.ceil(timeTaken / 60))
+      // Store time_taken in seconds (minimum 1 second)
+      const timeTakenSeconds = timeTaken !== null && timeTaken !== undefined
+        ? Math.max(1, Math.floor(timeTaken))
         : 1;
 
       // Combine all task answers into a single string for correct_answers field
@@ -60,7 +60,7 @@ export const useWritingCompletedStore = create((set) => ({
           score: null, // Writing doesn't have automated scoring
           total_questions: 1, // Constant as per requirements
           correct_answers: correctAnswersText, // User's written text
-          time_taken: timeTakenMinutes,
+          time_taken: timeTakenSeconds, // Store in seconds
           completed_at: new Date().toISOString(),
         })
         .select()
@@ -77,7 +77,7 @@ export const useWritingCompletedStore = create((set) => ({
               score: null,
               total_questions: 1,
               correct_answers: correctAnswersText,
-              time_taken: timeTakenMinutes,
+              time_taken: timeTakenSeconds, // Store in seconds
               completed_at: new Date().toISOString(),
             })
             .select()
@@ -148,11 +148,12 @@ export const useWritingCompletedStore = create((set) => ({
   },
 
   /**
-   * Fetch latest writing attempt for review mode
+   * Fetch writing attempt for review mode
    * @param {string} writingId - The writing ID
+   * @param {string} [attemptId] - Optional specific attempt ID to fetch (if not provided, fetches latest)
    * @returns {Promise<{success: boolean, attempt?: object, answers?: object, error?: string}>}
    */
-  getLatestWritingAttempt: async (writingId) => {
+  getLatestWritingAttempt: async (writingId, attemptId = null) => {
     const userId = getUserIdFromLocalStorage();
     if (!userId) {
       return {
@@ -162,32 +163,57 @@ export const useWritingCompletedStore = create((set) => ({
     }
 
     try {
-      // Try with writing_id first
-      let { data: attemptData, error: attemptError } = await supabase
-        .from('user_attempts')
-        .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
-        .eq('user_id', userId)
-        .eq('writing_id', writingId)
-        .order('completed_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      let attemptData = null;
+      let attemptError = null;
 
-      // If writing_id doesn't exist, try with test_id
-      if (attemptError && (attemptError.message.includes('writing_id') || attemptError.code === '42703')) {
-        const { data: retryData, error: retryError } = await supabase
+      // If attemptId is provided, fetch that specific attempt
+      if (attemptId) {
+        const { data, error } = await supabase
+          .from('user_attempts')
+          .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
+          .eq('id', attemptId)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
+        attemptData = data;
+        attemptError = error;
+      } else {
+        // Fetch latest attempt - try with writing_id first
+        let { data, error } = await supabase
           .from('user_attempts')
           .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
           .eq('user_id', userId)
-          .eq('test_id', writingId)
+          .eq('writing_id', writingId)
           .order('completed_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        if (retryError && retryError.code !== 'PGRST116') {
-          throw retryError;
+        // If writing_id doesn't exist, try with test_id
+        if (error && (error.message.includes('writing_id') || error.code === '42703')) {
+          const { data: retryData, error: retryError } = await supabase
+            .from('user_attempts')
+            .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
+            .eq('user_id', userId)
+            .eq('test_id', writingId)
+            .order('completed_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (retryError && retryError.code !== 'PGRST116') {
+            throw retryError;
+          }
+          data = retryData;
+          error = retryError;
         }
-        attemptData = retryData;
-        attemptError = retryError;
+
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
+        attemptData = data;
+        attemptError = error;
       }
 
       if (attemptError && attemptError.code !== 'PGRST116') {
@@ -204,17 +230,53 @@ export const useWritingCompletedStore = create((set) => ({
 
       // Parse answers from correct_answers field
       // Format: "Task 1: [answer]\n\nTask 2: [answer]"
+      // Improved parsing to handle multiple blank lines within answers
       const answers = {};
       if (attemptData.correct_answers) {
-        const tasks = attemptData.correct_answers.split('\n\n');
-        tasks.forEach((task) => {
-          const match = task.match(/^(Task \d+):\s*(.+)$/s);
-          if (match) {
+        // Use regex to find all "Task X:" patterns
+        // This handles cases where answers contain multiple blank lines
+        const taskPattern = /(Task \d+):\s*/g;
+        const matches = [...attemptData.correct_answers.matchAll(taskPattern)];
+        
+        if (matches.length > 0) {
+          matches.forEach((match, index) => {
             const taskType = match[1];
-            const answer = match[2].trim();
+            const startIndex = match.index + match[0].length;
+            // Get the end index (start of next task or end of string)
+            const endIndex = index < matches.length - 1 
+              ? matches[index + 1].index 
+              : attemptData.correct_answers.length;
+            
+            // Extract the answer text (preserve all whitespace including blank lines)
+            // Only trim leading/trailing whitespace, preserve internal blank lines
+            let answer = attemptData.correct_answers.substring(startIndex, endIndex);
+            // Remove leading whitespace but preserve internal structure
+            answer = answer.replace(/^\s+/, '').replace(/\s+$/, '');
             answers[taskType] = answer;
+          });
+        } else {
+          // Fallback: try to parse as single task or old format
+          // Check if it starts with "Task" pattern
+          const singleTaskMatch = attemptData.correct_answers.match(/^(Task \d+):\s*(.+)$/s);
+          if (singleTaskMatch) {
+            const taskType = singleTaskMatch[1];
+            let answer = singleTaskMatch[2];
+            answer = answer.replace(/^\s+/, '').replace(/\s+$/, '');
+            answers[taskType] = answer;
+          } else {
+            // Last resort: try old split method
+            const tasks = attemptData.correct_answers.split(/\n\n(?=Task \d+:)/);
+            tasks.forEach((task) => {
+              const match = task.match(/^(Task \d+):\s*(.+)$/s);
+              if (match) {
+                const taskType = match[1];
+                let answer = match[2];
+                answer = answer.replace(/^\s+/, '').replace(/\s+$/, '');
+                answers[taskType] = answer;
+              }
+            });
           }
-        });
+        }
       }
 
       return {
@@ -223,7 +285,7 @@ export const useWritingCompletedStore = create((set) => ({
         answers,
       };
     } catch (error) {
-      console.error('Error fetching latest writing attempt:', error);
+      console.error('Error fetching writing attempt:', error);
       return {
         success: false,
         error: error.message,

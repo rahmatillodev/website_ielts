@@ -16,6 +16,7 @@ import ResultBanner from "@/components/badges/ResultBanner";
 import { useSettingsStore } from "@/store/systemStore";
 import { toast } from "react-toastify";
 import { clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
+import { formatDateToDayMonth } from "@/store/analyticsStore";
 
 
 const ReadingResultPage = () => {
@@ -210,18 +211,12 @@ const ReadingResultPage = () => {
     return `${mins}m ${secs}s`;
   }, []);
 
-  // Format date from timestamp
-  const formatDate = useCallback((timestamp) => {
-    if (!timestamp) return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }, []);
 
   // Calculate elapsed time - use time_taken from database if available, otherwise calculate from timestamps
   const elapsedTime = useMemo(() => {
-    // Prefer time_taken from database (stored in minutes, convert to seconds for display)
+    // Prefer time_taken from database (stored in seconds)
     if (attemptData?.time_taken !== null && attemptData?.time_taken !== undefined) {
-      // Convert minutes to seconds
-      return Math.max(0, attemptData.time_taken * 60);
+      return Math.max(0, attemptData.time_taken);
     }
     // Fallback to calculating from timestamps
     if (attemptData?.created_at && attemptData?.completed_at) {
@@ -551,15 +546,14 @@ const ReadingResultPage = () => {
       test: currentTest,
       stats,
       answerDisplayData,
-      formatDate,
-      completedDate: attemptData?.completed_at || resultData?.completedAt,
+      completedDate: formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt),
       testType: 'Reading',
       defaultTestTitle: 'Academic Reading Practice Test',
       settings
     });
     setPdfLoading(false);
     toast.success('PDF is generated successfully');
-  }, [currentTest, resultData, answerDisplayData, stats, attemptData, formatDate]);
+  }, [currentTest, resultData, answerDisplayData, stats, attemptData]);
 
   // Handle retake - delete previous attempts
   const handleRetake = useCallback(async () => {
@@ -610,7 +604,7 @@ const ReadingResultPage = () => {
             <div className="flex flex-wrap items-center gap-2 text-slate-500 font-medium text-xs sm:text-sm">
               <span>{currentTest?.title || "Academic Reading Practice Test"}</span>
               <span className="text-gray-400">•</span>
-              <span>Completed on {formatDate(attemptData?.completed_at || resultData?.completedAt)}</span>
+              <span>Completed on {formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt)}</span>
             </div>
           </div>
           <div className="flex gap-3">

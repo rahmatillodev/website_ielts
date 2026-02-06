@@ -401,7 +401,7 @@ const ProfilePage = () => {
                 </Label>
                 <Input
                   value={firstName}
-                  placeholder="have don't name"
+                  placeholder="No name"
                   className="bg-gray-50/50 border-gray-100 cursor-default rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
@@ -412,7 +412,7 @@ const ProfilePage = () => {
                 </Label>
                 <Input
                   value={tg_username}
-                  placeholder="have don't telegram username"
+                  placeholder="No telegram username"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
@@ -424,7 +424,7 @@ const ProfilePage = () => {
                 <Input
                   value={email}
                   type="email"
-                  placeholder="have don't email"
+                  placeholder="No email"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />
@@ -435,7 +435,7 @@ const ProfilePage = () => {
                 </Label>
                 <Input
                   value={phone_number}
-                  placeholder="have don't phone number"
+                  placeholder="No phone number"
                   className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
                 />

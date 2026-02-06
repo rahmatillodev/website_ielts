@@ -104,9 +104,12 @@ const WritingPracticePageContent = () => {
         return;
       }
 
-      // Get the latest writing attempt
-      const result = await getLatestWritingAttempt(id);
-      console.log('[WritingPracticePage] getLatestWritingAttempt result:', result);
+      // Get attemptId from URL if provided (for specific attempt review)
+      const attemptId = searchParams.get('attemptId');
+      
+      // Get the specific or latest writing attempt
+      const result = await getLatestWritingAttempt(id, attemptId);
+      console.log('[WritingPracticePage] getLatestWritingAttempt result:', result, 'attemptId:', attemptId);
       
       if (result.success && result.attempt && result.answers) {
         console.log('[WritingPracticePage] Review mode - loaded answers:', result.answers);
@@ -139,7 +142,7 @@ const WritingPracticePageContent = () => {
       setStatus('taking');
       setIsLoadingReview(false);
     }
-  }, [authUser, id, currentWriting, fetchWritingById, getLatestWritingAttempt, status]);
+  }, [authUser, id, currentWriting, fetchWritingById, getLatestWritingAttempt, status, searchParams]);
 
   /* ================= FETCH & INITIALIZE ================= */
   useEffect(() => {
