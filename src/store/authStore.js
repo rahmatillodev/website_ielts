@@ -22,21 +22,33 @@ export const useAuthStore = create(
         // 1. Joriy sessiyani tekshirish
         const { data: { session } } = await supabase.auth.getSession();
 
-        // 2. Sessiyani yangilash (kickstart)
-        const { data: refreshData, error } = await supabase.auth.refreshSession();
 
-        // Yangilangan sessiyani ishlatish, agar mavjud bo'lsa
+        // 2. Sessiyani yangilash (kickstart)
+        const { data: refreshData } = await supabase.auth.refreshSession();
+
         const activeSession = refreshData?.session || session;
 
         if (activeSession?.user) {
           set({ authUser: activeSession.user });
           await get().fetchUserProfile(activeSession.user.id, false);
+        } else {
+          await supabase.auth.signOut();
+          get().clearUserLocalData();
+          set({ authUser: null, userProfile: null });
         }
 
+
         if (!get()._authListener) {
-          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            console.log('event', event);
-            console.log('session', session);
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session) {
+              set({ authUser: session.user });
+              // Muhim: Profilni faqat authUser o'zgarganda va u null bo'lmasa yuklaymiz
+              if (!get().userProfile) {
+                await get().fetchUserProfile(session.user.id, false);
+              }
+            } else {
+              set({ authUser: null, userProfile: null });
+            }
             // Minimal holatni yangilash
             if ((event === 'SIGNED_IN' || event === "TOKEN_REFRESHED") && session?.user) {
               set({ authUser: session.user });
@@ -129,10 +141,13 @@ export const useAuthStore = create(
             await get().forceSignOutToLogin('Profil topilmadi.');
             return null;
           }
+
+          // Subscription status to premium
           if (data.subscription_status === 'vip') {
             data.subscription_status = 'premium';
           }
-          /// 
+          // End of subscription status to premium
+
 
           set({ userProfile: data });
           return data;
