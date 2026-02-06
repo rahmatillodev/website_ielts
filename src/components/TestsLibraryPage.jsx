@@ -291,10 +291,28 @@ const TestsLibraryPage = ({
     };
   }, [loading]);
 
-  // Additional logging after currentItems calculated
-  // useEffect(() => {
-  //   console.log("[TestsLibraryPage] Post-calc: currentItems", currentItems);
-  // }, [currentItems]);
+  const [cols, setCols] = useState("grid-cols-1");
+
+  const getGridCols = () => {
+    const w = window.innerWidth;
+    if (w >= 1500) return "grid-cols-4";
+    if (w >= 1200) return "grid-cols-3";
+    if (w >= 768) return "grid-cols-2";
+    return "grid-cols-1";
+  };
+
+  useEffect(() => {
+    // Initial
+    setCols(getGridCols());
+
+    // Resize listener
+    const handleResize = () => setCols(getGridCols());
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  
 
   return (
     <div className={`flex flex-col mx-auto bg-gray-50 ${customHeight} overflow-hidden px-3 md:px-8`}>
@@ -425,8 +443,7 @@ const TestsLibraryPage = ({
         {/* First Priority: Loading State - Show skeleton loaders when loading and no data */}
         {(loading || dashboardLoading) && allTests.length === 0 ? (
           <>
-            {/* {console.log("[TestsLibraryPage] [RENDER] State=loading/dashboardLoading && allTests.length===0", { loading, dashboardLoading, allTests })} */}
-            <div className={isGridView ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
+            <div className={isGridView ? `grid ${cols} gap-4 md:gap-6 lg:gap-8 mb-16` : "flex flex-col gap-1 mb-16"}>
               {Array.from({ length: 9 }).map((_, index) => (
                 <LibraryCardShimmer key={index} isGridView={isGridView} />
               ))}
@@ -498,7 +515,7 @@ const TestsLibraryPage = ({
                   <motion.div
                     className={
                       isGridView
-                        ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-16"
+                        ?` grid ${cols} gap-4 md:gap-6 lg:gap-8 mb-16`
                         : "flex flex-col gap-1 mb-16"
                     }
                     variants={containerVariants}
