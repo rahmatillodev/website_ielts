@@ -63,14 +63,18 @@ const CardOpen = ({
         clearListeningPracticeData(id);
       } else if (testType === 'reading') {
         clearReadingPracticeData(id);
-      } else if (testType === 'writing') {
+      } else if (testType === 'speaking') {
         // clearWritingPracticeData(id);
       }
     }
     // Navigate using navigate to ensure localStorage is cleared first
     const practiceLink = testType === 'listening'
       ? `/listening-practice/${id}`
-      : (testType === 'reading' ? `/reading-practice/${id}` : `/writing-practice/${id}`);
+      : (testType === 'reading'
+        ? `/reading-practice/${id}`
+        : testType === 'speaking'
+          ? `/speaking-practice/${id}`
+          : `/writing-practice/${id}`);
     navigate(practiceLink);
   };
 
@@ -86,8 +90,8 @@ const CardOpen = ({
       navigate(`/listening-practice/${id}`);
     } else if (testType === 'reading') {
       navigate(`/reading-practice/${id}`);
-    } else if (testType === 'writing') {
-      navigate(`/writing-practice/${id}`);
+    } else if (testType === 'speaking') {
+      navigate(`/speaking-practice/${id}`);
     }
   };
 
@@ -96,8 +100,8 @@ const CardOpen = ({
       navigate(`/listening-practice/${id}?mode=review`);
     } else if (testType === 'reading') {
       navigate(`/reading-practice/${id}?mode=review`);
-    } else if (testType === 'writing') {
-      navigate(`/writing-practice/${id}?mode=review`);
+    } else if (testType === 'speaking') {
+      navigate(`/speaking-practice/${id}?mode=review`);
     }
   };
   
