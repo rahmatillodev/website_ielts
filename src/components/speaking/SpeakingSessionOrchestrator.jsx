@@ -1,22 +1,26 @@
 /**
- * Orchestrator: loads parts, auto-starts (READING_QUESTION → TTS → RECORDING),
+ * Orchestrator: loads parts, auto-starts (READING_QUESTION → TTS → RECORDING, or shadowing: WATCHING → Answer → RECORDING),
  * runs recording lifecycle, persists and navigates on finish.
  */
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSpeakingSessionStore, SESSION_STATUS, SPEAKING_RESULT_STORAGE_KEY, getFlatQuestions } from "@/store/speakingSessionStore";
-import { getSpeakingPartsForTest } from "@/pages/dashboard/speaking/speakingtypes/mockSpeakingQuestions";
+import { getSpeakingPartsForTest } from "@/pages/dashboard/speaking/speakingtypes/textToSpeach/mockSpeakingQuestions";
 import { SpeakingSessionContext } from "./SpeakingSessionContext";
 import AudioRecorder from "./audio/AudioRecorder";
 import SpeakingQuestionTTS from "./SpeakingQuestionTTS";
 
-export default function SpeakingSessionOrchestrator({ children }) {
+/** @param {{ children: React.ReactNode, getPartsForTest?: (testId: string) => Promise<unknown[]>, mode?: 'textToSpeech' | 'shadowing' }} props */
+export default function SpeakingSessionOrchestrator({ children, getPartsForTest, mode: sessionMode = "textToSpeech" }) {
   const { id: testId } = useParams();
   const navigate = useNavigate();
   const hasNavigatedRef = useRef(false);
 
+  const fetchParts = getPartsForTest || getSpeakingPartsForTest;
+
   const status = useSpeakingSessionStore((s) => s.status);
+  const mode = useSpeakingSessionStore((s) => s.mode);
   const currentStep = useSpeakingSessionStore((s) => s.currentStep);
   const stepDurationMs = useSpeakingSessionStore((s) => {
     const questions = getFlatQuestions(s.parts);
@@ -46,15 +50,15 @@ export default function SpeakingSessionOrchestrator({ children }) {
   useEffect(() => {
     if (!testId) return;
     let cancelled = false;
-    getSpeakingPartsForTest(testId).then((parts) => {
+    fetchParts(testId).then((parts) => {
       if (cancelled) return;
-      initSession(testId, parts);
+      initSession(testId, parts, { mode: sessionMode });
       startSession();
     });
     return () => {
       cancelled = true;
     };
-  }, [testId, initSession, startSession]);
+  }, [testId, fetchParts, initSession, startSession, sessionMode]);
 
   useEffect(() => {
     if (status !== SESSION_STATUS.FINISHED || !testId) return;
@@ -75,7 +79,7 @@ export default function SpeakingSessionOrchestrator({ children }) {
   return (
     <SpeakingSessionContext.Provider value={sessionContextValue}>
       {children}
-      {status === SESSION_STATUS.READING_QUESTION && <SpeakingQuestionTTS />}
+      {mode !== "shadowing" && status === SESSION_STATUS.READING_QUESTION && <SpeakingQuestionTTS />}
       {isRecording && (
         <AudioRecorder
           key={currentStep}

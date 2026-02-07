@@ -23,7 +23,7 @@ export default function SpeakingResultPage() {
   }, []);
 
   const handleBack = () => {
-    navigate(testId ? `/speaking-practice/${testId}` : "/speaking");
+    navigate("/dashboard");
   };
 
   if (!result) {

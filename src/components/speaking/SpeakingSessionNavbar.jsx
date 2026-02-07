@@ -11,8 +11,9 @@ function buildRoadmapSegments(parts) {
   if (!Array.isArray(parts) || parts.length === 0) return [];
   const segments = [];
   parts.forEach((part, partIndex) => {
+    const items = part.questions || part.steps || [];
     segments.push({ type: "part", label: part.title || `Part ${partIndex + 1}` });
-    (part.questions || []).forEach((_, qIndex) => {
+    items.forEach((_, qIndex) => {
       segments.push({ type: "question", label: String(qIndex + 1) });
     });
   });
@@ -25,8 +26,9 @@ function getCurrentSegmentIndex(parts, currentStep) {
   let segmentIndex = 0;
   let flatIndex = 0;
   for (let p = 0; p < parts.length; p++) {
-    segmentIndex++; // part segment
-    for (let q = 0; q < (parts[p].questions || []).length; q++) {
+    segmentIndex++;
+    const items = parts[p].questions || parts[p].steps || [];
+    for (let q = 0; q < items.length; q++) {
       if (flatIndex === currentStep) return segmentIndex;
       segmentIndex++;
       flatIndex++;

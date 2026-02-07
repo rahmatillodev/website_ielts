@@ -9,6 +9,7 @@ import { create } from "zustand";
 const SESSION_STATUS = {
   IDLE: "idle",
   READING_QUESTION: "reading_question",
+  WATCHING: "watching", // shadowing: video shown, user clicks Answer to start recording
   RECORDING: "recording",
   FINISHED: "finished",
 };
@@ -37,14 +38,17 @@ const SPEAKING_RESULT_STORAGE_KEY = "speaking_session_result";
  * @property {Blob} [blob]
  */
 
+/** Flatten parts to steps (questions or shadowing steps). */
 export function getFlatQuestions(parts) {
   if (!Array.isArray(parts)) return [];
-  return parts.flatMap((p) => p.questions || []);
+  return parts.flatMap((p) => p.questions || p.steps || []);
 }
 
 export const useSpeakingSessionStore = create((set, get) => ({
   testId: null,
   parts: [],
+  /** "textToSpeech" | "shadowing" */
+  mode: "textToSpeech",
   currentStep: 0,
   status: SESSION_STATUS.IDLE,
   recordingResults: [],
@@ -54,8 +58,15 @@ export const useSpeakingSessionStore = create((set, get) => ({
   getFlatQuestions: () => getFlatQuestions(get().parts),
   getTotalSteps: () => getFlatQuestions(get().parts).length,
   getCurrentQuestion: () => {
-    const questions = getFlatQuestions(get().parts);
-    return questions[get().currentStep] ?? null;
+    const steps = getFlatQuestions(get().parts);
+    const step = steps[get().currentStep];
+    if (!step) return null;
+    return { id: step.id, question: step.question ?? step.phrase, durationSec: step.durationSec };
+  },
+  getCurrentYoutubeUrl: () => {
+    const steps = getFlatQuestions(get().parts);
+    const step = steps[get().currentStep];
+    return step?.youtube_url ?? null;
   },
   isLastStep: () => {
     const { parts: p, currentStep } = get();
@@ -69,11 +80,13 @@ export const useSpeakingSessionStore = create((set, get) => ({
     return sec * 1000;
   },
 
-  initSession: (testId, parts) => {
+  initSession: (testId, parts, options = {}) => {
     const list = Array.isArray(parts) ? parts : [];
+    const mode = options.mode === "shadowing" ? "shadowing" : "textToSpeech";
     set({
       testId: testId ?? null,
       parts: list,
+      mode,
       currentStep: 0,
       status: SESSION_STATUS.IDLE,
       recordingResults: [],
@@ -82,14 +95,24 @@ export const useSpeakingSessionStore = create((set, get) => ({
     });
   },
 
-  /** Start session: go to reading_question for first question (TTS will run, then ttsEndedForCurrentStep starts recording). */
+  /** Start session: textToSpeech -> reading_question; shadowing -> watching. */
   startSession: () => {
     const flat = getFlatQuestions(get().parts);
+    const mode = get().mode;
     if (flat.length === 0) {
       set({ status: SESSION_STATUS.FINISHED });
       return;
     }
-    set({ status: SESSION_STATUS.READING_QUESTION, currentStep: 0, stepStartedAt: null });
+    set({
+      currentStep: 0,
+      stepStartedAt: null,
+      status: mode === "shadowing" ? SESSION_STATUS.WATCHING : SESSION_STATUS.READING_QUESTION,
+    });
+  },
+
+  /** Shadowing only: user clicked Answer -> start recording and timer. */
+  startRecordingForCurrentStep: () => {
+    set({ status: SESSION_STATUS.RECORDING, stepStartedAt: Date.now() });
   },
 
   /** Called when TTS finished reading the current question; starts timer and recording. */
@@ -104,7 +127,7 @@ export const useSpeakingSessionStore = create((set, get) => ({
     const audioUrl = blob ? URL.createObjectURL(blob) : null;
     const newResult = {
       questionId: question?.id ?? `step-${stepIndex}`,
-      questionText: question?.question ?? "",
+      questionText: question?.question ?? question?.phrase ?? "",
       audioUrl,
       blob,
     };
@@ -121,10 +144,11 @@ export const useSpeakingSessionStore = create((set, get) => ({
         stepStartedAt: null,
       });
     } else {
+      const mode = get().mode;
       set({
         recordingResults: nextResults,
         currentStep: stepIndex + 1,
-        status: SESSION_STATUS.READING_QUESTION,
+        status: mode === "shadowing" ? SESSION_STATUS.WATCHING : SESSION_STATUS.READING_QUESTION,
         stepStartedAt: null,
       });
     }
@@ -191,6 +215,7 @@ export const useSpeakingSessionStore = create((set, get) => ({
     set({
       testId: null,
       parts: [],
+      mode: "textToSpeech",
       currentStep: 0,
       status: SESSION_STATUS.IDLE,
       recordingResults: [],
@@ -202,6 +227,7 @@ export const useSpeakingSessionStore = create((set, get) => ({
 
 export const SESSION_STATUS_IDLE = SESSION_STATUS.IDLE;
 export const SESSION_STATUS_READING_QUESTION = SESSION_STATUS.READING_QUESTION;
+export const SESSION_STATUS_WATCHING = SESSION_STATUS.WATCHING;
 export const SESSION_STATUS_RECORDING = SESSION_STATUS.RECORDING;
 export const SESSION_STATUS_FINISHED = SESSION_STATUS.FINISHED;
 export { SESSION_STATUS };
