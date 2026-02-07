@@ -3,6 +3,7 @@ import { MdLock, MdQuiz, MdStar, MdTimer, MdCheckCircle } from "react-icons/md";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import UpgradeModal from "../modal/UpgradeModal";
+import { formatDateToDayMonth } from "@/utils/formatDate";
 
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
@@ -27,19 +28,9 @@ const CardLocked = ({
   correct_answers,
   total_questions,
 }) => {
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return `${months[date.getMonth()]} ${date.getDate()}`;
-    } catch {
-      return dateString;
-    }
-  };
 
-  const completedDate = date ? formatDate(date) : '';
-  const createdDate = created_at ? formatDate(created_at) : '';
+  const completedDate = date ? formatDateToDayMonth(date) : '';
+  const createdDate = created_at ? formatDateToDayMonth(created_at) : '';
   const cardStatus = is_premium ? "Premium" : "Free";
 
   // Animation variants for hover effect
@@ -55,7 +46,7 @@ const CardLocked = ({
 
   // Container classes with green border for completed tests
   const containerClass = isGridView
-    ? `bg-white border ${isCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-amber-300'} rounded-2xl md:rounded-[32px] p-4 md:p-7 shadow-lg hover:shadow-2xl transition-all flex flex-col relative h-full`
+    ? `bg-white border ${isCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-amber-300'} rounded-2xl p-4 shadow-lg hover:shadow-2xl transition-all flex flex-col relative h-full`
     : `bg-white border border-l-4 ${isCompleted ? 'border-l-green-500' : is_premium ? 'border-l-amber-400' : 'border-l-amber-300'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 justify-between mb-4`;
 
   if (isGridView) {
@@ -67,8 +58,8 @@ const CardLocked = ({
         whileHover="hover"
       >
         {/* Premium/Free Badge */}
-        <div className={`${isCompleted ? 'absolute top-3 md:top-5 right-20 md:right-30 z-10' : 'absolute top-3 md:top-5 right-3 md:right-5 z-10'}`}>
-          <span className={`px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 ${is_premium
+        <div className={`${isCompleted ? 'absolute top-3 right-20 md:right-24 z-10' : 'absolute top-3 right-3 z-10'}`}>
+          <span className={`px-2.5 md:px-3 py-1 text-[10px] md:text-xs font-black uppercase rounded-lg tracking-wider flex items-center gap-1.5 ${is_premium
             ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
             : "bg-green-500 text-white border-0 shadow-md"
             }`}>
@@ -78,26 +69,26 @@ const CardLocked = ({
 
         {/* Score Badge for Completed */}
         {isCompleted && (
-          <div className="absolute top-3 md:top-5 right-3 md:right-5 z-10">
-            <div className="bg-white border border-gray-200 rounded-full px-2 md:px-3 py-1 md:py-1.5 flex items-center gap-1 md:gap-1.5 shadow-sm">
-              <span className="text-[10px] md:text-xs text-gray-500 font-semibold">Score</span>
-              <span className="text-sm md:text-base font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
+          <div className="absolute top-3 right-3 z-10">
+            <div className="bg-white border border-gray-200 rounded-full px-2 py-1 flex items-center gap-1 shadow-sm">
+              <span className="text-[10px] text-gray-500 font-semibold">Score</span>
+              <span className="text-sm font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
             </div>
           </div>
         )}
 
         <div className="flex flex-col flex-1">
           {/* Icon */}
-          <div className={`size-12 md:size-16 mb-4 md:mb-6 rounded-xl md:rounded-2xl ${isCompleted
+          <div className={`size-12 md:size-14 mb-4 rounded-xl ${isCompleted
             ? 'bg-green-50 text-green-500'
             : is_premium
               ? 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-500'
               : 'bg-amber-50 text-amber-500'
             } flex items-center justify-center shrink-0`}>
             {isCompleted ? (
-              <MdCheckCircle className="text-2xl md:text-3xl" />
+              <MdCheckCircle className="text-2xl md:text-2xl" />
             ) : (
-              <MdLock className="text-2xl md:text-3xl" />
+              <MdLock className="text-2xl md:text-2xl" />
             )}
           </div>
 
@@ -143,11 +134,11 @@ const CardLocked = ({
 
           {/* Unlock Button - Always show for locked tests, even if completed */}
           <UpgradeModal>
-            <button className={`mt-4 md:mt-6 py-2.5 md:py-3 font-black rounded-lg md:rounded-xl transition-all w-full flex items-center justify-center gap-2 text-xs md:text-sm ${is_premium
+            <button className={`mt-4 py-2.5 font-black rounded-lg transition-all w-full flex items-center justify-center gap-2 text-xs ${is_premium
               ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 shadow-md'
               : 'border-2 border-amber-300 text-amber-600 hover:bg-amber-50'
               }`}>
-              <MdLock className="text-sm md:text-base" />
+              <MdLock className="text-sm" />
               Unlock Test
             </button>
           </UpgradeModal>

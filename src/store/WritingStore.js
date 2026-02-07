@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
 import { toast } from "react-toastify";
+import { useWritingTaskTypeStore } from "./testStore/writingTaskTypeStore";
 
-export const useWritingStore = create((set) => ({
+export const useWritingStore = create((set, get) => ({
   writings: [],
   currentWriting: null, // writing + tasks ichma-ich
   loadingWritings: false,
@@ -17,14 +18,36 @@ export const useWritingStore = create((set) => ({
       const { data, error } = await supabase
         .from("writings")
         .select("*")
+        .eq("is_active", true)
         .order("created_at", { ascending: false });
+
 
       /// writings table
       /// columns: id, title, duration, difficulty , created_at, updated_at, feedback, is_active, is_premium
 
       if (error) throw error;
 
-      set({ writings: data || [], loadingWritings: false });
+      // Ensure data is an array
+      const writings = Array.isArray(data) ? data : [];
+
+      // Fetch task types for all writings
+      const allWritingIds = writings.map(writing => writing.id);
+      let taskTypesMap = {};
+      
+      try {
+        taskTypesMap = await useWritingTaskTypeStore.getState().fetchTaskTypesForWritings(allWritingIds);
+      } catch (error) {
+        console.warn('[WritingStore] Error fetching task types, continuing without them:', error);
+        // Continue without task types - writings will still work
+      }
+
+      // Enrich writings with task types
+      const enrichedWritings = writings.map(writing => ({
+        ...writing,
+        task_types: taskTypesMap[writing.id] || new Set(),
+      }));
+
+      set({ writings: enrichedWritings, loadingWritings: false });
     } catch (err) {
       toast.error(err.message);
       set({ errorWritings: err.message, loadingWritings: false });
@@ -63,8 +86,9 @@ export const useWritingStore = create((set) => ({
       //    This can only be Task 1 or Task 2, sometimes there will be 2.      //     { "id": "task-id-1", 
       //   "writing_tasks": [
       //       "writing_id": "writing-id-1",
-      //       "task_type": "Task 1", only Task 1, Task 2 are available
+      //       "task_name": "Task 1", only Task 1, Task 2 are available
       //       "title": "...",
+      //       "task_types": , table , line_graph, bar_chart, pie_chart, map, process_diagram, formal_letter, semi_formal, informal, 
       //       "image_url": "...", only for TASK_1
       //       "content": "...",
       //       "sample": "...",
@@ -72,7 +96,7 @@ export const useWritingStore = create((set) => ({
       //     },
       //     { "id": "task-id-2",
       //       "writing_id": "writing-id-1",
-      //       "task_type": "Task 2",
+      //       "task_name": "Task 2",
       //       "title": "...",
       //       "content": "...",
       //       "sample": "...",

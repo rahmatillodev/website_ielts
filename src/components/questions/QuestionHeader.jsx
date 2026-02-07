@@ -8,10 +8,14 @@ import ConfirmModal from '@/components/modal/ConfirmModal'
 import { useAppearance } from '@/contexts/AppearanceContext'
 import { useAnnotation } from '@/contexts/AnnotationContext'
 
-const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, isPaused, handleStart, handlePause, onBack, showCorrectAnswers, onToggleShowCorrect, status, type }) => {
+const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, isPaused, handleStart, handlePause, onBack, showCorrectAnswers, onToggleShowCorrect, status, type, showTryPractice, handleRedoTask, isPracticeMode }) => {
   // Immediately check URL for review mode to prevent flickering
   const [searchParams] = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
+  
+  // For writing: show "Try practice" button when not in practice mode
+  const isWriting = type === "Writing";
+  const shouldShowTryPractice = isWriting && showTryPractice && !isReviewMode;
   // Try to use appearance context, but don't fail if not available (for backward compatibility)
   let themeColors = { text: '#000000', background: '#ffffff', border: '#e5e7eb' };
   let theme = 'light';
@@ -75,6 +79,18 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
   const navigate = useNavigate()
 
   const handleBackClick = () => {
+    // For Writing: only show confirmation modal if practice has started
+    if (type === "Writing" && !isPracticeMode && !isStarted) {
+      // Practice hasn't started, go back directly without confirmation
+      if (onBack) {
+        onBack();
+      } else {
+        // Fallback navigation if onBack is not provided
+        navigate("/writing");
+      }
+      return;
+    }
+    // Show confirmation modal for all other cases
     setIsConfirmModalOpen(true);
   };
 
@@ -103,7 +119,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
         <button
           onClick={handleBackClick}
           className="flex items-center gap-2 hover:text-primary transition-colors bg-gray-200 p-1 rounded-sm px-4"
-          style={{ color: themeColors.text }}
+          style={{ color: themeColors.text, backgroundColor: themeColors.backgroundColor }}
         >
           <FaArrowLeft className="w-4 h-4" />
           <span>Back</span>
@@ -123,7 +139,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
           </span>
         </div>
         {/* Show Correct Answers Toggle - only in review mode */}
-        {isReviewMode && (
+        {isReviewMode && !isWriting && (
           <div className="flex items-center gap-2 ml-4">
             <Label htmlFor="show-correct-answers" className="flex items-center gap-2 cursor-pointer">
               <span 
@@ -144,35 +160,48 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
 
       {!isReviewMode && (
         <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-1">
-          <div className="flex items-center gap-2">
-            <div 
-              className="text-lg font-semibold"
-              style={{ color: themeColors.text }}
+          {shouldShowTryPractice ? (
+            // Writing: Show "Try practice" button when not in practice mode
+            <button
+              onClick={handleStart}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
             >
-              {formatTime(timeRemaining)}
-            </div>
-            {(!isStarted && formatTime(timeRemaining).slice(0, -3) == currentTest?.duration) ? (
-              <button
-                onClick={handleStart}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+              Try practice
+            </button>
+          ) : (
+            // Reading/Listening or Writing in practice mode: Show timer
+            <>
+              <div className="flex items-center gap-2">
+                <div 
+                  className="text-lg font-semibold"
+                  style={{ color: themeColors.text }}
+                >
+                  {formatTime(timeRemaining)}
+                </div>
+                {(!isStarted && formatTime(timeRemaining).slice(0, -3) == currentTest?.duration) ? (
+                  <button
+                    onClick={handleStart}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Start
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePause}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    {isPaused ? "Resume" : "Pause"}
+                  </button>
+                )}
+              </div>
+              <p 
+                className="text-xs text-center"
+                style={{ color: themeColors.text, opacity: 0.7 }}
               >
-                Start
-              </button>
-            ) : (
-              <button
-                onClick={handlePause}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
-              >
-                {isPaused ? "Resume" : "Pause"}
-              </button>
-            )}
-          </div>
-          <p 
-            className="text-xs text-center"
-            style={{ color: themeColors.text, opacity: 0.7 }}
-          >
-            This test will automatically end when the allotted time expires.
-          </p>
+                This test will automatically end when the allotted time expires.
+              </p>
+            </>
+          )}
         </div>
       )}
 
@@ -243,6 +272,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
         onConfirm={handleConfirmExit}
         title="Exit Test"
         description="Are you sure you want to exit? Your progress may be lost."
+        testType={type}
       />
     </header>
   )

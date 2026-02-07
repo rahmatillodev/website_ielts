@@ -1,12 +1,12 @@
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { addBrandHeader } from "./pdfHeader";
+import { formatDateToDayMonth } from "@/store/analyticsStore";
 
 export const generateTestResultsPDF = async ({
   test,
   stats,
   answerDisplayData,
-  formatDate,
   completedDate,
   testType,
   defaultTestTitle = `Academic ${testType} Practice Test`,
@@ -65,8 +65,8 @@ export const generateTestResultsPDF = async ({
     doc.text(`Time Taken: ${stats.timeTaken}`, statsRightX, statsY);
     statsY += 6;
   }
-  if (completedDate && formatDate) {
-    doc.text(`Completed: ${formatDate(completedDate)}`, statsRightX, statsY);
+  if (completedDate) {
+    doc.text(`Completed: ${formatDateToDayMonth(completedDate)}`, statsRightX, statsY);
   }
   
   yPos += statsBoxHeight + 15;

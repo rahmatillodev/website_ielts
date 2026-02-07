@@ -14,6 +14,7 @@ import { generateTestResultsPDF } from "@/utils/pdfExport";
 import ResultBanner from "@/components/badges/ResultBanner";
 import { useSettingsStore } from "@/store/systemStore";
 import { clearListeningPracticeData } from "@/store/LocalStorage/listeningStorage";
+import { formatDateToDayMonth } from "@/store/analyticsStore";
 
 const ListeningResultPage = () => {
   const { id } = useParams();
@@ -155,15 +156,11 @@ const ListeningResultPage = () => {
     return `${mins}m ${secs}s`;
   }, []);
 
-  // Format date from timestamp
-  const formatDate = useCallback((timestamp) => {
-    if (!timestamp) return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }, []);
+
 
   // Calculate elapsed time - use time_taken from database if available, otherwise calculate from timestamps
   const elapsedTime = useMemo(() => {
-    // Prefer time_taken from database (in seconds)
+    // Prefer time_taken from database (stored in seconds)
     if (attemptData?.time_taken !== null && attemptData?.time_taken !== undefined) {
       return Math.max(0, attemptData.time_taken);
     }
@@ -490,13 +487,12 @@ const ListeningResultPage = () => {
       stats,
       answerDisplayData,
       showCorrectAnswers,
-      formatDate,
-      completedDate: attemptData?.completed_at || resultData?.completedAt,
+      completedDate: formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt),
       testType: 'Listening',
       defaultTestTitle: 'Academic Listening Practice Test',
       settings
     });
-  }, [currentTest, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDate]);
+  }, [currentTest, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDateToDayMonth]);
 
   // Handle retake - delete previous attempts
   const handleRetake = useCallback(async () => {
@@ -547,7 +543,7 @@ const ListeningResultPage = () => {
             <div className="flex flex-wrap items-center gap-2 text-slate-500 font-medium text-xs sm:text-sm">
               <span>{currentTest?.title || "Academic Listening Practice Test"}</span>
               <span className="text-gray-400">•</span>
-              <span>Completed on {formatDate(attemptData?.completed_at || resultData?.completedAt)}</span>
+              <span>Completed on {formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt)}</span>
             </div>
           </div>
           <div className="flex gap-3">

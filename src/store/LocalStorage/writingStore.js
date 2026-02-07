@@ -2,7 +2,7 @@
  * localStorage utility for Reading Practice
  * Stores answers and elapsed time for a specific test
  */
-
+import { v4 as uuidv4 } from 'uuid';
 const STORAGE_KEY_PREFIX = 'writing_practice_';
 
 /**
@@ -24,6 +24,9 @@ export const saveWritingPracticeData = (testId, data) => {
       timeRemaining: data.timeRemaining || 0,
       elapsedTime: data.elapsedTime || 0,
       startTime: data.startTime || Date.now(),
+      isPracticeMode: data.isPracticeMode !== undefined ? data.isPracticeMode : false,
+      isStarted: data.isStarted !== undefined ? data.isStarted : false,
+      isPaused: data.isPaused !== undefined ? data.isPaused : false,
       bookmarks: data.bookmarks || new Set(),
       lastSaved: Date.now(),
     };
@@ -99,7 +102,7 @@ export const getAllWritingPracticeKeys = () => {
  */
 const RESULT_KEY_PREFIX = 'writing_result_';
 
-const getResultStorageKey = (testId) => `${RESULT_KEY_PREFIX}${testId}`;
+const getResultStorageKey = (testId) => `${RESULT_KEY_PREFIX}${testId} `;
 
 export const saveWritingResultData = (testId, data) => {
   try {
@@ -138,6 +141,25 @@ export const clearWritingResultData = (testId) => {
     localStorage.removeItem(key);
   } catch (error) {
     console.error('Error clearing writing result data:', error);
+  }
+};
+
+/**
+ * Clear all writing practice data from localStorage (but keep result data)
+ * This is useful when starting a new test to clear old practice sessions
+ */
+export const clearAllWritingPracticeData = () => {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  } catch (error) {
+    console.error('Error clearing all writing practice data:', error);
   }
 };
 

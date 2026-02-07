@@ -263,35 +263,12 @@ const DashboardSidebar = ({ onNavigate }) => {
             ) : (
               /* Collapsed holatdagi Upgrade Icon */
               <UpgradeModal>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="flex items-center justify-center p-3 w-full bg-[#4B8EE3] rounded-xl hover:bg-[#3a7bc8] transition-colors">
-                      <LuStar size={20} className="text-white" fill="currentColor" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    Upgrade to Pro
-                  </TooltipContent>
-                </Tooltip>
+                  <button className="flex items-center justify-center p-3 w-full bg-[#4B8EE3] rounded-xl hover:bg-[#3a7bc8] transition-colors">
+                    <LuStar size={20} className="text-white" fill="currentColor" />
+                  </button>
               </UpgradeModal>
             )}
           </>
-        )}
-
-        {userProfile?.subscription_status !== "premium" && effectiveIsCollapsed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                to="/pricing"
-                className="flex items-center justify-center p-3 bg-[#4B8EE3] rounded-xl hover:bg-[#3a7bc8] transition-colors"
-              >
-                <LuStar size={20} className="text-white" fill="currentColor" />
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              Upgrade to Pro
-            </TooltipContent>
-          </Tooltip>
         )}
 
         <LogoutModal onConfirm={handleLogout}>

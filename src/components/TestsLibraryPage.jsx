@@ -7,12 +7,19 @@ import { Input } from "@/components/ui/input";
 // import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { QUESTION_TYPE_GROUPS, getQuestionTypeDisplayName } from "@/store/testStore/utils/questionTypeUtils";
+import { WRITING_TASK_TYPES, getWritingTaskTypeDisplayName } from "@/store/testStore/utils/writingTaskTypeUtils";
 import CardLocked from "./cards/CardLocked";
 import CardOpen from "./cards/CardOpen";
 import { motion } from "framer-motion";
 import { LibraryCardShimmer } from "@/components/ui/shimmer";
+import { useResponsiveGridCols } from "@/hooks/useResponsiveGridCols";
+import { CiFilter } from "react-icons/ci";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "./ui/button";
-
 const TestsLibraryPage = ({
   title,
   description,
@@ -39,6 +46,12 @@ const TestsLibraryPage = ({
   const [isGridView, setIsGridView] = useState(getInitialViewState);
   const [activeTab, setActiveTab] = useState("All Tests");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedQuestionTypes, setSelectedQuestionTypes] = useState([]); // Multi-select question types (for reading/listening)
+  const [selectedTaskTypes, setSelectedTaskTypes] = useState([]); // Multi-select task types (for writing)
+  const [sortOrder, setSortOrder] = useState("newest"); // Sort by oldest/newest
+  const [filterOpen, setFilterOpen] = useState(false); // Control filter popover
+  const [tempSelectedTypes, setTempSelectedTypes] = useState([]); // Temporary state for filter panel
+  const [tempSortOrder, setTempSortOrder] = useState("newest"); // Temporary sort state
   const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
   const itemsPerLoad = 9; // Items to load per scroll
   const scrollContainerRef = useRef(null);
@@ -76,22 +89,16 @@ const TestsLibraryPage = ({
 
   // Ensure allTests is always an array
   const allTests = Array.isArray(testData) ? testData : [];
-  // useEffect(() => {
-  //   console.log("[TestsLibraryPage] testData prop changed:", testData);
-  //   console.log("[TestsLibraryPage] allTests calculated:", allTests);
-  // }, [testData]);
+
 
   // Ensure tests are fetched when component mounts or route changes
   // Only fetch on initial mount or route change, not when data is empty
   useEffect(() => {
-    // console.log("[TestsLibraryPage] useEffect: route/fetchTests changed", { pathname: location.pathname, fetchTestsPresent: !!fetchTests, loading });
     if (!fetchTests) return;
 
     // Only fetch if we haven't fetched yet for this route
-    // Don't re-fetch just because data is empty - that's a valid state
     if (!hasFetchedRef.current && !loading) {
       hasFetchedRef.current = true;
-      // console.log("[TestsLibraryPage] Fetching tests (initial load or route change)");
       fetchTests(false); // Don't force refresh on initial load
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,12 +107,10 @@ const TestsLibraryPage = ({
   // Reset fetch flag when route changes to allow fresh fetch
   useEffect(() => {
     hasFetchedRef.current = false;
-    // console.log("[TestsLibraryPage] Route changed, reset hasFetchedRef to false");
   }, [location.pathname]);
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(allTests) || allTests.length === 0) {
-      // console.log("[TestsLibraryPage] filteredData computes [] because allTests is falsy or empty", { allTests });
       return [];
     }
     const filtered = allTests.filter((test) => {
@@ -123,14 +128,38 @@ const TestsLibraryPage = ({
         (activeTab === "premium" && test.is_premium === true) ||
         (activeTab === "free" && test.is_premium === false);
 
-      return matchesSearch && matchesTab;
+      // Filter by question type (for reading/listening) or task type (for writing)
+      let matchesType = true;
+      if (testType === "writing") {
+        // For writing: filter by task types
+        matchesType = selectedTaskTypes.length === 0 ||
+          (test.task_types && (
+            (test.task_types instanceof Set && selectedTaskTypes.some(type => test.task_types.has(type))) ||
+            (Array.isArray(test.task_types) && selectedTaskTypes.some(type => test.task_types.includes(type)))
+          ));
+      } else {
+        // For reading/listening: filter by question types
+        matchesType = selectedQuestionTypes.length === 0 ||
+          (test.question_types && (
+            (test.question_types instanceof Set && selectedQuestionTypes.some(type => test.question_types.has(type))) ||
+            (Array.isArray(test.question_types) && selectedQuestionTypes.some(type => test.question_types.includes(type)))
+          ));
+      }
+
+      return matchesSearch && matchesTab && matchesType;
     });
-    // console.log("[TestsLibraryPage] filteredData calculation", { filtered, searchQuery, activeTab, allTestsLength: allTests.length });
-    return filtered;
-  }, [allTests, searchQuery, activeTab]);
+    // Sort the filtered results
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = new Date(a.created_at || 0);
+      const dateB = new Date(b.created_at || 0);
+      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+    });
+
+    return sorted;
+  }, [allTests, searchQuery, activeTab, selectedQuestionTypes, selectedTaskTypes, sortOrder, testType]);
 
   const handleViewChange = (value) => {
-   
+
     localStorage.setItem('testsLibraryView', value);
     setIsGridView(value === 'grid' ? true : false);
   };
@@ -138,7 +167,6 @@ const TestsLibraryPage = ({
   // Lazy loading: Get items to display
   const currentItems = useMemo(() => {
     const items = filteredData.slice(0, displayedItems);
-    // console.log("[TestsLibraryPage] currentItems calculation", { len: items.length, displayedItems, filteredDataLen: filteredData.length });
     return items;
   }, [filteredData, displayedItems]);
 
@@ -166,7 +194,6 @@ const TestsLibraryPage = ({
         setTimeout(() => {
           isLoadingMoreRef.current = false;
         }, 300);
-        // console.log("[TestsLibraryPage] Lazy loading more items on scroll", { prev, newValue, filteredDataLen: filteredData.length });
         return newValue;
       });
     }
@@ -177,10 +204,8 @@ const TestsLibraryPage = ({
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll);
-      // console.log("[TestsLibraryPage] Added scroll event listener");
       return () => {
         container.removeEventListener('scroll', handleScroll);
-        // console.log("[TestsLibraryPage] Removed scroll event listener");
       };
     }
   }, [handleScroll]);
@@ -189,12 +214,11 @@ const TestsLibraryPage = ({
   useEffect(() => {
     setDisplayedItems(9);
     isLoadingMoreRef.current = false; // Reset loading flag when filters change
-    // Scroll to top when filter/search changes
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
-    // console.log("[TestsLibraryPage] activeTab/searchQuery changed, reset displayedItems to 9", { activeTab, searchQuery });
-  }, [activeTab, searchQuery]);
+    // console.log("[TestsLibraryPage] activeTab/searchQuery/selectedQuestionTypes/selectedTaskTypes/sortOrder changed, reset displayedItems to 9", { activeTab, searchQuery, selectedQuestionTypes, selectedTaskTypes, sortOrder });
+  }, [activeTab, searchQuery, selectedQuestionTypes, selectedTaskTypes, sortOrder]);
 
   // Check if we need to load more items initially or after filter changes
   // This handles cases where initial content doesn't fill the viewport
@@ -263,6 +287,56 @@ const TestsLibraryPage = ({
     // console.log("[TestsLibraryPage] Changed searchQuery", e.target.value);
   };
 
+  // Filter panel handlers
+  const handleFilterOpen = () => {
+    if (testType === "writing") {
+      setTempSelectedTypes([...selectedTaskTypes]);
+    } else {
+      setTempSelectedTypes([...selectedQuestionTypes]);
+    }
+    setTempSortOrder(sortOrder);
+    setFilterOpen(true);
+  };
+
+  const handleFilterClose = () => {
+    setFilterOpen(false);
+  };
+
+  const handleFilterCancel = () => {
+    if (testType === "writing") {
+      setTempSelectedTypes([...selectedTaskTypes]);
+    } else {
+      setTempSelectedTypes([...selectedQuestionTypes]);
+    }
+    setTempSortOrder(sortOrder);
+    setFilterOpen(false);
+  };
+
+  const handleFilterClear = () => {
+    /// close modal and reset the state
+    setTempSelectedTypes([]);
+    setFilterOpen(false);
+    setTempSortOrder("newest");
+  };
+
+  const handleFilterSearch = () => {
+    if (testType === "writing") {
+      setSelectedTaskTypes([...tempSelectedTypes]);
+    } else {
+      setSelectedQuestionTypes([...tempSelectedTypes]);
+    }
+    setSortOrder(tempSortOrder);
+    setFilterOpen(false);
+  };
+
+  const toggleType = (type) => {
+    setTempSelectedTypes(prev =>
+      prev.includes(type)
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
+
   // Safety guard: Prevent infinite loading state
   // If loading is still true after 5 seconds, force it to false
   useEffect(() => {
@@ -295,10 +369,8 @@ const TestsLibraryPage = ({
     };
   }, [loading]);
 
-  // Additional logging after currentItems calculated
-  // useEffect(() => {
-  //   console.log("[TestsLibraryPage] Post-calc: currentItems", currentItems);
-  // }, [currentItems]);
+  const cols = useResponsiveGridCols();
+
 
   return (
     <div className={`flex flex-col mx-auto bg-gray-50 ${customHeight} overflow-hidden px-3 md:px-8`}>
@@ -311,26 +383,36 @@ const TestsLibraryPage = ({
               {description}
             </p>
           </div>
-          <div className="flex justify-end gap-2">
-            {
-              testType === "writing" && (
-                <div className="flex justify-end">
-                  <Link to="/writing/writing-history" className="text-sm bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-all duration-200 flex items-center gap-2">
-                    <FaHistory className="w-4 h-4" />
-                    Writing History
-                  </Link>
-                </div>
-              )
-            }
+          <div className="flex justify-end gap-3">
+            {testType === "writing" && (
+              <div className="flex justify-end">
+                <Link
+                  to="/writing/writing-history"
+                  className="text-sm bg-gray-200 text-black px-4 py-2 rounded-md 
+                   hover:bg-gray-300 transition-all duration-200 
+                   flex items-center gap-2"
+                >
+                  <FaHistory className="w-4 h-4" />
+                  Writing History
+                </Link>
+              </div>
+            )}
+
             {headerAction && (
               <div className="flex justify-end">
-                <Link to={headerAction} className="text-sm bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-all duration-200 flex items-center gap-2">
+                <Link
+                  to={headerAction}
+                  className="text-sm bg-blue-500 text-white px-4 py-2 rounded-md 
+                   hover:bg-blue-700 transition-all duration-200 
+                   flex items-center gap-2"
+                >
                   {headerActionText}
                   <FaArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             )}
           </div>
+
 
         </div>
 
@@ -350,7 +432,125 @@ const TestsLibraryPage = ({
 
           <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">
 
-            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto ">
+              {/* filter question_type or task_type */}
+              {(testType === "reading" || testType === "listening" || testType === "writing") && (
+                <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      onClick={handleFilterOpen}
+                      className="relative rounded-2xl bg-white border-2 border-gray-300 shadow-md text-base focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-center hover:bg-gray-50 hover:border-blue-400 hover:shadow-lg"
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                      }}
+                    >
+                      <CiFilter className="w-6 h-6" />
+                      {((testType === "writing" && selectedTaskTypes.length > 0) || 
+                        ((testType === "reading" || testType === "listening") && selectedQuestionTypes.length > 0)) && (
+                        <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-md">
+                          {testType === "writing" ? selectedTaskTypes.length : selectedQuestionTypes.length}
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="end"
+                    sideOffset={8}
+                    className={cn(
+                      "z-50 w-[380px] rounded-xl border bg-white p-4 shadow-lg"
+                    )}
+                  >
+                    {/* Question Types or Task Types Section */}
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          {testType === "writing" ? "Task Types" : "Question Types"}
+                        </h3>
+                        <Button
+                          onClick={handleFilterClear}
+                          variant="ghost"
+                          className="text-sm text-gray-600 hover:text-gray-900 p-0 h-auto border-none hover:bg-transparent"
+                        >
+                          Clear All
+                        </Button>
+
+                      </div>
+                      <div className="">
+                        {(testType === "writing" ? WRITING_TASK_TYPES : QUESTION_TYPE_GROUPS).map((type) => {
+                          const isChecked = tempSelectedTypes.includes(type);
+                          return (
+                            <label
+                              key={type}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                            >
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => toggleType(type)}
+                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer accent-blue-600"
+                              />
+                              <span className="text-sm text-gray-700 font-medium">
+                                {testType === "writing" 
+                                  ? getWritingTaskTypeDisplayName(type)
+                                  : getQuestionTypeDisplayName(type)}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Separator */}
+                    <div className="border-t border-gray-200 my-2" />
+
+                    {/* Sort Section */}
+                    <div className="mb-2">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-1">Sort By</h3>
+                      <div className="space-y-0.5">
+                        <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                          <input
+                            type="radio"
+                            name="sortOrder"
+                            value="newest"
+                            checked={tempSortOrder === "newest"}
+                            onChange={() => setTempSortOrder("newest")}
+                            className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-700 font-medium">Newest First</span>
+                        </label>
+                        <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                          <input
+                            type="radio"
+                            name="sortOrder"
+                            value="oldest"
+                            checked={tempSortOrder === "oldest"}
+                            onChange={() => setTempSortOrder("oldest")}
+                            className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-700 font-medium">Oldest First</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-2 border-t border-gray-200">
+
+                      <Button
+                        onClick={handleFilterCancel}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleFilterSearch}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Search
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
               {/* Search */}
               <div className="relative flex-1 md:w-80">
                 <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm md:text-base" />
@@ -402,17 +602,15 @@ const TestsLibraryPage = ({
         {/* First Priority: Loading State - Show skeleton loaders when loading and no data */}
         {(loading || dashboardLoading) && allTests.length === 0 ? (
           <>
-            {/* {console.log("[TestsLibraryPage] [RENDER] State=loading/dashboardLoading && allTests.length===0", { loading, dashboardLoading, allTests })} */}
-            <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
+            <div className={isGridView ? `grid ${cols} gap-4 md:gap-6 lg:gap-8 mb-16` : "flex flex-col gap-1 mb-16"}>
               {Array.from({ length: 9 }).map((_, index) => (
                 <LibraryCardShimmer key={index} isGridView={isGridView} />
               ))}
             </div>
           </>
-        ) : /* Second Priority: Empty State - Show empty message when not loading and no data */
+        ) :
           !loading && !dashboardLoading && allTests.length === 0 ? (
             <>
-              {/* {console.log("[TestsLibraryPage] [RENDER] State=not loading && not dashboardLoading && allTests.length===0", { loading, dashboardLoading, allTests })} */}
               <div className="flex flex-1 items-center justify-center min-h-[300px]">
                 {emptyStateMessage ? (
                   <motion.div
@@ -433,7 +631,7 @@ const TestsLibraryPage = ({
                     className="flex flex-col items-center text-center gap-2 py-16"
                   >
                     <div className="text-gray-700 font-semibold text-base md:text-lg">
-                      We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
+                      We couldn't find any {testType} materials at the moment.
                     </div>
                     <div className="text-gray-400 text-sm md:text-base">
                       Please check back later or try again soon.
@@ -445,10 +643,14 @@ const TestsLibraryPage = ({
           ) : /* Third Priority: No Search Results - Show message when data exists but filtered results are empty */
             allTests.length > 0 && filteredData.length === 0 ? (
               <>
-                {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab })} */}
-                <div className="flex flex-1 items-center justify-center min-h-[300px]">
+                {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab, questionType })} */}
+                  <div className="flex flex-1 items-center justify-center min-h-[300px]">
                   <div className="py-20 text-center text-gray-400 font-semibold w-full whitespace-pre-line">
-                    {searchQuery.trim() !== "" && emptySearchMessage ? (
+                    {(testType === "writing" && selectedTaskTypes.length > 0) ? (
+                      `No tests found with task type${selectedTaskTypes.length > 1 ? 's' : ''}: ${selectedTaskTypes.map(type => getWritingTaskTypeDisplayName(type)).join(', ')}.`
+                    ) : ((testType === "reading" || testType === "listening") && selectedQuestionTypes.length > 0) ? (
+                      `No tests found with question type${selectedQuestionTypes.length > 1 ? 's' : ''}: ${selectedQuestionTypes.map(type => getQuestionTypeDisplayName(type)).join(', ')}.`
+                    ) : searchQuery.trim() !== "" && emptySearchMessage ? (
                       emptySearchMessage
                     ) : activeTab === "free" && emptyFreeMessage ? (
                       emptyFreeMessage
@@ -473,13 +675,13 @@ const TestsLibraryPage = ({
                   <motion.div
                     className={
                       isGridView
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16"
+                        ? ` grid ${cols} gap-4 md:gap-6 lg:gap-8 mb-16`
                         : "flex flex-col gap-1 mb-16"
                     }
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    key={`${activeTab}-${searchQuery}-${isGridView}`}
+                    key={`${activeTab}-${searchQuery}-${testType === "writing" ? selectedTaskTypes.join(',') : selectedQuestionTypes.join(',')}-${sortOrder}-${isGridView}`}
                   >
                     {currentItems.map((test, index) => {
                       const subscriptionStatus = userProfile?.subscription_status ?? "free";

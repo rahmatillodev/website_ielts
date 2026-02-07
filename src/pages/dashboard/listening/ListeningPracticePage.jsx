@@ -1087,6 +1087,7 @@ const ListeningPracticePageContent = () => {
                   />
                 </div>
               )}
+              
 
               {/* Questions */}
               <div className="p-6 space-y-8">
@@ -1127,6 +1128,7 @@ const ListeningPracticePageContent = () => {
                           </p>
                         )}
                       </div>
+                      
 
                       {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatching || isMultipleAnswers) ? (
                         <div

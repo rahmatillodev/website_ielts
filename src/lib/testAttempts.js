@@ -53,10 +53,10 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
     // Calculate band score (IELTS 0-9 scale based on percentage)
     const bandScore = calculateBandScore(correctCount, totalQuestions, type);
 
-    // Calculate time_taken if not provided (fallback to 0)
+    // Store time_taken in seconds (minimum 1 second)
     const timeTakenSeconds = timeTaken !== null && timeTaken !== undefined
-      ? Math.max(0, Math.floor(timeTaken))
-      : 0;
+      ? Math.max(1, Math.floor(timeTaken))
+      : 1;
 
     // 1. Create user_attempt record
     const { data: attemptData, error: attemptError } = await supabase
@@ -67,7 +67,7 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
         score: bandScore,
         total_questions: totalQuestions,
         correct_answers: correctCount,
-        time_taken: timeTakenSeconds,
+        time_taken: timeTakenSeconds, // Store in seconds
         completed_at: new Date().toISOString(),
       })
       .select()

@@ -176,6 +176,7 @@ export default {
         shimmer: 'shimmer 2s infinite',
       },
     },
+    
   },
   
   plugins: [],
