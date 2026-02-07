@@ -111,9 +111,9 @@ function App() {
             {/* Mock Tests */}
             <Route path="/mock-tests" element={<MockTestsPage />} />
             <Route path="/mock" element={<MockTestsPage />} />
-            <Route path="/mock/:type" element={<MockTypeSelectionPage />} />
-            <Route path="/mock/:type/online" element={<MockOnlinePage />} />
-            <Route path="/mock/:type/center" element={<MockCenterPage />} />
+            <Route path="/mock/select" element={<MockTypeSelectionPage />} />
+            <Route path="/mock/online" element={<MockOnlinePage />} />
+            <Route path="/mock/center" element={<MockCenterPage />} />
 
             {/* Own Writing */}
             <Route path="/own-writing" element={<OwnWritingPage />} />

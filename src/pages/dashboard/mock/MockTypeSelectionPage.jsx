@@ -1,21 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Laptop, Building2, ArrowLeft } from "lucide-react";
 
-const mockTypeNames = {
-  reading: "Reading",
-  listening: "Listening",
-  writing: "Writing",
-  speaking: "Speaking",
-};
-
 const MockTypeSelectionPage = () => {
   const navigate = useNavigate();
-  const { type } = useParams();
-  const mockTypeName = mockTypeNames[type] || type;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -61,7 +52,7 @@ const MockTypeSelectionPage = () => {
           className="text-center mb-12"
         >
           <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            {mockTypeName} Test
+            Full Mock Test
           </h1>
           <p className="text-lg text-gray-600">
             How would you like to take your mock test?
@@ -87,7 +78,7 @@ const MockTypeSelectionPage = () => {
                   Take the mock test from your laptop at home
                 </p>
                 <Button
-                  onClick={() => navigate(`/mock/${type}/online`)}
+                  onClick={() => navigate(`/mock/online`)}
                   className="w-full bg-blue-500 text-white hover:bg-blue-600 rounded-xl py-6 text-lg font-medium"
                 >
                   Take Online
@@ -108,7 +99,7 @@ const MockTypeSelectionPage = () => {
                   Come to our mock center and take the test in a real exam environment
                 </p>
                 <Button
-                  onClick={() => navigate(`/mock/${type}/center`)}
+                  onClick={() => navigate(`/mock/center`)}
                   className="w-full bg-green-500 text-white hover:bg-green-600 rounded-xl py-6 text-lg font-medium"
                 >
                   Visit Center
