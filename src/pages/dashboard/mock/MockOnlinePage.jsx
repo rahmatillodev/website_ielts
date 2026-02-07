@@ -1,16 +1,9 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, Clock, AlertCircle } from "lucide-react";
-
-const mockTypeNames = {
-  reading: "Reading",
-  listening: "Listening",
-  writing: "Writing",
-  speaking: "Speaking",
-};
 
 const statusConfig = {
   available: {
@@ -38,8 +31,6 @@ const statusConfig = {
 
 const MockOnlinePage = () => {
   const navigate = useNavigate();
-  const { type } = useParams();
-  const mockTypeName = mockTypeNames[type] || type;
   const [status, setStatus] = useState("available");
   const [showMessage, setShowMessage] = useState(false);
 
@@ -57,7 +48,7 @@ const MockOnlinePage = () => {
         <motion.button
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          onClick={() => navigate(`/mock/${type}`)}
+          onClick={() => navigate(`/mock/select`)}
           className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -71,7 +62,7 @@ const MockOnlinePage = () => {
           className="text-center mb-8"
         >
           <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            {mockTypeName} Test - Online
+            Full Mock Test - Online
           </h1>
           <p className="text-lg text-gray-600">
             Request to take your mock test online
