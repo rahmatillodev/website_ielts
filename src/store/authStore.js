@@ -125,17 +125,20 @@ export const useAuthStore = create(
 
           if (error) throw error;
 
-          if (!data && shouldLogoutOnMissing) {
-            await get().forceSignOutToLogin('Profil topilmadi.');
+          if (!data) {
+            if (shouldLogoutOnMissing) {
+              await get().forceSignOutToLogin('Profil topilmadi.');
+              return null;
+            }
+            set({ userProfile: null });
             return null;
           }
-          if (data.subscription_status === 'vip') {
-            data.subscription_status = 'premium';
+          const profile = { ...data };
+          if (profile.subscription_status === 'vip') {
+            profile.subscription_status = 'premium';
           }
-          /// 
-
-          set({ userProfile: data });
-          return data;
+          set({ userProfile: profile });
+          return profile;
         } catch (error) {
           console.error("Profile fetch error:", error);
           return null;

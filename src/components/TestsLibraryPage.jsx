@@ -13,6 +13,8 @@ import CardLocked from "./cards/CardLocked";
 import CardOpen from "./cards/CardOpen";
 import { motion } from "framer-motion";
 import { LibraryCardShimmer } from "@/components/ui/shimmer";
+import { Button } from "./ui/button";
+
 
 const TestsLibraryPage = ({
   title,
@@ -131,7 +133,7 @@ const TestsLibraryPage = ({
   }, [allTests, searchQuery, activeTab, questionType]);
 
   const handleViewChange = (value) => {
-
+   
     localStorage.setItem('testsLibraryView', value);
     setIsGridView(value === 'grid' ? true : false);
   };
@@ -346,34 +348,7 @@ const TestsLibraryPage = ({
 
           <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">
 
-            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto ">
-              {/* filter question_type */}
-              {(testType === "reading" || testType === "listening") && (
-                <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto h-20 ">
-                  <Select
-                  className="h-28"
-                    value={questionType}
-                    onValueChange={setQuestionType}
-                  >
-                    <SelectTrigger
-                      className="w-full md:w-60 px-4 rounded-2xl bg-white border border-gray-200 shadow-sm text-base focus:ring-2 focus:ring-blue-100 transition-all "
-                      style={{
-                        height: "40px",
-                      }}
-                    >
-                      <SelectValue placeholder="All Question Types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Question Types</SelectItem>
-                      {QUESTION_TYPE_GROUPS.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {getQuestionTypeDisplayName(type)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
               {/* Search */}
               <div className="relative flex-1 md:w-80">
                 <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm md:text-base" />
@@ -456,7 +431,7 @@ const TestsLibraryPage = ({
                     className="flex flex-col items-center text-center gap-2 py-16"
                   >
                     <div className="text-gray-700 font-semibold text-base md:text-lg">
-                      We couldn't find any {testType} materials at the moment.
+                      We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
                     </div>
                     <div className="text-gray-400 text-sm md:text-base">
                       Please check back later or try again soon.
@@ -468,12 +443,10 @@ const TestsLibraryPage = ({
           ) : /* Third Priority: No Search Results - Show message when data exists but filtered results are empty */
             allTests.length > 0 && filteredData.length === 0 ? (
               <>
-                {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab, questionType })} */}
+                {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab })} */}
                 <div className="flex flex-1 items-center justify-center min-h-[300px]">
                   <div className="py-20 text-center text-gray-400 font-semibold w-full whitespace-pre-line">
-                    {questionType !== "all" ? (
-                      `No tests found with question type "${getQuestionTypeDisplayName(questionType)}".`
-                    ) : searchQuery.trim() !== "" && emptySearchMessage ? (
+                    {searchQuery.trim() !== "" && emptySearchMessage ? (
                       emptySearchMessage
                     ) : activeTab === "free" && emptyFreeMessage ? (
                       emptyFreeMessage
@@ -498,13 +471,13 @@ const TestsLibraryPage = ({
                   <motion.div
                     className={
                       isGridView
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-16"
+                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16"
                         : "flex flex-col gap-1 mb-16"
                     }
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    key={`${activeTab}-${searchQuery}-${questionType}-${isGridView}`}
+                    key={`${activeTab}-${searchQuery}-${isGridView}`}
                   >
                     {currentItems.map((test, index) => {
                       const subscriptionStatus = userProfile?.subscription_status ?? "free";

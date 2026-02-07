@@ -169,11 +169,16 @@ export default {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(100%)' },
         },
+        softPulse: {
+          '0%, 100%': { opacity: '0.85' },
+          '50%': { opacity: '0.45' },
+        },
       },
       
       // Animation utilities
       animation: {
         shimmer: 'shimmer 2s infinite',
+        'soft-pulse': 'softPulse 2s ease-in-out infinite',
       },
     },
   },
