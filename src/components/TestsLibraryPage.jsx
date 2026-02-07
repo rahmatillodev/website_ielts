@@ -313,7 +313,9 @@ const TestsLibraryPage = ({
   };
 
   const handleFilterClear = () => {
+    /// close modal and reset the state
     setTempSelectedTypes([]);
+    setFilterOpen(false);
     setTempSortOrder("newest");
   };
 

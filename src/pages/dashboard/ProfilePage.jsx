@@ -561,6 +561,7 @@ const ProfilePage = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <textarea
+                    spellcheck="false"
                     required
                     rows={4}
                     value={message}

@@ -21,7 +21,6 @@ export const useWritingStore = create((set, get) => ({
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
-      console.log("[useWritingStore] fetchWritings data", data);
 
       /// writings table
       /// columns: id, title, duration, difficulty , created_at, updated_at, feedback, is_active, is_premium
@@ -89,6 +88,7 @@ export const useWritingStore = create((set, get) => ({
       //       "writing_id": "writing-id-1",
       //       "task_name": "Task 1", only Task 1, Task 2 are available
       //       "title": "...",
+      //       "task_types": , table , line_graph, bar_chart, pie_chart, map, process_diagram, formal_letter, semi_formal, informal, 
       //       "image_url": "...", only for TASK_1
       //       "content": "...",
       //       "sample": "...",

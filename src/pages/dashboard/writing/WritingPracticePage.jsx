@@ -370,44 +370,64 @@ const WritingPracticePageContent = () => {
     }
 
     if (isPaused) setIsPaused(false);
-    setAnswers((p) => ({ ...p, [currentTaskType]: e.target.value }));
-
-    // Save immediately on text change
-    if (id) {
-      saveWritingPracticeData(id, {
-        answers: { ...answers, [currentTaskType]: e.target.value },
-        timeRemaining,
-        elapsedTime,
-        startTime: startTime || Date.now(),
-        isPracticeMode: true,
-        isStarted,
-        isPaused: false,
-      });
-    }
+    
+    // Use functional update to get the latest state
+    setAnswers((p) => {
+      const updatedAnswers = { ...p, [currentTaskType]: e.target.value };
+      
+      // Save immediately on text change with the updated answers
+      if (id) {
+        saveWritingPracticeData(id, {
+          answers: updatedAnswers,
+          timeRemaining,
+          elapsedTime,
+          startTime: startTime || Date.now(),
+          isPracticeMode: true,
+          isStarted,
+          isPaused: false,
+        });
+      }
+      
+      return updatedAnswers;
+    });
   };
 
 
   const handleFinish = useCallback(() => {
     if (!currentWriting || !currentWriting.writing_tasks) return;
 
+    // Get the latest answers from localStorage to ensure we have the most up-to-date data
+    // This prevents issues where state hasn't updated yet after typing
+    const savedData = loadWritingPracticeData(id);
+    const latestAnswers = savedData?.answers || answers;
+
+    console.log("[WritingPracticePage] answers (state)", answers);
+    console.log("[WritingPracticePage] latestAnswers (from localStorage)", latestAnswers);
+    console.log("[WritingPracticePage] currentWriting", currentWriting);
+    
     const taskWordCounts = currentWriting.writing_tasks.map((task) => {
-      const answer = answers[task.task_name] || "";
+      const answer = latestAnswers[task.task_name] || "";
+      const wordCount = countWords(answer);
       return {
         taskType: task.task_name,
-        wordCount: countWords(answer),
+        wordCount: wordCount,
+        answer: answer, // Include for debugging
       };
     });
+
+    console.log("[WritingPracticePage] taskWordCounts", taskWordCounts);
 
     // Check if each task has at least one word
     for (const task of taskWordCounts) {
       if (task.wordCount === 0) {
+        console.log(`[WritingPracticePage] Task ${task.taskType} is empty. Answer: "${task.answer}"`);
         toast.error(`Please write at least one word in ${task.taskType} before finishing.`);
         return;
       }
     }
 
     setIsFinishModalOpen(true);
-  }, [answers, currentWriting]);
+  }, [answers, currentWriting, id]);
 
   const handleRetakeTask = useCallback(() => {
     if (!id) return;
@@ -727,50 +747,14 @@ const WritingPracticePageContent = () => {
 
   const displayWriting = currentWriting;
 
-  if (errorCurrentWriting) return <div>{errorCurrentWriting}</div>;
-  
-  // Show loading state while writing is being fetched
-  if (loadingCurrentWriting) {
-    return (
-      <div className="flex items-center justify-center h-screen" style={{ background: themeColors.background }}>
-        <div style={{ color: themeColors.text }}>Loading writing...</div>
-      </div>
-    );
-  }
-  
-  // Don't render if we don't have writing data
-  if (!currentWriting || !currentWriting.writing_tasks || currentWriting.writing_tasks.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-screen" style={{ background: themeColors.background }}>
-        <div style={{ color: themeColors.text }}>No writing data available</div>
-      </div>
-    );
-  }
-  
   // Ensure currentTaskType is set (use first task as fallback)
-  const effectiveTaskType = currentTaskType || currentWriting.writing_tasks[0]?.task_name;
-  const currentTask = displayWriting.writing_tasks.find(
+  const effectiveTaskType = currentTaskType || currentWriting?.writing_tasks?.[0]?.task_name;
+  const currentTask = displayWriting?.writing_tasks?.find(
     (t) => t.task_name === effectiveTaskType
   );
-  if (!effectiveTaskType) {
-    return (
-      <div className="flex items-center justify-center h-screen" style={{ background: themeColors.background }}>
-        <div style={{ color: themeColors.text }}>No tasks available</div>
-      </div>
-    );
-  }
   
   // If we have a currentTaskType but no matching task, try to use the first task
-  const taskToDisplay = currentTask || currentWriting.writing_tasks.find(t => t.task_name === effectiveTaskType) || currentWriting.writing_tasks[0];
-  if (!taskToDisplay) {
-    return (
-      <div className="flex items-center justify-center h-screen" style={{ background: themeColors.background }}>
-        <div style={{ color: themeColors.text }}>Task not found</div>
-      </div>
-    );
-  }
-  
-  console.log("[WritingPracticePage] currentTask", taskToDisplay, "currentTaskType", currentTaskType, "effectiveTaskType", effectiveTaskType, "status", status, "answers", answers);
+  const taskToDisplay = currentTask || currentWriting?.writing_tasks?.find(t => t.task_name === effectiveTaskType) || currentWriting?.writing_tasks?.[0];
   
   // Calculate font size in rem (base 16px = 1rem) for consistent scaling
   const baseFontSize = fontSizeValue.base / 16;
@@ -788,7 +772,7 @@ const WritingPracticePageContent = () => {
     >
       <TextSelectionTooltip
         universalContentRef={universalContentRef}
-        partId={taskToDisplay.task_name}
+        partId={taskToDisplay?.task_name || effectiveTaskType || 'task'}
         onHighlight={handleHighlight}
         onNote={handleNote}
         testType="writing"
@@ -809,6 +793,7 @@ const WritingPracticePageContent = () => {
         showCorrectAnswers={false}
         onToggleShowCorrect={() => {}}
         handleRedoTask={status === 'reviewing' ? handleRetakeTask : undefined}
+        isPracticeMode={isPracticeMode}
       />
 
       <div className="flex flex-1 overflow-hidden" ref={containerRef}>
@@ -816,114 +801,152 @@ const WritingPracticePageContent = () => {
           {/* LEFT - Show question content in all modes including review */}
           <div
             className="border overflow-y-auto rounded-2xl px-4 pt-1 pb-10 h-full scrollbar-hide"
-            style={{ width: `${leftWidth}%`, borderColor: themeColors.border }}
+            style={{ width: `${leftWidth}%`, borderColor: themeColors.border, backgroundColor: themeColors.background }}
           >
-            <div
-              className="m-5 p-4 border rounded-lg"
-              style={{
-                backgroundColor: theme === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
-                borderColor: themeColors.border
-              }}
-            >
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <PenSquare
-                    className="w-5 h-5 shrink-0 mb-0.5"
-                    style={{ color: themeColors.text }}
-                  />
-                  <span
-                    className="text-base font-bold"
+            {loadingCurrentWriting ? (
+              <div className="flex items-center justify-center h-full">
+                <div style={{ color: themeColors.text, fontSize: `${fontSizeValue.base}px` }}>
+                  Loading writing...
+                </div>
+              </div>
+            ) : errorCurrentWriting ? (
+              <div className="flex items-center justify-center h-full p-6">
+                <div 
+                  className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
+                  style={{
+                    borderColor: themeColors.border,
+                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                  }}
+                >
+                  <p className="text-sm font-semibold text-red-500 mb-2">
+                    ⚠️ Writing loading error
+                  </p>
+                  <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
+                    {typeof errorCurrentWriting === 'string' ? errorCurrentWriting : 'Unknown error'}
+                  </p>
+                </div>
+              </div>
+            ) : !currentWriting || !currentWriting.writing_tasks || currentWriting.writing_tasks.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <div style={{ color: themeColors.text, fontSize: `${fontSizeValue.base}px` }}>
+                  No writing data available
+                </div>
+              </div>
+            ) : !taskToDisplay ? (
+              <div className="flex items-center justify-center h-full">
+                <div style={{ color: themeColors.text, fontSize: `${fontSizeValue.base}px` }}>
+                  Task not found
+                </div>
+              </div>
+            ) : (
+              <>
+                <div
+                  className="m-5 p-4 border rounded-lg"
+                  style={{
+                    backgroundColor: theme === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
+                    borderColor: themeColors.border
+                  }}
+                >
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <PenSquare
+                        className="w-5 h-5 shrink-0 mb-0.5"
+                        style={{ color: themeColors.text }}
+                      />
+                      <span
+                        className="text-base font-bold"
+                        style={{ 
+                          color: themeColors.text,
+                          fontSize: `${fontSizeValue.base}px`
+                        }}
+                      >
+                        IELTS Writing Practice - {taskToDisplay.title}
+                      </span>
+                    </div>
+
+                  </div>
+                </div>
+                <div className="border rounded-lg text-justify" ref={passageRef} style={{ borderColor: themeColors.border }}>
+                  <div className="p-6 m-5">
+                  <h1 
+                    className="text-2xl font-bold"
                     style={{ 
                       color: themeColors.text,
+                      fontSize: `${fontSizeValue.base * 1.5}px`
+                    }}
+                  >
+                    {taskToDisplay.title}
+                  </h1>
+                  <div 
+                    className="text-sm my-4"
+                    style={{ 
+                      color: themeColors.text,
+                      opacity: 0.7,
                       fontSize: `${fontSizeValue.base}px`
                     }}
                   >
-                    IELTS Writing Practice - {taskToDisplay.title}
-                  </span>
-                </div>
-
-              </div>
-            </div>
-            <div className="border rounded-lg text-justify" ref={passageRef} style={{ borderColor: themeColors.border }}>
-              <div className="p-6 m-5">
-              <h1 
-                className="text-2xl font-bold"
-                style={{ 
-                  color: themeColors.text,
-                  fontSize: `${fontSizeValue.base * 1.5}px`
-                }}
-              >
-                {taskToDisplay.title}
-              </h1>
-              <div 
-                className="text-sm my-4"
-                style={{ 
-                  color: themeColors.text,
-                  opacity: 0.7,
-                  fontSize: `${fontSizeValue.base}px`
-                }}
-              >
-                {parse(taskToDisplay.content || "")}
-              </div>
-              {/* IMAGE */}
-              {taskToDisplay.image_url && (
-                <div 
-                  className="p-6 border-t w-full"
-                  style={{ borderColor: themeColors.border }}
-                >
-                  <img
-                    src={taskToDisplay.image_url}
-                    alt={taskToDisplay.title}
-                    className="w-full max-h-[500px] object-contain rounded-2xl"
-                    />
-                </div>
-              )}
-              </div>
-
-              {/* feedback */}
-              {!isPracticeMode ? (
-                taskToDisplay.feedback && (
-                  <div 
-                    className="p-6 border-t w-full"
-                    style={{ borderColor: themeColors.border }}
-                  >
-                    <h3 
-                      className="text-xl font-semibold mb-4"
-                      style={{ 
-                        color: themeColors.text,
-                        fontSize: `${fontSizeValue.base * 1.25}px`
-                      }}
+                    {parse(taskToDisplay.content || "")}
+                  </div>
+                  {/* IMAGE */}
+                  {taskToDisplay.image_url && (
+                    <div 
+                      className="p-6 border-t w-full"
+                      style={{ borderColor: themeColors.border }}
                     >
-                      Feedback
-                    </h3>
-                    <div
+                      <img
+                        src={taskToDisplay.image_url}
+                        alt={taskToDisplay.title}
+                        className="w-full max-h-[500px] object-contain rounded-2xl"
+                        />
+                    </div>
+                  )}
+                  </div>
+
+                  {/* feedback */}
+                  {!isPracticeMode ? (
+                    taskToDisplay.feedback && (
+                      <div 
+                        className="p-6 border-t w-full"
+                        style={{ borderColor: themeColors.border }}
+                      >
+                        <h3 
+                          className="text-xl font-semibold mb-4"
+                          style={{ 
+                            color: themeColors.text,
+                            fontSize: `${fontSizeValue.base * 1.25}px`
+                          }}
+                        >
+                          Feedback
+                        </h3>
+                        <div
+                          style={{ 
+                            color: themeColors.text,
+                            fontSize: `${fontSizeValue.base}px`
+                          }}
+                        >
+                          {parse(taskToDisplay.feedback || "")}
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <div 
+                      className="p-6 border-t w-full"
+                      style={{ borderColor: themeColors.border }}
+                    >
+                    <p 
                       style={{ 
                         color: themeColors.text,
+                        opacity: 0.7,
                         fontSize: `${fontSizeValue.base}px`
                       }}
                     >
-                      {parse(taskToDisplay.feedback || "")}
-                    </div>
+                      Feedback is not available yet. In the future, you will receive personalized feedback for every piece of writing you submit.
+                    </p>
                   </div>
-                )
-              ) : (
-                <div 
-                  className="p-6 border-t w-full"
-                  style={{ borderColor: themeColors.border }}
-                >
-                <p 
-                  style={{ 
-                    color: themeColors.text,
-                    opacity: 0.7,
-                    fontSize: `${fontSizeValue.base}px`
-                  }}
-                >
-                  Feedback is not available yet. In the future, you will receive personalized feedback for every piece of writing you submit.
-                </p>
-              </div>
-              )}
-            </div>
-
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* RESIZER */}
@@ -949,85 +972,124 @@ const WritingPracticePageContent = () => {
           {/* RIGHT */}
           <div
             className="border flex flex-col rounded-2xl overflow-hidden h-full"
-            style={{ width: `${100 - leftWidth}%`, borderColor: themeColors.border }}
+            style={{ width: `${100 - leftWidth}%`, borderColor: themeColors.border, backgroundColor: themeColors.background }}
           >
-            {isPracticeMode ? (
-              // Practice mode: show textarea for user input
-              <>
-                <textarea
-                  spellcheck="false"
-                  className="flex-1 p-8 resize-none outline-none"
-                  placeholder="Write your answer here..."
-                  value={answers[effectiveTaskType] || ""}
-                  onChange={handleTextChange}
-                  disabled={isPaused || status === 'reviewing'}
-                  style={{
-                    fontSize: `${fontSizeValue.base}px`,
-                    backgroundColor: themeColors.background,
-                    color: themeColors.text,
-                  }}
-                />
-
-              </>
-            ) : status === 'reviewing' ? (
-              // Review mode: show user's saved answer from user_attempts.correct_answers
-              <div className="flex-1 p-8 overflow-y-auto">
-                {isLoadingReview ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div 
-                      style={{ 
-                        color: themeColors.text,
-                        fontSize: `${fontSizeValue.base}px`
-                      }}
-                    >
-                      Loading your answer...
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      fontSize: `${fontSizeValue.base}px`,
-                      color: themeColors.text,
-                      whiteSpace: 'pre-wrap',
-                    }}
-                  >
-                    {answers[effectiveTaskType] ? answers[effectiveTaskType] : "No answer submitted for this task."}
-                  </div>
-                )}
-              </div>
-            ) : (
-              // Preview mode: show sample
-              <div className="flex-1 p-8 overflow-y-auto">
-                <div
-                  style={{
-                    fontSize: `${fontSizeValue.base}px`,
-                    color: themeColors.text,
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {taskToDisplay.sample || "Sample answer will appear here..."}
+            {loadingCurrentWriting ? (
+              <div className="flex items-center justify-center h-full">
+                <div style={{ color: themeColors.text, fontSize: `${fontSizeValue.base}px` }}>
+                  Loading writing...
                 </div>
               </div>
+            ) : errorCurrentWriting ? (
+              <div className="flex items-center justify-center h-full p-6">
+                <div 
+                  className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
+                  style={{
+                    borderColor: themeColors.border,
+                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                  }}
+                >
+                  <p className="text-sm font-semibold text-red-500 mb-2">
+                    ⚠️ Writing loading error
+                  </p>
+                  <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
+                    {typeof errorCurrentWriting === 'string' ? errorCurrentWriting : 'Unknown error'}
+                  </p>
+                </div>
+              </div>
+            ) : !currentWriting || !currentWriting.writing_tasks || currentWriting.writing_tasks.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <div style={{ color: themeColors.text, fontSize: `${fontSizeValue.base}px` }}>
+                  No writing data available
+                </div>
+              </div>
+            ) : !taskToDisplay ? (
+              <div className="flex items-center justify-center h-full">
+                <div style={{ color: themeColors.text, fontSize: `${fontSizeValue.base}px` }}>
+                  Task not found
+                </div>
+              </div>
+            ) : (
+              <>
+                {isPracticeMode ? (
+                  // Practice mode: show textarea for user input
+                  <>
+                    <textarea
+                      spellcheck="false"
+                      className="flex-1 p-8 resize-none outline-none"
+                      placeholder="Write your answer here..."
+                      value={answers[effectiveTaskType] || ""}
+                      onChange={handleTextChange}
+                      disabled={isPaused || status === 'reviewing'}
+                      style={{
+                        fontSize: `${fontSizeValue.base}px`,
+                        backgroundColor: themeColors.background,
+                        color: themeColors.text,
+                      }}
+                    />
+
+                  </>
+                ) : status === 'reviewing' ? (
+                  // Review mode: show user's saved answer from user_attempts.correct_answers
+                  <div className="flex-1 p-8 overflow-y-auto">
+                    {isLoadingReview ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div 
+                          style={{ 
+                            color: themeColors.text,
+                            fontSize: `${fontSizeValue.base}px`
+                          }}
+                        >
+                          Loading your answer...
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          fontSize: `${fontSizeValue.base}px`,
+                          color: themeColors.text,
+                          whiteSpace: 'pre-wrap',
+                        }}
+                      >
+                        {answers[effectiveTaskType] ? answers[effectiveTaskType] : "No answer submitted for this task."}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Preview mode: show sample
+                  <div className="flex-1 p-8 overflow-y-auto">
+                    <div
+                      style={{
+                        fontSize: `${fontSizeValue.base}px`,
+                        color: themeColors.text,
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {taskToDisplay.sample || "Sample answer will appear here..."}
+                    </div>
+                  </div>
+                )}
+                <div 
+                  className="px-6 py-4 border-t flex justify-between text-sm font-semibold"
+                  style={{ 
+                    borderColor: themeColors.border,
+                    color: themeColors.text,
+                    fontSize: `${fontSizeValue.base}px`
+                  }}
+                >
+                  <span>WORD COUNT: {
+                    isPracticeMode
+                      ? countWords(answers[effectiveTaskType] || "")
+                      : status === 'reviewing'
+                        ? countWords(answers[effectiveTaskType] || "")
+                        : countWords(taskToDisplay?.sample || "")
+                  }</span>
+                  <span style={{ color: '#ef4444' }}>
+                    MINIMUM: {effectiveTaskType === "Task 1" ? 150 : 250} WORDS
+                  </span>
+                </div>
+              </>
             )}
-            <div 
-              className="px-6 py-4 border-t flex justify-between text-sm font-semibold"
-              style={{ 
-                borderColor: themeColors.border,
-                color: themeColors.text,
-                fontSize: `${fontSizeValue.base}px`
-              }}
-            >
-              <span>WORD COUNT: {
-                isPracticeMode
-                  ? countWords(answers[effectiveTaskType] || "")
-                  : status === 'reviewing'
-                    ? countWords(answers[effectiveTaskType] || "")
-                    : countWords(taskToDisplay.sample || "")
-              }</span>
-              <span style={{ color: '#ef4444' }}>
-                MINIMUM: {effectiveTaskType === "Task 1" ? 150 : 250} WORDS
-              </span>
-            </div>
           </div>
         </div>
       </div>

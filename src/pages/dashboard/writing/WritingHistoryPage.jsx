@@ -158,6 +158,8 @@ const WritingHistoryPage = () => {
   };
 
   const handleFilterClear = () => {
+    /// close modal and reset the state
+    setFilterOpen(false);
     setTempSelectedTypes([]);
     setTempSortOrder("newest");
   };
@@ -176,9 +178,6 @@ const WritingHistoryPage = () => {
     );
   };
 
-  const handleSortChange = (value) => {
-    setSortOrder(value === "newest" ? "newest" : "oldest");
-  };
   
   return (
     <div className="flex flex-col mx-auto bg-gray-50 h-[calc(100vh-64px)] overflow-y-auto px-4 py-0 md:p-10">
@@ -221,7 +220,7 @@ const WritingHistoryPage = () => {
                 <PopoverTrigger asChild>
                   <button
                     onClick={handleFilterOpen}
-                    className="relative rounded-2xl bg-white border-2 border-gray-300 shadow-md text-base focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-center hover:bg-gray-50 hover:border-blue-400 hover:shadow-lg"
+                    className="relative rounded-2xl bg-white border-2 border-gray-300 text-base focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-center hover:bg-gray-50 hover:border-blue-400 hover:shadow-lg"
                     style={{
                       width: "48px",
                       height: "48px",

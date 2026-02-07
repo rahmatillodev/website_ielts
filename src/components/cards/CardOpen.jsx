@@ -229,7 +229,7 @@ const CardOpen = ({
             onClick={handleStartTest}
             className="mt-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-black rounded-lg flex items-center justify-center gap-2 w-full transition-all"
           >
-            Start Practice <HiOutlinePlay className="text-sm" />
+            {testType === 'writing' ? "View Sample" : "Start Practice"} <HiOutlinePlay className="text-sm" />
           </button>
         )}
       </motion.div>
@@ -337,7 +337,7 @@ const CardOpen = ({
               onClick={handleStartTest}
               className="py-2 md:py-3 px-4 md:px-6 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
             >
-              Start Practice <HiOutlinePlay className="text-sm md:text-base" />
+              {testType === 'writing' ? "View Sample" : "Start Practice"} <HiOutlinePlay className="text-sm md:text-base" />
             </button>
           )}
         </div>

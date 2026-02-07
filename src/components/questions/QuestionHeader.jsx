@@ -8,7 +8,7 @@ import ConfirmModal from '@/components/modal/ConfirmModal'
 import { useAppearance } from '@/contexts/AppearanceContext'
 import { useAnnotation } from '@/contexts/AnnotationContext'
 
-const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, isPaused, handleStart, handlePause, onBack, showCorrectAnswers, onToggleShowCorrect, status, type, showTryPractice, handleRedoTask }) => {
+const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, isPaused, handleStart, handlePause, onBack, showCorrectAnswers, onToggleShowCorrect, status, type, showTryPractice, handleRedoTask, isPracticeMode }) => {
   // Immediately check URL for review mode to prevent flickering
   const [searchParams] = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
@@ -79,6 +79,18 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
   const navigate = useNavigate()
 
   const handleBackClick = () => {
+    // For Writing: only show confirmation modal if practice has started
+    if (type === "Writing" && !isPracticeMode && !isStarted) {
+      // Practice hasn't started, go back directly without confirmation
+      if (onBack) {
+        onBack();
+      } else {
+        // Fallback navigation if onBack is not provided
+        navigate("/writing");
+      }
+      return;
+    }
+    // Show confirmation modal for all other cases
     setIsConfirmModalOpen(true);
   };
 
@@ -260,6 +272,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
         onConfirm={handleConfirmExit}
         title="Exit Test"
         description="Are you sure you want to exit? Your progress may be lost."
+        testType={type}
       />
     </header>
   )

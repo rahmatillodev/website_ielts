@@ -27,7 +27,10 @@ import SpeakingPage from "./pages/dashboard/SpeakingPage";
 import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
 import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
 import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
-import MockTestsPage from "./pages/dashboard/MockTestsPage";
+import MockTestsPage from "./pages/dashboard/mock/MockTestsPage";
+import MockTypeSelectionPage from "./pages/dashboard/mock/MockTypeSelectionPage";
+import MockOnlinePage from "./pages/dashboard/mock/MockOnlinePage";
+import MockCenterPage from "./pages/dashboard/mock/MockCenterPage";
 import "./App.css";
 import FeedbackModal from "./components/modal/FeedbackModal";
 import WritingPracticePage from "./pages/dashboard/writing/WritingPracticePage";
@@ -104,7 +107,15 @@ function App() {
             <Route path="/writing" element={<WritingPage />} />
             <Route path="/speaking" element={<SpeakingPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+
+            {/* Mock Tests */}
             <Route path="/mock-tests" element={<MockTestsPage />} />
+            <Route path="/mock" element={<MockTestsPage />} />
+            <Route path="/mock/:type" element={<MockTypeSelectionPage />} />
+            <Route path="/mock/:type/online" element={<MockOnlinePage />} />
+            <Route path="/mock/:type/center" element={<MockCenterPage />} />
+
+            {/* Own Writing */}
             <Route path="/own-writing" element={<OwnWritingPage />} />
             <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
             <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
@@ -133,19 +144,4 @@ function App() {
 
 export default App;
 
-
-
-
-/// pdf ni to'grilash high
-/// sidebarni ranglari  done
-/// resultni ishlatish kerak orqaga qaytganda high
-/// pendingni to'g'rilash kerak orqaga qaytganda high
-/// tab almashganlarda  done
-/// image upload qilish kerak bo'ladi userda  done
-/// admimnda contextlarni to'grilsh kerak high
-/// highlight delete qilish kerak  done
-/// listening resultni to'g'rilash kerak 
-/// bookmarkni kattalshtirish kerak va 
-/// reaview qilish patdi va redo qilish tekshirish 
-/// send telegram button qilish kerak 
-/// channel qo'shish kerak 
+// view sample
