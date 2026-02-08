@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { formatISO } from "date-fns";
 
 // Components
-import MockTypeSelector from "./components/MockTypeSelector";
 import TestCalendar from "./components/TestCalendar";
 import TimeSlotSelector from "./components/TimeSlotSelector";
 import CenterInfoCard from "./components/CenterInfoCard";
@@ -27,36 +26,33 @@ const centerInfo = {
 
 const MockCenterPage = () => {
   const navigate = useNavigate();
-  
-  // Mock type selection (AI or Human)
-  const [mockType, setMockType] = useState("ai"); // "ai" or "human"
-  
+
   // Speaking test date/time selection
   const [speakingDate, setSpeakingDate] = useState(null);
   const [speakingSlot, setSpeakingSlot] = useState(null);
   const [speakingCurrentMonth, setSpeakingCurrentMonth] = useState(new Date().getMonth());
   const [speakingCurrentYear, setSpeakingCurrentYear] = useState(new Date().getFullYear());
-  
+
   // Reading/Writing/Listening test date/time selection
   const [rwlDate, setRwlDate] = useState(null);
   const [rwlSlot, setRwlSlot] = useState(null);
   const [rwlCurrentMonth, setRwlCurrentMonth] = useState(new Date().getMonth());
   const [rwlCurrentYear, setRwlCurrentYear] = useState(new Date().getFullYear());
-  
+
   const [showConfirmation, setShowConfirmation] = useState(false);
-  
+
   // Time slots state
   const [speakingSlots, setSpeakingSlots] = useState([]);
   const [rwlSlots, setRwlSlots] = useState([]);
   const [loadingSpeakingSlots, setLoadingSpeakingSlots] = useState(false);
   const [loadingRwlSlots, setLoadingRwlSlots] = useState(false);
-  
+
   // Available dates state (dates that have slots)
   const [speakingAvailableDates, setSpeakingAvailableDates] = useState(new Set());
   const [rwlAvailableDates, setRwlAvailableDates] = useState(new Set());
   const [loadingSpeakingDates, setLoadingSpeakingDates] = useState(false);
   const [loadingRwlDates, setLoadingRwlDates] = useState(false);
-  
+
   // Calendar state
   const today = new Date();
 
@@ -75,7 +71,7 @@ const MockCenterPage = () => {
         setLoadingSpeakingDates(false);
       }
     };
-    
+
     loadSpeakingDates();
   }, [speakingCurrentMonth, speakingCurrentYear]);
 
@@ -93,7 +89,7 @@ const MockCenterPage = () => {
         setLoadingRwlDates(false);
       }
     };
-    
+
     loadRwlDates();
   }, [rwlCurrentMonth, rwlCurrentYear]);
 
@@ -104,7 +100,7 @@ const MockCenterPage = () => {
       setSpeakingSlot(null);
       return;
     }
-    
+
     const loadSlots = async () => {
       setLoadingSpeakingSlots(true);
       try {
@@ -121,7 +117,7 @@ const MockCenterPage = () => {
         setLoadingSpeakingSlots(false);
       }
     };
-    
+
     loadSlots();
   }, [speakingDate]);
 
@@ -131,7 +127,7 @@ const MockCenterPage = () => {
       setRwlSlot(null);
       return;
     }
-    
+
     const loadSlots = async () => {
       setLoadingRwlSlots(true);
       try {
@@ -148,7 +144,7 @@ const MockCenterPage = () => {
         setLoadingRwlSlots(false);
       }
     };
-    
+
     loadSlots();
   }, [rwlDate]);
 
@@ -209,7 +205,7 @@ const MockCenterPage = () => {
 
   return (
     <div className="w-full min-h-screen p-6 md:p-12">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-9xl mx-auto">
         {/* Back Button */}
         <motion.button
           initial={{ opacity: 0, x: -20 }}
@@ -235,65 +231,71 @@ const MockCenterPage = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Right Side - Booking Section */}
           <div className="space-y-6">
-            {/* Mock Type Selection */}
-            <MockTypeSelector mockType={mockType} setMockType={setMockType} />
-
             {/* Speaking Test - Calendar */}
-            <TestCalendar
-              title="Speaking Test"
-              icon={Mic}
-              iconColor="text-purple-600"
-              selectedDate={speakingDate}
-              onDateSelect={handleSpeakingDateClick}
-              currentMonth={speakingCurrentMonth}
-              currentYear={speakingCurrentYear}
-              onPreviousMonth={handleSpeakingPreviousMonth}
-              onNextMonth={handleSpeakingNextMonth}
-              availableDates={speakingAvailableDates}
-              loadingDates={loadingSpeakingDates}
-              today={today}
-            />
+            <div className="grid lg:grid-cols-2 grid-cols-1 gap-6">
 
-            {/* Speaking Test - Time Slots */}
-            <TimeSlotSelector
-              title="Speaking Time Slot"
-              iconColor="text-purple-600"
-              selectedDate={speakingDate}
-              selectedSlot={speakingSlot}
-              onSlotSelect={setSpeakingSlot}
-              slots={speakingSlots}
-              loading={loadingSpeakingSlots}
-            />
 
-            {/* Reading/Writing/Listening Test - Calendar */}
-            <TestCalendar
-              title="Reading, Writing & Listening"
-              icon={BookOpen}
-              iconColor="text-green-600"
-              selectedDate={rwlDate}
-              onDateSelect={handleRwlDateClick}
-              currentMonth={rwlCurrentMonth}
-              currentYear={rwlCurrentYear}
-              onPreviousMonth={handleRwlPreviousMonth}
-              onNextMonth={handleRwlNextMonth}
-              availableDates={rwlAvailableDates}
-              loadingDates={loadingRwlDates}
-              today={today}
-            />
+              {/* Reading/Writing/Listening Test - Calendar */}
+              <div className="space-y-6">
 
-            {/* Reading/Writing/Listening Test - Time Slots */}
-            <TimeSlotSelector
-              title="RWL Time Slot"
-              iconColor="text-green-600"
-              selectedDate={rwlDate}
-              selectedSlot={rwlSlot}
-              onSlotSelect={setRwlSlot}
-              slots={rwlSlots}
-              loading={loadingRwlSlots}
-            />
+                <TestCalendar
+                  title="Reading, Writing & Listening"
+                  icon={BookOpen}
+                  iconColor="text-green-600"
+                  selectedDate={rwlDate}
+                  onDateSelect={handleRwlDateClick}
+                  currentMonth={rwlCurrentMonth}
+                  currentYear={rwlCurrentYear}
+                  onPreviousMonth={handleRwlPreviousMonth}
+                  onNextMonth={handleRwlNextMonth}
+                  availableDates={rwlAvailableDates}
+                  loadingDates={loadingRwlDates}
+                  today={today}
+                />
+
+                {/* Reading/Writing/Listening Test - Time Slots */}
+                <TimeSlotSelector
+                  title="RWL Time Slot"
+                  iconColor="text-green-600"
+                  selectedDate={rwlDate}
+                  selectedSlot={rwlSlot}
+                  onSlotSelect={setRwlSlot}
+                  slots={rwlSlots}
+                  loading={loadingRwlSlots}
+                />
+              </div>
+
+              <div className="space-y-6">
+                <TestCalendar
+                  title="Speaking Test"
+                  icon={Mic}
+                  iconColor="text-purple-600"
+                  selectedDate={speakingDate}
+                  onDateSelect={handleSpeakingDateClick}
+                  currentMonth={speakingCurrentMonth}
+                  currentYear={speakingCurrentYear}
+                  onPreviousMonth={handleSpeakingPreviousMonth}
+                  onNextMonth={handleSpeakingNextMonth}
+                  availableDates={speakingAvailableDates}
+                  loadingDates={loadingSpeakingDates}
+                  today={today}
+                />
+
+                {/* Speaking Test - Time Slots */}
+                <TimeSlotSelector
+                  title="Speaking Time Slot"
+                  iconColor="text-purple-600"
+                  selectedDate={speakingDate}
+                  selectedSlot={speakingSlot}
+                  onSlotSelect={setSpeakingSlot}
+                  slots={speakingSlots}
+                  loading={loadingSpeakingSlots}
+                />
+              </div>
+            </div>
 
             {/* Book Button */}
             <motion.div
@@ -317,7 +319,7 @@ const MockCenterPage = () => {
           </div>
 
           {/* Left Side - Center Info and Map */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className=" space-y-6">
             <CenterInfoCard centerInfo={centerInfo} />
             <CenterMapCard mapUrl={centerInfo.mapUrl} />
           </div>
