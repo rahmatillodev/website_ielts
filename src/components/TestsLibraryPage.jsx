@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 // import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { QUESTION_TYPE_GROUPS, getQuestionTypeDisplayName } from "@/store/testStore/utils/questionTypeUtils";
 import CardLocked from "./cards/CardLocked";
 import CardOpen from "./cards/CardOpen";
 import { motion } from "framer-motion";
@@ -40,6 +42,7 @@ const TestsLibraryPage = ({
   const [isGridView, setIsGridView] = useState(getInitialViewState);
   const [activeTab, setActiveTab] = useState("All Tests");
   const [searchQuery, setSearchQuery] = useState("");
+  const [questionType, setQuestionType] = useState("all"); // Filter by question type
   const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
   const itemsPerLoad = 9; // Items to load per scroll
   const scrollContainerRef = useRef(null);
@@ -77,22 +80,16 @@ const TestsLibraryPage = ({
 
   // Ensure allTests is always an array
   const allTests = Array.isArray(testData) ? testData : [];
-  // useEffect(() => {
-  //   console.log("[TestsLibraryPage] testData prop changed:", testData);
-  //   console.log("[TestsLibraryPage] allTests calculated:", allTests);
-  // }, [testData]);
+
 
   // Ensure tests are fetched when component mounts or route changes
   // Only fetch on initial mount or route change, not when data is empty
   useEffect(() => {
-    // console.log("[TestsLibraryPage] useEffect: route/fetchTests changed", { pathname: location.pathname, fetchTestsPresent: !!fetchTests, loading });
     if (!fetchTests) return;
 
     // Only fetch if we haven't fetched yet for this route
-    // Don't re-fetch just because data is empty - that's a valid state
     if (!hasFetchedRef.current && !loading) {
       hasFetchedRef.current = true;
-      // console.log("[TestsLibraryPage] Fetching tests (initial load or route change)");
       fetchTests(false); // Don't force refresh on initial load
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,12 +98,10 @@ const TestsLibraryPage = ({
   // Reset fetch flag when route changes to allow fresh fetch
   useEffect(() => {
     hasFetchedRef.current = false;
-    // console.log("[TestsLibraryPage] Route changed, reset hasFetchedRef to false");
   }, [location.pathname]);
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(allTests) || allTests.length === 0) {
-      // console.log("[TestsLibraryPage] filteredData computes [] because allTests is falsy or empty", { allTests });
       return [];
     }
     const filtered = allTests.filter((test) => {
@@ -124,11 +119,18 @@ const TestsLibraryPage = ({
         (activeTab === "premium" && test.is_premium === true) ||
         (activeTab === "free" && test.is_premium === false);
 
-      return matchesSearch && matchesTab;
+      // Filter by question type
+      // Handle both Set and Array for backward compatibility
+      const matchesQuestionType = questionType === "all" ||
+        (test.question_types && (
+          (test.question_types instanceof Set && test.question_types.has(questionType)) ||
+          (Array.isArray(test.question_types) && test.question_types.includes(questionType))
+        ));
+
+      return matchesSearch && matchesTab && matchesQuestionType;
     });
-    // console.log("[TestsLibraryPage] filteredData calculation", { filtered, searchQuery, activeTab, allTestsLength: allTests.length });
     return filtered;
-  }, [allTests, searchQuery, activeTab]);
+  }, [allTests, searchQuery, activeTab, questionType]);
 
   const handleViewChange = (value) => {
    
@@ -139,7 +141,6 @@ const TestsLibraryPage = ({
   // Lazy loading: Get items to display
   const currentItems = useMemo(() => {
     const items = filteredData.slice(0, displayedItems);
-    // console.log("[TestsLibraryPage] currentItems calculation", { len: items.length, displayedItems, filteredDataLen: filteredData.length });
     return items;
   }, [filteredData, displayedItems]);
 
@@ -167,7 +168,6 @@ const TestsLibraryPage = ({
         setTimeout(() => {
           isLoadingMoreRef.current = false;
         }, 300);
-        // console.log("[TestsLibraryPage] Lazy loading more items on scroll", { prev, newValue, filteredDataLen: filteredData.length });
         return newValue;
       });
     }
@@ -178,10 +178,8 @@ const TestsLibraryPage = ({
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll);
-      // console.log("[TestsLibraryPage] Added scroll event listener");
       return () => {
         container.removeEventListener('scroll', handleScroll);
-        // console.log("[TestsLibraryPage] Removed scroll event listener");
       };
     }
   }, [handleScroll]);
@@ -190,12 +188,11 @@ const TestsLibraryPage = ({
   useEffect(() => {
     setDisplayedItems(9);
     isLoadingMoreRef.current = false; // Reset loading flag when filters change
-    // Scroll to top when filter/search changes
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
-    // console.log("[TestsLibraryPage] activeTab/searchQuery changed, reset displayedItems to 9", { activeTab, searchQuery });
-  }, [activeTab, searchQuery]);
+    // console.log("[TestsLibraryPage] activeTab/searchQuery/questionType changed, reset displayedItems to 9", { activeTab, searchQuery, questionType });
+  }, [activeTab, searchQuery, questionType]);
 
   // Check if we need to load more items initially or after filter changes
   // This handles cases where initial content doesn't fill the viewport
@@ -404,7 +401,7 @@ const TestsLibraryPage = ({
         {(loading || dashboardLoading) && allTests.length === 0 ? (
           <>
             {/* {console.log("[TestsLibraryPage] [RENDER] State=loading/dashboardLoading && allTests.length===0", { loading, dashboardLoading, allTests })} */}
-            <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
+            <div className={isGridView ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-16" : "flex flex-col gap-1 mb-16"}>
               {Array.from({ length: 9 }).map((_, index) => (
                 <LibraryCardShimmer key={index} isGridView={isGridView} />
               ))}

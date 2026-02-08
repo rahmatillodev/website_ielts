@@ -52,6 +52,10 @@ export const useTestStore = create((set, get) => {
       return result;
     },
 
+    cancelFetch: () => {
+      useTestDetailStore.getState().cancelFetch();
+    },
+
     clearCurrentTest: (clearTestList = false) => {
       useTestDetailStore.getState().clearCurrentTest(clearTestList);
       

@@ -13,11 +13,14 @@ import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext"
 import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext";
 import { useWritingStore } from "@/store/WritingStore";
 import { useWritingCompletedStore } from "@/store/WritingCompletedStore";
+import { useAuthStore } from "@/store/authStore";
 import {
   saveWritingPracticeData,
   loadWritingPracticeData,
   clearWritingPracticeData,
-  saveWritingResultData
+  saveWritingResultData,
+  loadWritingResultData,
+  clearAllWritingPracticeData
 } from "@/store/LocalStorage/writingStore";
 import { convertDurationToSeconds } from "@/utils/testDuration";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
@@ -37,7 +40,8 @@ const WritingPracticePageContent = () => {
     errorCurrentWriting,
   } = useWritingStore();
 
-  const { submitWritingAttempt, loading: savingAttempt } = useWritingCompletedStore();
+  const { submitWritingAttempt, loading: savingAttempt, getLatestWritingAttempt } = useWritingCompletedStore();
+  const { authUser } = useAuthStore();
 
   const {
     addHighlight,
@@ -49,6 +53,12 @@ const WritingPracticePageContent = () => {
   const [currentTaskType, setCurrentTaskType] = useState(null);
   const [answers, setAnswers] = useState({});
   const [leftWidth, setLeftWidth] = useState(50);
+
+  // Status: 'taking', 'reviewing'
+  const [status, setStatus] = useState(() => {
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    return mode === 'review' ? 'reviewing' : 'taking';
+  });
 
   // Practice flow states
   const [isPracticeMode, setIsPracticeMode] = useState(false); // When user clicks "Try practice"
@@ -63,37 +73,173 @@ const WritingPracticePageContent = () => {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAutoSubmitting, setIsAutoSubmitting] = useState(false);
+  const [isLoadingReview, setIsLoadingReview] = useState(false);
 
   const containerRef = useRef(null);
   const universalContentRef = useRef(null);
   const passageRef = useRef(null);
+  const previousIdRef = useRef(null);
+
+  /* ================= HANDLERS ================= */
+  const handleReviewWriting = useCallback(async () => {
+    if (!authUser || !id) {
+      return;
+    }
+
+    setIsLoadingReview(true);
+    try {
+      // Fetch the writing data first if not already loaded
+      let writing = currentWriting;
+      if (!writing) {
+        writing = await fetchWritingById(id);
+      }
+      console.log('[WritingPracticePage] writing', writing);
+
+      if (!writing || !writing.writing_tasks || writing.writing_tasks.length === 0) {
+        console.error('Writing not found or has no tasks');
+        setStatus('taking');
+        setIsLoadingReview(false);
+        return;
+      }
+
+      // Get the latest writing attempt
+      const result = await getLatestWritingAttempt(id);
+      console.log('[WritingPracticePage] getLatestWritingAttempt result:', result);
+      
+      if (result.success && result.attempt && result.answers) {
+        console.log('[WritingPracticePage] Review mode - loaded answers:', result.answers);
+        console.log('[WritingPracticePage] Available task names:', writing.writing_tasks.map(t => t.task_name));
+        
+        // Set answers from attempt (these come from correct_answers field in user_attempts)
+        setAnswers(result.answers);
+        setStatus('reviewing');
+        setIsPracticeMode(false); // Don't show practice mode in review
+        
+        // Set currentTaskType to the first task that has an answer, or first task
+        const tasks = writing.writing_tasks || [];
+        if (tasks.length > 0) {
+          // Find first task with an answer, or default to first task
+          const taskWithAnswer = tasks.find(t => result.answers[t.task_name]);
+          const taskToSet = taskWithAnswer ? taskWithAnswer.task_name : tasks[0].task_name;
+          console.log('[WritingPracticePage] Setting currentTaskType to:', taskToSet, 'Available answers keys:', Object.keys(result.answers));
+          setCurrentTaskType(taskToSet);
+        }
+        setIsLoadingReview(false);
+        return;
+      }
+
+      // No attempt found, stay in taking mode
+      console.log('[WritingPracticePage] No attempt found for review');
+      setStatus('taking');
+      setIsLoadingReview(false);
+    } catch (error) {
+      console.error('Error loading review data:', error);
+      setStatus('taking');
+      setIsLoadingReview(false);
+    }
+  }, [authUser, id, currentWriting, fetchWritingById, getLatestWritingAttempt, status]);
 
   /* ================= FETCH & INITIALIZE ================= */
   useEffect(() => {
-    if (id) fetchWritingById(id);
+    if (id) {
+      // Clear all old writing practice data when starting a NEW test (ID changed)
+      // This ensures old practice data from other tests doesn't interfere
+      // But preserve data if it's the same test (page refresh)
+      const isNewTest = previousIdRef.current !== null && previousIdRef.current !== id;
+      if (isNewTest) {
+        clearAllWritingPracticeData();
+      }
+      previousIdRef.current = id;
+      
+      // Always fetch writing data - needed for both normal and review modes
+      fetchWritingById(id);
+    }
   }, [id, fetchWritingById]);
 
   useEffect(() => {
     if (!currentWriting?.writing_tasks?.length) return;
 
     const tasks = currentWriting.writing_tasks;
-    setCurrentTaskType(tasks[0].task_type);
-
-    // Check URL parameter for practice mode
+    
+    // Check URL parameter for review mode
+    const isReviewMode = searchParams.get('mode') === 'review';
     const urlPracticeMode = searchParams.get('mode') === 'practice';
 
-    // Load saved data from localStorage
+    // Always set currentTaskType to first task if not set (needed for initial render)
+    if (!currentTaskType && tasks.length > 0) {
+      setCurrentTaskType(tasks[0].task_name);
+    }
+
+    
+
+    // If review mode, load attempt data (it will update currentTaskType if needed)
+    if (isReviewMode && authUser && id && status === 'reviewing') {
+      handleReviewWriting();
+      return;
+    }
+    
+    // Load saved data from localStorage (only if not in review mode)
     const savedData = loadWritingPracticeData(id);
+    const resultData = loadWritingResultData(id);
+
+    // If result data exists and is newer than practice data, clear stale practice data
+    // This happens when user submitted writing and visits page again - old practice data should be cleared
+    if (resultData && savedData) {
+      const resultCompletedAt = resultData.completedAt || 0;
+      const practiceLastSaved = savedData.lastSaved || 0;
+      
+      // If result is newer, practice data is stale (from before submission)
+      if (resultCompletedAt > practiceLastSaved) {
+        clearWritingPracticeData(id);
+        // Don't use savedData, initialize fresh instead
+        const init = {};
+        tasks.forEach((t) => (init[t.task_name] = ""));
+        setAnswers(init);
+        setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+        setElapsedTime(0);
+        setStartTime(null);
+        setIsPracticeMode(false);
+        setIsStarted(false);
+        setIsPaused(false);
+
+        // Check if URL has practice mode parameter
+        if (urlPracticeMode) {
+          setIsPracticeMode(true);
+          setIsStarted(true);
+          setStartTime(Date.now());
+        }
+        return; // Skip loading stale data
+      }
+    }
+
+    // Continue with normal loading if data is not stale
     if (savedData) {
       setAnswers(savedData.answers || {});
-      setTimeRemaining(savedData.timeRemaining || convertDurationToSeconds(currentWriting.duration));
-      setElapsedTime(savedData.elapsedTime || 0);
-      setStartTime(savedData.startTime || null);
+
+      // Restore time remaining - if startTime exists and practice was active (not paused), calculate remaining time
+      if (savedData.startTime && savedData.isPracticeMode && savedData.isStarted && !savedData.isPaused && savedData.lastSaved) {
+        // Calculate time elapsed since last save
+        const timeSinceSave = Math.floor((Date.now() - savedData.lastSaved) / 1000);
+        const totalElapsed = (savedData.elapsedTime || 0) + timeSinceSave;
+        const totalDuration = convertDurationToSeconds(currentWriting.duration);
+        const remaining = Math.max(0, totalDuration - totalElapsed);
+        setTimeRemaining(remaining);
+        setElapsedTime(totalElapsed);
+        // Keep original startTime for accurate time calculation
+        setStartTime(savedData.startTime);
+      } else {
+        // If paused or no startTime, use saved values
+        setTimeRemaining(savedData.timeRemaining || convertDurationToSeconds(currentWriting.duration));
+        setElapsedTime(savedData.elapsedTime || 0);
+        setStartTime(savedData.startTime || null);
+      }
 
       // Restore practice mode from URL or localStorage
       const shouldBeInPracticeMode = urlPracticeMode || savedData.isPracticeMode || false;
       setIsPracticeMode(shouldBeInPracticeMode);
       setIsStarted(savedData.isStarted || shouldBeInPracticeMode);
+      setIsPaused(savedData.isPaused || false);
 
       // If practice mode was active, restore it
       if (shouldBeInPracticeMode) {
@@ -102,7 +248,7 @@ const WritingPracticePageContent = () => {
     } else {
       // Initialize fresh
       const init = {};
-      tasks.forEach((t) => (init[t.task_type] = ""));
+      tasks.forEach((t) => (init[t.task_name] = ""));
       setAnswers(init);
       setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
 
@@ -113,18 +259,22 @@ const WritingPracticePageContent = () => {
         setStartTime(Date.now());
       }
     }
-  }, [currentWriting, id, searchParams]);
+  }, [currentWriting, id, searchParams, authUser, handleReviewWriting]);
+
+  // Check URL params for mode (review) - after writing is loaded
+  // This is handled in the useEffect above when currentWriting is available
+  // No need for a separate useEffect here
 
   /* ================= TIMER ================= */
   useEffect(() => {
-    if (!isPracticeMode || !isStarted || isPaused || timeRemaining <= 0 || savingAttempt) return;
+    if (!isPracticeMode || !isStarted || isPaused || timeRemaining <= 0 || savingAttempt || isAutoSubmitting) return;
 
     const interval = setInterval(() => {
       setTimeRemaining((t) => {
         if (t <= 1) {
           clearInterval(interval);
-          toast.info("Time is up");
-          handleFinish();
+          // Auto-submit when time runs out (no loading overlay)
+          handleAutoSubmit();
           return 0;
         }
         return t - 1;
@@ -132,11 +282,11 @@ const WritingPracticePageContent = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPracticeMode, isStarted, isPaused, timeRemaining, savingAttempt]);
+  }, [isPracticeMode, isStarted, isPaused, timeRemaining, savingAttempt, isAutoSubmitting]);
 
   // Update elapsed time
   useEffect(() => {
-    if (!isPracticeMode || !isStarted || isPaused || !startTime || savingAttempt) return;
+    if (!isPracticeMode || !isStarted || isPaused || !startTime || savingAttempt || isAutoSubmitting) return;
 
     const interval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -144,13 +294,28 @@ const WritingPracticePageContent = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPracticeMode, isStarted, isPaused, startTime, savingAttempt]);
+  }, [isPracticeMode, isStarted, isPaused, startTime, savingAttempt, isAutoSubmitting]);
 
   /* ================= LOCALSTORAGE PERSISTENCE ================= */
   useEffect(() => {
     if (!id || !isPracticeMode) return;
 
-    // Save every 5 seconds
+    // Save immediately when answers change
+    saveWritingPracticeData(id, {
+      answers,
+      timeRemaining,
+      elapsedTime,
+      startTime: startTime || Date.now(),
+      isPracticeMode: true,
+      isStarted,
+      isPaused,
+    });
+  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused]);
+
+  // Also save periodically to ensure time updates are captured
+  useEffect(() => {
+    if (!id || !isPracticeMode) return;
+
     const interval = setInterval(() => {
       saveWritingPracticeData(id, {
         answers,
@@ -159,14 +324,18 @@ const WritingPracticePageContent = () => {
         startTime: startTime || Date.now(),
         isPracticeMode: true,
         isStarted,
+        isPaused,
       });
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted]);
+  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused]);
 
-  /* ================= HANDLERS ================= */
   const handleTryPractice = () => {
+    // Clear all old writing practice data when starting practice
+    // This ensures a clean start and removes old data from other tests
+    clearAllWritingPracticeData();
+    
     setIsPracticeMode(true);
     setIsStarted(true);
     setStartTime(Date.now());
@@ -185,6 +354,7 @@ const WritingPracticePageContent = () => {
       startTime: Date.now(),
       isPracticeMode: true,
       isStarted: true,
+      isPaused: false,
     });
   };
 
@@ -197,12 +367,159 @@ const WritingPracticePageContent = () => {
 
     if (isPaused) setIsPaused(false);
     setAnswers((p) => ({ ...p, [currentTaskType]: e.target.value }));
+
+    // Save immediately on text change
+    if (id) {
+      saveWritingPracticeData(id, {
+        answers: { ...answers, [currentTaskType]: e.target.value },
+        timeRemaining,
+        elapsedTime,
+        startTime: startTime || Date.now(),
+        isPracticeMode: true,
+        isStarted,
+        isPaused: false,
+      });
+    }
   };
 
+
   const handleFinish = useCallback(() => {
-      setIsFinishModalOpen(true);
-   
-  }, []);
+    if (!currentWriting || !currentWriting.writing_tasks) return;
+
+    const taskWordCounts = currentWriting.writing_tasks.map((task) => {
+      const answer = answers[task.task_name] || "";
+      return {
+        taskType: task.task_name,
+        wordCount: countWords(answer),
+      };
+    });
+
+    // Check if each task has at least one word
+    for (const task of taskWordCounts) {
+      if (task.wordCount === 0) {
+        toast.error(`Please write at least one word in ${task.taskType} before finishing.`);
+        return;
+      }
+    }
+
+    setIsFinishModalOpen(true);
+  }, [answers, currentWriting]);
+
+  const handleRetakeTask = useCallback(() => {
+    if (!id) return;
+  
+    /* URL tozalash */
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    newSearchParams.delete('mode');
+    setSearchParams(newSearchParams, { replace: true });
+  
+    /* MUHIM: review flag */
+    setStatus('taking');
+  
+    /* Review flowni to'liq o'chirish */
+    setIsLoadingReview(false);
+    setIsPracticeMode(false);
+    setIsStarted(false);
+    setIsPaused(false);
+  
+    /* Javoblarni reset */
+    const init = {};
+    if (currentWriting?.writing_tasks?.length) {
+      currentWriting.writing_tasks.forEach(t => {
+        init[t.task_name] = "";
+      });
+      setCurrentTaskType(currentWriting.writing_tasks[0].task_name);
+    }
+    setAnswers(init);
+  
+    /* Timer reset */
+    setStartTime(null);
+    setElapsedTime(0);
+    if (currentWriting) {
+      setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+    }
+  
+    clearWritingPracticeData(id);
+  
+  }, [id, searchParams, setSearchParams, currentWriting]);
+
+  const handleBack = useCallback(() => {
+    // Clear practice data from localStorage when user exits via back button
+    if (id) {
+      clearWritingPracticeData(id);
+    }
+    navigate(-1);
+  }, [id, navigate]);
+  
+  
+
+  // Auto-submit function (no loading overlay, no modal)
+  const handleAutoSubmit = useCallback(async () => {
+    if (!currentWriting || !currentWriting.writing_tasks || isAutoSubmitting) return;
+
+    setIsAutoSubmitting(true);
+    toast.info("Time is up! Auto-submitting your writing...");
+
+    try {
+      // Calculate time taken
+      const timeTaken = startTime
+        ? Math.floor((Date.now() - startTime) / 1000)
+        : elapsedTime;
+
+      // Save to database (silently, no loading overlay)
+      const result = await submitWritingAttempt(id, answers, timeTaken);
+
+      if (result.success) {
+        // Save result data
+        saveWritingResultData(id, {
+          answers,
+          timeRemaining: 0,
+          elapsedTime: timeTaken,
+          startTime,
+        });
+
+        // Clear practice data
+        clearWritingPracticeData(id);
+
+        // Reset to initial state (sample preview mode)
+        setIsPracticeMode(false);
+        setIsStarted(false);
+        setIsPaused(false);
+        setStartTime(null);
+        setElapsedTime(0);
+
+        // Reset timer to full duration
+        if (currentWriting) {
+          setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+        }
+
+        // Remove practice mode from URL
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('mode');
+        setSearchParams(newSearchParams, { replace: true });
+
+        // Show success modal after saving completes
+        setIsAutoSubmitting(false);
+        setIsSuccessModalOpen(true);
+        toast.success("Your writing has been auto-submitted successfully!");
+      } else {
+        setIsAutoSubmitting(false);
+        toast.error(result.error || 'Failed to auto-submit writing attempt');
+        // Resume practice mode if save failed
+        setIsPaused(false);
+        setIsStarted(true);
+      }
+    } catch (error) {
+      console.error('Error auto-submitting writing:', error);
+      setIsAutoSubmitting(false);
+      toast.error('An error occurred while auto-submitting your writing');
+      // Resume practice mode if save failed
+      setIsPaused(false);
+      setIsStarted(true);
+    }
+  }, [currentWriting, answers, startTime, elapsedTime, id, searchParams, setSearchParams, submitWritingAttempt, isAutoSubmitting]);
+
+  // If all tasks have at least one word, open the finish modal and save the writing
 
   const handleSubmitFinish = async () => {
     setIsFinishModalOpen(false);
@@ -299,12 +616,12 @@ const WritingPracticePageContent = () => {
       };
 
       for (const task of currentWriting.writing_tasks) {
-        const taskKey = task.task_type === "Task 1" ? "task1" : "task2";
+        const taskKey = task.task_name === "Task 1" ? "task1" : "task2";
         const imageData = task.image_url ? await loadImage(task.image_url) : null;
 
         tasks[taskKey] = {
           question: task.content || "",
-          answer: answers[task.task_type] || "",
+          answer: answers[task.task_name] || "",
           image: imageData,
         };
       }
@@ -404,41 +721,83 @@ const WritingPracticePageContent = () => {
     window.getSelection().removeAllRanges();
   }, [addNote]);
 
-  const currentTask = currentWriting?.writing_tasks?.find(
-    (t) => t.task_type === currentTaskType
-  );
+  const displayWriting = currentWriting;
 
   if (errorCurrentWriting) return <div>{errorCurrentWriting}</div>;
-  if (!currentTask) return null;
-
+  
+  // Show loading state while writing is being fetched
+  if (loadingCurrentWriting) {
+    return (
+      <div className="flex items-center justify-center h-screen" style={{ background: themeColors.background }}>
+        <div style={{ color: themeColors.text }}>Loading writing...</div>
+      </div>
+    );
+  }
+  
+  // Don't render if we don't have writing data
+  if (!currentWriting || !currentWriting.writing_tasks || currentWriting.writing_tasks.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-screen" style={{ background: themeColors.background }}>
+        <div style={{ color: themeColors.text }}>No writing data available</div>
+      </div>
+    );
+  }
+  
+  // Ensure currentTaskType is set (use first task as fallback)
+  const effectiveTaskType = currentTaskType || currentWriting.writing_tasks[0]?.task_name;
+  const currentTask = displayWriting.writing_tasks.find(
+    (t) => t.task_name === effectiveTaskType
+  );
+  if (!effectiveTaskType) {
+    return (
+      <div className="flex items-center justify-center h-screen" style={{ background: themeColors.background }}>
+        <div style={{ color: themeColors.text }}>No tasks available</div>
+      </div>
+    );
+  }
+  
+  // If we have a currentTaskType but no matching task, try to use the first task
+  const taskToDisplay = currentTask || currentWriting.writing_tasks.find(t => t.task_name === effectiveTaskType) || currentWriting.writing_tasks[0];
+  if (!taskToDisplay) {
+    return (
+      <div className="flex items-center justify-center h-screen" style={{ background: themeColors.background }}>
+        <div style={{ color: themeColors.text }}>Task not found</div>
+      </div>
+    );
+  }
+  
+  console.log("[WritingPracticePage] currentTask", taskToDisplay, "currentTaskType", currentTaskType, "effectiveTaskType", effectiveTaskType, "status", status, "answers", answers);
   /* ================= RENDER ================= */
   return (
     <div className="flex flex-col h-screen" style={{ background: themeColors.background }}>
       <TextSelectionTooltip
         universalContentRef={universalContentRef}
-        partId={currentTaskType}
+        partId={taskToDisplay.task_name}
         onHighlight={handleHighlight}
         onNote={handleNote}
         testType="writing"
       />
 
       <QuestionHeader
-        currentTest={currentWriting}
+        currentTest={displayWriting}
         id={id}
         timeRemaining={isPracticeMode ? timeRemaining : null} // Hide timer if not in practice mode
         isStarted={isStarted}
         isPaused={isPaused}
         handleStart={handleTryPractice}
         handlePause={() => setIsPaused((p) => !p)}
-        onBack={() => navigate(-1)}
+        onBack={handleBack}
         type="Writing"
-        status="taking"
-        showTryPractice={!isPracticeMode && !isStarted} // Show "Try practice" button when not in practice mode
+        status={status}
+        showTryPractice={!isPracticeMode && !isStarted && status === 'taking'}
+        showCorrectAnswers={false}
+        onToggleShowCorrect={() => {}}
+        handleRedoTask={status === 'reviewing' ? handleRetakeTask : undefined}
       />
 
       <div className="flex flex-1 overflow-hidden" ref={containerRef}>
         <div className="flex w-full items-stretch p-4 gap-2 overflow-hidden" ref={universalContentRef}>
-          {/* LEFT */}
+          {/* LEFT - Show question content in all modes including review */}
           <div
             className="border overflow-y-auto rounded-2xl px-4 pt-1 pb-10 h-full scrollbar-hide"
             style={{ width: `${leftWidth}%`, borderColor: themeColors.border }}
@@ -460,31 +819,33 @@ const WritingPracticePageContent = () => {
                     className="text-base font-bold"
                     style={{ color: themeColors.text }}
                   >
-                    IELTS Writing Practice - {currentTask.title}
+                    IELTS Writing Practice - {taskToDisplay.title}
                   </span>
                 </div>
 
               </div>
             </div>
-            <div className="m-5 p-4 border rounded-lg text-justify" ref={passageRef}>
-              <h1 className="text-2xl font-bold">{currentTask.title}</h1>
-              <p className="text-sm text-gray-500 my-4">{parse(currentTask.content || "")}</p>
+            <div className="border rounded-lg text-justify" ref={passageRef}>
+              <div className="p-6 m-5">
+              <h1 className="text-2xl font-bold">{taskToDisplay.title}</h1>
+              <p className="text-sm text-gray-500 my-4">{parse(taskToDisplay.content || "")}</p>
               {/* IMAGE */}
-              {currentTask.image_url && (
+              {taskToDisplay.image_url && (
                 <div className="p-6 border-t border-gray-300 w-full">
                   <img
-                    src={currentTask.image_url}
-                    alt={currentTask.title}
+                    src={taskToDisplay.image_url}
+                    alt={taskToDisplay.title}
                     className="w-full max-h-[500px] object-contain rounded-2xl"
-                  />
+                    />
                 </div>
               )}
+              </div>
 
               {/* feedback */}
-              {currentTask.feedback && (
+              {taskToDisplay.feedback && (
                 <div className="p-6 border-t border-gray-300 w-full">
                   <h3 className="text-xl font-semibold mb-4">Feedback</h3>
-                  {parse(currentTask.feedback || "")}
+                  {parse(taskToDisplay.feedback || "")}
                 </div>
               )}
             </div>
@@ -514,25 +875,45 @@ const WritingPracticePageContent = () => {
           {/* RIGHT */}
           <div
             className="border flex flex-col rounded-2xl overflow-hidden h-full"
-           style={{ width: `${100 - leftWidth}%`, borderColor: themeColors.border }}
+            style={{ width: `${100 - leftWidth}%`, borderColor: themeColors.border }}
           >
             {isPracticeMode ? (
               // Practice mode: show textarea for user input
               <>
                 <textarea
+                  spellcheck="false"
                   className="flex-1 p-8 resize-none outline-none"
                   placeholder="Write your answer here..."
-                  value={answers[currentTaskType] || ""}
+                  value={answers[effectiveTaskType] || ""}
                   onChange={handleTextChange}
-                  disabled={isPaused}
+                  disabled={isPaused || status === 'reviewing'}
                   style={{
                     fontSize: `${fontSizeValue.base}px`,
                     backgroundColor: themeColors.background,
                     color: themeColors.text,
                   }}
                 />
-                
+
               </>
+            ) : status === 'reviewing' ? (
+              // Review mode: show user's saved answer from user_attempts.correct_answers
+              <div className="flex-1 p-8 overflow-y-auto">
+                {isLoadingReview ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div style={{ color: themeColors.text }}>Loading your answer...</div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: `${fontSizeValue.base}px`,
+                      color: themeColors.text,
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
+                    {answers[effectiveTaskType] ? answers[effectiveTaskType] : "No answer submitted for this task."}
+                  </div>
+                )}
+              </div>
             ) : (
               // Preview mode: show sample
               <div className="flex-1 p-8 overflow-y-auto">
@@ -543,16 +924,22 @@ const WritingPracticePageContent = () => {
                     whiteSpace: 'pre-wrap',
                   }}
                 >
-                  {currentTask.sample || "Sample answer will appear here..."}
+                  {taskToDisplay.sample || "Sample answer will appear here..."}
                 </div>
               </div>
             )}
             <div className="px-6 py-4 border-t flex justify-between text-sm font-semibold">
-                  <span>WORD COUNT: { isPracticeMode ? countWords(answers[currentTaskType] || "") : countWords(currentTask.sample || "")}</span>
-                  <span className="text-red-500">
-                    MINIMUM: {currentTaskType === "Task 1" ? 150 : 250} WORDS
-                  </span>
-                </div>
+              <span>WORD COUNT: {
+                isPracticeMode
+                  ? countWords(answers[effectiveTaskType] || "")
+                  : status === 'reviewing'
+                    ? countWords(answers[effectiveTaskType] || "")
+                    : countWords(taskToDisplay.sample || "")
+              }</span>
+              <span className="text-red-500">
+                MINIMUM: {effectiveTaskType === "Task 1" ? 150 : 250} WORDS
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -567,14 +954,14 @@ const WritingPracticePageContent = () => {
       >
         {/* TASK SWITCHER */}
         <div className="flex justify-center items-center w-full h-full">
-          {currentWriting.writing_tasks.length > 1 ? (
-            currentWriting.writing_tasks.map((task) => {
-              const isActive = currentTaskType === task.task_type;
+          {displayWriting?.writing_tasks && displayWriting.writing_tasks.length > 1 ? (
+            displayWriting.writing_tasks.map((task) => {
+              const isActive = effectiveTaskType === task.task_name;
 
               return (
                 <div
                   key={task.id}
-                  onClick={() => setCurrentTaskType(task.task_type)}
+                  onClick={() => setCurrentTaskType(task.task_name)}
                   className={`relative flex flex-col items-center justify-center gap-1 h-full transition-all transform w-full cursor-pointer`}
                   style={{
                     backgroundColor: isActive ? '#E0E0E0' : themeColors.background,
@@ -587,7 +974,7 @@ const WritingPracticePageContent = () => {
                       opacity: isActive ? 1 : 0.5,
                     }}
                   >
-                    {task.task_type}
+                    {task.task_name}
                   </span>
                 </div>
               );
@@ -597,30 +984,42 @@ const WritingPracticePageContent = () => {
               className="px-4 py-2 text-xs font-bold uppercase tracking-widest"
               style={{ color: themeColors.text, opacity: 0.5 }}
             >
-              {currentTaskType}
+              {effectiveTaskType}
             </div>
           )}
         </div>
 
-        {/* FINISH BUTTON - Only show in practice mode */}
-        {isPracticeMode && (
+        {/* FINISH BUTTON - Only show in practice mode and not in review */}
+        {isPracticeMode && status === 'taking' && !isAutoSubmitting && (
           <div className="flex justify-end ml-auto fixed right-5 bottom-1">
             <button
               onClick={handleFinish}
-              disabled={savingAttempt || isSaving}
+              disabled={savingAttempt || isSaving || isAutoSubmitting}
               className="bg-green-600 p-2 text-white rounded-lg font-bold hover:bg-green-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Finish Writing
             </button>
           </div>
         )}
+
+        {/* RETAKE BUTTON - Show in review mode */}
+        {status === 'reviewing' && (
+          <div className="flex justify-end ml-auto fixed right-5 bottom-1">
+            <button
+              onClick={handleRetakeTask}
+              className="bg-blue-600 p-2 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-lg"
+            >
+              Retake Task
+            </button>
+          </div>
+        )}
       </footer>
 
-      {/* LOADING OVERLAY */}
-      {(savingAttempt || isSaving) && (
+      {/* LOADING OVERLAY - Exclude auto-submit */}
+      {(savingAttempt || isSaving) && !isAutoSubmitting && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto"
-          style={{ backgroundColor: 'rgba(128, 128, 128, 0.5)' }}
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
           onClick={(e) => e.stopPropagation()}
         >
           <div
@@ -660,6 +1059,12 @@ const WritingPracticePageContent = () => {
                 Please wait while we save your work...
               </p>
               <div className="space-y-2 mt-4">
+                <p
+                  className="text-sm font-semibold text-red-500"
+                  style={{ color: '#ef4444' }}
+                >
+                  ⚠️ Do not close or refresh this page!
+                </p>
                 <p
                   className="text-sm"
                   style={{ color: themeColors.text, opacity: 0.7 }}
@@ -705,6 +1110,7 @@ const WritingPracticePageContent = () => {
         onDownloadPDF={handleDownloadPDF}
         pdfLoading={isPdfLoading}
         writingId={id}
+        onGoToHistory={() => navigate("/writing/writing-history")}
       />
 
       <NoteSidebar />

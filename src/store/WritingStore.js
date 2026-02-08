@@ -14,10 +14,15 @@ export const useWritingStore = create((set) => ({
   fetchWritings: async () => {
     set({ loadingWritings: true, errorWritings: null });
     try {
-      const { data, error } = await supabase
+      const { data,
+        
+        
+        error } = await supabase
         .from("writings")
         .select("*")
         .order("created_at", { ascending: false });
+
+        console.log("[useWritingStore] fetchWritings data", data);
 
       /// writings table
       /// columns: id, title, duration, difficulty , created_at, updated_at, feedback, is_active, is_premium
@@ -63,7 +68,7 @@ export const useWritingStore = create((set) => ({
       //    This can only be Task 1 or Task 2, sometimes there will be 2.      //     { "id": "task-id-1", 
       //   "writing_tasks": [
       //       "writing_id": "writing-id-1",
-      //       "task_type": "Task 1", only Task 1, Task 2 are available
+      //       "task_name": "Task 1", only Task 1, Task 2 are available
       //       "title": "...",
       //       "image_url": "...", only for TASK_1
       //       "content": "...",
@@ -72,7 +77,7 @@ export const useWritingStore = create((set) => ({
       //     },
       //     { "id": "task-id-2",
       //       "writing_id": "writing-id-1",
-      //       "task_type": "Task 2",
+      //       "task_name": "Task 2",
       //       "title": "...",
       //       "content": "...",
       //       "sample": "...",

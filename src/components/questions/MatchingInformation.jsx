@@ -258,16 +258,7 @@ const sortedQuestions = useMemo(() => {
         </h2>
       )} */}
 
-      {/* Instructions */}
-      {instructionText && (
-        <div 
-          className="text-sm leading-relaxed"
-          data-selectable="true"
-          style={{ color: themeColors.text }}
-        >
-          {parse(instructionText, { allowDangerousHtml: true })}
-        </div>
-      )}
+     
 
       {/* Answer Options Box */}
       {answerOptions.length > 0 && (
@@ -357,7 +348,7 @@ const sortedQuestions = useMemo(() => {
                 backgroundColor: 'transparent'
               }}
             >
-              <div className="flex items-start gap-2 flex-1">
+              <div className="flex items-center gap-2 flex-1">
                 <span 
                   className="font-medium"
                   style={{ color: themeColors.text }}
@@ -378,7 +369,7 @@ const sortedQuestions = useMemo(() => {
                 )}
                 {showWrong && correctAnswerText && showCorrectAnswers && (
                   <span className="text-xs text-green-600 font-medium ml-2">
-                    Correct: {correctAnswerText}
+                    {correctAnswerText}
                   </span>
                 )}
               </div>
@@ -422,8 +413,7 @@ const sortedQuestions = useMemo(() => {
                           // Use actual option_key from data
                           optionKeyList.map((item, idx) => {
                             const isSelected = selectedAnswer === item.text;
-                            const isCorrectOption = isReviewMode && 
-                              item.text.toLowerCase() === (correctAnswerText || '').toLowerCase().trim();
+                    
                             
                             return (
                               <SelectItem
@@ -447,6 +437,7 @@ const sortedQuestions = useMemo(() => {
                         ) : (
                           // Fallback: Generate display key based on option_key_type
                           answerOptions.map((optionText, idx) => {
+                            console.log(optionText);
                             let displayKey = '';
                             if (optionKeyType === 'numeric') {
                               displayKey = String(idx + 1);
@@ -457,9 +448,7 @@ const sortedQuestions = useMemo(() => {
                             }
                             
                             const isSelected = selectedAnswer === optionText;
-                            const isCorrectOption = isReviewMode && 
-                              optionText.toLowerCase() === (correctAnswerText || '').toLowerCase().trim();
-                            
+                           
                             return (
                               <SelectItem
                                 key={idx}

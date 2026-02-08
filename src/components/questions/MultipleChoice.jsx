@@ -194,7 +194,7 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                 ? "bg-green-100 border-2 border-green-500 text-green-900"
                 : isSelected && showWrong
                 ? "bg-red-100 border-2 border-red-500 text-red-900"
-                : isCorrectOption && isReviewMode
+                : isCorrectOption && isReviewMode && showCorrectAnswers
                 ? "bg-green-50 border border-green-300 text-green-700"
                 : isSelected
                 ? "bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-300"
@@ -223,11 +223,11 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                 Wrong
               </span>
             )}
-            {isSelected && showWrong && correctAnswer && showCorrectAnswers && (
+            {/* {isSelected && showWrong && correctAnswer && showCorrectAnswers && (
               <span className="text-xs text-green-600 font-medium ml-2">
                 Correct: {correctAnswer}
               </span>
-            )}
+            )} */}
             {isCorrectOption && isReviewMode && !isSelected && correctAnswer && showCorrectAnswers && (
               <span className="text-xs text-green-700 font-medium">Correct Answer</span>
             )}

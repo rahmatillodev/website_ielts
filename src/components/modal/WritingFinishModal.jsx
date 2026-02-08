@@ -40,7 +40,7 @@ const WritingFinishModal = ({
             className="font-medium pt-2"
             style={{ color: themeColors.text, opacity: 0.8 }}
           >
-            Are you sure you want to finish your writing? Your work will be saved.
+            Are you sure you want to finish your writing? You can download it as PDF.
           </AlertDialogDescription>
         </AlertDialogHeader>
         

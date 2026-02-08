@@ -18,32 +18,24 @@ const SignalBars = ({ level = 1 }) => (
   </span>
 );
 
-const CardOpen = ({
+const ComplatedCard = ({
   id,
   title,
   difficulty,
   duration,
-  question_quantity,
   isCompleted,
   created_at,
+  completed_at,
   date,
   isGridView,
-  link,
   is_premium,
   testType = 'reading', // 'reading' or 'listening'
+  isOwnWriting = false, // For own writings, hide retake button
 }) => {
   const navigate = useNavigate();
 
   // Get completion status from dashboardStore (no API call needed)
-  const completionData = useDashboardStore((state) => state.getCompletion(id));
 
-  const hasCompleted = useMemo(() => {
-    return completionData?.isCompleted || false;
-  }, [completionData]);
-
-  const attemptData = useMemo(() => {
-    return completionData?.attempt || null;
-  }, [completionData]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -56,6 +48,14 @@ const CardOpen = ({
     }
   };
 
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
   const handleStartTest = (e) => {
     // Clear localStorage when starting a new test
     if (id) {
@@ -63,18 +63,12 @@ const CardOpen = ({
         clearListeningPracticeData(id);
       } else if (testType === 'reading') {
         clearReadingPracticeData(id);
-      } else if (testType === 'speaking') {
+      } else if (testType === 'writing') {
         // clearWritingPracticeData(id);
       }
     }
     // Navigate using navigate to ensure localStorage is cleared first
-    const practiceLink = testType === 'listening'
-      ? `/listening-practice/${id}`
-      : (testType === 'reading'
-        ? `/reading-practice/${id}`
-        : testType === 'speaking'
-          ? `/speaking-practice/${id}`
-          : `/writing-practice/${id}`);
+    const practiceLink =  `/writing-practice/${id}`;
     navigate(practiceLink);
   };
 
@@ -90,8 +84,8 @@ const CardOpen = ({
       navigate(`/listening-practice/${id}`);
     } else if (testType === 'reading') {
       navigate(`/reading-practice/${id}`);
-    } else if (testType === 'speaking') {
-      navigate(`/speaking-practice/${id}`);
+    } else if (testType === 'writing') {
+      navigate(`/writing-practice/${id}`);
     }
   };
 
@@ -100,23 +94,19 @@ const CardOpen = ({
       navigate(`/listening-practice/${id}?mode=review`);
     } else if (testType === 'reading') {
       navigate(`/reading-practice/${id}?mode=review`);
-    } else if (testType === 'speaking') {
-      navigate(`/speaking-practice/${id}?mode=review`);
+    } else if (testType === 'writing') {
+      navigate(`/writing-practice/${id}?mode=review`);
     }
   };
   
   const cardStatus = is_premium ? "Premium" : "Free";
   const createdDate = created_at ? formatDate(created_at) : '';
-  const completedDate = attemptData?.completed_at ? formatDate(attemptData.completed_at) : (date ? formatDate(date) : '');
-
-  const score = attemptData?.score || null;
-  const correctAnswers = attemptData?.correct_answers || 0;
-  const totalQuestions = attemptData?.total_questions || question_quantity || 0;
+  const completedDate = completed_at ? formatDate(completed_at) : (date ? formatDate(date) : '');
 
   // Container classes with green border for completed tests
   const containerClass = isGridView
-    ? `bg-white border ${hasCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-blue-500'} rounded-2xl md:rounded-[32px] p-2 md:p-7 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
-    : `bg-white border border-l-4 ${hasCompleted ? 'border-l-green-500' : is_premium ? 'border-l-amber-400' : 'border-l-blue-500'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 mb-4 relative`;
+    ? `bg-white border ${isCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-blue-500'} rounded-2xl md:rounded-[32px] p-4 md:p-7 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
+    : `bg-white border border-l-4 ${isCompleted ? 'border-l-green-500' : is_premium ? 'border-l-amber-400' : 'border-l-blue-500'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 mb-4 relative`;
 
   // Animation variants for hover effect
   const cardVariants = {
@@ -150,24 +140,24 @@ const CardOpen = ({
         }
 
         {/* Score Badge for Completed */}
-        {hasCompleted && (
-          <div className="absolute top-10 md:top-12 right-3 md:right-6 z-10">
-            <div className="bg-white border border-gray-200 w-12 md:w-16 h-12 md:h-16 rounded-full p-2 md:p-4 flex items-center justify-center flex-col shadow-sm">
+        {isCompleted && (
+          <div className="absolute top-10 md:top-12 right-3 md:right-5 z-10">
+            <div className="bg-white border border-gray-200 w-12 md:w-18 h-12 md:h-18 rounded-full p-2 md:p-4 flex items-center justify-center flex-col shadow-sm">
               <p className="text-[10px] md:text-xs text-gray-500 font-semibold">Score</p>
-              <p className="text-sm md:text-xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</p>
+              <p className="text-sm md:text-xl font-black text-green-600">{'--'}</p>
             </div>
           </div>
         )}
 
         <div className="flex flex-col flex-1">
           {/* Icon */}
-          <div className={`size-12 md:size-16 mb-4 md:mb-6 rounded-xl md:rounded-2xl ${hasCompleted
+          <div className={`size-12 md:size-16 mb-4 md:mb-6 rounded-xl md:rounded-2xl ${isCompleted
             ? 'bg-green-50 text-green-500'
             : is_premium
               ? 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-500'
               : 'bg-blue-50 text-blue-500'
             } flex items-center justify-center shrink-0`}>
-            {hasCompleted ? (
+            {isCompleted ? (
               <MdCheckCircle className="text-2xl md:text-3xl" />
             ) : (
               testType === 'listening' ? (
@@ -186,13 +176,13 @@ const CardOpen = ({
               {title}
             </h3>
 
-            {hasCompleted && (
+            {isCompleted && (
               <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
                 Completed on {completedDate}
               </p>
             )}
 
-            {createdDate && !hasCompleted && (
+            {createdDate && !isCompleted && (
               <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
                 Created on {createdDate}
               </p>
@@ -204,38 +194,29 @@ const CardOpen = ({
                 <span className="text-gray-600">{difficulty || "—"}</span>
               </span>
               <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                <MdTimer className="text-[10px] md:text-xs" /> {duration} min
+                <MdTimer className="text-[10px] md:text-xs" /> {formatTime(duration)}
               </span>
-              {hasCompleted ? (
-                <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                  <MdQuiz className="text-[10px] md:text-xs" /> {correctAnswers}/{totalQuestions} Correct
-                </span>
-              ) : (
-                question_quantity != null && (
-                  <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                    <MdQuiz className="text-[10px] md:text-xs" /> {question_quantity} {question_quantity === 1 ? "question" : "questions"}
-                  </span>
-                )
-              )}
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        {hasCompleted ? (
-          <div className="mt-4 md:mt-6 flex gap-2 md:gap-3 w-full">
+        {isCompleted ? (
+          <div className={`mt-4 md:mt-6 flex gap-2 md:gap-3 w-full ${isOwnWriting ? 'justify-center' : ''}`}>
             <button
               onClick={handleReview}
-              className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs md:text-sm font-semibold rounded-lg md:rounded-xl transition-all"
+              className={`${isOwnWriting ? 'flex-1 max-w-xs' : 'flex-1'} py-2.5 md:py-3 px-3 md:px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs md:text-sm font-semibold rounded-lg md:rounded-xl transition-all`}
             >
               Review
             </button>
-            <button
-              onClick={handleRetake}
-              className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
-            >
-              Retake <HiOutlinePlay className="text-sm md:text-base" />
-            </button>
+            {!isOwnWriting && (
+              <button
+                onClick={handleRetake}
+                className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
+              >
+                Retake <HiOutlinePlay className="text-sm md:text-base" />
+              </button>
+            )}
           </div>
         ) : (
           <button
@@ -256,11 +237,11 @@ const CardOpen = ({
         whileHover="hover"
       >
         {/* Icon */}
-        <div className={`size-10 md:size-14 rounded-xl md:rounded-2xl ${hasCompleted
+        <div className={`size-10 md:size-14 rounded-xl md:rounded-2xl ${isCompleted
           ? 'bg-green-50 text-green-500'
           : 'bg-blue-50 text-blue-400'
           } flex items-center justify-center shrink-0`}>
-          {hasCompleted ? (
+          {isCompleted ? (
             <MdCheckCircle className="text-2xl md:text-3xl" />
           ) : (
             testType === 'listening' ? (
@@ -289,13 +270,13 @@ const CardOpen = ({
 
           </div>
 
-          {hasCompleted && (
+          {isCompleted && (
             <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
               Completed on {completedDate}
             </p>
           )}
 
-          {createdDate && !hasCompleted && (
+          {createdDate && !isCompleted && (
             <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
               Created on {createdDate}
             </p>
@@ -307,28 +288,17 @@ const CardOpen = ({
               <span className="text-gray-600">{difficulty || "—"}</span>
             </span>
             <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-              <MdTimer className="text-[10px] md:text-xs" /> {duration} min
+              <MdTimer className="text-[10px] md:text-xs" /> {formatTime(duration)}
             </span>
-            {hasCompleted ? (
-              <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                <MdQuiz className="text-[10px] md:text-xs" /> {correctAnswers}/{totalQuestions} Correct
-              </span>
-            ) : (
-              question_quantity != null && (
-                <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                  <MdQuiz className="text-[10px] md:text-xs" /> {question_quantity} {question_quantity === 1 ? "question" : "questions"}
-                </span>
-              )
-            )}
           </div>
         </div>
 
         <div className="flex items-center gap-3 md:gap-6 shrink-0">
-          {hasCompleted ? (
+          {isCompleted ? (
             <>
               <div className="flex flex-col items-end border-l border-gray-200 pl-3 md:pl-6">
                 <span className="text-[10px] md:text-xs text-gray-500 font-semibold mb-1">Score</span>
-                <span className="text-xl md:text-2xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
+                <span className="text-xl md:text-2xl font-black text-green-600">{'--'}</span>
               </div>
               <div className="flex flex-col gap-1.5 md:gap-2 mr-2 md:mr-4">
                 <button
@@ -337,12 +307,14 @@ const CardOpen = ({
                 >
                   Review
                 </button>
-                <button
-                  onClick={handleRetake}
-                  className="py-1 text-xs md:text-sm font-semibold text-blue-400 hover:text-blue-700 transition-all text-left"
-                >
-                  Retake Test
-                </button>
+                {!isOwnWriting && (
+                  <button
+                    onClick={handleRetake}
+                    className="py-1 text-xs md:text-sm font-semibold text-blue-400 hover:text-blue-700 transition-all text-left"
+                  >
+                    Retake Test
+                  </button>
+                )}
               </div>
             </>
           ) : (
@@ -359,4 +331,4 @@ const CardOpen = ({
   }
 };
 
-export default CardOpen;
+export default React.memo(ComplatedCard);

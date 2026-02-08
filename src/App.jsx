@@ -30,6 +30,8 @@ import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
 
 import SpeakingPage from "./pages/dashboard/speaking/SpeakingPage";
 import SpeakingPracticePage from "./pages/dashboard/speaking/SpeakingPracticePage";
+import SpeakingTaskPage from "./pages/dashboard/speaking/speakingtypes/textToSpeach/SpeakingTaskPage";
+import SpeakingResultPage from "./pages/dashboard/speaking/SpeakingResultPage";
 
 import ProfilePage from "./pages/dashboard/ProfilePage";
 import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
@@ -91,6 +93,7 @@ function App() {
     location.pathname.startsWith("/listening-practice") ||
     location.pathname.startsWith("/writing-practice") ||
     location.pathname.startsWith("/speaking-practice") ||
+    location.pathname.startsWith("/speaking-result") ||
     location.pathname.startsWith("/own-writing");
 
   if (loading && !isInitialized) {
@@ -133,6 +136,8 @@ function App() {
             <Route path="/speaking" element={<SpeakingPage />} />
             <Route path="/speaking-practice/:id" element={<SpeakingPracticePage />} />
             <Route path="/speaking-practice" element={<SpeakingPracticePage />} />
+            <Route path="/speaking-practice/:id/session" element={<SpeakingTaskPage />} />
+            <Route path="/speaking-result/:id" element={<SpeakingResultPage />} />
 
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />

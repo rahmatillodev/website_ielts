@@ -74,6 +74,7 @@ function SignUpPage() {
           </div>
 
           <h1 className="text-3xl font-semibold mb-2 text-gray-900">
+          
             Create an account
           </h1>
           <p className="text-gray-600 mb-8">

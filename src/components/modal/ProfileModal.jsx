@@ -141,7 +141,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
 
     // Validate phone number format only if provided
     const phoneNumber = formData.phone_number.trim();
-    if (phoneNumber && phoneNumber.length !== 13) {
+    if (phoneNumber.length > 5 && phoneNumber.length !== 13) {
       toast.error("Iltimos, telefon raqamini to'liq kiriting (+998XXXXXXXXX)");
       setLoading(false);
       return;

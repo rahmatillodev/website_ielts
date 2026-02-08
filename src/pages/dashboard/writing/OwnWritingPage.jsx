@@ -13,9 +13,11 @@ import { PenSquare, X } from "lucide-react";
 import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
 import AppearanceSettingsModal from "@/components/modal/AppearanceSettingsModal";
 import WritingFinishModal from "@/components/modal/WritingFinishModal";
+import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
 import { toast } from "react-toastify";
 import { useSettingsStore } from "@/store/systemStore";
+import { Button } from "@/components/ui/button";
 
 const OwnWritingPageContent = () => {
   const navigate = useNavigate();
@@ -30,6 +32,8 @@ const OwnWritingPageContent = () => {
   const [leftWidth, setLeftWidth] = useState(45);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFinishOpen, setIsFinishOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   const containerRef = useRef(null);
   const isResizing = useRef(false);
@@ -102,17 +106,14 @@ const OwnWritingPageContent = () => {
     }
   };
 
-  /* ================= QUESTION TEXTAREA AUTO-GROW (scroll in wrapper, not page) ================= */
+  /* ================= QUESTION TEXTAREA AUTO-GROW (grows with content, parent scrolls) ================= */
   const autosizeQuestionTextarea = (el) => {
     if (!el) return;
     el.style.height = "auto";
     const MIN_PX = 200;
     const nextHeight = Math.max(el.scrollHeight, MIN_PX);
-    const MAX_PX = 500;
-    const clampedHeight = Math.min(nextHeight, MAX_PX);
-    el.style.height = `${clampedHeight}px`;
-    // After max height, allow internal textarea scroll (still inside writing area)
-    el.style.overflowY = nextHeight > MAX_PX ? "auto" : "hidden";
+    el.style.height = `${nextHeight}px`;
+    el.style.overflowY = "hidden";
   };
 
   useEffect(() => {
@@ -128,10 +129,16 @@ const OwnWritingPageContent = () => {
     e.preventDefault();
 
     // Only Task 1 accepts image drop
-    if (activeTask !== "task1") return;
+    if (activeTask !== "task1") {
+      toast.warning("Images can only be uploaded for Task 1");
+      return;
+    }
 
     const file = e.dataTransfer?.files?.[0];
-    if (!file || !file.type?.startsWith("image/")) return;
+    if (!file || !file.type?.startsWith("image/")) {
+      toast.error("Please drop a valid image file");
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -143,6 +150,10 @@ const OwnWritingPageContent = () => {
           image: base64,
         },
       }));
+      toast.success("Image uploaded successfully");
+    };
+    reader.onerror = () => {
+      toast.error("Failed to read image file");
     };
     reader.readAsDataURL(file);
   };
@@ -184,7 +195,7 @@ const OwnWritingPageContent = () => {
           <button
             onClick={() => setIsRunning((p) => !p)}
             disabled={isSubmitted}
-            className="px-4 py-2 bg-blue-500 text-white rounded"
+            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRunning ? "Pause" : "Start"}
           </button>
@@ -211,9 +222,9 @@ const OwnWritingPageContent = () => {
         ref={containerRef}
         className="flex flex-1 overflow-hidden p-3 gap-2"
       >
-        {/* ===== LEFT (STATIC HEIGHT) ===== */}
+        {/* ===== LEFT (GROW AND SCROLL AS DATA GROWS) ===== */}
         <div
-          className="border rounded-2xl p-6 flex flex-col flex-none relative z-0 h-full overflow-hidden"
+          className="border rounded-2xl p-6 flex flex-col relative z-0 overflow-auto min-h-0 h-full"
           style={{
             width: `${leftWidth}%`,
             borderColor: themeColors.border,
@@ -221,23 +232,23 @@ const OwnWritingPageContent = () => {
           }}
         >
           {/* TOP INFO CARD */}
-          <div className="shrink-0 rounded-xl border border-slate-200 bg-slate-100 p-4 mb-4">
+          <div className="shrink-0 rounded-xl border border-slate-200 p-4 mb-4">
             <div className="flex items-center gap-2">
               <PenSquare className="w-5 h-5" />
               <span className="text-base font-bold">
                 IELTS Writing Practice - {activeTask === "task1" ? "Task 1" : "Task 2"}
               </span>
             </div>
-            <div className="text-sm text-slate-600 mt-1">
+            <div className="text-sm mt-1">
               Create your own writing task and practice at your own pace
             </div>
           </div>
 
-          {/* WRITING BLOCK (single scroll container: textarea + image) */}
-          <div className="w-full  h-full rounded-lg overflow-auto p-2 relative">
+          {/* WRITING BLOCK (textarea + image) */}
+          <div className="w-full rounded-lg relative flex flex-col gap-2">
             <textarea
               ref={questionTextareaRef}
-              className="w-full h-64 border resize-none border-gray-300 rounded-lg p-2 relative"
+              className="w-full border border-gray-300 bg-amber-500 rounded-lg p-2 focus:ring-0 focus:border-blue-500 resize-none min-h-[10px] shrink-0"
               placeholder={
                 activeTask === "task1"
                   ? "Type your writing task question here...\n\nTip: You can drag & drop image"
@@ -261,16 +272,16 @@ const OwnWritingPageContent = () => {
 
             {/* IMAGE PREVIEW (Task 1 only) */}
             {activeTask === "task1" && tasks.task1.image && (
-              <div className="rounded-xl border border-gray-200 overflow-hidden bg-white max-w-full">
+              <div className="rounded-xl border border-gray-300 overflow-hidden max-w-full mt-2 shrink-0">
                 <div className="flex justify-end p-2">
-                  <button
+                  <Button
                     type="button"
                     onClick={handleRemoveQuestionImage}
-                    className="w-8 h-8 rounded-full bg-white hover:bg-gray-50 border border-gray-200 flex items-center justify-center"
+                    className="w-8 h-8 rounded-full hover:bg-gray-50 border border-gray-200 flex items-center justify-center"
                     title="Remove image"
                   >
                     <X className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
                 <img
                   src={tasks.task1.image}
@@ -302,16 +313,18 @@ const OwnWritingPageContent = () => {
 
         {/* ===== RIGHT (FULL HEIGHT) ===== */}
         <div
-          className="flex flex-col border border-[color:var(--panel-border)] rounded-2xl p-6 overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 relative z-0"
+          className="flex flex-col border border-[color:var(--panel-border)] rounded-2xl overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 relative z-0"
           style={{
             width: `${100 - leftWidth}%`,
             "--panel-border": themeColors.border,
           }}
         >
           <textarea
-            className="flex-1 resize-none outline-none bg-transparent p-4"
+            className="flex-1 p-5 resize-none outline-none bg-transparent focus:ring-0 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Write your answer here..."
             value={currentTask.answer}
+            disabled={isSubmitted}
+            style={{ backgroundColor: themeColors.background }}
             onChange={(e) =>
               setTasks((p) => ({
                 ...p,
@@ -321,11 +334,11 @@ const OwnWritingPageContent = () => {
                 },
               }))
             }
-            onFocus={() => !isRunning && setIsRunning(true)}
+            onFocus={() => !isRunning && !isSubmitted && setIsRunning(true)}
           />
 
           <div
-            className="shrink-0 flex justify-between text-sm mt-3 pt-3 border-t"
+            className="shrink-0 flex justify-between text-sm mt-3 p-4 border-t"
             style={{ borderColor: themeColors.border }}
           >
             <span>
@@ -353,7 +366,8 @@ const OwnWritingPageContent = () => {
             <button
               key={t}
               onClick={() => setActiveTask(t)}
-              className="flex-1 py-3 font-semibold"
+              disabled={isSubmitted}
+              className="flex-1 py-3 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 background: activeTask === t ? "#e5e7eb" : "transparent",
               }}
@@ -365,7 +379,8 @@ const OwnWritingPageContent = () => {
 
         <button
           onClick={() => setIsFinishOpen(true)}
-          className="mr-4 px-6 py-2 bg-green-600 text-white rounded"
+          disabled={isSubmitted}
+          className="mr-4 px-6 py-2 bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Save
         </button>
@@ -380,7 +395,57 @@ const OwnWritingPageContent = () => {
       <WritingFinishModal
         isOpen={isFinishOpen}
         onClose={() => setIsFinishOpen(false)}
-        onSubmit={() => setIsSubmitted(true)}
+        onConfirm={async () => {
+          // Close modal first
+          setIsFinishOpen(false);
+          
+          // Stop timer and disable button
+          setIsRunning(false);
+          setIsSubmitted(true);
+
+          try {
+            // Check if at least one task has content
+            const hasTask1 = tasks.task1.answer && tasks.task1.answer.trim();
+            const hasTask2 = tasks.task2.answer && tasks.task2.answer.trim();
+            
+            if (!hasTask1 && !hasTask2) {
+              toast.error('Please write at least one word in either Task 1 or Task 2 before generating PDF.');
+              setIsSubmitted(false);
+              setIsRunning(true);
+              return;
+            }
+
+            // Show success modal which will allow PDF download
+            setIsSuccessModalOpen(true);
+          } catch (error) {
+            console.error('Error preparing PDF:', error);
+            setIsSubmitted(false);
+            setIsRunning(true);
+            toast.error('An error occurred while preparing your writing');
+          }
+        }}
+        loading={false}
+      />
+
+
+      {/* SUCCESS MODAL */}
+      <WritingSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        onDownloadPDF={async () => {
+          setIsPdfLoading(true);
+          try {
+            await generateWritingPDF(tasks, formatTime(elapsedTime), settings);
+            toast.success('PDF downloaded successfully');
+          } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast.error('Failed to generate PDF');
+          } finally {
+            setIsPdfLoading(false);
+          }
+        }}
+        pdfLoading={isPdfLoading}
+        onGoToHistory={() => navigate("/writing/writing-history")}
       />
     </div>
   );

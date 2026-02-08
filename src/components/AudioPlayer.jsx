@@ -4,7 +4,7 @@ import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { saveAudioPosition, loadAudioPosition, clearAudioPosition } from "@/store/LocalStorage/listeningStorage";
 
-const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded, autoPlay = false, testId = null }, ref) => {
+const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded, onPlay, autoPlay = false, testId = null }, ref) => {
     const { themeColors } = useAppearance();
     const audioRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -222,6 +222,21 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
             audio.removeEventListener('ended', handleEnded);
         };
     }, [onAudioEnded, isTestMode]);
+
+    // Listen for play event to trigger onPlay callback
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio || !onPlay) return;
+
+        const handlePlay = () => {
+            onPlay();
+        };
+
+        audio.addEventListener('play', handlePlay);
+        return () => {
+            audio.removeEventListener('play', handlePlay);
+        };
+    }, [onPlay]);
 
     useEffect(() => {
         if (audioRef.current) {

@@ -74,6 +74,11 @@ const ReadingPracticePageContent = () => {
 
     let isMounted = true;
 
+    // Cancel any previous request and clear current test
+    const { cancelFetch, clearCurrentTest } = useTestStore.getState();
+    cancelFetch();
+    clearCurrentTest();
+
     const loadTestData = async () => {
       try {
         const isReviewMode = status === 'reviewing';
@@ -119,7 +124,8 @@ const ReadingPracticePageContent = () => {
     return () => {
       isMounted = false;
       // Cleanup: cancel any active fetch requests
-      const { clearCurrentTest } = useTestStore.getState();
+      const { cancelFetch, clearCurrentTest } = useTestStore.getState();
+      cancelFetch();
       clearCurrentTest(false);
     };
   }, [id, status]);
@@ -266,9 +272,22 @@ const ReadingPracticePageContent = () => {
   const getPartAnsweredCount = (partQuestions) => {
     if (!partQuestions) return 0;
     return partQuestions.filter(q => {
-      // Use questions.id as primary key, fallback to question_number for backward compatibility
-      const answerKey = q.id || q.question_number;
-      return answerKey && answers[answerKey] && answers[answerKey].toString().trim() !== '';
+      // Check both question.id (UUID) and question_number for answer
+      // Some components use question.id, others use question_number
+      const questionId = q.id;
+      const questionNumber = q.question_number;
+      
+      // First check by question.id (UUID) - this is what most components use
+      if (questionId && answers[questionId] && answers[questionId].toString().trim() !== '') {
+        return true;
+      }
+      
+      // Then check by question_number - for backward compatibility and matching_information type
+      if (questionNumber && answers[questionNumber] && answers[questionNumber].toString().trim() !== '') {
+        return true;
+      }
+      
+      return false;
     }).length;
   };
 
@@ -1066,7 +1085,7 @@ const ReadingPracticePageContent = () => {
                       >
                         Questions {questionRange}
                       </h3>
-                      {questionGroup.instruction && questionGroup.type !== 'matching_information' && (
+                      {/* {questionGroup.instruction && questionGroup.type !== 'matching_information' && ( */}
                         <p
                           className="text-sm leading-relaxed"
                           data-selectable="true"
@@ -1076,7 +1095,7 @@ const ReadingPracticePageContent = () => {
                         >
                           {parse(questionGroup.instruction, { allowDangerousHtml: true })}
                         </p>
-                      )}
+                      {/* )} */}
                     </div>
                     {questionGroup.type === 'matching_information' && (
                       <div className="space-y-3">

@@ -1,5 +1,3 @@
-
-
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import supabase from '@/lib/supabase'
@@ -9,372 +7,190 @@ import { clearAllListeningData } from '@/store/LocalStorage/listeningStorage'
 export const useAuthStore = create(
   persist(
     (set, get) => ({
-      // --- State ---
       authUser: null,
       userProfile: null,
       loading: false,
       error: null,
       isInitialized: false,
-
+      _authListener: null, // Listenerni saqlash uchun
 
       initializeSession: async () => {
-        if (get().isInitialized) {
-          // If already initialized but loading is stuck, reset it
-          if (get().loading) {
-            set({ loading: false });
-          }
-          return;
+        if (get().isInitialized) return;
+
+        set({ loading: true });
+
+        // 1. Joriy sessiyani tekshirish
+        const { data: { session } } = await supabase.auth.getSession();
+
+        // 2. Sessiyani yangilash (kickstart)
+        const { data: refreshData, error } = await supabase.auth.refreshSession();
+
+        // Yangilangan sessiyani ishlatish, agar mavjud bo'lsa
+        const activeSession = refreshData?.session || session;
+
+        if (activeSession?.user) {
+          set({ authUser: activeSession.user });
+          await get().fetchUserProfile(activeSession.user.id, false);
         }
-      
-        try {
-          set({ loading: true });
-      
-          const { data: { session } } = await supabase.auth.getSession();
-      
-          if (session?.user) {
-            set({ authUser: session.user });
-            try {
-              await get().fetchUserProfile(session.user.id, false);
-            } catch (error) {
-              console.error('Error fetching profile during initialization:', error);
-              // Don't block initialization if profile fetch fails
+
+        if (!get()._authListener) {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log('event', event);
+            console.log('session', session);
+            // Minimal holatni yangilash
+            if ((event === 'SIGNED_IN' || event === "TOKEN_REFRESHED") && session?.user) {
+              set({ authUser: session.user });
+              // DB so‘rovini tashqaridan trigger qilamiz
             }
-          } else {
-            set({ authUser: null, userProfile: null });
-          }
-      
-          // listener faqat 1 marta
-          if (!get()._authListener) {
-            const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
-              if (event === 'SIGNED_IN' && session?.user) {
-                set({ loading: true, authUser: session.user });
-                try {
-                  await get().fetchUserProfile(session.user.id, false);
-                } catch (error) {
-                  console.error('Error fetching profile on sign in:', error);
-                } finally {
-                  set({ loading: false });
-                }
-              }
-      
-              if (event === 'SIGNED_OUT') {
-                set({ authUser: null, userProfile: null, isInitialized: false, loading: false });
-              }
-            });
-      
-            set({ _authListener: listener?.subscription });
-          }
-      
-          set({ isInitialized: true });
-        } catch (error) {
-          console.error('Error initializing session:', error);
-          set({ error: error.message });
-        } finally {
-          set({ loading: false });
+
+            if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+              set({ authUser: null, userProfile: null });
+              get().clearUserLocalData();
+            }
+          });
+
+          set({ _authListener: subscription, isInitialized: true, loading: false });
+        } else {
+          set({ isInitialized: true, loading: false });
         }
       },
-      
-      
 
-      // Kirish (Sign In)
+      updateUserProfile: async (update) => {
+        const userId = get().authUser?.id;
+        if (!userId) {
+          set({ error: 'User not authenticated', loading: false });
+          return { success: false, error: 'User not authenticated' };
+        }
+
+        set({ loading: true, error: null });
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .update(update)
+            .eq('id', userId)
+            .select()
+            .single();
+
+          if (error) throw error;
+
+
+
+          set({ userProfile: data, loading: false });
+          return { success: true, data };
+        } catch (error) {
+          set({ error: error.message, loading: false });
+          return { success: false, error: error.message };
+        }
+      },
+
       signIn: async (email, password) => {
-        set({ loading: true, error: null })
+        set({ loading: true, error: null });
         try {
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) throw error;
 
-          if (error) {
-            set({ error: error.message, loading: false })
-            return { success: false, error: error.message }
-          }
+          set({ authUser: data.user });
+          await get().fetchUserProfile(data.user.id, false);
 
-          set({ authUser: data.user })
-          // Fetch profile - if it fails, don't block the login
-          try {
-            await get().fetchUserProfile(data.user.id, false)
-          } catch (profileError) {
-            console.error('Error fetching user profile:', profileError)
-            // Continue with login even if profile fetch fails
-          }
-          set({ loading: false })
-          return { success: true }
+          set({ loading: false });
+          return { success: true };
         } catch (error) {
-          const message = error?.message || 'Failed to sign in. Please try again.'
-          set({ error: message, loading: false })
-          return { success: false, error: message }
+          set({ error: error.message, loading: false });
+          return { success: false, error: error.message };
         }
       },
 
-      // Ro'yxatdan o'tish (Sign Up)
-      signUp: async (email, password, fullName) => {
-        set({ loading: true, error: null })
+      signUp: async (email, password, username) => {
+        set({ loading: true, error: null });
         try {
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: { full_name: fullName || "User" } }
-          })
-
-          if (error) {
-            set({ error: error.message, loading: false })
-            return { success: false, error: error.message }
-          }
-
-          set({ authUser: data.user })
-
-          // Try to fetch profile - if it doesn't exist yet (e.g., waiting for DB trigger), 
-          // that's okay, the onAuthStateChange listener will handle it later
-          if (data.user) {
-            try {
-              // Don't force logout if profile is missing (common for new signups)
-              await get().fetchUserProfile(data.user.id, false)
-            } catch (profileError) {
-              console.log('Profile not available yet, will be fetched by auth state listener')
-              // Continue - profile will be fetched by onAuthStateChange or created by trigger
-            }
-          }
-
-          set({ loading: false })
-          return { success: true }
+          const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: username } } });
+          if (error) throw error;
+          set({ authUser: data.user });
+          await get().fetchUserProfile(data.user.id, false);
+          set({ loading: false });
+          return { success: true };
         } catch (error) {
-          const message = error?.message || 'Failed to sign up. Please try again.'
-          set({ error: message, loading: false })
-          return { success: false, error: message }
+          set({ error: error.message, loading: false });
+          return { success: false, error: error.message };
         }
       },
 
-      // Profilni olish
       fetchUserProfile: async (userId, shouldLogoutOnMissing = true) => {
         try {
-          // Add timeout to prevent hanging
-          const timeoutId = setTimeout(() => {
-            console.warn('Profile fetch taking too long, continuing anyway...');
-          }, 10000);
-
           const { data, error } = await supabase
             .from('users')
             .select('*')
             .eq('id', userId)
-            .maybeSingle(); // Xato bermay null qaytaradi
+            .maybeSingle();
 
-          clearTimeout(timeoutId);
-
-          if (error) {
-            console.error("Error fetching user profile:", error);
-            if (shouldLogoutOnMissing) {
-              await get().forceSignOutToLogin('Error fetching profile.');
-            }
-            return null;
-          }
+          if (error) throw error;
 
           if (!data) {
-            console.warn("User profile missing in Database.");
             if (shouldLogoutOnMissing) {
-              await get().forceSignOutToLogin('Unauthorized: Profile not found.');
+              await get().forceSignOutToLogin('Profil topilmadi.');
+              return null;
             }
+            set({ userProfile: null });
             return null;
           }
-
-          set({ userProfile: data });
-          return data;
-        } catch (error) {
-          console.error("Exception in fetchUserProfile:", error);
-          if (shouldLogoutOnMissing) {
-            await get().forceSignOutToLogin('Error fetching profile.');
+          const profile = { ...data };
+          if (profile.subscription_status === 'vip') {
+            profile.subscription_status = 'premium';
           }
+          set({ userProfile: profile });
+          return profile;
+        } catch (error) {
+          console.error("Profile fetch error:", error);
           return null;
         }
       },
 
-      // Sessiya bor bo'lsa ham DB'da user borligini tekshirish
-      validateSessionAgainstDatabase: async () => {
-        const authUser = get().authUser;
-        if (!authUser?.id) return false;
+      // LocalStorage tozalash mantiqi bitta joyda
+      clearUserLocalData: () => {
         try {
-          const { data, error } = await supabase
-            .from('users')
-            .select('id')
-            .eq('id', authUser.id)
-            .maybeSingle();
+          clearAllReadingData();
+          clearAllListeningData();
+          localStorage.removeItem('auth-storage'); // Zustand persist kaliti
 
-          if (error || !data) {
-            await get().forceSignOutToLogin('Unauthorized: Profile not found.');
-            return false;
-          }
-          return true;
-        } catch (error) {
-          set({ error: error.message });
-          return false;
-        }
-      },
-
-      // Avatar yuklash
-      uploadAvatar: async (file) => {
-        try {
-          const userId = get().authUser?.id;
-          if (!userId) {
-            return { success: false, error: 'User not authenticated. Please log in again.' };
-          }
-
-          // Validate file exists
-          if (!file) {
-            return { success: false, error: 'No file selected. Please choose an image.' };
-          }
-
-          // Validate file type
-          const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-          if (!validImageTypes.includes(file.type)) {
-            return { success: false, error: 'Invalid file format. Please select a JPEG, PNG, GIF, or WebP image.' };
-          }
-
-          // Validate file size (5MB limit)
-          const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
-          if (file.size > maxSizeInBytes) {
-            return { success: false, error: 'File size too large. Please select an image smaller than 5MB.' };
-          }
-
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${userId}-${Date.now()}.${fileExt}`;
-
-          // Upload file to storage
-          const { error: uploadError } = await supabase.storage
-            .from('avatar-image')
-            .upload(fileName, file, { upsert: true });
-
-          if (uploadError) {
-            // Provide user-friendly error messages
-            let errorMessage = 'Failed to upload image. ';
-            if (uploadError.message.includes('size')) {
-              errorMessage += 'File size is too large.';
-            } else if (uploadError.message.includes('format') || uploadError.message.includes('type')) {
-              errorMessage += 'Invalid file format.';
-            } else if (uploadError.message.includes('network') || uploadError.message.includes('timeout')) {
-              errorMessage += 'Network error. Please check your connection and try again.';
-            } else {
-              errorMessage += uploadError.message || 'Please try again later.';
+          const keysToRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith('reading_') || key.startsWith('listening_') || key.includes('practice_'))) {
+              keysToRemove.push(key);
             }
-            return { success: false, error: errorMessage };
           }
-
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatar-image')
-            .getPublicUrl(fileName);
-
-          if (!publicUrl) {
-            return { success: false, error: 'Failed to generate image URL. Please try again.' };
-          }
-
-          return { success: true, url: publicUrl };
-        } catch (error) {
-          // Catch any unexpected errors
-          const errorMessage = error?.message || 'An unexpected error occurred during upload. Please try again.';
-          return { success: false, error: errorMessage };
+          keysToRemove.forEach(k => localStorage.removeItem(k));
+        } catch (e) {
+          console.error("Cleanup error:", e);
         }
       },
 
-      // Profilni yangilash
-      updateUserProfile: async (profileData) => {
-        const userId = get().authUser?.id;
-        if (!userId) return { success: false, error: 'User not authenticated' };
-
-        set({ loading: true, error: null });
-
-        const { data, error } = await supabase
-          .from('users')
-          .update(profileData)
-          .eq('id', userId)
-          .select()
-          .single();
-
-        if (error) {
-          set({ error: error.message, loading: false });
-          return { success: false, error: error.message };
-        }
-
-        set({ userProfile: data, loading: false });
-        return { success: true };
-      },
-
-      // Chiqish (Sign Out)
       signOut: async () => {
-        set({ loading: true, error: null })
-        try {
-          const { error } = await supabase.auth.signOut()
-          if (error) {
-            set({ error: error.message, loading: false })
-            return { success: false, error: error.message }
-          }
-      
-          // Clear Zustand state
-          set({
-            authUser: null,
-            userProfile: null,
-            loading: false,
-            isInitialized: false
-                    })
-      
-          // Clear only user-related storage
-          try {
-            clearAllReadingData()
-            clearAllListeningData()
-            localStorage.removeItem('auth-storage')
-      
-            const keysToRemove = []
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i)
-              if (!key) continue
-      
-              const isUserData =
-                key.startsWith('reading_') ||
-                key.startsWith('listening_') ||
-                key.includes('practice_') ||
-                key.includes('result_') ||
-                key.includes('audio_position_')
-      
-              if (isUserData) keysToRemove.push(key)
-            }
-      
-            keysToRemove.forEach(k => localStorage.removeItem(k))
-          } catch (e) {
-            console.warn('Storage cleanup error:', e)
-          }
-      
-          return { success: true, redirectTo: '/' }
-        } catch (error) {
-          const message = error?.message || 'Failed to log out. Please try again.'
-          set({ error: message, loading: false })
-          return { success: false, error: message }
-        }
-      },
-      
-
-      forceSignOutToLogin: async (reason) => {
-        set({ loading: true, error: reason || null })
+        set({ loading: true });
         try {
           await supabase.auth.signOut();
-          localStorage.clear();
-          set({ authUser: null, userProfile: null, isInitialized: false, loading: false })
+          get().clearUserLocalData();
+          set({ authUser: null, userProfile: null, loading: false });
+          return { success: true };
         } catch (error) {
-          const message = error?.message || reason || 'Failed to log out.'
-          set({ error: message })
-        } finally {
-          // Clear Zustand state
-          set({ authUser: null, userProfile: null, isInitialized: false, loading: false })
-
-          // Clear all user-specific localStorage data
-          
+          set({ error: error.message, loading: false });
+          return { success: false };
         }
       },
 
-      clearError: () => set({ error: null }),
+      forceSignOutToLogin: async (reason) => {
+        await supabase.auth.signOut();
+        get().clearUserLocalData();
+        set({ authUser: null, userProfile: null, error: reason });
+      }
     }),
     {
-      name: 'auth-storage', // localStorage dagi kalit nomi
-      storage: createJSONStorage(() => localStorage), // Ma'lumotni qayerga saqlash
+      name: 'auth-storage',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         authUser: state.authUser,
-        userProfile: state.userProfile,
-      }), // Faqat kerakli qismlarni localStoragega saqlaymiz (loading saqlanmaydi)
+        userProfile: state.userProfile
+      }),
     }
   )
 )
