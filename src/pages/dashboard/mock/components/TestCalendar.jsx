@@ -40,7 +40,7 @@ const TestCalendar = ({
         <CardContent className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Icon className={`w-5 h-5 ${iconColor}`} />
-            <h3 className="text-xl font-semibold">{title}</h3>
+            <h3 className="text-base font-semibold overflow-hidden text-ellipsis whitespace-nowrap line-clamp-1">{title}</h3>
           </div>
           
           {/* Month Navigation */}

@@ -2,44 +2,48 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { addBrandHeader } from "./pdfHeader";
 
-const LINE_HEIGHT_QUESTION = 6.5;
-const LINE_HEIGHT_ANSWER = 5.5;
-const BOTTOM_MARGIN = 50;
-const TASK_GAP = 35;
+// Dinamik o'lchamlar va masofalar (Ixchamlashtirildi)
+const LINE_HEIGHT_QUESTION = 6.0;
+const LINE_HEIGHT_ANSWER = 5.2;
+const BOTTOM_MARGIN = 20;
+const TASK_GAP = 12; // Tasklar orasidagi masofa
+const SECTION_GAP = 6; // Sarlavha va kontent orasidagi masofa
+const QUESTION_ANSWER_GAP = 8; // Savol va Javob bloklari orasidagi masofa
+
+// Ranglar palitrasi
 const primaryColor = [59, 130, 246]; // #3B82F6
 const darkGray = [31, 41, 55]; // #1F2937
-const lightGray = [243, 244, 246]; // #F3F4F6
+const lightGray = [248, 249, 250]; // #F8F9FA
 const accentGray = [229, 231, 235]; // #E5E7EB
 
 /**
- * Draws multi-line text with automatic page breaks. Returns final yPos.
+ * Matnni avtomatik sahifalarga bo'lish bilan chizish
  */
 function drawTextWithPagination(doc, lines, x, yPos, { lineHeight, margin }) {
   const pageHeight = doc.internal.pageSize.getHeight();
+  let currentY = yPos;
+
   lines.forEach((line) => {
-    if (yPos + lineHeight > pageHeight - BOTTOM_MARGIN) {
+    if (currentY + lineHeight > pageHeight - BOTTOM_MARGIN) {
       doc.addPage();
-      yPos = margin;
+      currentY = margin + 10; // Yangi sahifada tepadan masofa
     }
-    doc.text(line, x, yPos);
-    yPos += lineHeight;
+    doc.text(line, x, currentY);
+    currentY += lineHeight;
   });
-  return yPos;
+  return currentY;
 }
 
 /**
- * Draws a section box with rounded corners
+ * Dumaloq burchakli blok chizish
+ * NOTE: Borders REMOVED per instruction
  */
-function drawSectionBox(doc, x, y, width, height, { fillColor, borderColor, borderWidth = 0.5 }) {
+function drawSectionBox(doc, x, y, width, height, { fillColor }) {
   if (fillColor) {
     doc.setFillColor(...fillColor);
     doc.roundedRect(x, y, width, height, 2, 2, 'F');
   }
-  if (borderColor) {
-    doc.setDrawColor(...borderColor);
-    doc.setLineWidth(borderWidth);
-    doc.roundedRect(x, y, width, height, 2, 2, 'S');
-  }
+  // Borders removed
 }
 
 export const generateWritingPDF = async (tasks, totalTime, settings) => {
@@ -48,205 +52,149 @@ export const generateWritingPDF = async (tasks, totalTime, settings) => {
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
 
+  // Brend headerini qo'shish
   let yPos = await addBrandHeader(doc, pageWidth, "writing", settings);
 
-  // Overall time display at the top (only for Task 1)
-  if (tasks.task1 && totalTime) {
+  // Umumiy vaqt (faqat mavjud bo'lsa)
+  if (totalTime) {
     yPos += 5;
     doc.setFontSize(9);
     doc.setFont(undefined, "normal");
     doc.setTextColor(...darkGray);
-    doc.text(`Total Time: ${totalTime}`, pageWidth - margin, yPos, { align: "right" });
-    yPos += 12;
+    doc.text(`Total Duration: ${totalTime}`, pageWidth - margin, yPos, { align: "right" });
+    yPos += 5;
   }
 
-  for (const taskKey of ["task1", "task2"]) {
-    if (taskKey === "task2") {
-      if (yPos + TASK_GAP > pageHeight - BOTTOM_MARGIN) {
-        doc.addPage();
-        yPos = margin;
-      } else {
-        yPos += TASK_GAP;
-      }
-    }
+  yPos += 5; // Headerdan keyingi boshlang'ich masofa
 
+  for (const taskKey of ["task1", "task2"]) {
     const task = tasks[taskKey];
     if (!task) continue;
 
-    // Task header section
-    const taskHeaderY = yPos;
-    const taskHeaderHeight = 25;
-    
-    // Task header background
-    drawSectionBox(doc, margin, taskHeaderY, pageWidth - 2 * margin, taskHeaderHeight, {
-      fillColor: primaryColor,
-      borderColor: primaryColor
-    });
-
-    // Task number and title
-    doc.setFont(undefined, "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(255, 255, 255);
-    doc.text(
-      taskKey === "task1" ? "Task 1" : "Task 2",
-      margin + 10,
-      taskHeaderY + 10
-    );
-
-    // Task description
-    doc.setFontSize(9);
-    doc.setFont(undefined, "normal");
-    doc.setTextColor(255, 255, 255);
-    const taskDesc = taskKey === "task1" 
-      ? "Academic Writing Task 1" 
-      : "Academic Writing Task 2";
-    doc.text(taskDesc, margin + 10, taskHeaderY + 18);
-
-    yPos = taskHeaderY + taskHeaderHeight + 12;
-
-    // Question section
-    const questionBoxY = yPos;
-    doc.setFontSize(10);
-    doc.setFont(undefined, "bold");
-    doc.setTextColor(...primaryColor);
-    doc.text("Question:", margin + 5, yPos);
-    yPos += 8;
-
-    // Question text box
-    const questionTextWidth = pageWidth - 2 * margin - (taskKey === "task1" && task.image ? 70 : 0);
-    const questionLines = doc.splitTextToSize(
-      task.question || "",
-      questionTextWidth - 10
-    );
-    const questionStartY = yPos;
-    const questionPadding = 8;
-
-    // Question background box
-    const questionBoxHeight = Math.max(
-      questionLines.length * LINE_HEIGHT_QUESTION + questionPadding * 2,
-      (taskKey === "task1" && task.image ? 60 : 0) + questionPadding * 2
-    );
-    
-    drawSectionBox(doc, margin + 5, questionStartY - 3, questionTextWidth, questionBoxHeight, {
-      fillColor: lightGray,
-      borderColor: accentGray
-    });
-
-    doc.setFont(undefined, "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(...darkGray);
-    
-    yPos = drawTextWithPagination(
-      doc, 
-      questionLines, 
-      margin + 10, 
-      questionStartY + questionPadding - 3, 
-      {
-        lineHeight: LINE_HEIGHT_QUESTION,
-        margin,
-      }
-    );
-
-    // Image for Task 1
-    if (taskKey === "task1" && task.image) {
-      const imgWidth = 55;
-      const imgHeight = 55;
-      const imgX = pageWidth - margin - imgWidth - 5;
-      const imgY = questionStartY + questionPadding - 3;
-      
-      // Image border
-      doc.setDrawColor(...accentGray);
-      doc.setLineWidth(1);
-      doc.roundedRect(imgX - 2, imgY - 2, imgWidth + 4, imgHeight + 4, 2, 2, 'S');
-      
-      doc.addImage(
-        task.image,
-        "PNG",
-        imgX,
-        imgY,
-        imgWidth,
-        imgHeight
-      );
-    }
-
-    const questionHeight = questionLines.length * LINE_HEIGHT_QUESTION + questionPadding * 2;
-    const imageHeight = taskKey === "task1" && task.image ? 60 : 0;
-    yPos = Math.max(yPos, questionStartY + Math.max(questionHeight, imageHeight)) + 15;
-
-    if (yPos > pageHeight - BOTTOM_MARGIN) {
+    // Tasklar orasida yangi sahifa tekshiruvi
+    if (yPos + 40 > pageHeight - BOTTOM_MARGIN) {
       doc.addPage();
       yPos = margin;
     }
 
-    // Answer section
-    doc.setFontSize(10);
+    // --- Task Header Section ---
+    const taskHeaderHeight = 18;
+    drawSectionBox(doc, margin, yPos, pageWidth - 2 * margin, taskHeaderHeight, {
+      fillColor: primaryColor
+      // No borderColor
+    });
+
+    doc.setFont(undefined, "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(255, 255, 255);
+    doc.text(taskKey === "task1" ? "Writing Task 1" : "Writing Task 2", margin + 8, yPos + 8);
+
+    doc.setFontSize(8);
+    doc.setFont(undefined, "normal");
+    doc.text(taskKey === "task1" ? "Academic/General Training" : "Essay Writing", margin + 8, yPos + 14);
+
+    yPos += taskHeaderHeight + SECTION_GAP;
+
+    // --- Question Section ---
+    doc.setFontSize(9);
     doc.setFont(undefined, "bold");
     doc.setTextColor(...primaryColor);
-    doc.text("Your Answer:", margin + 5, yPos);
-    yPos += 8;
+    doc.text("QUESTION PROMPT:", margin, yPos);
+    yPos += 4;
 
-    // Answer text box
-    const answerTextWidth = pageWidth - 2 * margin - 10;
-    const answerLines = doc.splitTextToSize(task.answer || "", answerTextWidth - 10);
-    const answerStartY = yPos;
-    const answerPadding = 8;
-    const answerBoxHeight = answerLines.length * LINE_HEIGHT_ANSWER + answerPadding * 2;
+    const hasImage = taskKey === "task1" && task.image;
+    const questionTextWidth = pageWidth - 2 * margin - (hasImage ? 65 : 10);
+    const questionLines = doc.splitTextToSize(task.question || "", questionTextWidth);
     
-    drawSectionBox(doc, margin + 5, answerStartY - 3, answerTextWidth, answerBoxHeight, {
-      fillColor: [255, 255, 255],
-      borderColor: accentGray
+    const questionPadding = 6;
+    const questionTextHeight = questionLines.length * LINE_HEIGHT_QUESTION;
+    const imageHeight = hasImage ? 55 : 0;
+    const questionBoxHeight = Math.max(questionTextHeight, imageHeight) + (questionPadding * 2);
+
+    // Savol bloki foni
+    drawSectionBox(doc, margin, yPos, pageWidth - 2 * margin, questionBoxHeight, {
+      fillColor: lightGray
+      // No borderColor
     });
 
     doc.setFont(undefined, "normal");
-    doc.setFontSize(11);
+    doc.setFontSize(10.5);
     doc.setTextColor(...darkGray);
     
-    yPos = drawTextWithPagination(
-      doc, 
-      answerLines, 
-      margin + 10, 
-      answerStartY + answerPadding - 3, 
-      {
-        lineHeight: LINE_HEIGHT_ANSWER,
-        margin,
-      }
-    );
+    // Matnni chizish
+    const textStartY = yPos + questionPadding + 4;
+    let textEndY = drawTextWithPagination(doc, questionLines, margin + 5, textStartY, {
+      lineHeight: LINE_HEIGHT_QUESTION,
+      margin,
+    });
 
-    yPos = answerStartY + answerBoxHeight + 10;
+    // Rasm (Task 1 bo'lsa)
+    if (hasImage) {
+      const imgSize = 50;
+      doc.addImage(task.image, "PNG", pageWidth - margin - imgSize - 5, yPos + questionPadding, imgSize, imgSize);
+    }
 
-    // Word count badge
+    yPos += questionBoxHeight + QUESTION_ANSWER_GAP;
+
+    // --- Answer Section ---
+    if (yPos + 30 > pageHeight - BOTTOM_MARGIN) {
+      doc.addPage();
+      yPos = margin;
+    }
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(...primaryColor);
+    doc.text("CANDIDATE RESPONSE:", margin, yPos);
+    yPos += 4;
+
+    const answerLines = doc.splitTextToSize(task.answer || "No answer provided.", pageWidth - 2 * margin - 10);
+    const answerPadding = 6;
+    const answerContentHeight = answerLines.length * LINE_HEIGHT_ANSWER;
+    const answerBoxHeight = Math.max(answerContentHeight + (answerPadding * 2), 20);
+
+    drawSectionBox(doc, margin, yPos, pageWidth - 2 * margin, answerBoxHeight, {
+      fillColor: [255, 255, 255]
+      // No borderColor
+    });
+
+    doc.setFont(undefined, "normal");
+    doc.setFontSize(10.5);
+    let finalAnswerY = drawTextWithPagination(doc, answerLines, margin + 5, yPos + answerPadding + 4, {
+      lineHeight: LINE_HEIGHT_ANSWER,
+      margin,
+    });
+
+    yPos += answerBoxHeight + 6;
+
+    // --- Word Count Badge ---
     const wordCount = task.answer ? task.answer.trim().split(/\s+/).length : 0;
-    if (yPos + 15 > pageHeight - BOTTOM_MARGIN) {
-      doc.addPage();
-      yPos = margin;
-    }
+    const badgeWidth = 35;
+    const badgeHeight = 8;
     
-    // Word count box
-    const wordCountWidth = 60;
-    const wordCountHeight = 12;
     doc.setFillColor(...primaryColor);
-    doc.roundedRect(margin + 5, yPos, wordCountWidth, wordCountHeight, 2, 2, 'F');
-    
+    doc.roundedRect(margin, yPos, badgeWidth, badgeHeight, 1, 1, 'F');
     doc.setFont(undefined, "bold");
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(255, 255, 255);
-    doc.text(`Words: ${wordCount}`, margin + 10, yPos + 8);
+    doc.text(`Words: ${wordCount}`, margin + 4, yPos + 5.5);
     
-    yPos += wordCountHeight + 15;
+    yPos += badgeHeight + TASK_GAP;
   }
 
-  // Footer on last page
-  const currentPage = doc.internal.getNumberOfPages();
-  doc.setPage(currentPage);
-  doc.setFontSize(7);
-  doc.setTextColor(...darkGray);
-  doc.setFont(undefined, "italic");
-  doc.text(
-    "Generated by  - IELTS Preparation Platform",
-    pageWidth / 2,
-    pageHeight - 15,
-    { align: "center" }
-  );
+  // Sahifalar sonini va footerni qo'shish
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(
+      `Page ${i} of ${totalPages} - IELTS Practice Hub`,
+      pageWidth / 2,
+      pageHeight - 10,
+      { align: "center" }
+    );
+  }
 
-  doc.save(`Writing_Tasks_${new Date().toISOString().split("T")[0]}.pdf`);
+  doc.save(`Writing_Report_${new Date().getTime()}.pdf`);
 };

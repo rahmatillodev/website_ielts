@@ -172,6 +172,44 @@ const OwnWritingPageContent = () => {
     }));
   };
 
+  /* ================= IMAGE PASTE (TASK 1 ONLY) ================= */
+  const handleQuestionPaste = (e) => {
+    // Only Task 1 accepts image paste
+    if (activeTask !== "task1") {
+      return;
+    }
+
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type?.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result;
+          setTasks((p) => ({
+            ...p,
+            task1: {
+              ...p.task1,
+              image: base64,
+            },
+          }));
+          toast.success("Image pasted successfully");
+        };
+        reader.onerror = () => {
+          toast.error("Failed to read image file");
+        };
+        reader.readAsDataURL(file);
+        break;
+      }
+    }
+  };
+
   /* ================= BACK HANDLER ================= */
   const handleBack = () => {
     // Check if user has started (timer is running, elapsed time > 0, or has content)
@@ -277,13 +315,14 @@ const OwnWritingPageContent = () => {
               className="w-full border border-gray-300 bg-amber-500 rounded-lg p-2 focus:ring-0 focus:border-blue-500 resize-none min-h-[10px] shrink-0"
               placeholder={
                 activeTask === "task1"
-                  ? "Type your writing task question here...\n\nTip: You can drag & drop image"
+                  ? "Type your writing task question here...\n\nTip: You can drag & drop or paste image"
                   : "Type your writing task question here..."
               }
               value={currentTask.question}
               style={{ backgroundColor: themeColors.background }}
               onDragOver={activeTask === "task1" ? handleQuestionDragOver : undefined}
               onDrop={activeTask === "task1" ? handleQuestionDrop : undefined}
+              onPaste={activeTask === "task1" ? handleQuestionPaste : undefined}
               onChange={(e) =>
                 (autosizeQuestionTextarea(e.currentTarget),
                 setTasks((p) => ({
