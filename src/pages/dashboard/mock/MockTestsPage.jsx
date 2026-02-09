@@ -27,11 +27,11 @@ const fullMockTest = {
 
 const MockTestsPage = () => {
 
-  return (
-    <div>
-      <ComingSoonPage title="Mock Tests Center" description="Master the exam with targeted section practice or a full-length simulation." type="mock" headerAction="/mock/select" headerActionText="Start Full Test" />
-    </div>
-  )
+  // return (
+  //   <div>
+  //     <ComingSoonPage title="Mock Tests Center" description="Master the exam with targeted section practice or a full-length simulation." type="mock" headerAction="/mock/select" headerActionText="Start Full Test" />
+  //   </div>
+  // )
   const navigate = useNavigate();
   const [videoModal, setVideoModal] = useState({ open: false, title: "", videoId: "" });
 
