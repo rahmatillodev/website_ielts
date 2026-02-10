@@ -12,6 +12,9 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
   // Immediately check URL for review mode to prevent flickering
   const [searchParams] = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
+  // Check both searchParams and window.location.search for mockTest (handles history.replaceState)
+  const isMockTest = searchParams.get('mockTest') === 'true' || 
+                     new URLSearchParams(window.location.search).get('mockTest') === 'true';
   
   // For writing: show "Try practice" button when not in practice mode
   const isWriting = type === "Writing";
@@ -116,14 +119,16 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
       }}
     >
       <div className="flex items-center gap-4">
-        <button
-          onClick={handleBackClick}
-          className="flex items-center gap-2 hover:text-primary transition-colors bg-gray-200 p-1 rounded-sm px-4"
-          style={{ color: themeColors.text, backgroundColor: themeColors.backgroundColor }}
-        >
-          <FaArrowLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
+        {!isMockTest && onBack && (
+          <button
+            onClick={handleBackClick}
+            className="flex items-center gap-2 hover:text-primary transition-colors bg-gray-200 p-1 rounded-sm px-4"
+            style={{ color: themeColors.text, backgroundColor: themeColors.backgroundColor }}
+          >
+            <FaArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+        )}
         <div className="flex items-center gap-3">
           <span 
             className="text-xl font-semibold"
@@ -178,28 +183,32 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
                 >
                   {formatTime(timeRemaining)}
                 </div>
-                {(!isStarted && formatTime(timeRemaining).slice(0, -3) == currentTest?.duration) ? (
-                  <button
-                    onClick={handleStart}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Start
-                  </button>
-                ) : (
-                  <button
-                    onClick={handlePause}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    {isPaused ? "Resume" : "Pause"}
-                  </button>
+                {!isMockTest && (
+                  (!isStarted && formatTime(timeRemaining).slice(0, -3) == currentTest?.duration) ? (
+                    <button
+                      onClick={handleStart}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      Start
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handlePause}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      {isPaused ? "Resume" : "Pause"}
+                    </button>
+                  )
                 )}
               </div>
-              <p 
-                className="text-xs text-center"
-                style={{ color: themeColors.text, opacity: 0.7 }}
-              >
-                This test will automatically end when the allotted time expires.
-              </p>
+              {!isMockTest && (
+                <p 
+                  className="text-xs text-center"
+                  style={{ color: themeColors.text, opacity: 0.7 }}
+                >
+                  This test will automatically end when the allotted time expires.
+                </p>
+              )}
             </>
           )}
         </div>
@@ -207,22 +216,24 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
 
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <button
-            onClick={toggleFullscreen}
-            className="p-2 rounded transition-colors"
-            style={{ 
-              color: themeColors.text,
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = theme === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.1)'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-          >
-            {isFullscreen ? (
-              <FaCompress className="w-5 h-5" />
-            ) : (
-              <FaExpand className="w-5 h-5" />
-            )}
-          </button>
+          {!isMockTest && (
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 rounded transition-colors"
+              style={{ 
+                color: themeColors.text,
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = theme === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.1)'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+              title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            >
+              {isFullscreen ? (
+                <FaCompress className="w-5 h-5" />
+              ) : (
+                <FaExpand className="w-5 h-5" />
+              )}
+            </button>
+          )}
           <button 
             onClick={() => setIsSettingsModalOpen(true)}
             className="p-2 rounded transition-colors"

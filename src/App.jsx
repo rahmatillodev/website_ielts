@@ -31,10 +31,12 @@ import MockTestsPage from "./pages/dashboard/mock/MockTestsPage";
 import MockTypeSelectionPage from "./pages/dashboard/mock/MockTypeSelectionPage";
 import MockOnlinePage from "./pages/dashboard/mock/MockOnlinePage";
 import MockCenterPage from "./pages/dashboard/mock/MockCenterPage";
+import MockTestFlow from "./pages/dashboard/mock/MockTestFlow";
 import "./App.css";
 import FeedbackModal from "./components/modal/FeedbackModal";
 import WritingPracticePage from "./pages/dashboard/writing/WritingPracticePage";
 import WritingHistoryPage from "./pages/dashboard/writing/WritingHistoryPage";
+import MockTestResults from "./pages/dashboard/mock/MockTestResults";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -66,7 +68,13 @@ function App() {
     }
   }, [fetchTests, isInitialized, user])
 
-  const isPracticePage = location.pathname.includes("/reading-practice") || location.pathname.includes("/listening-practice") || location.pathname.includes("/writing-practice") || location.pathname.includes("/speaking-practice") || location.pathname.includes("/own-writing");
+  const isPracticePage = 
+  location.pathname.includes("/reading-practice") || 
+  location.pathname.includes("/listening-practice") || 
+  location.pathname.includes("/writing-practice") || 
+  location.pathname.includes("/speaking-practice") || 
+  location.pathname.includes("/own-writing") ||
+  location.pathname.includes("/mock-test/flow")
 
   // Show loading state while initializing authentication
   if (loading && !isInitialized) {
@@ -114,6 +122,8 @@ function App() {
             <Route path="/mock/select" element={<MockTypeSelectionPage />} />
             <Route path="/mock/online" element={<MockOnlinePage />} />
             <Route path="/mock/center" element={<MockCenterPage />} />
+            <Route path="/mock-test/flow/:mockTestId" element={<MockTestFlow />} />
+            <Route path="/mock-test/results" element={<MockTestResults />} />
 
             {/* Own Writing */}
             <Route path="/own-writing" element={<OwnWritingPage />} />
@@ -144,4 +154,3 @@ function App() {
 
 export default App;
 
-// view sample

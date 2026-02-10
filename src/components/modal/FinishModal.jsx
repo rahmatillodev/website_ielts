@@ -8,9 +8,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { clearReadingPracticeData, loadReadingPracticeData, saveReadingResultData } from "@/store/LocalStorage/readingStorage";
 
-export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, loading = false }) {
+export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, loading = false, isMockTest = false }) {
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
@@ -20,7 +21,14 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
         // Only navigate if submission was explicitly successful
         if (result && result.success === true) {
           onClose();
-          navigate(link);
+          
+          // For mock test, show "Saved" toast and don't navigate
+          if (isMockTest) {
+            toast.success('Saved');
+            // Don't navigate - let the parent component handle the transition
+          } else {
+            navigate(link);
+          }
         } else if (result && result.success === false) {
           // Don't navigate on failure, let the user see the error
           console.error('Submission failed:', result.error);
@@ -43,7 +51,13 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
           clearReadingPracticeData(testId);
         }
         onClose();
-        navigate(link);
+        
+        // For mock test, show "Saved" toast and don't navigate
+        if (isMockTest) {
+          toast.success('Saved');
+        } else {
+          navigate(link);
+        }
       }
     } catch (error) {
       console.error('Error in handleSubmit:', error);

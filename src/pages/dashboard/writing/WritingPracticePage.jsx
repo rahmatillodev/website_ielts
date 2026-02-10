@@ -12,9 +12,10 @@ import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
 
 import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
 import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext";
-import { useWritingStore } from "@/store/WritingStore";
-import { useWritingCompletedStore } from "@/store/WritingCompletedStore";
+import { useWritingStore } from "@/store/writingStore";
+import { useWritingCompletedStore } from "@/store/writingCompletedStore";
 import { useAuthStore } from "@/store/authStore";
+import { useMockTestClientStore } from "@/store/mockTestClientStore";
 import {
   saveWritingPracticeData,
   loadWritingPracticeData,
@@ -43,6 +44,22 @@ const WritingPracticePageContent = () => {
 
   const { submitWritingAttempt, loading: savingAttempt, getLatestWritingAttempt } = useWritingCompletedStore();
   const { authUser } = useAuthStore();
+  const { updateClientStatus } = useMockTestClientStore();
+
+  // Check if this is a mock test (check both searchParams and window.location.search)
+  const urlSearchParams = React.useMemo(() => new URLSearchParams(window.location.search), []);
+  const isMockTest = React.useMemo(() => 
+    searchParams.get('mockTest') === 'true' || urlSearchParams.get('mockTest') === 'true',
+    [searchParams, urlSearchParams]
+  );
+  const mockTestId = React.useMemo(() => 
+    searchParams.get('mockTestId') || urlSearchParams.get('mockTestId'),
+    [searchParams, urlSearchParams]
+  );
+  const mockClientId = React.useMemo(() => 
+    searchParams.get('mockClientId') || urlSearchParams.get('mockClientId'),
+    [searchParams, urlSearchParams]
+  );
 
   const {
     addHighlight,
@@ -81,6 +98,7 @@ const WritingPracticePageContent = () => {
   const universalContentRef = useRef(null);
   const passageRef = useRef(null);
   const previousIdRef = useRef(null);
+  const mockTestInitializedRef = useRef(false);
 
   /* ================= HANDLERS ================= */
   const handleReviewWriting = useCallback(async () => {
@@ -153,6 +171,7 @@ const WritingPracticePageContent = () => {
       const isNewTest = previousIdRef.current !== null && previousIdRef.current !== id;
       if (isNewTest) {
         clearAllWritingPracticeData();
+        mockTestInitializedRef.current = false; // Reset mock test initialization for new test
       }
       previousIdRef.current = id;
       
@@ -175,15 +194,56 @@ const WritingPracticePageContent = () => {
       setCurrentTaskType(tasks[0].task_name);
     }
 
-    
-
     // If review mode, load attempt data (it will update currentTaskType if needed)
     if (isReviewMode && authUser && id && status === 'reviewing') {
       handleReviewWriting();
       return;
     }
+
+    // Mock test mode: Auto-start timer immediately (no button needed)
+    if (isMockTest && !isReviewMode && currentWriting && tasks.length > 0) {
+      // Only initialize once per mock test session
+      if (!mockTestInitializedRef.current) {
+        // Get duration from URL param (in seconds) or use writing duration
+        const durationParam = searchParams.get('duration') || urlSearchParams.get('duration');
+        const durationInSeconds = durationParam 
+          ? parseInt(durationParam, 10) 
+          : convertDurationToSeconds(currentWriting.duration);
+
+        // Initialize answers if not set
+        if (Object.keys(answers).length === 0) {
+          const init = {};
+          tasks.forEach((t) => (init[t.task_name] = ""));
+          setAnswers(init);
+        }
+
+        // Auto-start timer
+        setIsPracticeMode(true);
+        setIsStarted(true);
+        setIsPaused(false);
+        setTimeRemaining(durationInSeconds);
+        setElapsedTime(0);
+        setStartTime(Date.now());
+
+        // Update mock_test_clients status to 'started' if not already started
+        if (mockClientId) {
+          updateClientStatus(mockClientId, 'started').catch(err => {
+            console.error('Error updating mock test client status to started:', err);
+          });
+        }
+
+        mockTestInitializedRef.current = true;
+      }
+
+      return; // Skip normal localStorage loading for mock test
+    }
     
-    // Load saved data from localStorage (only if not in review mode)
+    // Reset initialization flag when not in mock test mode
+    if (!isMockTest) {
+      mockTestInitializedRef.current = false;
+    }
+    
+    // Load saved data from localStorage (only if not in review mode and not mock test)
     const savedData = loadWritingPracticeData(id);
     const resultData = loadWritingResultData(id);
 
@@ -263,11 +323,73 @@ const WritingPracticePageContent = () => {
         setStartTime(Date.now());
       }
     }
-  }, [currentWriting, id, searchParams, authUser, handleReviewWriting]);
+  }, [currentWriting, id, searchParams, authUser, handleReviewWriting, isMockTest, mockClientId, urlSearchParams, updateClientStatus]);
 
   // Check URL params for mode (review) - after writing is loaded
   // This is handled in the useEffect above when currentWriting is available
   // No need for a separate useEffect here
+
+  /* ================= FORCE SUBMIT HANDLER (Mock Test) ================= */
+  // Listen for forced submission when user confirms exit
+  useEffect(() => {
+    if (!isMockTest || !mockTestId) return;
+
+    const handleForceSubmit = async (event) => {
+      const { section, mockTestId: eventMockTestId } = event.detail || {};
+      
+      // Only handle if it's for writing section and matches our mockTestId
+      if (section === 'writing' && eventMockTestId === mockTestId) {
+        // Prevent duplicate submissions
+        if (isAutoSubmitting || isSaving) return;
+
+        setIsSaving(true);
+
+        try {
+          // Calculate time taken
+          const timeTaken = startTime
+            ? Math.floor((Date.now() - startTime) / 1000)
+            : elapsedTime;
+
+          // Save to database
+          const result = await submitWritingAttempt(id, answers, timeTaken, mockClientId);
+
+          if (result.success) {
+            // Signal completion via localStorage
+            const completionKey = `mock_test_${mockTestId}_writing_completed`;
+            const resultKey = `mock_test_${mockTestId}_writing_result`;
+            const resultData = {
+              success: true,
+              attemptId: result.attemptId,
+            };
+            localStorage.setItem(completionKey, 'true');
+            localStorage.setItem(resultKey, JSON.stringify(resultData));
+
+            // Update mock_test_clients status to 'completed'
+            if (mockClientId) {
+              updateClientStatus(mockClientId, 'completed').catch(err => {
+                console.error('Error updating mock test client status to completed:', err);
+              });
+            }
+
+            setIsSaving(false);
+          } else {
+            setIsSaving(false);
+            toast.error(result.error || 'Failed to save writing attempt');
+          }
+        } catch (error) {
+          console.error('Error force-submitting writing:', error);
+          setIsSaving(false);
+          toast.error('An error occurred while saving your writing');
+        }
+      }
+    };
+
+    window.addEventListener('mockTestForceSubmit', handleForceSubmit);
+
+    return () => {
+      window.removeEventListener('mockTestForceSubmit', handleForceSubmit);
+    };
+  }, [isMockTest, mockTestId, mockClientId, id, answers, startTime, elapsedTime, isAutoSubmitting, isSaving, submitWritingAttempt, updateClientStatus]);
 
   /* ================= TIMER ================= */
   useEffect(() => {
@@ -491,41 +613,66 @@ const WritingPracticePageContent = () => {
         : elapsedTime;
 
       // Save to database (silently, no loading overlay)
-      const result = await submitWritingAttempt(id, answers, timeTaken);
+      // Pass mockClientId if in mock test mode
+      const result = await submitWritingAttempt(id, answers, timeTaken, isMockTest ? mockClientId : null);
 
       if (result.success) {
-        // Save result data
-        saveWritingResultData(id, {
-          answers,
-          timeRemaining: 0,
-          elapsedTime: timeTaken,
-          startTime,
-        });
-
-        // Clear practice data
-        clearWritingPracticeData(id);
-
-        // Reset to initial state (sample preview mode)
-        setIsPracticeMode(false);
-        setIsStarted(false);
-        setIsPaused(false);
-        setStartTime(null);
-        setElapsedTime(0);
-
-        // Reset timer to full duration
-        if (currentWriting) {
-          setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+        // If mock test, signal completion via localStorage
+        if (isMockTest && mockTestId) {
+          const completionKey = `mock_test_${mockTestId}_writing_completed`;
+          const resultKey = `mock_test_${mockTestId}_writing_result`;
+          const resultData = {
+            success: true,
+            attemptId: result.attemptId,
+          };
+          localStorage.setItem(completionKey, 'true');
+          localStorage.setItem(resultKey, JSON.stringify(resultData));
         }
 
-        // Remove practice mode from URL
-        const newSearchParams = new URLSearchParams(searchParams);
-        newSearchParams.delete('mode');
-        setSearchParams(newSearchParams, { replace: true });
+        // Update mock_test_clients status to 'completed' if in mock test mode
+        if (isMockTest && mockClientId) {
+          updateClientStatus(mockClientId, 'completed').catch(err => {
+            console.error('Error updating mock test client status to completed:', err);
+          });
+        }
 
-        // Show success modal after saving completes
-        setIsAutoSubmitting(false);
-        setIsSuccessModalOpen(true);
-        toast.success("Your writing has been auto-submitted successfully!");
+        // Save result data (only if not mock test, as mock test doesn't use localStorage for results)
+        if (!isMockTest) {
+          saveWritingResultData(id, {
+            answers,
+            timeRemaining: 0,
+            elapsedTime: timeTaken,
+            startTime,
+          });
+
+          // Clear practice data
+          clearWritingPracticeData(id);
+
+          // Reset to initial state (sample preview mode)
+          setIsPracticeMode(false);
+          setIsStarted(false);
+          setIsPaused(false);
+          setStartTime(null);
+          setElapsedTime(0);
+
+          // Reset timer to full duration
+          if (currentWriting) {
+            setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+          }
+
+          // Remove practice mode from URL
+          const newSearchParams = new URLSearchParams(searchParams);
+          newSearchParams.delete('mode');
+          setSearchParams(newSearchParams, { replace: true });
+
+          // Show success modal after saving completes
+          setIsAutoSubmitting(false);
+          setIsSuccessModalOpen(true);
+          toast.success("Your writing has been auto-submitted successfully!");
+        } else {
+          // For mock test, just mark as submitting - MockTestWriting will handle navigation
+          setIsAutoSubmitting(false);
+        }
       } else {
         setIsAutoSubmitting(false);
         toast.error(result.error || 'Failed to auto-submit writing attempt');
@@ -541,7 +688,7 @@ const WritingPracticePageContent = () => {
       setIsPaused(false);
       setIsStarted(true);
     }
-  }, [currentWriting, answers, startTime, elapsedTime, id, searchParams, setSearchParams, submitWritingAttempt, isAutoSubmitting]);
+  }, [currentWriting, answers, startTime, elapsedTime, id, searchParams, setSearchParams, submitWritingAttempt, isAutoSubmitting, isMockTest, mockTestId, mockClientId, updateClientStatus]);
 
   // If all tasks have at least one word, open the finish modal and save the writing
 
@@ -556,40 +703,67 @@ const WritingPracticePageContent = () => {
         : elapsedTime;
 
       // Save to database
-      const result = await submitWritingAttempt(id, answers, timeTaken);
+      // Pass mockClientId if in mock test mode
+      const result = await submitWritingAttempt(id, answers, timeTaken, isMockTest ? mockClientId : null);
 
       if (result.success) {
-        // Save result data
-        saveWritingResultData(id, {
-          answers,
-          timeRemaining,
-          elapsedTime: timeTaken,
-          startTime,
-        });
-
-        // Clear practice data
-        clearWritingPracticeData(id);
-
-        // Reset to initial state (sample preview mode)
-        setIsPracticeMode(false);
-        setIsStarted(false);
-        setIsPaused(false);
-        setStartTime(null);
-        setElapsedTime(0);
-
-        // Reset timer to full duration
-        if (currentWriting) {
-          setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+        // If mock test, signal completion via localStorage
+        if (isMockTest && mockTestId) {
+          const completionKey = `mock_test_${mockTestId}_writing_completed`;
+          const resultKey = `mock_test_${mockTestId}_writing_result`;
+          const resultData = {
+            success: true,
+            attemptId: result.attemptId,
+          };
+          localStorage.setItem(completionKey, 'true');
+          localStorage.setItem(resultKey, JSON.stringify(resultData));
         }
 
-        // Remove practice mode from URL
-        const newSearchParams = new URLSearchParams(searchParams);
-        newSearchParams.delete('mode');
-        setSearchParams(newSearchParams, { replace: true });
+        // Update mock_test_clients status to 'completed' if in mock test mode
+        if (isMockTest && mockClientId) {
+          updateClientStatus(mockClientId, 'completed').catch(err => {
+            console.error('Error updating mock test client status to completed:', err);
+          });
+        }
 
-        // Show success modal after saving completes
-        setIsSaving(false);
-        setIsSuccessModalOpen(true);
+        // Save result data (only if not mock test, as mock test doesn't use localStorage for results)
+        if (!isMockTest) {
+          saveWritingResultData(id, {
+            answers,
+            timeRemaining,
+            elapsedTime: timeTaken,
+            startTime,
+          });
+
+          // Clear practice data
+          clearWritingPracticeData(id);
+
+          // Reset to initial state (sample preview mode)
+          setIsPracticeMode(false);
+          setIsStarted(false);
+          setIsPaused(false);
+          setStartTime(null);
+          setElapsedTime(0);
+
+          // Reset timer to full duration
+          if (currentWriting) {
+            setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+          }
+
+          // Remove practice mode from URL
+          const newSearchParams = new URLSearchParams(searchParams);
+          newSearchParams.delete('mode');
+          setSearchParams(newSearchParams, { replace: true });
+
+          // Show success modal after saving completes
+          setIsSaving(false);
+          setIsSuccessModalOpen(true);
+        } else {
+          // For mock test, just mark as saving - MockTestWriting will handle navigation
+          setIsSaving(false);
+
+          navigate('/mock-test/results');
+                }
       } else {
         setIsSaving(false);
         toast.error(result.error || 'Failed to save writing attempt');
@@ -789,7 +963,7 @@ const WritingPracticePageContent = () => {
         onBack={handleBack}
         type="Writing"
         status={status}
-        showTryPractice={!isPracticeMode && !isStarted && status === 'taking'}
+        showTryPractice={!isMockTest && !isPracticeMode && !isStarted && status === 'taking'}
         showCorrectAnswers={false}
         onToggleShowCorrect={() => {}}
         handleRedoTask={status === 'reviewing' ? handleRetakeTask : undefined}
@@ -903,7 +1077,8 @@ const WritingPracticePageContent = () => {
                   </div>
 
                   {/* feedback */}
-                  {!isPracticeMode ? (
+                  {/* Hide feedback in mock test mode */}
+                  {!isMockTest && !isPracticeMode ? (
                     taskToDisplay.feedback && (
                       <div 
                         className="p-6 border-t w-full"
@@ -928,7 +1103,7 @@ const WritingPracticePageContent = () => {
                         </div>
                       </div>
                     )
-                  ) : (
+                  ) : !isMockTest && isPracticeMode ? (
                     <div 
                       className="p-6 border-t w-full"
                       style={{ borderColor: themeColors.border }}
@@ -943,7 +1118,7 @@ const WritingPracticePageContent = () => {
                       Feedback is not available yet. In the future, you will receive personalized feedback for every piece of writing you submit.
                     </p>
                   </div>
-                  )}
+                  ) : null}
                 </div>
               </>
             )}
@@ -1015,7 +1190,7 @@ const WritingPracticePageContent = () => {
                   // Practice mode: show textarea for user input
                   <>
                     <textarea
-                      spellcheck="false"
+                      spellCheck="false"
                       className="flex-1 p-8 resize-none outline-none"
                       placeholder="Write your answer here..."
                       value={answers[effectiveTaskType] || ""}
@@ -1264,6 +1439,7 @@ const WritingPracticePageContent = () => {
         onClose={() => setIsFinishModalOpen(false)}
         onConfirm={handleSubmitFinish}
         loading={savingAttempt || isSaving}
+        isMockTest={isMockTest}
       />
 
       {/* SUCCESS MODAL */}

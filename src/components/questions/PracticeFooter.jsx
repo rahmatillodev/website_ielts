@@ -3,8 +3,9 @@ import { FaCheck, FaChevronLeft, FaChevronRight, FaBookmark, FaRedo } from 'reac
 import { useSearchParams } from 'react-router-dom';
 import { useAppearance } from '@/contexts/AppearanceContext';
 import ConfirmModal from '@/components/modal/ConfirmModal';
+import { toast } from 'react-toastify';
 
-const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false }) => {
+const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false, isMockTest = false, mockTestId = null }) => {
   // Immediately check URL for review mode to prevent flickering
   const [searchParams] = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
@@ -176,6 +177,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                 if (!questionNumber) return null;
 
                                 const questionId = q.id;
+                                const groupQuestionId = q.question_id; // For multiple_answers, answer is stored at group level
                                 // Check both question.id (UUID) and question_number for answer
                                 // Most components use question.id as the primary key
                                 let answered = false;
@@ -190,8 +192,11 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                   answered = true;
                                 }
                                 
-                                // For multiple_answers: each question stores its own answer individually
-                                // So we don't need to check group-level answers - the check above is sufficient
+                                // For multiple_answers and other group-based types, check group-level question_id
+                                // The answer is stored using the group-level question.id (not individual question.id)
+                                if (!answered && groupQuestionId && answers[groupQuestionId] && answers[groupQuestionId].toString().trim() !== '') {
+                                  answered = true;
+                                }
 
                                 // Determine line color: only answered questions are green, default is gray
                                 let lineColor = "bg-gray-300 dark:bg-gray-600";
@@ -221,6 +226,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                 if (!questionNumber) return null;
                                 
                                 const questionId = q.id;
+                                const groupQuestionId = q.question_id; // For multiple_answers, answer is stored at group level
                                 // Check both question.id (UUID) and question_number for answer
                                 // Most components use question.id as the primary key
                                 let answered = false;
@@ -235,11 +241,14 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                   answered = true;
                                 }
                                 
-                                // For multiple_answers: each question stores its own answer individually
-                                // So we don't need to check group-level answers - the check above is sufficient
+                                // For multiple_answers and other group-based types, check group-level question_id
+                                // The answer is stored using the group-level question.id (not individual question.id)
+                                if (!answered && groupQuestionId && answers[groupQuestionId] && answers[groupQuestionId].toString().trim() !== '') {
+                                  answered = true;
+                                }
                                 
-                                // Get the actual answer value for display (check both keys)
-                                const answerValue = (questionId && answers[questionId]) || (questionNumber && answers[questionNumber]) || '';
+                                // Get the actual answer value for display (check all keys: questionId, questionNumber, and groupQuestionId)
+                                const answerValue = (questionId && answers[questionId]) || (questionNumber && answers[questionNumber]) || (groupQuestionId && answers[groupQuestionId]) || '';
                                 
                                 // Ensure type consistency for comparison
                                 const active = activeQuestion != null && Number(activeQuestion) === Number(questionNumber);

@@ -11,8 +11,8 @@ import { Outlet } from 'react-router-dom'
 const FEEDBACK_MODAL_SHOWN_KEY = "feedback_modal_shown"
 
 const DashboardLayout = () => {
-  const { pathname } = useLocation()
-  const isSmallScreen = useSmallScreen()
+  const { pathname, search } = useLocation();
+  const isSmallScreen = useSmallScreen();
   const [showModal, setShowModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -29,8 +29,27 @@ const DashboardLayout = () => {
     }
   }, [isSmallScreen])
 
-  const hideNavOn = ["/reading-practice", "/reading-result", "/listening-practice", "/listening-result", "/pricing", "/writing-practice", "/own-writing"]
-  const isHide = hideNavOn.some((p) => pathname.startsWith(p))
+  // Check for mock test in both search params and URL (handles history.replaceState case)
+  const params = new URLSearchParams(search)
+  const urlParams = new URLSearchParams(window.location.search)
+  const isMockTest = params.get("mockTest") === "true" || urlParams.get("mockTest") === "true"
+
+  const hideNavOn = [
+    "/reading-practice",
+    "/reading-result",
+    "/listening-practice",
+    "/listening-result",
+    "/pricing",
+    "/writing-practice",
+    "/own-writing",
+    "/mock-test/results"
+  ]
+
+  const isHideByPath = hideNavOn.some((p) => pathname.startsWith(p))
+
+  // 🔥 final logic - hide nav/sidebar if it's a practice page OR mock test
+  const isHide = isHideByPath || isMockTest
+
 
   const handleDismiss = () => {
     setShowModal(false)

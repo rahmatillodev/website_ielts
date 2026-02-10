@@ -24,9 +24,10 @@ export const useWritingCompletedStore = create((set) => ({
    * @param {string} writingId - The writing ID
    * @param {object} answers - User answers object { "Task 1": "...", "Task 2": "..." }
    * @param {number} timeTaken - Time taken in seconds (stored as seconds, minimum 1 second)
+   * @param {string} [mockClientId] - Optional mock test client ID for mock test mode
    * @returns {Promise<{success: boolean, attemptId?: string, error?: string}>}
    */
-  submitWritingAttempt: async (writingId, answers, timeTaken) => {
+  submitWritingAttempt: async (writingId, answers, timeTaken, mockClientId = null) => {
     set({ loading: true, error: null });
 
     try {
@@ -51,35 +52,50 @@ export const useWritingCompletedStore = create((set) => ({
         .map(([taskType, answer]) => `${taskType}: ${answer.trim()}`)
         .join('\n\n');
 
+      // Prepare attempt data
+      const attemptDataToInsert = {
+        user_id: userId,
+        writing_id: writingId, // Note: This assumes writing_id column exists
+        score: null, // Writing doesn't have automated scoring
+        total_questions: 1, // Constant as per requirements
+        correct_answers: correctAnswersText, // User's written text
+        time_taken: timeTakenSeconds, // Store in seconds
+        completed_at: new Date().toISOString(),
+      };
+
+      // Add mock_id if provided (for mock test mode)
+      if (mockClientId) {
+        attemptDataToInsert.mock_id = mockClientId;
+      }
+
       // Insert into user_attempts table
       const { data: attemptData, error: attemptError } = await supabase
         .from('user_attempts')
-        .insert({
-          user_id: userId,
-          writing_id: writingId, // Note: This assumes writing_id column exists
-          score: null, // Writing doesn't have automated scoring
-          total_questions: 1, // Constant as per requirements
-          correct_answers: correctAnswersText, // User's written text
-          time_taken: timeTakenSeconds, // Store in seconds
-          completed_at: new Date().toISOString(),
-        })
+        .insert(attemptDataToInsert)
         .select()
         .single();
 
       if (attemptError) {
         // If writing_id column doesn't exist, try with test_id instead
         if (attemptError.message.includes('writing_id') || attemptError.code === '42703') {
+          const retryDataToInsert = {
+            user_id: userId,
+            test_id: writingId, // Fallback to test_id
+            score: null,
+            total_questions: 1,
+            correct_answers: correctAnswersText,
+            time_taken: timeTakenSeconds, // Store in seconds
+            completed_at: new Date().toISOString(),
+          };
+
+          // Add mock_id if provided
+          if (mockClientId) {
+            retryDataToInsert.mock_id = mockClientId;
+          }
+
           const { data: retryData, error: retryError } = await supabase
             .from('user_attempts')
-            .insert({
-              user_id: userId,
-              test_id: writingId, // Fallback to test_id
-              score: null,
-              total_questions: 1,
-              correct_answers: correctAnswersText,
-              time_taken: timeTakenSeconds, // Store in seconds
-              completed_at: new Date().toISOString(),
-            })
+            .insert(retryDataToInsert)
             .select()
             .single();
 

@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { useWritingCompletedStore } from '@/store/WritingCompletedStore';
+import { useWritingCompletedStore } from '@/store/writingCompletedStore';
 import React, { useEffect, useState, useMemo } from 'react'
 import { FaArrowLeft, FaClock, FaFileAlt, FaArrowRight, FaHistory, FaSearch, FaArrowUp, FaArrowDown  } from 'react-icons/fa'
 import { useNavigate, useParams } from 'react-router-dom';

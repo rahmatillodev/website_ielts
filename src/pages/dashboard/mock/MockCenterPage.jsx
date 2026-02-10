@@ -342,16 +342,19 @@ const MockCenterPage = () => {
           <Card className="rounded-2xl shadow-sm border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
-                <div className="shrink-0 mt-1">
-                  <Info className="w-6 h-6 text-blue-600" />
-                </div>
+                
                 <div className="flex-1">
+                  <div className="flex gap-2 justify-between">
                   <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <span>Flexible Scheduling Feature</span>
                     <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
                       NEW
                     </span>
                   </h3>
+                  <div className="shrink-0">
+                  <Info className="w-6 h-6 text-blue-600" />
+                </div>
+                  </div>
                   <div className="space-y-3">
                     <p className="text-gray-700 leading-relaxed">
                       With a <strong className="text-gray-900">single payment</strong>, you have the flexibility to complete your mock test in two parts:

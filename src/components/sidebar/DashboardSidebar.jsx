@@ -1,4 +1,4 @@
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useLocation, Link, useNavigate, NavLink } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
   LuLayoutDashboard,
@@ -24,12 +24,15 @@ import LogoDesign from "../LogoDesign";
 import { MdAutoStories } from "react-icons/md";
 import UpgradeModal from "../modal/UpgradeModal";
 
-const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapsed }) => {
+
+
+
+const SidebarItem = ({ icon: Icon, label, link, isCollapsed }) => {
   const content = (
-    <Link
+    <NavLink
       to={link}
-      onClick={onNavigate}
-      className={`flex items-center gap-3 px-4 py-2.5 2xl:py-3 text-sm font-medium rounded-xl cursor-pointer transition-all duration-200
+
+      className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 2xl:py-3 text-sm font-medium rounded-xl cursor-pointer transition-all duration-200
         ${isActive
           ? "bg-[#EBF5FF] text-[#4A90E2]"
           : "text-[#64748B] hover:text-gray-900 hover:bg-gray-50"
@@ -37,9 +40,9 @@ const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapse
         ${isCollapsed ? "mx-2 justify-center" : "mx-3"}
       `}
     >
-      <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 shrink-0 ${isActive ? "text-[#4A90E2]" : "text-[#64748B]"}`} />
+      <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 shrink-0`} />
       {!isCollapsed && <span className="truncate">{label}</span>}
-    </Link>
+    </NavLink>
   );
 
   if (isCollapsed) {
@@ -60,8 +63,12 @@ const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapse
 
 const DashboardSidebar = ({ onNavigate }) => {
   const { pathname } = useLocation();
+
+  const checkActive = (link, exact = true) => {
+    if (exact) return pathname === link;
+    return pathname.startsWith(link);
+  };
   const navigate = useNavigate();
-  const authUser = useAuthStore((state) => state.authUser);
   const userProfile = useAuthStore((state) => state.userProfile);
   const signOut = useAuthStore((state) => state.signOut);
   const isSmallScreen = useSmallScreen();
@@ -72,15 +79,15 @@ const DashboardSidebar = ({ onNavigate }) => {
     return saved ? JSON.parse(saved) : false;
   });
 
+
+
+
+
+
   // On small screens, always keep sidebar expanded (don't allow collapsing)
   const effectiveIsCollapsed = isSmallScreen ? false : isCollapsed;
 
-  // Save collapsed state to localStorage whenever it changes (only for desktop)
-  useEffect(() => {
-    if (!isSmallScreen) {
-      localStorage.setItem("sidebarCollapsed", JSON.stringify(isCollapsed));
-    }
-  }, [isCollapsed, isSmallScreen]);
+
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -96,7 +103,7 @@ const DashboardSidebar = ({ onNavigate }) => {
     }
   };
 
-  const checkActive = (link) => pathname === link;
+
 
   return (
     <aside className={`flex flex-col h-screen sticky top-0 z-20 bg-white border-0 md:border-r border-gray-100 font-sans transition-all duration-300 ${effectiveIsCollapsed ? "w-[80px] 2xl:w-[90px]" : "w-[280px] 2xl:w-[320px]"
@@ -157,7 +164,6 @@ const DashboardSidebar = ({ onNavigate }) => {
           label="Dashboard"
           link="/dashboard"
           isActive={checkActive("/dashboard")}
-          onNavigate={onNavigate}
           isCollapsed={effectiveIsCollapsed}
         />
 
@@ -170,7 +176,7 @@ const DashboardSidebar = ({ onNavigate }) => {
           icon={LuBookOpen}
           label="Reading"
           link="/reading"
-          isActive={pathname.startsWith("/reading")}
+          isActive={checkActive("/reading", false)}
           onNavigate={onNavigate}
           isCollapsed={effectiveIsCollapsed}
         />
@@ -263,9 +269,9 @@ const DashboardSidebar = ({ onNavigate }) => {
             ) : (
               /* Collapsed holatdagi Upgrade Icon */
               <UpgradeModal>
-                  <button className="flex items-center justify-center p-3 w-full bg-[#4B8EE3] rounded-xl hover:bg-[#3a7bc8] transition-colors">
-                    <LuStar size={20} className="text-white" fill="currentColor" />
-                  </button>
+                <button className="flex items-center justify-center p-3 w-full bg-[#4B8EE3] rounded-xl hover:bg-[#3a7bc8] transition-colors">
+                  <LuStar size={20} className="text-white" fill="currentColor" />
+                </button>
               </UpgradeModal>
             )}
           </>
