@@ -1,5 +1,6 @@
 /**
  * Timer for the current step. When recording: countdown. When reading_question: full duration, paused.
+ * Human mode: count-up from 0 (total session duration).
  */
 
 import React, { useState, useEffect } from "react";
@@ -7,6 +8,7 @@ import { useSpeakingSessionStore, getFlatQuestions } from "@/store/speakingSessi
 
 export default function SpeakingStepTimer() {
   const status = useSpeakingSessionStore((s) => s.status);
+  const mode = useSpeakingSessionStore((s) => s.mode);
   const stepStartedAt = useSpeakingSessionStore((s) => s.stepStartedAt);
   const stepDurationMs = useSpeakingSessionStore((s) => {
     const questions = getFlatQuestions(s.parts);
@@ -16,9 +18,25 @@ export default function SpeakingStepTimer() {
   });
 
   const [remainingSec, setRemainingSec] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const isPaused = status === "reading_question";
+  const isHuman = mode === "human";
 
   useEffect(() => {
+    if (isHuman && status === "recording" && stepStartedAt) {
+      const tick = () => {
+        setElapsedSec(Math.floor((Date.now() - stepStartedAt) / 1000));
+      };
+      tick();
+      const id = setInterval(tick, 1000);
+      return () => clearInterval(id);
+    }
+    setElapsedSec(0);
+    return undefined;
+  }, [isHuman, status, stepStartedAt]);
+
+  useEffect(() => {
+    if (isHuman) return;
     if (status !== "recording" || !stepStartedAt || !stepDurationMs) {
       if (!isPaused) setRemainingSec(0);
       return;
@@ -33,7 +51,19 @@ export default function SpeakingStepTimer() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [status, stepStartedAt, stepDurationMs, isPaused]);
+  }, [isHuman, status, stepStartedAt, stepDurationMs, isPaused]);
+
+  if (isHuman && status === "recording") {
+    const mm = Math.floor(elapsedSec / 60);
+    const ss = elapsedSec % 60;
+    const display = `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+    return (
+      <div className="inline-flex flex-col items-center justify-center gap-1">
+        <span className="font-mono text-2xl font-bold text-primary">{display}</span>
+        <span className="text-xs font-medium text-text-secondary-light">Elapsed</span>
+      </div>
+    );
+  }
 
   if (status !== "recording" && status !== "reading_question") return null;
 

@@ -74,7 +74,11 @@ const CardOpen = ({
         ? `/reading-practice/${id}`
         : testType === 'speaking'
           ? `/speaking-practice/${id}`
-          : `/writing-practice/${id}`);
+          : testType === 'shadowing'
+            ? `/speaking-practice/${id}`
+            : testType === 'human'
+              ? `/speaking-practice/${id}`
+              : `/writing-practice/${id}`);
     navigate(practiceLink);
   };
 
@@ -92,6 +96,10 @@ const CardOpen = ({
       navigate(`/reading-practice/${id}`);
     } else if (testType === 'speaking') {
       navigate(`/speaking-practice/${id}`);
+    } else if (testType === 'shadowing') {
+      navigate(`/speaking-practice/${id}`);
+    } else if (testType === 'human') {
+      navigate(`/speaking-practice/${id}`);
     }
   };
 
@@ -102,6 +110,10 @@ const CardOpen = ({
       navigate(`/reading-practice/${id}?mode=review`);
     } else if (testType === 'speaking') {
       navigate(`/speaking-practice/${id}?mode=review`);
+    } else if (testType === 'shadowing') {
+      navigate(`/speaking-practice/${id}/shadowing?mode=review`);
+    } else if (testType === 'human') {
+      navigate(`/speaking-practice/${id}/human?mode=review`);
     }
   };
   

@@ -3,16 +3,18 @@
  * Stretches full width; small circles and labels. Active/completed = primary, rest = outline.
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSpeakingSessionStore, getFlatQuestions } from "@/store/speakingSessionStore";
+import ConfirmModal from "@/components/modal/ConfirmModal";
 
 function buildRoadmapSegments(parts) {
   if (!Array.isArray(parts) || parts.length === 0) return [];
   const segments = [];
   parts.forEach((part, partIndex) => {
+    const items = part.questions || part.steps || [];
     segments.push({ type: "part", label: part.title || `Part ${partIndex + 1}` });
-    (part.questions || []).forEach((_, qIndex) => {
+    items.forEach((_, qIndex) => {
       segments.push({ type: "question", label: String(qIndex + 1) });
     });
   });
@@ -25,8 +27,9 @@ function getCurrentSegmentIndex(parts, currentStep) {
   let segmentIndex = 0;
   let flatIndex = 0;
   for (let p = 0; p < parts.length; p++) {
-    segmentIndex++; // part segment
-    for (let q = 0; q < (parts[p].questions || []).length; q++) {
+    segmentIndex++;
+    const items = parts[p].questions || parts[p].steps || [];
+    for (let q = 0; q < items.length; q++) {
       if (flatIndex === currentStep) return segmentIndex;
       segmentIndex++;
       flatIndex++;
@@ -47,26 +50,55 @@ export default function SpeakingSessionNavbar() {
     [parts, currentStep]
   );
   const totalSteps = getFlatQuestions(parts).length;
+  const resetSession = useSpeakingSessionStore((s) => s.resetSession);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const handleBack = () => {
-    navigate(testId ? `/speaking-practice/${testId}` : "/speaking");
+    setShowExitConfirm(true);
+  };
+
+  const handleExitConfirm = () => {
+    resetSession();
+    navigate("/speaking");
+    setShowExitConfirm(false);
   };
 
   if (totalSteps === 0 || segments.length === 0) {
     return (
-      <header className="sticky top-0 z-30 flex items-center h-14 px-4 bg-white border-b border-border">
-        <button type="button" onClick={handleBack} className="text-sm text-text-secondary-light hover:text-text-light">
-          ← Back
-        </button>
-      </header>
+      <>
+        <ConfirmModal
+          isOpen={showExitConfirm}
+          onClose={() => setShowExitConfirm(false)}
+          onConfirm={handleExitConfirm}
+          title="Exit Test"
+          description="Are you sure you want to exit? Your progress may be lost."
+          cancelLabel="Stay"
+          confirmLabel="Yes, Leave"
+        />
+        <header className="sticky top-0 z-30 flex items-center h-14 px-4 bg-white border-b border-border">
+          <button type="button" onClick={handleBack} className="text-sm text-text-secondary-light hover:text-text-light">
+            ← Back
+          </button>
+        </header>
+      </>
     );
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center h-14 px-4 bg-white border-b border-border min-w-0">
-      <button type="button" onClick={handleBack} className="shrink-0 text-sm text-text-secondary-light hover:text-text-light">
-        ← Back
-      </button>
+    <>
+      <ConfirmModal
+        isOpen={showExitConfirm}
+        onClose={() => setShowExitConfirm(false)}
+        onConfirm={handleExitConfirm}
+        title="Exit Test"
+        description="Are you sure you want to exit? Your progress may be lost."
+        cancelLabel="Stay"
+        confirmLabel="Yes, Leave"
+      />
+      <header className="sticky top-0 z-30 flex items-center h-14 px-4 bg-white border-b border-border min-w-0">
+        <button type="button" onClick={handleBack} className="shrink-0 text-sm text-text-secondary-light hover:text-text-light">
+          ← Back
+        </button>
       <div className="flex items-end gap-0 min-w-0 flex-1 py-2 ml-5">
         {segments.map((seg, i) => {
           const isActive = i === currentSegmentIndex;
@@ -97,5 +129,6 @@ export default function SpeakingSessionNavbar() {
         })}
       </div>
     </header>
+    </>
   );
 }

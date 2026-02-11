@@ -493,7 +493,7 @@ const TestsLibraryPage = ({
                             <CardOpen
                               {...test}
                               isGridView={isGridView}
-                              testType={testType}
+                              testType={test.testType ?? testType}
                             />
                           ) : (
                             <CardLocked

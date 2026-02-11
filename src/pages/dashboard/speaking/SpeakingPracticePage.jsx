@@ -787,7 +787,6 @@ const SpeakingPracticePage = () => {
                   type="button"
                   disabled={!canStartExam}
                   onClick={async () => {
-                    // Where speaking resumes normally (overlay closes, page interaction enabled)
                     await cleanupRecording();
                     setIsMicMenuOpen(false);
                     setIsSpeakerMenuOpen(false);
@@ -795,8 +794,16 @@ const SpeakingPracticePage = () => {
                       URL.revokeObjectURL(audioUrl);
                       setAudioUrl("");
                     }
-                    // Exam start blocking condition:
-                    // Only after this flag becomes true will the new speaking exam flow mount.
+                    if (id === "shadowing") {
+                      setShowEquipmentCheck(false);
+                      navigate(`/speaking-practice/shadowing/shadowing`);
+                      return;
+                    }
+                    if (id === "human") {
+                      setShowEquipmentCheck(false);
+                      navigate(`/speaking-practice/human/human`);
+                      return;
+                    }
                     setIsEquipmentCheckCompleted(true);
                     setShowEquipmentCheck(false);
                   }}

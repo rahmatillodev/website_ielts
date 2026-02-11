@@ -13,10 +13,25 @@ import AudioFrequencyGraph from "./audio/AudioFrequencyGraph";
 
 export default function SpeakingSessionSidebar() {
   const status = useSpeakingSessionStore((s) => s.status);
+  const mode = useSpeakingSessionStore((s) => s.mode);
+  const startRecordingForCurrentStep = useSpeakingSessionStore((s) => s.startRecordingForCurrentStep);
   const { liveStream } = useSpeakingSessionContext();
 
-  const showRecordingPanel = status === "recording" || status === "reading_question";
-  const isPaused = status === "reading_question";
+  const isShadowing = mode === "shadowing";
+  const isHuman = mode === "human";
+  const isReady = status === "ready";
+  const isWatching = status === "watching";
+  const showRecordingPanel =
+    status === "recording" ||
+    status === "reading_question" ||
+    (isShadowing && isWatching) ||
+    (isHuman && isReady);
+  const isPaused = status === "reading_question" || (isShadowing && isWatching);
+  const showAnswerButton = isShadowing && isWatching;
+  const showHumanStartButton = isHuman && isReady;
+  const showHumanInProgress = isHuman && status === "recording";
+  const showSubmitAndTimer = (!isShadowing || status === "recording") && !showHumanStartButton && !showHumanInProgress;
+  const nextQuestionHuman = useSpeakingSessionStore((s) => s.nextQuestionHuman);
 
   return (
     <aside className="w-[340px] shrink-0 flex flex-col bg-white border-l border-border">
@@ -33,30 +48,80 @@ export default function SpeakingSessionSidebar() {
               </div>
             </div>
             <p className="font-semibold text-text-light text-center">
-              {isPaused ? "Question playing…" : "Recording"}
+              {showHumanStartButton ? "Ready" : showHumanInProgress ? "Recording" : showAnswerButton ? "Your turn" : isPaused ? "Question playing…" : "Recording"}
             </p>
             <p className="text-sm text-text-secondary-light mt-1 text-center">
-              {isPaused
-                ? "Timer and recording will start when the question finishes."
-                : "Speak your answer clearly into the microphone."}
+              {showHumanStartButton
+                ? "Click Start Test to begin. Timer and recording will run for the full session."
+                : showHumanInProgress
+                  ? "Speak your answers. Use Next Question to advance. Finish when done."
+                  : showAnswerButton
+                    ? "Click Answer to start the microphone and speak."
+                    : isPaused
+                      ? "Timer and recording will start when the question finishes."
+                      : "Speak your answer clearly into the microphone."}
             </p>
-            <div className="mt-6 w-full flex justify-center">
-              <SpeakingStepTimer />
-            </div>
-            <div className="mt-6 w-full">
-              <SpeakingNextButton />
-            </div>
+            {showHumanInProgress && (
+              <div className="mt-6 w-full flex justify-center">
+                <SpeakingStepTimer />
+              </div>
+            )}
+            {showSubmitAndTimer && (
+              <div className="mt-6 w-full flex justify-center">
+                <SpeakingStepTimer />
+              </div>
+            )}
+            {showHumanStartButton ? (
+              <div className="mt-6 w-full">
+                <button
+                  type="button"
+                  onClick={startRecordingForCurrentStep}
+                  className="w-full py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90"
+                >
+                  Start Test
+                </button>
+              </div>
+            ) : showHumanInProgress ? (
+              <div className="mt-6 w-full space-y-2">
+                <button
+                  type="button"
+                  onClick={nextQuestionHuman}
+                  className="w-full py-3 px-4 rounded-lg border border-gray-200 bg-white text-gray-800 font-medium hover:bg-gray-50"
+                >
+                  Next Question
+                </button>
+                <SpeakingFinishButton />
+              </div>
+            ) : showAnswerButton ? (
+              <div className="mt-6 w-full">
+                <button
+                  type="button"
+                  onClick={startRecordingForCurrentStep}
+                  className="w-full py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90"
+                >
+                  Answer
+                </button>
+              </div>
+            ) : (
+              showSubmitAndTimer && (
+                <div className="mt-6 w-full">
+                  <SpeakingNextButton />
+                </div>
+              )
+            )}
           </div>
           <div className="flex-1 min-h-[80px] p-4 flex flex-col justify-end">
             <AudioFrequencyGraph
-              isActive={!isPaused}
-              stream={isPaused ? null : liveStream}
+              isActive={!isPaused && !showHumanStartButton}
+              stream={isPaused || showHumanStartButton ? null : liveStream}
               className="w-full rounded-lg"
             />
           </div>
-          <div className="p-4 border-t border-border">
-            <SpeakingFinishButton />
-          </div>
+          {!showHumanInProgress && !showHumanStartButton && (
+            <div className="p-4 border-t border-border">
+              <SpeakingFinishButton />
+            </div>
+          )}
         </>
       ) : (
         <div className="flex-1 flex items-center justify-center p-6 text-text-secondary-light text-sm text-center">

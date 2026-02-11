@@ -1,5 +1,5 @@
 /**
- * Orchestrator: loads parts, auto-starts (READING_QUESTION → TTS → RECORDING),
+ * Orchestrator: loads parts, auto-starts (READING_QUESTION → TTS → RECORDING, or shadowing: WATCHING → Answer → RECORDING),
  * runs recording lifecycle, persists and navigates on finish.
  */
 
@@ -11,12 +11,16 @@ import { SpeakingSessionContext } from "./SpeakingSessionContext";
 import AudioRecorder from "./audio/AudioRecorder";
 import SpeakingQuestionTTS from "./SpeakingQuestionTTS";
 
-export default function SpeakingSessionOrchestrator({ children }) {
+/** @param {{ children: React.ReactNode, getPartsForTest?: (testId: string) => Promise<unknown[]>, mode?: 'textToSpeech' | 'shadowing' }} props */
+export default function SpeakingSessionOrchestrator({ children, getPartsForTest, mode: sessionMode = "textToSpeech" }) {
   const { id: testId } = useParams();
   const navigate = useNavigate();
   const hasNavigatedRef = useRef(false);
 
+  const fetchParts = getPartsForTest || getSpeakingPartsForTest;
+
   const status = useSpeakingSessionStore((s) => s.status);
+  const mode = useSpeakingSessionStore((s) => s.mode);
   const currentStep = useSpeakingSessionStore((s) => s.currentStep);
   const stepDurationMs = useSpeakingSessionStore((s) => {
     const questions = getFlatQuestions(s.parts);
@@ -29,8 +33,10 @@ export default function SpeakingSessionOrchestrator({ children }) {
   const nextRequested = useSpeakingSessionStore((s) => s.nextRequested);
   const persistResultForResultPage = useSpeakingSessionStore((s) => s.persistResultForResultPage);
   const resetSession = useSpeakingSessionStore((s) => s.resetSession);
+  const setHumanSessionRecordingResult = useSpeakingSessionStore((s) => s.setHumanSessionRecordingResult);
 
   const isRecording = status === SESSION_STATUS.RECORDING;
+  const isHuman = mode === "human";
   const [liveStream, setLiveStream] = useState(null);
 
   const onStreamReady = useCallback((stream) => {
@@ -38,23 +44,29 @@ export default function SpeakingSessionOrchestrator({ children }) {
   }, []);
 
   const onRecordingResult = useCallback((blob) => {
-    const { currentStep: step, setRecordingResult: save, clearNextRequested: clearNext } = useSpeakingSessionStore.getState();
+    const state = useSpeakingSessionStore.getState();
+    if (state.mode === "human") {
+      setHumanSessionRecordingResult(blob);
+      state.clearNextRequested();
+      return;
+    }
+    const { currentStep: step, setRecordingResult: save, clearNextRequested: clearNext } = state;
     save(step, blob);
     clearNext();
-  }, []);
+  }, [setHumanSessionRecordingResult]);
 
   useEffect(() => {
     if (!testId) return;
     let cancelled = false;
-    getSpeakingPartsForTest(testId).then((parts) => {
+    fetchParts(testId).then((parts) => {
       if (cancelled) return;
-      initSession(testId, parts);
+      initSession(testId, parts, { mode: sessionMode });
       startSession();
     });
     return () => {
       cancelled = true;
     };
-  }, [testId, initSession, startSession]);
+  }, [testId, fetchParts, initSession, startSession, sessionMode]);
 
   useEffect(() => {
     if (status !== SESSION_STATUS.FINISHED || !testId) return;
@@ -75,8 +87,18 @@ export default function SpeakingSessionOrchestrator({ children }) {
   return (
     <SpeakingSessionContext.Provider value={sessionContextValue}>
       {children}
-      {status === SESSION_STATUS.READING_QUESTION && <SpeakingQuestionTTS />}
-      {isRecording && (
+      {mode !== "shadowing" && mode !== "human" && status === SESSION_STATUS.READING_QUESTION && <SpeakingQuestionTTS />}
+      {isRecording && isHuman && (
+        <AudioRecorder
+          key="human-session"
+          isActive={true}
+          onResult={onRecordingResult}
+          maxDurationMs={2 * 60 * 60 * 1000}
+          requestStop={nextRequested}
+          onStreamReady={onStreamReady}
+        />
+      )}
+      {isRecording && !isHuman && (
         <AudioRecorder
           key={currentStep}
           isActive={true}
