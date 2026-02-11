@@ -313,11 +313,21 @@ const TestsLibraryPage = ({
   };
 
   const handleFilterClear = () => {
-    /// close modal and reset the state
+    // Reset temp states
     setTempSelectedTypes([]);
-    setFilterOpen(false);
     setTempSortOrder("newest");
+  
+    // Reset real filter states
+    if (testType === "writing") {
+      setSelectedTaskTypes([]);
+    } else {
+      setSelectedQuestionTypes([]);
+    }
+  
+    setSortOrder("newest");
+    handleFilterClose()
   };
+  
 
   const handleFilterSearch = () => {
     if (testType === "writing") {
