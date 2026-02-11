@@ -11,8 +11,7 @@ import ListeningPracticePage from '../listening/ListeningPracticePage';
  * - Auto-submit on time expiry
  * - Can proceed early
  */
-const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onBack }) => {
-  const navigate = useNavigate();
+const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack }) => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [urlReady, setUrlReady] = useState(false);
@@ -25,19 +24,36 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onBac
     true
   );
 
+  // Track if this is an early exit submission
+  const [isEarlyExit, setIsEarlyExit] = useState(false);
+
   // Listen for completion from practice page via localStorage polling
   useEffect(() => {
     const checkCompletion = setInterval(() => {
       const completed = localStorage.getItem(`mock_test_${mockTestId}_listening_completed`);
       if (completed === 'true') {
         const result = localStorage.getItem(`mock_test_${mockTestId}_listening_result`);
-        if (result && onComplete) {
+        if (result) {
           try {
-            onComplete(JSON.parse(result));
+            const parsedResult = JSON.parse(result);
+            
+            // Reset submitting state when completion is detected
+            setIsSubmitting(false);
+            
+            // If this was an early exit, navigate to results instead of next section
+            if (isEarlyExit && onEarlyExit) {
+              // Pass result to onEarlyExit so it can save it and navigate to results
+              onEarlyExit(parsedResult, 'listening');
+            } else if (onComplete) {
+              // Normal completion - proceed to next section
+              onComplete(parsedResult);
+            }
+            
             localStorage.removeItem(`mock_test_${mockTestId}_listening_completed`);
             localStorage.removeItem(`mock_test_${mockTestId}_listening_result`);
           } catch (e) {
             console.error('Error parsing listening result:', e);
+            setIsSubmitting(false);
           }
         }
         clearInterval(checkCompletion);
@@ -45,12 +61,15 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onBac
     }, 1000);
 
     return () => clearInterval(checkCompletion);
-  }, [mockTestId, onComplete]);
+  }, [mockTestId, onComplete, onEarlyExit, isEarlyExit]);
 
   const handleExitConfirm = async () => {
     setShowExitModal(false);
     resetExitModal();
+    // Mark as early exit so we navigate to results after submission
+    setIsEarlyExit(true);
     // Trigger submission via custom event
+    
     window.dispatchEvent(new CustomEvent('mockTestForceSubmit', {
       detail: { section: 'listening', mockTestId }
     }));
@@ -86,18 +105,6 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onBac
     });
   }, [testId, mockTestId, mockClientId]);
 
-  // Don't render ListeningPracticePage until URL is ready
-  if (!testId || !urlReady) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading test...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Auto-fullscreen after URL is ready
   useEffect(() => {
     if (urlReady && testId) {
@@ -116,6 +123,18 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onBac
       setTimeout(enterFullscreen, 100);
     }
   }, [urlReady, testId]);
+
+  // Don't render ListeningPracticePage until URL is ready
+  if (!testId || !urlReady) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading test...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

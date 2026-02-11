@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMockTestClientStore } from '@/store/mockTestClientStore';
 import { useAuthStore } from '@/store/authStore';
-import { saveMockTestData, loadMockTestData, clearMockTestData } from '@/store/LocalStorage/mockTestStorage';
+import { saveMockTestData, loadMockTestData, clearMockTestData, clearAllMockTestDataForId } from '@/store/LocalStorage/mockTestStorage';
 import MockTestListening from './MockTestListening';
 import MockTestReading from './MockTestReading';
 import MockTestWriting from './MockTestWriting';
@@ -103,14 +103,43 @@ const MockTestFlow = () => {
     };
     setSectionResults(updatedResults);
     
-    // Clear saved data
+    // Clear all mock test data from localStorage after all sections are completed
+    // This includes main progress data and all completion signals
     if (effectiveMockTestId) {
-      clearMockTestData(effectiveMockTestId);
+      console.log('[MockTestFlow] Clearing all localStorage data for mock test:', effectiveMockTestId);
+      clearAllMockTestDataForId(effectiveMockTestId);
     }
     
     // Navigate to results page
     setCurrentSection('results');
     console.log('[MockTestFlow] Navigating to results page');
+  };
+
+  // Handler for early exit - navigates to results with only completed sections
+  // Only the completed section's result is saved; skipped sections remain null
+  const handleEarlyExit = (result, section) => {
+    console.log('[MockTestFlow] Early exit triggered, navigating to results with completed sections only', { section, result });
+    
+    // Save the result for the current section if provided
+    // This ensures only completed sections have results; skipped sections will be null
+    if (result && section) {
+      const updatedResults = {
+        ...sectionResults,
+        [section]: result,
+      };
+      setSectionResults(updatedResults);
+    }
+    
+    // Clear all mock test data from localStorage (including any partial progress for skipped sections)
+    // This ensures no data is saved for sections that were skipped
+    if (effectiveMockTestId) {
+      console.log('[MockTestFlow] Clearing all localStorage data for mock test:', effectiveMockTestId);
+      clearAllMockTestDataForId(effectiveMockTestId);
+    }
+    
+    // Navigate to results page with current section results
+    // Only completed sections will have results; skipped sections (reading/writing) will be null
+    setCurrentSection('results');
   };
 
   const handleAudioCheckComplete = () => {
@@ -183,6 +212,7 @@ const MockTestFlow = () => {
           mockTestId={mockTest.id}
           mockClientId={client?.id}
           onComplete={handleListeningComplete}
+          onEarlyExit={handleEarlyExit}
           onBack={() => navigate('/mock-tests')}
         />
       );
@@ -194,6 +224,7 @@ const MockTestFlow = () => {
           mockTestId={mockTest.id}
           mockClientId={client?.id}
           onComplete={handleReadingComplete}
+          onEarlyExit={handleEarlyExit}
           onBack={() => navigate('/mock-tests')}
         />
       );
@@ -205,6 +236,7 @@ const MockTestFlow = () => {
           mockTestId={mockTest.id}
           mockClientId={client?.id}
           onComplete={handleWritingComplete}
+          onEarlyExit={handleEarlyExit}
           onBack={() => navigate('/mock-tests')}
         />
       );

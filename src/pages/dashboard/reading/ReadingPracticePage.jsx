@@ -20,6 +20,8 @@ import NoteSidebar from "@/components/sidebar/NoteSidebar";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 import parse from "html-react-parser";
 import PracticeFooter from "@/components/questions/PracticeFooter";
+import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
+import MockTestExitModal from "@/components/modal/MockTestExitModal";
 
 
 
@@ -75,6 +77,8 @@ const ReadingPracticePageContent = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [startTime, setStartTime] = useState(null); // Track when test started for elapsed time
   const [isPaused, setIsPaused] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [isEarlyExit, setIsEarlyExit] = useState(false);
 
   const [answers, setAnswers] = useState({});
   const [reviewData, setReviewData] = useState({}); // Stores review data: { [questionId]: { userAnswer, isCorrect, correctAnswer } }
@@ -97,6 +101,16 @@ const ReadingPracticePageContent = () => {
   const { addHighlight, addNote, highlights, notes } = useAnnotation();
   const selectableContentRef = useRef(null);
   const universalContentRef = useRef(null); // Universal container for all selectable content
+
+  // Security hook for mock test mode (applies on refresh too)
+  const { resetExitModal, forceFullscreen } = useMockTestSecurity(
+    () => {
+      if (isMockTest) {
+        setShowExitModal(true);
+      }
+    },
+    isMockTest // Only active in mock test mode
+  );
 
 
   useEffect(() => {
@@ -718,9 +732,34 @@ const ReadingPracticePageContent = () => {
 
   // Handler for clearing localStorage when back button is clicked
   const handleBack = () => {
+    // In mock test mode, show exit modal instead of navigating
+    if (isMockTest) {
+      setShowExitModal(true);
+      return;
+    }
     if (id && !isMockTest) {
       clearReadingPracticeData(id);
     }
+  };
+
+  const handleExitConfirm = async () => {
+    setShowExitModal(false);
+    resetExitModal();
+    // Mark as early exit so we navigate to results after submission
+    setIsEarlyExit(true);
+    // Trigger submission via custom event
+    // Note: Don't set isSubmitting here - let handleSubmitTest manage its own state
+    // Setting it here causes a race condition where the event handler sees isSubmitting=true
+    // and returns early before calling handleSubmitTest
+    window.dispatchEvent(new CustomEvent('mockTestForceSubmit', {
+      detail: { section: 'reading', mockTestId }
+    }));
+  };
+
+  const handleExitCancel = () => {
+    setShowExitModal(false);
+    resetExitModal();
+    forceFullscreen();
   };
 
   // Handler for submitting test - memoized to prevent unnecessary re-renders
@@ -792,6 +831,70 @@ const ReadingPracticePageContent = () => {
       return { success: false, error: error.message };
     }
   }, [isSubmitting, authUser, effectiveTestId, currentTest, answers, startTime, isMockTest, mockTestId]);
+
+  /* ================= FORCE SUBMIT HANDLER (Mock Test) ================= */
+  // Listen for forced submission when user confirms exit
+  // Only active in mock test mode
+  useEffect(() => {
+    if (!isMockTest || !mockTestId) return;
+
+    const handleForceSubmit = async (event) => {
+      const { section, mockTestId: eventMockTestId } = event.detail || {};
+      
+      // Only handle if it's for reading section and matches our mockTestId
+      if (section === 'reading' && eventMockTestId === mockTestId) {
+        // Prevent duplicate submissions - only check ref to avoid stale closure issues
+        // The ref is set inside handleSubmitTest, so this accurately reflects submission state
+        if (isSubmittingRef.current) {
+          console.warn('[ReadingPracticePage] Submission already in progress, ignoring duplicate request');
+          return;
+        }
+
+        // Validate all required data is available before attempting submission
+        // This ensures we only submit when we have all necessary information
+        if (!authUser || !effectiveTestId || !currentTest) {
+          console.error('[ReadingPracticePage] Cannot force submit: Missing required data', {
+            hasAuthUser: !!authUser,
+            hasEffectiveTestId: !!effectiveTestId,
+            hasCurrentTest: !!currentTest,
+            isMockTest,
+            mockTestId
+          });
+          toast.error('Cannot submit: Test data not fully loaded. Please wait and try again.');
+          return;
+        }
+
+        try {
+          // Call handleSubmitTest which handles all the submission logic
+          // handleSubmitTest will set both isSubmittingRef and isSubmitting state
+          const result = await handleSubmitTest();
+          
+          if (!result || !result.success) {
+            console.error('[ReadingPracticePage] Force submit failed:', result?.error);
+            toast.error(result?.error || 'Failed to submit test attempt');
+            // handleSubmitTest already resets the state on failure, but ensure it's reset here too
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
+          }
+          // On success, handleSubmitTest manages state and localStorage completion signal
+          // The completion will be detected by MockTestReading's polling mechanism
+        } catch (error) {
+          console.error('[ReadingPracticePage] Error force-submitting reading:', error);
+          toast.error('An error occurred while submitting your test');
+          // Reset state on unexpected error
+          isSubmittingRef.current = false;
+          setIsSubmitting(false);
+        }
+      }
+    };
+
+    window.addEventListener('mockTestForceSubmit', handleForceSubmit);
+
+    return () => {
+      window.removeEventListener('mockTestForceSubmit', handleForceSubmit);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMockTest, mockTestId, authUser, effectiveTestId, currentTest]);
 
   // Handler for reviewing test
   const handleReviewTest = async () => {
@@ -1078,6 +1181,15 @@ const ReadingPracticePageContent = () => {
         transition: 'font-size 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out'
       }}
     >
+      {/* Exit Modal for mock test mode */}
+      {isMockTest && (
+        <MockTestExitModal
+          isOpen={showExitModal}
+          onConfirm={handleExitConfirm}
+          onCancel={handleExitCancel}
+          isSubmitting={isSubmitting}
+        />
+      )}
       {/* Text Selection Tooltip - Rendered at top level */}
       <TextSelectionTooltip
         universalContentRef={universalContentRef}

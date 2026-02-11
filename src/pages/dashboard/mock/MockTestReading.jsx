@@ -12,13 +12,14 @@ import ReadingPracticePage from '../reading/ReadingPracticePage';
  * - Security restrictions
  * - Auto-submit on time expiry
  */
-const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onBack }) => {
+const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack }) => {
   const navigate = useNavigate();
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVideo, setShowVideo] = useState(true);
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [urlReady, setUrlReady] = useState(false);
+  const [isEarlyExit, setIsEarlyExit] = useState(false);
 
   // Security hook
   const { resetExitModal, forceFullscreen } = useMockTestSecurity(
@@ -34,13 +35,27 @@ const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onBack 
       const completed = localStorage.getItem(`mock_test_${mockTestId}_reading_completed`);
       if (completed === 'true') {
         const result = localStorage.getItem(`mock_test_${mockTestId}_reading_result`);
-        if (result && onComplete) {
+        if (result) {
           try {
-            onComplete(JSON.parse(result));
+            const parsedResult = JSON.parse(result);
+            
+            // Reset submitting state when completion is detected
+            setIsSubmitting(false);
+            
+            // If this was an early exit, navigate to results instead of next section
+            if (isEarlyExit && onEarlyExit) {
+              // Pass result to onEarlyExit so it can save it and navigate to results
+              onEarlyExit(parsedResult, 'reading');
+            } else if (onComplete) {
+              // Normal completion - proceed to next section
+              onComplete(parsedResult);
+            }
+            
             localStorage.removeItem(`mock_test_${mockTestId}_reading_completed`);
             localStorage.removeItem(`mock_test_${mockTestId}_reading_result`);
           } catch (e) {
             console.error('Error parsing reading result:', e);
+            setIsSubmitting(false);
           }
         }
         clearInterval(checkCompletion);
@@ -48,7 +63,7 @@ const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onBack 
     }, 1000);
 
     return () => clearInterval(checkCompletion);
-  }, [mockTestId, onComplete]);
+  }, [mockTestId, onComplete, onEarlyExit, isEarlyExit]);
 
   const handleVideoComplete = () => {
     setVideoCompleted(true);
@@ -58,6 +73,8 @@ const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onBack 
   const handleExitConfirm = async () => {
     setShowExitModal(false);
     resetExitModal();
+    // Mark as early exit so we navigate to results after submission
+    setIsEarlyExit(true);
     window.dispatchEvent(new CustomEvent('mockTestForceSubmit', {
       detail: { section: 'reading', mockTestId }
     }));

@@ -16,6 +16,8 @@ import { useWritingStore } from "@/store/writingStore";
 import { useWritingCompletedStore } from "@/store/writingCompletedStore";
 import { useAuthStore } from "@/store/authStore";
 import { useMockTestClientStore } from "@/store/mockTestClientStore";
+import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
+import MockTestExitModal from "@/components/modal/MockTestExitModal";
 import {
   saveWritingPracticeData,
   loadWritingPracticeData,
@@ -68,6 +70,16 @@ const WritingPracticePageContent = () => {
     notes,
   } = useAnnotation();
 
+  // Security hook for mock test mode (applies on refresh too)
+  const { resetExitModal, forceFullscreen } = useMockTestSecurity(
+    () => {
+      if (isMockTest) {
+        setShowExitModal(true);
+      }
+    },
+    isMockTest // Only active in mock test mode
+  );
+
   const [currentTaskType, setCurrentTaskType] = useState(null);
   const [answers, setAnswers] = useState({});
   const [leftWidth, setLeftWidth] = useState(50);
@@ -93,6 +105,8 @@ const WritingPracticePageContent = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSubmitting, setIsAutoSubmitting] = useState(false);
   const [isLoadingReview, setIsLoadingReview] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [isEarlyExit, setIsEarlyExit] = useState(false);
 
   const containerRef = useRef(null);
   const universalContentRef = useRef(null);
@@ -590,12 +604,35 @@ const WritingPracticePageContent = () => {
   }, [id, searchParams, setSearchParams, currentWriting]);
 
   const handleBack = useCallback(() => {
+    // In mock test mode, show exit modal instead of navigating
+    if (isMockTest) {
+      setShowExitModal(true);
+      return;
+    }
     // Clear practice data from localStorage when user exits via back button
     if (id) {
       clearWritingPracticeData(id);
     }
     navigate(-1);
-  }, [id, navigate]);
+  }, [id, navigate, isMockTest]);
+
+  const handleExitConfirm = async () => {
+    setShowExitModal(false);
+    resetExitModal();
+    // Mark as early exit so we navigate to results after submission
+    setIsEarlyExit(true);
+    // Trigger submission via custom event
+    window.dispatchEvent(new CustomEvent('mockTestForceSubmit', {
+      detail: { section: 'writing', mockTestId }
+    }));
+    setIsSaving(true);
+  };
+
+  const handleExitCancel = () => {
+    setShowExitModal(false);
+    resetExitModal();
+    forceFullscreen();
+  };
   
   
 
@@ -944,6 +981,15 @@ const WritingPracticePageContent = () => {
         transition: 'font-size 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out'
       }}
     >
+      {/* Exit Modal for mock test mode */}
+      {isMockTest && (
+        <MockTestExitModal
+          isOpen={showExitModal}
+          onConfirm={handleExitConfirm}
+          onCancel={handleExitCancel}
+          isSubmitting={isSaving}
+        />
+      )}
       <TextSelectionTooltip
         universalContentRef={universalContentRef}
         partId={taskToDisplay?.task_name || effectiveTaskType || 'task'}

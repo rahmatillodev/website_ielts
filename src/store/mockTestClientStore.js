@@ -9,27 +9,20 @@ export const useMockTestClientStore = create((set) => ({
 
     fetchClientById: async (clientId) => {
         set({ loading: true, error: null });
+        console.log("fetchClientById type", typeof clientId, clientId);
 
         try {
             const { data, error } = await supabase
                 .from("mock_test_clients")
-                .select(`
-            id,
-            user_id,
-            full_name,
-            email,
-            phone_number,
-            date,
-            time,
-            status,
-            total_score,
-            created_at,
-            updated_at
-          `)
+                .select('*')
                 .eq("user_id", clientId)
-                .single();
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
             if (error) throw error;
+            console.log(data);
+            
 
             set({ client: data, loading: false });
             return data;

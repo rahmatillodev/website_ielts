@@ -85,6 +85,65 @@ export const clearAllMockTestData = () => {
 };
 
 /**
+ * Clear all mock test data for a specific mock test ID
+ * This includes:
+ * - Main progress data (mock_test_${mockTestId})
+ * - Completion signals (mock_test_${mockTestId}_listening_completed, etc.)
+ * - Result data (mock_test_${mockTestId}_listening_result, etc.)
+ * @param {string} mockTestId - Mock test ID
+ */
+export const clearAllMockTestDataForId = (mockTestId) => {
+  try {
+    if (!mockTestId) {
+      console.warn('[mockTestStorage] clearAllMockTestDataForId: mockTestId is required');
+      return;
+    }
+
+    // List of all possible localStorage keys for this mock test
+    const keysToRemove = [
+      // Main progress data
+      `${STORAGE_KEY_PREFIX}${mockTestId}`,
+      // Listening completion signals
+      `${STORAGE_KEY_PREFIX}${mockTestId}_listening_completed`,
+      `${STORAGE_KEY_PREFIX}${mockTestId}_listening_result`,
+      // Reading completion signals
+      `${STORAGE_KEY_PREFIX}${mockTestId}_reading_completed`,
+      `${STORAGE_KEY_PREFIX}${mockTestId}_reading_result`,
+      // Writing completion signals
+      `${STORAGE_KEY_PREFIX}${mockTestId}_writing_completed`,
+      `${STORAGE_KEY_PREFIX}${mockTestId}_writing_result`,
+    ];
+
+    // Remove each key
+    keysToRemove.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (err) {
+        console.warn(`[mockTestStorage] Error removing key ${key}:`, err);
+      }
+    });
+
+    // Also check for any other keys that might start with the pattern
+    // (in case there are other variations we haven't accounted for)
+    const allKeys = Object.keys(localStorage);
+    allKeys.forEach((key) => {
+      if (key.startsWith(`${STORAGE_KEY_PREFIX}${mockTestId}_`) || 
+          key === `${STORAGE_KEY_PREFIX}${mockTestId}`) {
+        try {
+          localStorage.removeItem(key);
+        } catch (err) {
+          console.warn(`[mockTestStorage] Error removing key ${key}:`, err);
+        }
+      }
+    });
+
+    console.log(`[mockTestStorage] Cleared all data for mock test: ${mockTestId}`);
+  } catch (error) {
+    console.error('[mockTestStorage] Error clearing all mock test data for ID:', error);
+  }
+};
+
+/**
  * Save section-specific data
  * @param {string} mockTestId - Mock test ID
  * @param {string} section - Section name: 'listening' | 'reading' | 'writing'

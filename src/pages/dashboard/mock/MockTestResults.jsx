@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaTelegramPlane } from 'react-icons/fa';
 import { MdSchedule, MdCheckCircleOutline } from 'react-icons/md';
+import { clearAllMockTestDataForId } from '@/store/LocalStorage/mockTestStorage';
 
 /**
  * Mock Test Results Page (Pending Evaluation)
@@ -12,9 +13,16 @@ import { MdSchedule, MdCheckCircleOutline } from 'react-icons/md';
 const MockTestResults = ({ mockTestId, results, onBack }) => {
   const navigate = useNavigate();
 
-  // Log when results page is displayed
+  // Log when results page is displayed and ensure localStorage is cleared
   useEffect(() => {
     console.log('[MockTestResults] Results page displayed', { mockTestId, results });
+    
+    // Ensure all localStorage data is cleared when results page loads
+    // This is a safety measure in case cleanup didn't happen earlier
+    if (mockTestId) {
+      console.log('[MockTestResults] Ensuring localStorage cleanup for mock test:', mockTestId);
+      clearAllMockTestDataForId(mockTestId);
+    }
   }, [mockTestId, results]);
 
   return (

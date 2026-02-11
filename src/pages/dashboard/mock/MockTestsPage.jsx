@@ -4,6 +4,8 @@ import { useAuthStore } from "@/store/authStore";
 import { useMockTestClientStore } from "@/store/mockTestClientStore";
 import ComingSoonPage from "../ComingSoonPage";
 import MockTestStart from "./MockTestStart";
+import { Button } from "@/components/ui/button";
+import { useSettingsStore } from "@/store/systemStore";
 
 const MockTestsPage = () => {
   const { fetchClientById, fetchMockTestByPassword, client, mockTest, loading } = useMockTestClientStore();
@@ -12,6 +14,7 @@ const MockTestsPage = () => {
   const [passwordCode, setPasswordCode] = useState("");
   const [showPasswordInput, setShowPasswordInput] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const { settings } = useSettingsStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -59,6 +62,20 @@ const MockTestsPage = () => {
         headerActionText="Start Full Test"
       />
     );
+
+    if (client.status !== 'booked') {
+      return (
+        <div className=" flex flex-col items-center justify-center bg-gray-50 space-y-6 p-6 w-full h-full max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold">{client.full_name}</h1> 
+          <p className="text-xl text-gray-500 w-7/12 text-center">You have completed the test. You will be provided with the answers shortly. Please wait a moment.</p>
+          <a href={`https://t.me/${settings.telegram_admin_username}`} target="_blank">
+          <Button className="px-10 py-10 text-3xl font-bold bg-primary text-white rounded-lg hover:bg-primary/90">
+            Contact Admin
+          </Button>
+          </a>
+        </div>
+      );
+    }
 
   return (
     <div className=" flex flex-col items-center justify-center bg-gray-50 space-y-6 p-6 w-full h-full max-w-7xl mx-auto">

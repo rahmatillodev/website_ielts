@@ -13,13 +13,14 @@ import WritingPracticePage from '../writing/WritingPracticePage';
  * - Auto-submit on time expiry
  * - Timer starts automatically after intro (no button needed)
  */
-const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onBack }) => {
+const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack }) => {
   const navigate = useNavigate();
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVideo, setShowVideo] = useState(true);
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [urlReady, setUrlReady] = useState(false);
+  const [isEarlyExit, setIsEarlyExit] = useState(false);
 
   // Security hook
   const { resetExitModal, forceFullscreen } = useMockTestSecurity(
@@ -35,15 +36,28 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onBa
       const completed = localStorage.getItem(`mock_test_${mockTestId}_writing_completed`);
       if (completed === 'true') {
         const result = localStorage.getItem(`mock_test_${mockTestId}_writing_result`);
-        if (result && onComplete) {
+        if (result) {
           try {
             const parsedResult = JSON.parse(result);
             console.log('[MockTestWriting] Writing completed, calling onComplete with:', parsedResult);
-            onComplete(parsedResult);
+            
+            // Reset submitting state when completion is detected
+            setIsSubmitting(false);
+            
+            // If this was an early exit, navigate to results instead of next section
+            if (isEarlyExit && onEarlyExit) {
+              // Pass result to onEarlyExit so it can save it and navigate to results
+              onEarlyExit(parsedResult, 'writing');
+            } else if (onComplete) {
+              // Normal completion - proceed to next section (results)
+              onComplete(parsedResult);
+            }
+            
             localStorage.removeItem(`mock_test_${mockTestId}_writing_completed`);
             localStorage.removeItem(`mock_test_${mockTestId}_writing_result`);
           } catch (e) {
             console.error('Error parsing writing result:', e);
+            setIsSubmitting(false);
           }
         }
         clearInterval(checkCompletion);
@@ -51,7 +65,7 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onBa
     }, 1000);
 
     return () => clearInterval(checkCompletion);
-  }, [mockTestId, onComplete]);
+  }, [mockTestId, onComplete, onEarlyExit, isEarlyExit]);
 
   const handleVideoComplete = () => {
     setVideoCompleted(true);
@@ -61,6 +75,8 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onBa
   const handleExitConfirm = async () => {
     setShowExitModal(false);
     resetExitModal();
+    // Mark as early exit so we navigate to results after submission
+    setIsEarlyExit(true);
     window.dispatchEvent(new CustomEvent('mockTestForceSubmit', {
       detail: { section: 'writing', mockTestId }
     }));
