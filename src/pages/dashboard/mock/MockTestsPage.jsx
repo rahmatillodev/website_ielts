@@ -6,9 +6,10 @@ import ComingSoonPage from "../ComingSoonPage";
 import MockTestStart from "./MockTestStart";
 import { Button } from "@/components/ui/button";
 import { useSettingsStore } from "@/store/systemStore";
+import MockTestClientResults from "./MockTestClientResults";
 
 const MockTestsPage = () => {
-  const { fetchClientById, fetchMockTestByPassword, client, mockTest, loading } = useMockTestClientStore();
+  const { fetchClientById, fetchMockTestByPassword, client, mockTest, loading, fetchClientAttempts } = useMockTestClientStore();
   const { userProfile } = useAuthStore();
   const [showStartModal, setShowStartModal] = useState(false);
   const [passwordCode, setPasswordCode] = useState("");
@@ -16,6 +17,28 @@ const MockTestsPage = () => {
   const [passwordError, setPasswordError] = useState("");
   const { settings } = useSettingsStore();
   const navigate = useNavigate();
+  const [results, setResults] = useState({
+    listening: null,
+    reading: null,
+    writing: null
+  })
+
+  useEffect(() => {
+    const loadResults = async () => {
+      if (userProfile?.id) {
+        try {
+          const data = await fetchClientAttempts(userProfile.id)
+          if (data?.results) {
+            setResults(data.results)
+          }
+        } catch (err) {
+          console.error('Failed to load results:', err)
+        }
+      }
+    }
+
+    loadResults()
+  }, [userProfile?.id])
 
   useEffect(() => {
     if (userProfile?.id) {
@@ -62,6 +85,9 @@ const MockTestsPage = () => {
         headerActionText="Start Full Test"
       />
     );
+    if (client.status === "checked" || client.status === "notified") {
+      return <MockTestClientResults client={client} results={results} />
+    }
 
     if (client.status !== 'booked') {
       return (

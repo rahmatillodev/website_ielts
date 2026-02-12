@@ -17,17 +17,23 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
   const navigate = useNavigate();
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showVideo, setShowVideo] = useState(true);
+  // Check if video was already completed (persisted in localStorage)
+  const [showVideo, setShowVideo] = useState(() => {
+    if (!mockTestId) return true;
+    const videoKey = `mock_test_${mockTestId}_writing_video_completed`;
+    return localStorage.getItem(videoKey) !== 'true';
+  });
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [urlReady, setUrlReady] = useState(false);
   const [isEarlyExit, setIsEarlyExit] = useState(false);
 
-  // Security hook
+  // Security hook - always active in mock test mode
+  // WritingPracticePage will also call this hook, but having both active ensures security works
   const { resetExitModal, forceFullscreen } = useMockTestSecurity(
     () => {
       setShowExitModal(true);
     },
-    true
+    true // Always active in mock test wrapper
   );
 
   // Listen for completion from practice page
@@ -70,6 +76,10 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
   const handleVideoComplete = () => {
     setVideoCompleted(true);
     setShowVideo(false);
+    // Persist video completion so it doesn't show again on refresh
+    if (mockTestId) {
+      localStorage.setItem(`mock_test_${mockTestId}_writing_video_completed`, 'true');
+    }
   };
 
   const handleExitConfirm = async () => {
@@ -78,7 +88,7 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
     // Mark as early exit so we navigate to results after submission
     setIsEarlyExit(true);
     window.dispatchEvent(new CustomEvent('mockTestForceSubmit', {
-      detail: { section: 'writing', mockTestId }
+      detail: { section: 'writing', mockTestId, writingId }
     }));
     setIsSubmitting(true);
   };
@@ -90,6 +100,7 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
   };
 
   // Update URL to match practice page route - MUST happen before WritingPracticePage renders
+  // Use React Router's navigate to properly update useParams()
   useEffect(() => {
     if (!writingId || showVideo) return;
     
@@ -102,15 +113,17 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
     
     const newUrl = `/writing-practice/${writingId}?${searchParams.toString()}`;
     
-    // Update URL immediately
-    window.history.replaceState({}, '', newUrl);
+    // Use React Router's navigate with replace to properly update useParams()
+    // This ensures WritingPracticePage can get the id from useParams()
+    navigate(newUrl, { replace: true });
     
-    // Mark as ready after ensuring URL is updated
-    // Use requestAnimationFrame to ensure DOM/React Router has processed the change
-    requestAnimationFrame(() => {
+    // Mark as ready after a short delay to ensure React Router has processed the navigation
+    const timer = setTimeout(() => {
       setUrlReady(true);
-    });
-  }, [writingId, mockTestId, mockClientId, showVideo]);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [writingId, mockTestId, mockClientId, showVideo, navigate]);
 
   // Early return for video - must be AFTER all hooks
   if (showVideo) {

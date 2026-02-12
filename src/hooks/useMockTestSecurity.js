@@ -6,10 +6,8 @@ import { useEffect, useRef, useCallback } from 'react';
  * - Blocks keyboard shortcuts
  * - Disables copy/paste
  * - Prevents tab switching
- * - Shows exit warning modal
  */
 export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
-  const exitModalShownRef = useRef(false);
   const developerBypassRef = useRef(false);
   const originalFullscreenMethodsRef = useRef({
     requestFullscreen: null,
@@ -38,7 +36,6 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       };
       initializedRef.current = true;
     }
-
     // Block F11 key (user-initiated fullscreen)
     const handleKeyDown = (e) => {
       if (e.key === 'F11') {
@@ -155,10 +152,6 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
     if (!isActive) return;
 
     const handleBeforeUnload = (e) => {
-      if (!exitModalShownRef.current && onExitAttempt) {
-        exitModalShownRef.current = true;
-        onExitAttempt();
-      }
       // Modern browsers ignore custom messages, but we still prevent default
       e.preventDefault();
       e.returnValue = ''; // Required for Chrome
@@ -166,18 +159,11 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden && !exitModalShownRef.current && onExitAttempt) {
-        exitModalShownRef.current = true;
-        onExitAttempt();
-      }
+      // Just prevent tab switching, no modal
     };
 
     const handleBlur = () => {
-      // When window loses focus, show exit warning
-      if (!exitModalShownRef.current && onExitAttempt) {
-        exitModalShownRef.current = true;
-        onExitAttempt();
-      }
+      // Just prevent window blur, no modal
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -189,18 +175,11 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [isActive, onExitAttempt]);
-
-  // Reset exit modal flag when component unmounts or isActive changes
-  useEffect(() => {
-    if (!isActive) {
-      exitModalShownRef.current = false;
-    }
   }, [isActive]);
 
-  // Function to reset exit modal flag (call this after modal is closed)
+  // Function to reset exit modal flag (kept for backward compatibility, but no longer needed)
   const resetExitModal = useCallback(() => {
-    exitModalShownRef.current = false;
+    // No-op: exit modal functionality removed
   }, []);
 
   // === ESC KEY INTERCEPT (PREVENT FULLSCREEN EXIT) ===
@@ -211,13 +190,7 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       if (e.code === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-
-        // Show modal instead of exiting fullscreen
-        if (!exitModalShownRef.current && onExitAttempt) {
-          exitModalShownRef.current = true;
-          onExitAttempt();
-        }
-
+        // Block ESC key, no modal
         return false;
       }
     };
@@ -228,7 +201,7 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
     return () => {
       document.removeEventListener('keydown', handleEsc, true);
     };
-  }, [isActive, onExitAttempt]);
+  }, [isActive]);
 
 
   // === DEVELOPER HOTKEY: Shift + 1 + 2 to bypass security and navigate back ===
@@ -311,11 +284,6 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       // Prevent the default back navigation
       e.preventDefault();
 
-      if (!exitModalShownRef.current && onExitAttempt) {
-        exitModalShownRef.current = true;
-        onExitAttempt();
-      }
-
       // Push again to block back navigation
       window.history.pushState(null, '', window.location.href);
     };
@@ -346,11 +314,8 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
         Math.abs(deltaX) > Math.abs(deltaY) && // More horizontal than vertical
         deltaX > 0 // Swiping right
       ) {
-        if (!exitModalShownRef.current && onExitAttempt) {
-          exitModalShownRef.current = true;
-          onExitAttempt();
-          e.preventDefault();
-        }
+        // Prevent swipe back navigation, no modal
+        e.preventDefault();
       }
     };
 
@@ -366,10 +331,8 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
         // Scrolling left (backward) - might be trying to navigate back
         // Only trigger if at the left edge of scrollable content
         if (window.scrollX === 0 || document.documentElement.scrollLeft === 0) {
-          if (!exitModalShownRef.current && onExitAttempt) {
-            exitModalShownRef.current = true;
-            onExitAttempt();
-          }
+          // Prevent navigation, no modal
+          e.preventDefault();
         }
       }
     };
@@ -387,7 +350,7 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       document.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('wheel', handleWheel);
     };
-  }, [isActive, onExitAttempt]);
+  }, [isActive]);
 
 
   // === FULLSCREEN EXIT DETECTION ===
@@ -409,12 +372,10 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
         document.mozFullScreenElement ||
         document.msFullscreenElement;
 
-      // If user exits fullscreen (was fullscreen, now not) → show modal
+      // If user exits fullscreen (was fullscreen, now not) → just track it
+      // No modal shown
       if (wasFullscreen && !isFullscreen) {
-        if (!exitModalShownRef.current && onExitAttempt) {
-          exitModalShownRef.current = true;
-          onExitAttempt();
-        }
+        // Fullscreen exit detected, but no action taken
       }
 
       // Update tracked state
@@ -432,7 +393,7 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
       document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
     };
-  }, [isActive, onExitAttempt]);
+  }, [isActive]);
 
 
   // === Helper function to force fullscreen again ===

@@ -107,21 +107,65 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
 
   // Auto-fullscreen after URL is ready
   useEffect(() => {
-    if (urlReady && testId) {
-      const enterFullscreen = async () => {
-        try {
-          const el = document.documentElement;
-          const requestMethod = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-          if (requestMethod) {
-            await requestMethod.call(el);
+    if (!urlReady || !testId) return;
+
+    let fullscreenEntered = false;
+    let userInteractionListener = null;
+
+    const enterFullscreen = async () => {
+      try {
+        const el = document.documentElement;
+        const requestMethod = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (requestMethod) {
+          await requestMethod.call(el);
+          fullscreenEntered = true;
+          // Remove listener if fullscreen was successful
+          if (userInteractionListener) {
+            document.removeEventListener('click', userInteractionListener, true);
+            document.removeEventListener('touchstart', userInteractionListener, true);
+            document.removeEventListener('keydown', userInteractionListener, true);
+            userInteractionListener = null;
           }
-        } catch (error) {
-          console.error('[MockTestListening] Error entering fullscreen:', error);
         }
-      };
-      // Small delay to ensure page is rendered
-      setTimeout(enterFullscreen, 100);
-    }
+      } catch (error) {
+        // If fullscreen fails (e.g., no user gesture), set up listener for first user interaction
+        if (!fullscreenEntered && !userInteractionListener) {
+          userInteractionListener = async () => {
+            try {
+              const el = document.documentElement;
+              const requestMethod = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+              if (requestMethod) {
+                await requestMethod.call(el);
+                fullscreenEntered = true;
+                // Remove listener after successful fullscreen
+                document.removeEventListener('click', userInteractionListener, true);
+                document.removeEventListener('touchstart', userInteractionListener, true);
+                document.removeEventListener('keydown', userInteractionListener, true);
+                userInteractionListener = null;
+              }
+            } catch (err) {
+              // Silently fail - user may have already entered fullscreen or browser doesn't support it
+            }
+          };
+          // Listen for first user interaction
+          document.addEventListener('click', userInteractionListener, true);
+          document.addEventListener('touchstart', userInteractionListener, true);
+          document.addEventListener('keydown', userInteractionListener, true);
+        }
+      }
+    };
+
+    // Small delay to ensure page is rendered
+    const timeoutId = setTimeout(enterFullscreen, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (userInteractionListener) {
+        document.removeEventListener('click', userInteractionListener, true);
+        document.removeEventListener('touchstart', userInteractionListener, true);
+        document.removeEventListener('keydown', userInteractionListener, true);
+      }
+    };
   }, [urlReady, testId]);
 
   // Don't render ListeningPracticePage until URL is ready

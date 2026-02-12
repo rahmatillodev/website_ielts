@@ -523,7 +523,6 @@ const ReadingPracticePageContent = () => {
       currentTest &&
       !hasAutoSubmittedRef.current &&
       !isSubmittingRef.current &&
-      !isSubmitting &&
       isMounted
     ) {
       // Auto-submit the test when timer reaches zero
@@ -545,12 +544,16 @@ const ReadingPracticePageContent = () => {
             console.error('[ReadingPracticePage] Auto-submit failed:', result.error);
             // Reset the flag so user can try again
             hasAutoSubmittedRef.current = false;
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
           }
         } catch (error) {
           console.error('[ReadingPracticePage] Auto-submit error:', error);
           // Reset the flag on error
           if (isMounted) {
             hasAutoSubmittedRef.current = false;
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
           }
         }
       };
@@ -563,7 +566,7 @@ const ReadingPracticePageContent = () => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest, isSubmitting]);
+  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest]);
 
   // persist data on change
   useEffect(() => {
@@ -812,6 +815,11 @@ const ReadingPracticePageContent = () => {
           localStorage.setItem(completionKey, 'true');
           localStorage.setItem(resultKey, JSON.stringify(resultData));
         }
+        
+        // Reset submission state after successful submission
+        // This prevents the component from being stuck in loading state
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
         
         return { success: true, attemptId: result.attemptId, score: result.score };
       } else {

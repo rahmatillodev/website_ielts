@@ -22,7 +22,7 @@ export const useMockTestClientStore = create((set) => ({
 
             if (error) throw error;
             console.log(data);
-            
+
 
             set({ client: data, loading: false });
             return data;
@@ -121,7 +121,7 @@ export const useMockTestClientStore = create((set) => ({
         try {
             const { error } = await supabase
                 .from("mock_test_clients")
-                .update({ 
+                .update({
                     status: status,
                     updated_at: new Date().toISOString()
                 })
@@ -144,27 +144,93 @@ export const useMockTestClientStore = create((set) => ({
             };
         }
     },
+
+    /**
+     * Fetch client attempts for a mock test
+     * @param {string} userId - The user ID to fetch mock_test and attempts
+     * @returns {Promise<{client: object, mockTest: object, results: {listening: object|null, reading: object|null, writing: object|null}}>}
+     */
+    fetchClientAttempts: async (userId) => {
+        set({ loading: true, error: null });
+
+        try {
+            // 1. Get the client using user_id
+            const { data: client, error: clientError } = await supabase
+                .from('mock_test_clients')
+                .select('id, user_id, total_score, status, full_name, email')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (clientError) throw clientError;
+            if (!client) {
+                throw new Error('Client not found');
+            }
+
+            // 2. Get the active mock_test (using user_id as per requirement)
+            const { data: mockTest, error: mockTestError } = await supabase
+                .from('mock_test')
+                .select('id, listening_id, reading_id, writing_id, is_active')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (mockTestError) throw mockTestError;
+            if (!mockTest) {
+                throw new Error('Active mock test not found');
+            }
+
+            const { listening_id, reading_id, writing_id } = mockTest;
+
+            // 3. Get user attempts for this user and mock client
+            const { data: attempts, error: attemptsError } = await supabase
+                .from('user_attempts')
+                .select(`
+                    id,
+                    test_id,
+                    writing_id,
+                    score,
+                    feedback,
+                    correct_answers,
+                    total_questions,
+                    time_taken,
+                    completed_at,
+                    mock_id
+                `)
+                .eq('user_id', userId)
+                .eq('mock_id', client.id);
+
+            if (attemptsError) throw attemptsError;
+
+            
+
+            // 4. Map attempts to listening, reading, and writing
+            const listening = attempts?.find(a => a.test_id === listening_id) || null;
+            const reading = attempts?.find(a => a.test_id === reading_id) || null;
+            const writing = attempts?.find(a => a.writing_id === writing_id) || null;
+
+            const result = {
+                client,
+                mockTest,
+                results: {
+                    listening,
+                    reading,
+                    writing,
+                }
+            };
+
+            set({ loading: false });
+            return result;
+        } catch (err) {
+            set({ 
+                error: err.message || 'Failed to fetch client attempts', 
+                loading: false 
+            });
+            throw err;
+        }
+    }
+
 }));
 
-
-
-// Legacy function - use store method instead
-export async function fetchMockTestByPassword(passwordCode) {
-    const { data, error } = await supabase
-        .from("mock_test")
-        .select(`
-      id,
-      writing_id,
-      listening_id,
-      reading_id,
-      password_code,
-      is_active,
-      created_at
-    `)
-        .eq("is_active", true)
-        .eq("password_code", passwordCode)
-        .maybeSingle();
-
-    if (error) throw error;
-    return data;
-}

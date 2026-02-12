@@ -251,11 +251,25 @@ const MockTestFlow = () => {
       );
 
     default:
-      // Show audio check as default/fallback
+      // If we're in a section that should show audio check, show it
+      // Otherwise, show audio check as default/fallback only if not already completed
+      if (!audioCheckComplete) {
+        return (
+          <div className="flex items-center justify-center min-h-screen">
+            <MockTestStart onStart={handleAudioCheckComplete} />
+          </div>
+        );
+      }
+      // If audio check is complete but we're in an unknown section, go to listening
       return (
-        <div className="flex items-center justify-center min-h-screen">
-          <MockTestStart onStart={handleAudioCheckComplete} />
-        </div>
+        <MockTestListening
+          testId={mockTest.listening_id}
+          mockTestId={mockTest.id}
+          mockClientId={client?.id}
+          onComplete={handleListeningComplete}
+          onEarlyExit={handleEarlyExit}
+          onBack={() => navigate('/mock-tests')}
+        />
       );
   }
 };

@@ -45,20 +45,45 @@ export const useWritingCompletedStore = create((set) => ({
         ? Math.max(1, Math.floor(timeTaken))
         : 1;
 
-      // Combine all task answers into a single string for correct_answers field
-      // Format: "Task 1: [answer]\n\nTask 2: [answer]"
-      const correctAnswersText = Object.entries(answers)
-        .filter(([_, answer]) => answer && answer.trim())
-        .map(([taskType, answer]) => `${taskType}: ${answer.trim()}`)
-        .join('\n\n');
+      // Fetch writing_tasks to get their IDs for user_answers table
+      let writingTasks = null;
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('writing_tasks')
+        .select('id, task_name')
+        .eq('writing_id', writingId);
 
-      // Prepare attempt data
+      if (tasksError) {
+        // If writing_id doesn't work, try with test_id (fallback)
+        const { data: retryTasks, error: retryTasksError } = await supabase
+          .from('writing_tasks')
+          .select('id, task_name')
+          .eq('test_id', writingId);
+
+        if (retryTasksError) {
+          throw new Error(`Failed to fetch writing tasks: ${retryTasksError.message}`);
+        }
+        writingTasks = retryTasks;
+      } else {
+        writingTasks = tasksData;
+      }
+
+      if (!writingTasks || writingTasks.length === 0) {
+        throw new Error('No writing tasks found for this writing');
+      }
+
+      // Create a map of task_name to task_id
+      const taskNameToIdMap = {};
+      writingTasks.forEach(task => {
+        taskNameToIdMap[task.task_name] = task.id;
+      });
+
+      // Prepare attempt data - correct_answers should be null
       const attemptDataToInsert = {
         user_id: userId,
         writing_id: writingId, // Note: This assumes writing_id column exists
         score: null, // Writing doesn't have automated scoring
         total_questions: 1, // Constant as per requirements
-        correct_answers: correctAnswersText, // User's written text
+        correct_answers: null, // Set to null as per new requirement
         time_taken: timeTakenSeconds, // Store in seconds
         completed_at: new Date().toISOString(),
       };
@@ -69,21 +94,24 @@ export const useWritingCompletedStore = create((set) => ({
       }
 
       // Insert into user_attempts table
-      const { data: attemptData, error: attemptError } = await supabase
+      let attemptData = null;
+      let attemptError = null;
+      
+      const { data: insertedAttempt, error: insertError } = await supabase
         .from('user_attempts')
         .insert(attemptDataToInsert)
         .select()
         .single();
 
-      if (attemptError) {
+      if (insertError) {
         // If writing_id column doesn't exist, try with test_id instead
-        if (attemptError.message.includes('writing_id') || attemptError.code === '42703') {
+        if (insertError.message.includes('writing_id') || insertError.code === '42703') {
           const retryDataToInsert = {
             user_id: userId,
             test_id: writingId, // Fallback to test_id
             score: null,
             total_questions: 1,
-            correct_answers: correctAnswersText,
+            correct_answers: null, // Set to null as per new requirement
             time_taken: timeTakenSeconds, // Store in seconds
             completed_at: new Date().toISOString(),
           };
@@ -101,19 +129,42 @@ export const useWritingCompletedStore = create((set) => ({
 
           if (retryError) throw retryError;
           
-          set({ loading: false, error: null });
-          return {
-            success: true,
-            attemptId: retryData.id,
-          };
+          attemptData = retryData;
+        } else {
+          throw insertError;
         }
-        throw attemptError;
+      } else {
+        attemptData = insertedAttempt;
+      }
+
+      const attemptId = attemptData.id;
+
+      // Insert individual answers into user_answers table
+      const answersToInsert = Object.entries(answers)
+        .filter(([taskName, answer]) => answer && answer.trim() && taskNameToIdMap[taskName])
+        .map(([taskName, answer]) => ({
+          attempt_id: attemptId,
+          question_id: taskNameToIdMap[taskName], // Use writing_task.id as question_id
+          user_answer: answer.trim(),
+          is_correct: false, // Always false for writing
+          correct_answer: '', // Empty for writing
+          question_type: 'speaking', // As specified by user
+        }));
+
+      if (answersToInsert.length > 0) {
+        const { error: answersError } = await supabase
+          .from('user_answers')
+          .insert(answersToInsert);
+
+        if (answersError) {
+          throw new Error(`Failed to save user answers: ${answersError.message}`);
+        }
       }
 
       set({ loading: false, error: null });
       return {
         success: true,
-        attemptId: attemptData.id,
+        attemptId: attemptId,
       };
     } catch (error) {
       console.error('Error submitting writing attempt:', error);
@@ -244,55 +295,111 @@ export const useWritingCompletedStore = create((set) => ({
         };
       }
 
-      // Parse answers from correct_answers field
-      // Format: "Task 1: [answer]\n\nTask 2: [answer]"
-      // Improved parsing to handle multiple blank lines within answers
-      const answers = {};
-      if (attemptData.correct_answers) {
-        // Use regex to find all "Task X:" patterns
-        // This handles cases where answers contain multiple blank lines
-        const taskPattern = /(Task \d+):\s*/g;
-        const matches = [...attemptData.correct_answers.matchAll(taskPattern)];
-        
-        if (matches.length > 0) {
-          matches.forEach((match, index) => {
-            const taskType = match[1];
-            const startIndex = match.index + match[0].length;
-            // Get the end index (start of next task or end of string)
-            const endIndex = index < matches.length - 1 
-              ? matches[index + 1].index 
-              : attemptData.correct_answers.length;
-            
-            // Extract the answer text (preserve all whitespace including blank lines)
-            // Only trim leading/trailing whitespace, preserve internal blank lines
-            let answer = attemptData.correct_answers.substring(startIndex, endIndex);
-            // Remove leading whitespace but preserve internal structure
-            answer = answer.replace(/^\s+/, '').replace(/\s+$/, '');
-            answers[taskType] = answer;
-          });
-        } else {
-          // Fallback: try to parse as single task or old format
-          // Check if it starts with "Task" pattern
-          const singleTaskMatch = attemptData.correct_answers.match(/^(Task \d+):\s*(.+)$/s);
-          if (singleTaskMatch) {
-            const taskType = singleTaskMatch[1];
-            let answer = singleTaskMatch[2];
-            answer = answer.replace(/^\s+/, '').replace(/\s+$/, '');
-            answers[taskType] = answer;
-          } else {
-            // Last resort: try old split method
-            const tasks = attemptData.correct_answers.split(/\n\n(?=Task \d+:)/);
-            tasks.forEach((task) => {
-              const match = task.match(/^(Task \d+):\s*(.+)$/s);
-              if (match) {
-                const taskType = match[1];
-                let answer = match[2];
-                answer = answer.replace(/^\s+/, '').replace(/\s+$/, '');
-                answers[taskType] = answer;
-              }
-            });
-          }
+      // Fetch answers from user_answers table
+      const { data: userAnswers, error: answersError } = await supabase
+        .from('user_answers')
+        .select(`
+          *,
+          writing_tasks!inner (
+            id,
+            task_name
+          )
+        `)
+        .eq('attempt_id', attemptData.id);
+
+      if (answersError) {
+        // If join fails, try fetching without join and then fetch writing_tasks separately
+        const { data: answersOnly, error: answersOnlyError } = await supabase
+          .from('user_answers')
+          .select('*')
+          .eq('attempt_id', attemptData.id);
+
+        if (answersOnlyError) {
+          console.warn('Error fetching user answers:', answersOnlyError);
+          // Return empty answers if fetch fails (backward compatibility)
+          return {
+            success: true,
+            attempt: attemptData,
+            answers: {},
+          };
         }
+
+        // Fetch writing_tasks separately to map question_id to task_name
+        const writingId = attemptData.writing_id || attemptData.test_id;
+        const { data: writingTasks, error: tasksError } = await supabase
+          .from('writing_tasks')
+          .select('id, task_name')
+          .eq('writing_id', writingId);
+
+        if (tasksError) {
+          // Try with test_id as fallback
+          const { data: retryTasks, error: retryTasksError } = await supabase
+            .from('writing_tasks')
+            .select('id, task_name')
+            .eq('test_id', writingId);
+
+          if (retryTasksError || !retryTasks || retryTasks.length === 0) {
+            console.warn('Error fetching writing tasks:', retryTasksError);
+            return {
+              success: true,
+              attempt: attemptData,
+              answers: {},
+            };
+          }
+
+          // Map question_id to task_name
+          const taskIdToNameMap = {};
+          retryTasks.forEach(task => {
+            taskIdToNameMap[task.id] = task.task_name;
+          });
+
+          // Build answers object
+          const answers = {};
+          answersOnly.forEach(answer => {
+            const taskName = taskIdToNameMap[answer.question_id];
+            if (taskName) {
+              answers[taskName] = answer.user_answer || '';
+            }
+          });
+
+          return {
+            success: true,
+            attempt: attemptData,
+            answers,
+          };
+        }
+
+        // Map question_id to task_name
+        const taskIdToNameMap = {};
+        writingTasks.forEach(task => {
+          taskIdToNameMap[task.id] = task.task_name;
+        });
+
+        // Build answers object
+        const answers = {};
+        answersOnly.forEach(answer => {
+          const taskName = taskIdToNameMap[answer.question_id];
+          if (taskName) {
+            answers[taskName] = answer.user_answer || '';
+          }
+        });
+
+        return {
+          success: true,
+          attempt: attemptData,
+          answers,
+        };
+      }
+
+      // Build answers object from joined data
+      const answers = {};
+      if (userAnswers && userAnswers.length > 0) {
+        userAnswers.forEach(answer => {
+          const taskName = answer.writing_tasks?.task_name;
+          if (taskName) {
+            answers[taskName] = answer.user_answer || '';
+          }
+        });
       }
 
       return {

@@ -26,16 +26,32 @@ import {
   loadWritingResultData,
   clearAllWritingPracticeData
 } from "@/store/LocalStorage/writingStore";
+import { saveSectionData, loadSectionData } from "@/store/LocalStorage/mockTestStorage";
 import { convertDurationToSeconds } from "@/utils/testDuration";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
 import { PenSquare } from "lucide-react";
 
 const WritingPracticePageContent = () => {
-  const { id } = useParams();
+  const { id: idFromParams } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { themeColors, fontSizeValue, settings, theme } = useAppearance();
+
+  // Extract ID from URL path as fallback when useParams() doesn't work (e.g., after window.history.replaceState)
+  // This ensures we can fetch writing data even if React Router hasn't updated useParams() yet
+  const id = React.useMemo(() => {
+    if (idFromParams) return idFromParams;
+    
+    // Fallback: extract from URL path
+    const pathMatch = window.location.pathname.match(/\/writing-practice\/([^\/\?]+)/);
+    if (pathMatch && pathMatch[1]) {
+      console.log('[WritingPracticePage] Extracted ID from URL path:', pathMatch[1]);
+      return pathMatch[1];
+    }
+    
+    return idFromParams;
+  }, [idFromParams]);
 
   const {
     currentWriting,
@@ -49,11 +65,15 @@ const WritingPracticePageContent = () => {
   const { updateClientStatus } = useMockTestClientStore();
 
   // Check if this is a mock test (check both searchParams and window.location.search)
+  // Use a more reliable check that reads directly from window.location.search
+  // This ensures we catch mock test mode even if React Router params haven't updated yet
   const urlSearchParams = React.useMemo(() => new URLSearchParams(window.location.search), []);
-  const isMockTest = React.useMemo(() => 
-    searchParams.get('mockTest') === 'true' || urlSearchParams.get('mockTest') === 'true',
-    [searchParams, urlSearchParams]
-  );
+  const isMockTest = React.useMemo(() => {
+    const fromSearchParams = searchParams.get('mockTest') === 'true';
+    const fromUrlSearch = urlSearchParams.get('mockTest') === 'true';
+    const fromWindowLocation = new URLSearchParams(window.location.search).get('mockTest') === 'true';
+    return fromSearchParams || fromUrlSearch || fromWindowLocation;
+  }, [searchParams, urlSearchParams]);
   const mockTestId = React.useMemo(() => 
     searchParams.get('mockTestId') || urlSearchParams.get('mockTestId'),
     [searchParams, urlSearchParams]
@@ -71,13 +91,15 @@ const WritingPracticePageContent = () => {
   } = useAnnotation();
 
   // Security hook for mock test mode (applies on refresh too)
+  // Note: MockTestExitModal is rendered in MockTestWriting wrapper, not here
+  // This hook is only for security restrictions, not for showing modal
+  // Use the improved isMockTest detection that checks multiple sources
   const { resetExitModal, forceFullscreen } = useMockTestSecurity(
     () => {
-      if (isMockTest) {
-        setShowExitModal(true);
-      }
+      // Modal is handled by MockTestWriting wrapper, not here
+      // This is just for security restrictions
     },
-    isMockTest // Only active in mock test mode
+    isMockTest // Only active in mock test mode - uses improved detection above
   );
 
   const [currentTaskType, setCurrentTaskType] = useState(null);
@@ -105,7 +127,7 @@ const WritingPracticePageContent = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSubmitting, setIsAutoSubmitting] = useState(false);
   const [isLoadingReview, setIsLoadingReview] = useState(false);
-  const [showExitModal, setShowExitModal] = useState(false);
+  // Note: showExitModal is handled by MockTestWriting wrapper, not here
   const [isEarlyExit, setIsEarlyExit] = useState(false);
 
   const containerRef = useRef(null);
@@ -147,7 +169,7 @@ const WritingPracticePageContent = () => {
         console.log('[WritingPracticePage] Review mode - loaded answers:', result.answers);
         console.log('[WritingPracticePage] Available task names:', writing.writing_tasks.map(t => t.task_name));
         
-        // Set answers from attempt (these come from correct_answers field in user_attempts)
+        // Set answers from attempt (these come from user_answers table)
         setAnswers(result.answers);
         setStatus('reviewing');
         setIsPracticeMode(false); // Don't show practice mode in review
@@ -178,21 +200,59 @@ const WritingPracticePageContent = () => {
 
   /* ================= FETCH & INITIALIZE ================= */
   useEffect(() => {
-    if (id) {
-      // Clear all old writing practice data when starting a NEW test (ID changed)
-      // This ensures old practice data from other tests doesn't interfere
-      // But preserve data if it's the same test (page refresh)
-      const isNewTest = previousIdRef.current !== null && previousIdRef.current !== id;
-      if (isNewTest) {
-        clearAllWritingPracticeData();
-        mockTestInitializedRef.current = false; // Reset mock test initialization for new test
-      }
-      previousIdRef.current = id;
+    // Ensure we have a valid ID before proceeding
+    if (!id) {
+      console.warn('[WritingPracticePage] No writing ID available yet. Waiting...', {
+        idFromParams,
+        pathname: window.location.pathname,
+        search: window.location.search
+      });
       
-      // Always fetch writing data - needed for both normal and review modes
-      fetchWritingById(id);
+      // For mock test mode, retry after a short delay if ID is not available
+      if (isMockTest) {
+        const retryTimeout = setTimeout(() => {
+          // Re-extract ID from URL path
+          const pathMatch = window.location.pathname.match(/\/writing-practice\/([^\/\?]+)/);
+          if (pathMatch && pathMatch[1]) {
+            console.log('[WritingPracticePage] Retry: Extracted ID from URL path:', pathMatch[1]);
+            // Force re-render by updating a state or trigger fetch directly
+            // The effect will re-run when id changes
+          }
+        }, 500);
+        return () => clearTimeout(retryTimeout);
+      }
+      return;
     }
-  }, [id, fetchWritingById]);
+
+    // Clear all old writing practice data when starting a NEW test (ID changed)
+    // This ensures old practice data from other tests doesn't interfere
+    // But preserve data if it's the same test (page refresh)
+    const isNewTest = previousIdRef.current !== null && previousIdRef.current !== id;
+    if (isNewTest) {
+      clearAllWritingPracticeData();
+      mockTestInitializedRef.current = false; // Reset mock test initialization for new test
+    }
+    previousIdRef.current = id;
+    
+    // Always fetch writing data - needed for both normal and review modes
+    // Only fetch if we don't already have the data or if it's a different ID
+    if (!currentWriting || currentWriting.id !== id) {
+      console.log('[WritingPracticePage] Fetching writing with ID:', id);
+      fetchWritingById(id)
+        .then((writing) => {
+          if (writing) {
+            console.log('[WritingPracticePage] Successfully fetched writing:', writing.id, 'Tasks:', writing.writing_tasks?.length);
+          } else {
+            console.warn('[WritingPracticePage] fetchWritingById returned null/undefined');
+          }
+        })
+        .catch(err => {
+          console.error('[WritingPracticePage] Error fetching writing:', err);
+        });
+    } else {
+      console.log('[WritingPracticePage] Writing already loaded, skipping fetch:', currentWriting.id);
+    }
+  }, [id, fetchWritingById, currentWriting, isMockTest, idFromParams]);
 
   useEffect(() => {
     if (!currentWriting?.writing_tasks?.length) return;
@@ -217,35 +277,70 @@ const WritingPracticePageContent = () => {
     // Mock test mode: Auto-start timer immediately (no button needed)
     if (isMockTest && !isReviewMode && currentWriting && tasks.length > 0) {
       // Only initialize once per mock test session
-      if (!mockTestInitializedRef.current) {
+      if (!mockTestInitializedRef.current && mockTestId) {
+        // Load/restore progress from mock test storage on refresh
+        const savedData = loadSectionData(mockTestId, 'writing');
+        
         // Get duration from URL param (in seconds) or use writing duration
         const durationParam = searchParams.get('duration') || urlSearchParams.get('duration');
         const durationInSeconds = durationParam 
           ? parseInt(durationParam, 10) 
           : convertDurationToSeconds(currentWriting.duration);
-
-        // Initialize answers if not set
-        if (Object.keys(answers).length === 0) {
-          const init = {};
-          tasks.forEach((t) => (init[t.task_name] = ""));
-          setAnswers(init);
+        
+        if (savedData && savedData.timeRemaining !== undefined && savedData.timeRemaining !== null && savedData.timeRemaining > 0) {
+          // Restore from saved data (refresh case)
+          // Restore answers if available
+          if (savedData.answers && Object.keys(savedData.answers).length > 0) {
+            setAnswers(savedData.answers);
+          } else {
+            // Initialize answers if not set
+            const init = {};
+            tasks.forEach((t) => (init[t.task_name] = ""));
+            setAnswers(init);
+          }
+          
+          // Calculate elapsed time since last save
+          const now = Date.now();
+          const savedStartTime = savedData.startTime || now;
+          const timeSinceSave = Math.floor((now - savedStartTime) / 1000);
+          const savedElapsedTime = savedData.elapsedTime || 0;
+          const totalElapsed = savedElapsedTime + timeSinceSave;
+          
+          // Calculate remaining time
+          const remaining = Math.max(0, durationInSeconds - totalElapsed);
+          setTimeRemaining(remaining);
+          setElapsedTime(totalElapsed);
+          setStartTime(savedStartTime);
+          
+          // Auto-resume timer if time remaining > 0
+          setIsPracticeMode(true);
+          setIsStarted(true);
+          setIsPaused(false);
+        } else {
+          // First time initialization - no saved data
+          // Initialize answers if not set
+          if (Object.keys(answers).length === 0) {
+            const init = {};
+            tasks.forEach((t) => (init[t.task_name] = ""));
+            setAnswers(init);
+          }
+          
+          // Auto-start timer
+          setIsPracticeMode(true);
+          setIsStarted(true);
+          setIsPaused(false);
+          setTimeRemaining(durationInSeconds);
+          setElapsedTime(0);
+          setStartTime(Date.now());
         }
-
-        // Auto-start timer
-        setIsPracticeMode(true);
-        setIsStarted(true);
-        setIsPaused(false);
-        setTimeRemaining(durationInSeconds);
-        setElapsedTime(0);
-        setStartTime(Date.now());
-
+        
         // Update mock_test_clients status to 'started' if not already started
         if (mockClientId) {
           updateClientStatus(mockClientId, 'started').catch(err => {
             console.error('Error updating mock test client status to started:', err);
           });
         }
-
+        
         mockTestInitializedRef.current = true;
       }
 
@@ -349,7 +444,7 @@ const WritingPracticePageContent = () => {
     if (!isMockTest || !mockTestId) return;
 
     const handleForceSubmit = async (event) => {
-      const { section, mockTestId: eventMockTestId } = event.detail || {};
+      const { section, mockTestId: eventMockTestId, writingId: eventWritingId } = event.detail || {};
       
       // Only handle if it's for writing section and matches our mockTestId
       if (section === 'writing' && eventMockTestId === mockTestId) {
@@ -359,13 +454,24 @@ const WritingPracticePageContent = () => {
         setIsSaving(true);
 
         try {
+          // Get writing ID - use event writingId, then id from params, then from URL path as fallback
+          let writingIdToUse = eventWritingId || id;
+          if (!writingIdToUse) {
+            const pathMatch = window.location.pathname.match(/\/writing-practice\/([^\/]+)/);
+            writingIdToUse = pathMatch ? pathMatch[1] : null;
+          }
+
+          if (!writingIdToUse) {
+            throw new Error('Writing ID is required but not available');
+          }
+
           // Calculate time taken
           const timeTaken = startTime
             ? Math.floor((Date.now() - startTime) / 1000)
             : elapsedTime;
 
           // Save to database
-          const result = await submitWritingAttempt(id, answers, timeTaken, mockClientId);
+          const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, mockClientId);
 
           if (result.success) {
             // Signal completion via localStorage
@@ -440,36 +546,67 @@ const WritingPracticePageContent = () => {
   useEffect(() => {
     if (!id || !isPracticeMode) return;
 
-    // Save immediately when answers change
-    saveWritingPracticeData(id, {
-      answers,
-      timeRemaining,
-      elapsedTime,
-      startTime: startTime || Date.now(),
-      isPracticeMode: true,
-      isStarted,
-      isPaused,
-    });
-  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused]);
+    // Calculate current elapsed time for accurate saving
+    const currentElapsedTime = startTime && isStarted && !isPaused
+      ? Math.floor((Date.now() - startTime) / 1000)
+      : elapsedTime;
+
+    // For mock test, save to mock test storage
+    if (isMockTest && mockTestId) {
+      saveSectionData(mockTestId, 'writing', {
+        answers,
+        timeRemaining,
+        elapsedTime: currentElapsedTime,
+        startTime: startTime || Date.now(),
+        completed: false,
+      });
+    } else {
+      // For normal practice, save to writing practice storage
+      saveWritingPracticeData(id, {
+        answers,
+        timeRemaining,
+        elapsedTime: currentElapsedTime,
+        startTime: startTime || Date.now(),
+        isPracticeMode: true,
+        isStarted,
+        isPaused,
+      });
+    }
+  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused, isMockTest, mockTestId]);
 
   // Also save periodically to ensure time updates are captured
   useEffect(() => {
     if (!id || !isPracticeMode) return;
 
     const interval = setInterval(() => {
-      saveWritingPracticeData(id, {
-        answers,
-        timeRemaining,
-        elapsedTime,
-        startTime: startTime || Date.now(),
-        isPracticeMode: true,
-        isStarted,
-        isPaused,
-      });
+      // Calculate current elapsed time for accurate saving
+      const currentElapsedTime = startTime && isStarted && !isPaused
+        ? Math.floor((Date.now() - startTime) / 1000)
+        : elapsedTime;
+
+      if (isMockTest && mockTestId) {
+        saveSectionData(mockTestId, 'writing', {
+          answers,
+          timeRemaining,
+          elapsedTime: currentElapsedTime,
+          startTime: startTime || Date.now(),
+          completed: false,
+        });
+      } else {
+        saveWritingPracticeData(id, {
+          answers,
+          timeRemaining,
+          elapsedTime: currentElapsedTime,
+          startTime: startTime || Date.now(),
+          isPracticeMode: true,
+          isStarted,
+          isPaused,
+        });
+      }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused]);
+  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused, isMockTest, mockTestId]);
 
   const handleTryPractice = () => {
     // Clear all old writing practice data when starting practice
@@ -604,9 +741,10 @@ const WritingPracticePageContent = () => {
   }, [id, searchParams, setSearchParams, currentWriting]);
 
   const handleBack = useCallback(() => {
-    // In mock test mode, show exit modal instead of navigating
+    // In mock test mode, exit modal is handled by MockTestWriting wrapper
+    // This function should not be called in mock test mode, but if it is, just navigate
     if (isMockTest) {
-      setShowExitModal(true);
+      // Exit modal is handled by MockTestWriting wrapper
       return;
     }
     // Clear practice data from localStorage when user exits via back button
@@ -616,12 +754,11 @@ const WritingPracticePageContent = () => {
     navigate(-1);
   }, [id, navigate, isMockTest]);
 
+  // Exit handlers are handled by MockTestWriting wrapper, not here
+  // These are kept for compatibility but shouldn't be called
   const handleExitConfirm = async () => {
-    setShowExitModal(false);
-    resetExitModal();
-    // Mark as early exit so we navigate to results after submission
+    // This should not be called - exit modal is in MockTestWriting wrapper
     setIsEarlyExit(true);
-    // Trigger submission via custom event
     window.dispatchEvent(new CustomEvent('mockTestForceSubmit', {
       detail: { section: 'writing', mockTestId }
     }));
@@ -629,8 +766,7 @@ const WritingPracticePageContent = () => {
   };
 
   const handleExitCancel = () => {
-    setShowExitModal(false);
-    resetExitModal();
+    // This should not be called - exit modal is in MockTestWriting wrapper
     forceFullscreen();
   };
   
@@ -649,9 +785,20 @@ const WritingPracticePageContent = () => {
         ? Math.floor((Date.now() - startTime) / 1000)
         : elapsedTime;
 
+      // Get writing ID - use id from params, or fallback to URL path
+      let writingIdToUse = id;
+      if (!writingIdToUse) {
+        const pathMatch = window.location.pathname.match(/\/writing-practice\/([^\/]+)/);
+        writingIdToUse = pathMatch ? pathMatch[1] : null;
+      }
+
+      if (!writingIdToUse) {
+        throw new Error('Writing ID is required but not available');
+      }
+
       // Save to database (silently, no loading overlay)
       // Pass mockClientId if in mock test mode
-      const result = await submitWritingAttempt(id, answers, timeTaken, isMockTest ? mockClientId : null);
+      const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockClientId : null);
 
       if (result.success) {
         // If mock test, signal completion via localStorage
@@ -739,9 +886,20 @@ const WritingPracticePageContent = () => {
         ? Math.floor((Date.now() - startTime) / 1000)
         : elapsedTime;
 
+      // Get writing ID - use id from params, or fallback to URL path
+      let writingIdToUse = id;
+      if (!writingIdToUse) {
+        const pathMatch = window.location.pathname.match(/\/writing-practice\/([^\/]+)/);
+        writingIdToUse = pathMatch ? pathMatch[1] : null;
+      }
+
+      if (!writingIdToUse) {
+        throw new Error('Writing ID is required but not available');
+      }
+
       // Save to database
       // Pass mockClientId if in mock test mode
-      const result = await submitWritingAttempt(id, answers, timeTaken, isMockTest ? mockClientId : null);
+      const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockClientId : null);
 
       if (result.success) {
         // If mock test, signal completion via localStorage
@@ -981,15 +1139,7 @@ const WritingPracticePageContent = () => {
         transition: 'font-size 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out'
       }}
     >
-      {/* Exit Modal for mock test mode */}
-      {isMockTest && (
-        <MockTestExitModal
-          isOpen={showExitModal}
-          onConfirm={handleExitConfirm}
-          onCancel={handleExitCancel}
-          isSubmitting={isSaving}
-        />
-      )}
+      {/* Exit Modal is rendered in MockTestWriting wrapper, not here */}
       <TextSelectionTooltip
         universalContentRef={universalContentRef}
         partId={taskToDisplay?.task_name || effectiveTaskType || 'task'}
@@ -1046,10 +1196,30 @@ const WritingPracticePageContent = () => {
                   </p>
                 </div>
               </div>
-            ) : !currentWriting || !currentWriting.writing_tasks || currentWriting.writing_tasks.length === 0 ? (
+            ) : !currentWriting ? (
               <div className="flex items-center justify-center h-full">
                 <div style={{ color: themeColors.text, fontSize: `${fontSizeValue.base}px` }}>
-                  No writing data available
+                  {loadingCurrentWriting ? 'Loading writing...' : 'No writing data available'}
+                </div>
+              </div>
+            ) : !currentWriting.writing_tasks || currentWriting.writing_tasks.length === 0 ? (
+              <div className="flex items-center justify-center h-full p-6">
+                <div 
+                  className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
+                  style={{
+                    borderColor: themeColors.border,
+                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                  }}
+                >
+                  <p className="text-sm font-semibold text-red-500 mb-2">
+                    ⚠️ No tasks found
+                  </p>
+                  <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
+                    This writing doesn't have any tasks. Please contact support if this is unexpected.
+                  </p>
+                  <p className="text-xs" style={{ color: themeColors.text, opacity: 0.5 }}>
+                    Writing ID: {currentWriting.id}
+                  </p>
                 </div>
               </div>
             ) : !taskToDisplay ? (
@@ -1218,10 +1388,30 @@ const WritingPracticePageContent = () => {
                   </p>
                 </div>
               </div>
-            ) : !currentWriting || !currentWriting.writing_tasks || currentWriting.writing_tasks.length === 0 ? (
+            ) : !currentWriting ? (
               <div className="flex items-center justify-center h-full">
                 <div style={{ color: themeColors.text, fontSize: `${fontSizeValue.base}px` }}>
-                  No writing data available
+                  {loadingCurrentWriting ? 'Loading writing...' : 'No writing data available'}
+                </div>
+              </div>
+            ) : !currentWriting.writing_tasks || currentWriting.writing_tasks.length === 0 ? (
+              <div className="flex items-center justify-center h-full p-6">
+                <div 
+                  className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
+                  style={{
+                    borderColor: themeColors.border,
+                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                  }}
+                >
+                  <p className="text-sm font-semibold text-red-500 mb-2">
+                    ⚠️ No tasks found
+                  </p>
+                  <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
+                    This writing doesn't have any tasks. Please contact support if this is unexpected.
+                  </p>
+                  <p className="text-xs" style={{ color: themeColors.text, opacity: 0.5 }}>
+                    Writing ID: {currentWriting.id}
+                  </p>
                 </div>
               </div>
             ) : !taskToDisplay ? (
@@ -1251,7 +1441,7 @@ const WritingPracticePageContent = () => {
 
                   </>
                 ) : status === 'reviewing' ? (
-                  // Review mode: show user's saved answer from user_attempts.correct_answers
+                  // Review mode: show user's saved answer from user_answers table
                   <div className="flex-1 p-8 overflow-y-auto">
                     {isLoadingReview ? (
                       <div className="flex items-center justify-center h-full">

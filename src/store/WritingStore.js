@@ -108,6 +108,25 @@ export const useWritingStore = create((set, get) => ({
 
       if (error) throw error;
 
+      // Validate data structure
+      if (!data) {
+        throw new Error('Writing not found');
+      }
+
+      // Ensure writing_tasks is an array (even if empty)
+      if (!Array.isArray(data.writing_tasks)) {
+        console.warn('[useWritingStore] writing_tasks is not an array, setting to empty array:', data.writing_tasks);
+        data.writing_tasks = [];
+      }
+
+      console.log('[useWritingStore] Successfully fetched writing:', {
+        id: data.id,
+        title: data.title,
+        tasksCount: data.writing_tasks?.length || 0,
+        is_mock: data.is_mock,
+        is_active: data.is_active
+      });
+
       set({ currentWriting: data, loadingCurrentWriting: false, errorCurrentWriting: null });
 
       return data;
