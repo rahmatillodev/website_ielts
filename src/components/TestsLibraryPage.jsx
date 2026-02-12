@@ -48,10 +48,10 @@ const TestsLibraryPage = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState([]); // Multi-select question types (for reading/listening)
   const [selectedTaskTypes, setSelectedTaskTypes] = useState([]); // Multi-select task types (for writing)
-  const [sortOrder, setSortOrder] = useState("newest"); // Sort by oldest/newest
+  const [sortOrder, setSortOrder] = useState("oldest"); // Sort by oldest/newest
   const [filterOpen, setFilterOpen] = useState(false); // Control filter popover
   const [tempSelectedTypes, setTempSelectedTypes] = useState([]); // Temporary state for filter panel
-  const [tempSortOrder, setTempSortOrder] = useState("newest"); // Temporary sort state
+  const [tempSortOrder, setTempSortOrder] = useState("oldest"); // Temporary sort state
   const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
   const itemsPerLoad = 9; // Items to load per scroll
   const scrollContainerRef = useRef(null);
@@ -315,7 +315,7 @@ const TestsLibraryPage = ({
   const handleFilterClear = () => {
     // Reset temp states
     setTempSelectedTypes([]);
-    setTempSortOrder("newest");
+    setTempSortOrder("oldest");
   
     // Reset real filter states
     if (testType === "writing") {
@@ -324,7 +324,7 @@ const TestsLibraryPage = ({
       setSelectedQuestionTypes([]);
     }
   
-    setSortOrder("newest");
+    setSortOrder("oldest");
     handleFilterClose()
   };
   

@@ -73,6 +73,7 @@ export const useAuthStore = create(
           set({ error: 'User not authenticated', loading: false });
           return { success: false, error: 'User not authenticated' };
         }
+        
 
         set({ loading: true, error: null });
         try {
@@ -92,6 +93,38 @@ export const useAuthStore = create(
         } catch (error) {
           set({ error: error.message, loading: false });
           return { success: false, error: error.message };
+        }
+      },
+
+      uploadAvatar: async (file) => {
+        const userId = get().authUser?.id;
+        if (!userId) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        try {
+          const fileExt = file.name.split('.').pop();
+          const filePath = `${userId}/avatar.${fileExt}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('avatar-image')
+            .upload(filePath, file, { upsert: true });
+
+          if (uploadError) throw uploadError;
+
+          const { data: urlData } = supabase.storage.from('avatar-image').getPublicUrl(filePath);
+          const url = urlData?.publicUrl;
+
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ avatar_image: url })
+            .eq('id', userId);
+
+          if (updateError) throw updateError;
+
+          await get().fetchUserProfile(userId);
+          return { success: true, url };
+        } catch (error) {
+          return { success: false, error: error?.message || String(error) };
         }
       },
 
