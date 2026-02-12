@@ -14,7 +14,7 @@ import { CiFilter } from "react-icons/ci";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useWritingCompletedStore } from '@/store/writingCompletedStore';
+import { useWritingCompletedStore } from '@/store/WritingCompletedStore';
 
 const WritingHistoryPage = () => {
   const navigate = useNavigate();
