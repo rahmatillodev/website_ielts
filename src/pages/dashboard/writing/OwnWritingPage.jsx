@@ -310,7 +310,7 @@ const OwnWritingPageContent = () => {
           {/* WRITING BLOCK (textarea + image) */}
           <div className="w-full rounded-lg relative flex flex-col gap-2">
             <textarea
-              spellcheck="false"
+              spellCheck="false"
               ref={questionTextareaRef}
               className="w-full border border-gray-300 bg-amber-500 rounded-lg p-2 focus:ring-0 focus:border-blue-500 resize-none min-h-[10px] shrink-0"
               placeholder={
@@ -385,7 +385,7 @@ const OwnWritingPageContent = () => {
           }}
         >
           <textarea
-            spellcheck="false"
+            spellCheck="false"
             className="flex-1 p-5 resize-none outline-none bg-transparent focus:ring-0 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Write your answer here..."
             value={currentTask.answer}

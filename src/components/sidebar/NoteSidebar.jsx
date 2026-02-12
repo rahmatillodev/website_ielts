@@ -138,7 +138,7 @@ const NoteSidebar = () => {
 
                 {/* Textarea for note */}
                 <textarea
-                      spellcheck="false"
+                      spellCheck="false"
 
                   value={note.note || ''}
                   onChange={(e) => handleNoteChange(note.id, e.target.value)}

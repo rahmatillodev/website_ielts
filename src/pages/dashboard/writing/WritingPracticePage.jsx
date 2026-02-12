@@ -9,7 +9,6 @@ import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip"
 import NoteSidebar from "@/components/sidebar/NoteSidebar";
 import WritingFinishModal from "@/components/modal/WritingFinishModal";
 import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
-
 import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
 import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext";
 import { useWritingStore } from "@/store/writingStore";
