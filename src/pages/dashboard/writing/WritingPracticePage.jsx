@@ -12,7 +12,7 @@ import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
 import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
 import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext";
   import { useWritingStore } from "@/store/WritingStore";
-import { useWritingCompletedStore } from "@/store/writingCompletedStore";
+import { useWritingCompletedStore } from "@/store/WritingCompletedStore";
 import { useAuthStore } from "@/store/authStore";
 import { useMockTestClientStore } from "@/store/mockTestClientStore";
 import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
