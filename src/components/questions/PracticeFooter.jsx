@@ -137,7 +137,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
 
 
         {/* Center: All Parts with Progress */}
-        <div className="flex-1 flex items-center justify-between">
+        <div className="flex-1 flex items-center justify-center">
           {currentTest?.parts && currentTest.parts.length > 0 ? (
             getSortedParts().map((part) => {
               const partNumber = part.part_number ?? part.id;
@@ -148,22 +148,25 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
 
               return (
                 <div
-                  key={part.id}
-                  className="flex flex-col items-center w-full h-full"
-                  style={{ backgroundColor: themeColors.background }}
+  key={part.id}
+  className="flex flex-col items-center h-full shrink-0"
+
                   
                 >
                   {isActive ? (
-                    // Active part: Show Part label and question numbers
+                    // Active part: Part label and question numbers in same row
                     <div className='w-full h-20' style={{ backgroundColor: themeColors.backgroundColor !== '#000000' ? '#E0E0E0' : themeColors.backgroundColor }}>
-                      <div
-                        className="font-semibold text-md text-center"
-                        style={{ color: themeColors.text }}
-                      >
-                        Part {partNumber}
-                      </div>
-                      {partQuestions.length > 0 && (
-                        <div className="flex flex-col  w-full items-center">
+                      <div className="flex items-center justify-start w-full h-full min-w-0 px-2">
+                        {/* LEFT: Part X + question numbers in one row */}
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div
+                            className="font-semibold text-md text-center shrink-0"
+                            style={{ color: themeColors.text }}
+                          >
+                            Part {partNumber}
+                          </div>
+                          {partQuestions.length > 0 && (
+                            <div className="flex flex-col flex-1 min-w-0 w-full items-center">
                           {/* Progress bars above question buttons */}
                           <div className="flex items-center gap-x-1 overflow-x-auto max-w-full">
                             {[...partQuestions]
@@ -214,7 +217,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                           </div>
 
                           {/* Question number buttons */}
-                          <div className="flex items-center gap-x-1 overflow-x-auto max-w-full p-2 rounded-md">
+                          <div className="flex items-center gap-x-1 whitespace-nowrap p-2 rounded-md">
                             {[...partQuestions]
                               .sort((a, b) => {
                                 const aNum = a.question_number ?? 0;
@@ -290,8 +293,10 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                 );
                               })}
                           </div>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   ) : (
                     // Inactive part: Show Part label and progress
