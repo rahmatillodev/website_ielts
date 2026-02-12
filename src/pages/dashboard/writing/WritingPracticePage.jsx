@@ -11,7 +11,7 @@ import WritingFinishModal from "@/components/modal/WritingFinishModal";
 import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
 import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
 import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext";
-import { useWritingStore } from "@/store/writingStore";
+import { useWritingStore } from "@/store/writingStore-temp";
 import { useWritingCompletedStore } from "@/store/writingCompletedStore";
 import { useAuthStore } from "@/store/authStore";
 import { useMockTestClientStore } from "@/store/mockTestClientStore";
