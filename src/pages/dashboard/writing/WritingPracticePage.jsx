@@ -16,7 +16,6 @@ import { useWritingCompletedStore } from "@/store/writingCompletedStore";
 import { useAuthStore } from "@/store/authStore";
 import { useMockTestClientStore } from "@/store/mockTestClientStore";
 import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
-import MockTestExitModal from "@/components/modal/MockTestExitModal";
 import {
   saveWritingPracticeData,
   loadWritingPracticeData,
