@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import TestsLibraryPage from "@/components/TestsLibraryPage";
-import { useWritingStore } from "@/store/writingStore-temp";
+import { useWritingStore } from "@/store/WritingStore";
 
 const WritingPage = () => {
 

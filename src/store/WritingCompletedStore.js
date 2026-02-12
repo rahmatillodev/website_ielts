@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
 const getUserIdFromLocalStorage = () => {
   try {
+    
     const authStore = localStorage.getItem('auth-storage');
     if (authStore) {
       const parsed = JSON.parse(authStore);
