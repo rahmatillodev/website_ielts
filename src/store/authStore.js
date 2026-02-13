@@ -73,7 +73,7 @@ export const useAuthStore = create(
           set({ error: 'User not authenticated', loading: false });
           return { success: false, error: 'User not authenticated' };
         }
-        
+
 
         set({ loading: true, error: null });
         try {
@@ -131,10 +131,106 @@ export const useAuthStore = create(
       signIn: async (email, password) => {
         set({ loading: true, error: null });
         try {
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          // Normalize email to lowercase for consistent matching
+          const normalizedEmail = email.trim().toLowerCase();
+
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password
+          });
           if (error) throw error;
 
+          if (!data.user) {
+            throw new Error('Sign in failed - no user returned');
+          }
+
           set({ authUser: data.user });
+
+          // Link any unlinked mock test bookings for this user
+          console.log('[signIn] Starting booking linking process...');
+          console.log('[signIn] Normalized email:', normalizedEmail);
+          console.log('[signIn] User ID:', data.user.id);
+
+          try {
+            // First, check ALL bookings with this email (for debugging)
+            console.log('[signIn] Checking ALL bookings with this email (for debugging)...');
+            const { data: allBookings, error: allBookingsError } = await supabase
+              .from('mock_test_clients')
+              .select('id, email, user_id, full_name, created_at')
+              .ilike('email', normalizedEmail);
+
+            console.log('[signIn] All bookings query error:', allBookingsError);
+            console.log('[signIn] All bookings found:', allBookings);
+            console.log('[signIn] Total bookings with this email:', allBookings?.length || 0);
+
+            if (allBookings && allBookings.length > 0) {
+              console.log('[signIn] Booking details:');
+              allBookings.forEach((booking, index) => {
+                console.log(`[signIn]   Booking ${index + 1}:`, {
+                  id: booking.id,
+                  email: booking.email,
+                  user_id: booking.user_id,
+                  full_name: booking.full_name,
+                  created_at: booking.created_at
+                });
+              });
+            }
+
+            // Now check for unlinked bookings specifically
+            console.log('[signIn] Checking for unlinked bookings (user_id is null)...');
+            const { data: unlinkedBookings, error: checkError } = await supabase
+              .from('mock_test_clients')
+              .select('id, email, user_id, full_name')
+              .ilike('email', normalizedEmail)
+              .is('user_id', null);
+
+            console.log('[signIn] Unlinked bookings query error:', checkError);
+            console.log('[signIn] Unlinked bookings found:', unlinkedBookings);
+            console.log('[signIn] Number of unlinked bookings:', unlinkedBookings?.length || 0);
+
+            if (checkError) {
+              console.error("[signIn] Error checking for unlinked bookings:", checkError);
+              console.error("[signIn] Error details:", JSON.stringify(checkError, null, 2));
+            } else if (unlinkedBookings && unlinkedBookings.length > 0) {
+              console.log(`[signIn] Found ${unlinkedBookings.length} unlinked booking(s), attempting to link...`);
+
+              const { data: updatedBookings, error: updateError } = await supabase
+                .from('mock_test_clients')
+                .update({
+                  user_id: data.user.id,
+                  updated_at: new Date().toISOString()
+                })
+                .ilike('email', normalizedEmail)
+                .is('user_id', null)
+                .select('id, email, user_id');
+
+              console.log('[signIn] Update query error:', updateError);
+              console.log('[signIn] Updated bookings:', updatedBookings);
+              console.log('[signIn] Number of bookings updated:', updatedBookings?.length || 0);
+
+              if (updateError) {
+                console.error("[signIn] Error linking mock test bookings:", updateError);
+                console.error("[signIn] Update error details:", JSON.stringify(updateError, null, 2));
+              } else if (updatedBookings && updatedBookings.length > 0) {
+                console.log(`[signIn] ✅ Successfully linked ${updatedBookings.length} mock test booking(s) to user`);
+              } else {
+                console.warn("[signIn] ⚠️ Update query returned empty array - no bookings were updated");
+              }
+            } else {
+              console.log('[signIn] No unlinked bookings found for this email');
+              if (allBookings && allBookings.length > 0) {
+                console.log('[signIn] ⚠️ Found bookings with this email, but they all already have user_id assigned');
+              } else {
+                console.log('[signIn] ℹ️ No bookings found with this email at all');
+              }
+            }
+          } catch (linkError) {
+            console.error("[signIn] ❌ Error during booking linking process:", linkError);
+            console.error("[signIn] Link error stack:", linkError.stack);
+          }
+
+          console.log('[signIn] Booking linking process completed');
+
           await get().fetchUserProfile(data.user.id, false);
 
           set({ loading: false });
@@ -148,10 +244,42 @@ export const useAuthStore = create(
       signUp: async (email, password, username) => {
         set({ loading: true, error: null });
         try {
-          const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: username } } });
+          const normalizedEmail = email.trim().toLowerCase();
+          
+          // 1. Foydalanuvchini yaratish
+          const { data, error } = await supabase.auth.signUp({ 
+            email: normalizedEmail, 
+            password, 
+            options: { data: { full_name: username } } 
+          });
+      
           if (error) throw error;
-          set({ authUser: data.user });
-          await get().fetchUserProfile(data.user.id, false);
+          const newUser = data.user;
+          if (!newUser) throw new Error('User creation failed');
+      
+          set({ authUser: newUser });
+      
+          // 2. FAQAT ushbu foydalanuvchiga tegishli bookinglarni bog'lash
+          // RLS yuqoridagi qoidaga ko'ra begonalar emailini yangilashga yo'l qo'ymaydi
+          const { data: updatedRecords, error: linkError } = await supabase
+            .from('mock_test_clients')
+            .update({ 
+              user_id: newUser.id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('email', normalizedEmail) // Faqat shu emailga tegishli qatorlar
+            .is('user_id', null)          // Faqat hali bog'lanmaganlar
+            .select();                    // Natijani qaytarish (tekshirish uchun)
+      
+          if (linkError) {
+            console.error("Linking error:", linkError.message);
+          } else if (updatedRecords?.length > 0) {
+            console.log(`✅ ${updatedRecords.length} ta booking profilingizga biriktirildi.`);
+          }
+      
+          // 3. Profil ma'lumotlarini yuklash
+          await get().fetchUserProfile(newUser.id, false);
+          
           set({ loading: false });
           return { success: true };
         } catch (error) {

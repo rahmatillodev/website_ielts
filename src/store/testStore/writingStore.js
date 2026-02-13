@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
 import { toast } from "react-toastify";
-import { useWritingTaskTypeStore } from "./testStore/writingTaskTypeStore";
+import { useWritingTaskTypeStore } from "./writingTaskTypeStore";
 
 export const useWritingStore = create((set, get) => ({
   writings: [],

@@ -4,6 +4,7 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import PublicLayout from "./layouts/LandingLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
+import MockTestLayout from "./layouts/MockTestLayout";
 // import Settings from './pages/Settings'
 import PricingPage from "./pages/landing/PricingPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
@@ -20,8 +21,7 @@ import { useSettingsStore } from "./store/systemStore";
 import { useTestStore } from "./store/testStore";
 import ListeningPage from "./pages/dashboard/listening/ListeningPage";
 import ListeningPracticePage from "./pages/dashboard/listening/ListeningPracticePage";
-import NetworkModal from "./components/modal/NetworkModal";
-import useNetworkStatus from "./hooks/use_network_status";
+
 import WritingPage from "./pages/dashboard/writing/WritingPage";
 import SpeakingPage from "./pages/dashboard/SpeakingPage";
 import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
@@ -68,6 +68,45 @@ function App() {
     }
   }, [fetchTests, isInitialized, user])
 
+  // Set access mode in sessionStorage based on current route
+  // This works for both logged in and logged out users
+  useEffect(() => {
+    
+    // Don't set access mode for public pages (login, signup, landing)
+    if (location.pathname === '/' || 
+        location.pathname === '/login' || 
+        location.pathname === '/signup') {
+      return;
+    }
+
+    const currentMode = sessionStorage.getItem('accessMode');
+    
+    // Set access mode based on route type
+    if (isMockTestRoute(location.pathname)) {
+      // Always set mockTest for mock test routes - this is the priority
+      sessionStorage.setItem('accessMode', 'mockTest');
+    } else if (location.pathname !== '/' && 
+               location.pathname !== '/login' && 
+               location.pathname !== '/signup') {
+      // Only set regular mode if:
+      // 1. Current mode is NOT mockTest (NEVER overwrite mockTest mode)
+      // 2. User is actually on a regular dashboard route (not practice pages that can be from either mode)
+      const isPracticePage = location.pathname.includes('/reading-practice') || 
+                            location.pathname.includes('/listening-practice') || 
+                            location.pathname.includes('/writing-practice') ||
+                            location.pathname.includes('/reading-result') ||
+                            location.pathname.includes('/listening-result');
+      
+      
+      // CRITICAL: Never overwrite mockTest mode, even if on regular routes
+      // This ensures users in mock test mode stay in mock test mode
+      if (!currentMode && !isPracticePage) {
+        sessionStorage.setItem('accessMode', 'regular');
+      } 
+      // If currentMode is 'mockTest', do nothing - preserve it
+    }
+  }, [location.pathname, user]);
+
   const isPracticePage = 
   location.pathname.includes("/reading-practice") || 
   location.pathname.includes("/listening-practice") || 
@@ -75,6 +114,14 @@ function App() {
   location.pathname.includes("/speaking-practice") || 
   location.pathname.includes("/own-writing") ||
   location.pathname.includes("/mock-test/flow")
+
+  // Helper function to check if a route is a mock test route
+  const isMockTestRoute = (path) => {
+    return path.startsWith("/mock-test") || 
+           path.startsWith("/mock-tests") || 
+           path.startsWith("/mock/") || 
+           path === "/mock";
+  }
 
   // Show loading state while initializing authentication
   if (loading && !isInitialized) {
@@ -92,58 +139,69 @@ function App() {
   return (
     <DndProvider backend={HTML5Backend}>
       <Routes>
-
-        {/* <Route
-          path="/"
-          element={user ? <Navigate to="/dashboard" replace /> : <LandingPage />}
-        /> */}
        
         {!user ?
           <Route element={<PublicLayout />}>
-
             <Route path="/" element={<LandingPage />} />
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/login" element={<LoginPage />} />
           </Route>
             
           :
-          <Route element={<DashboardLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/reading" element={<ReadingPage />} />
-            <Route path="/listening" element={<ListeningPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/writing" element={<WritingPage />} />
-            <Route path="/speaking" element={<SpeakingPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
+          <>
+            {/* Mock Test Routes - Separate Layout */}
+            <Route element={<MockTestLayout />}>
+              <Route path="/mock-tests" element={<MockTestsPage />} />
+              <Route path="/mock" element={<MockTestsPage />} />
+              <Route path="/mock/select" element={<MockTypeSelectionPage />} />
+              <Route path="/mock/online" element={<MockOnlinePage />} />
+              <Route path="/mock/center" element={<MockCenterPage />} />
+              <Route path="/mock-test/flow/:mockTestId" element={<MockTestFlow />} />
+              <Route path="/mock-test/results" element={<MockTestResults />} />
+              {/* Practice pages accessible from mock test routes */}
+              <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
+              <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
+              <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
+              <Route path="/reading-result/:id" element={<ReadingResultPage />} />
+              <Route path="/listening-result/:id" element={<ListeningResultPage />} />
+              {/* Profile is accessible from both layouts */}
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
 
-            {/* Mock Tests */}
-            <Route path="/mock-tests" element={<MockTestsPage />} />
-            <Route path="/mock" element={<MockTestsPage />} />
-            <Route path="/mock/select" element={<MockTypeSelectionPage />} />
-            <Route path="/mock/online" element={<MockOnlinePage />} />
-            <Route path="/mock/center" element={<MockCenterPage />} />
-            <Route path="/mock-test/flow/:mockTestId" element={<MockTestFlow />} />
-            <Route path="/mock-test/results" element={<MockTestResults />} />
-
-            {/* Own Writing */}
-            <Route path="/own-writing" element={<OwnWritingPage />} />
-            <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
-            <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
-            <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
-            <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
-            <Route path="/reading-result/:id" element={<ReadingResultPage />} />
-            <Route path="/listening-result/:id" element={<ListeningResultPage />} />
-
-          </Route>
+            {/* Regular Dashboard Routes */}
+            <Route element={<DashboardLayout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/reading" element={<ReadingPage />} />
+              <Route path="/listening" element={<ListeningPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/writing" element={<WritingPage />} />
+              <Route path="/speaking" element={<SpeakingPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/own-writing" element={<OwnWritingPage />} />
+              <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
+              <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
+              <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
+              <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
+              <Route path="/reading-result/:id" element={<ReadingResultPage />} />
+              <Route path="/listening-result/:id" element={<ListeningResultPage />} />
+            </Route>
+          </>
         }
         <Route
           path="*"
-          element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/" replace />}
+          element={user ? (
+            isMockTestRoute(location.pathname) ? (
+              <Navigate to="/mock-tests" replace />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )
+          ) : (
+            <Navigate to="/login" replace />
+          )}
         />
 
       </Routes>
       <ToastContainer duration={2000} />
-      {/* <NetworkModal isOpen={!useNetworkStatus()} /> */}
       <FeedbackModal isOpen={feedbackOpen} setFeedbackOpen={setFeedbackOpen} />
       {!isPracticePage && <div className='fixed_bottom_right_container'>
 

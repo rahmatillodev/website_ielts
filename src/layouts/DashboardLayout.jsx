@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import DashboardNavbar from '@/components/navbar/DashboardNavbar';
 import DashboardSidebar from '@/components/sidebar/DashboardSidebar';
@@ -12,10 +12,40 @@ const FEEDBACK_MODAL_SHOWN_KEY = "feedback_modal_shown"
 
 const DashboardLayout = () => {
   const { pathname, search } = useLocation();
+  const navigate = useNavigate();
   const isSmallScreen = useSmallScreen();
   const [showModal, setShowModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // Set access mode to regular when accessing dashboard routes
+  useEffect(() => {
+    // Only set to regular if not accessing practice pages (practice pages can be from either mode)
+    const isPracticePage = pathname.includes('/reading-practice') || 
+                          pathname.includes('/listening-practice') || 
+                          pathname.includes('/writing-practice') ||
+                          pathname.includes('/reading-result') ||
+                          pathname.includes('/listening-result');
+    
+    if (!isPracticePage) {
+      sessionStorage.setItem('accessMode', 'regular');
+    }
+  }, [pathname])
+
+  // Redirect users away from dashboard routes if they're in mock test mode
+  useEffect(() => {
+    const accessMode = sessionStorage.getItem('accessMode');
+    // Only redirect if they're trying to access dashboard routes (not practice pages)
+    const isDashboardRoute = pathname === '/dashboard' || 
+                             pathname === '/reading' || 
+                             pathname === '/listening' || 
+                             pathname === '/writing' || 
+                             pathname === '/speaking' || 
+                             pathname === '/analytics';
+    
+    if (accessMode === 'mockTest' && isDashboardRoute) {
+      navigate('/mock-tests', { replace: true });
+    }
+  }, [pathname, navigate])
   
   useEffect(() => {
     // Check if modal was previously dismissed
