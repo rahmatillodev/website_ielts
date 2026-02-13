@@ -26,11 +26,11 @@ const WritingHistoryPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("All Tests");
   const [isGridView, setIsGridView] = useState(true);
-  const [sortOrder, setSortOrder] = useState("newest"); // Sort by newest/oldest
+  const [sortOrder, setSortOrder] = useState("oldest"); // Sort by newest/oldest
   const [selectedTaskTypes, setSelectedTaskTypes] = useState([]); // Multi-select task types
   const [filterOpen, setFilterOpen] = useState(false); // Control filter popover
   const [tempSelectedTypes, setTempSelectedTypes] = useState([]); // Temporary state for filter panel
-  const [tempSortOrder, setTempSortOrder] = useState("newest"); // Temporary sort state
+  const [tempSortOrder, setTempSortOrder] = useState("oldest"); // Temporary sort state
 
   const handleGridViewChange = (value) => {
     setIsGridView(value === "grid");
@@ -158,11 +158,17 @@ const WritingHistoryPage = () => {
   };
 
   const handleFilterClear = () => {
-    /// close modal and reset the state
     setFilterOpen(false);
+  
+    // vaqtinchalik filterlarni tozalash
     setTempSelectedTypes([]);
-    setTempSortOrder("newest");
+    setTempSortOrder("oldest");
+  
+    // haqiqiy filterlarni ham tozalash
+    setSelectedTaskTypes([]);
+    setSortOrder("oldest");
   };
+  
 
   const handleFilterSearch = () => {
     setSelectedTaskTypes([...tempSelectedTypes]);

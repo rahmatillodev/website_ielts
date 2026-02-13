@@ -106,7 +106,7 @@ const CardOpen = ({
       navigate(`/speaking-practice/${id}/human?mode=review`);
     }
   };
-  
+
   const cardStatus = is_premium ? "Premium" : "Free";
   const createdDate = created_at ? formatDateToDayMonth(created_at) : '';
   const completedDate = attemptData?.completed_at ? formatDateToDayMonth(attemptData.completed_at) : (date ? formatDateToDayMonth(date) : '');
@@ -142,7 +142,7 @@ const CardOpen = ({
       >
         {/* Premium/Free Badge */}
         {
-          <div className={`${'absolute top-3 right-3 z-10'}`}>
+          <div className={`${'absolute top-5 right-3 z-10'}`}>
             <span className={`px-2.5 md:px-3 py-1 text-[10px] md:text-xs font-black uppercase rounded-lg tracking-wider flex items-center gap-1.5 ${is_premium
               ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
               : "bg-green-500 text-white border-0 shadow-md"
@@ -153,35 +153,36 @@ const CardOpen = ({
         }
 
         {/* Score Badge for Completed */}
-        {hasCompleted && (
-          <div className="absolute top-10 right-3 z-10">
-            <div className="bg-white border border-gray-200 w-12 md:w-14 h-12 md:h-14 rounded-full p-2 flex items-center justify-center flex-col shadow-sm">
-              <p className="text-[10px] text-gray-500 font-semibold">Score</p>
-              <p className="text-sm md:text-base font-black text-green-600">{score?.toFixed(1) || '0.0'}</p>
-            </div>
-          </div>
-        )}
+
 
         <div className="flex flex-col flex-1">
           {/* Icon */}
-          <div className={`size-12 md:size-14 mb-4 rounded-xl ${hasCompleted
-            ? 'bg-green-50 text-green-500'
-            : is_premium
-              ? 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-500'
-              : 'bg-blue-50 text-blue-500'
-            } flex items-center justify-center shrink-0`}>
+          <div className="size-12 md:size-14 mb-4 flex items-center justify-center shrink-0">
+
+
+
             {hasCompleted ? (
-              <MdCheckCircle className="text-2xl md:text-2xl" />
+              <div className="bg-white border border-gray-200 w-12 md:w-14 h-12 md:h-14 rounded-full flex flex-col items-center justify-center shadow-sm">
+                <span className="text-[10px] text-gray-500 font-semibold">Score</span>
+                <span className="text-sm md:text-base font-black text-green-600">
+                  {score?.toFixed(1) || '0.0'}
+                </span>
+              </div>
             ) : (
-              testType === 'listening' ? (
-                <MdHeadset className="text-2xl md:text-2xl" />
-              ) : testType === 'writing' ? (
-                <FaPencilAlt className="text-2xl md:text-2xl" />
-              ) : (
-                <IoBookOutline className="text-2xl md:text-2xl" />
-              )
+              <div className={`size-full rounded-xl flex items-center justify-center ${is_premium
+                  ? 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-500'
+                  : 'bg-blue-50 text-blue-500'
+                }`}>
+                {testType === 'listening'
+                  ? <MdHeadset className="text-2xl" />
+                  : testType === 'writing'
+                    ? <FaPencilAlt className="text-2xl" />
+                    : <IoBookOutline className="text-2xl" />}
+              </div>
             )}
+
           </div>
+
 
           {/* Content */}
           <div className="flex-1 min-w-0">
