@@ -90,7 +90,7 @@ const DashboardSidebar = ({ onNavigate }) => {
     const result = await signOut();
     if (result.success) {
       toast.success("Logged out successfully");
-      navigate("/");
+      navigate("/login");
     } else {
       toast.error(result.error);
     }
