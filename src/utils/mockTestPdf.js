@@ -1,9 +1,42 @@
 import jsPDF from "jspdf";
 
 /**
- * Generates an IELTS Test Report Form style PDF
+ * Helper function to format value or return "-" if missing
+ */
+const formatValue = (value) => {
+  if (value === null || value === undefined || value === '') return '-';
+  return String(value);
+};
+
+/**
+ * Helper function to format date
+ */
+const formatDate = (date) => {
+  if (!date) return '-';
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch {
+    return '-';
+  }
+};
+
+/**
+ * Calculate overall IELTS band score by averaging 4 sections
+ * Rounds to nearest 0.5 (official IELTS rule)
+ */
+const calculateOverallScore = (scores) => {
+  const validScores = scores.filter(s => s !== null && s !== undefined && !isNaN(s));
+  if (validScores.length === 0) return null;
+  const average = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+  return Math.round(average * 2) / 2; // Round to nearest 0.5
+};
+
+/**
+ * Generates an IELTS Test Report Form style PDF matching the official format
  * @param {Object} client - Client information object
- * @param {Object} results - Test results object with listening, reading, writing
+ * @param {Object} results - Test results object with listening, reading, writing, speaking
  * @param {Object} settings - Optional settings (not used, kept for compatibility)
  */
 export const generateMockTestPDF = async (client, results, settings = {}) => {
@@ -13,202 +46,449 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   }
 
   const doc = new jsPDF();
-  const margin = 20;
+  const margin = 15;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const primaryColor = [59, 130, 246]; // #3B82F6
-  const darkGray = [31, 41, 55]; // #1F2937
-  const lightGray = [243, 244, 246]; // #F3F4F6
-  const borderColor = [200, 200, 200]; // Light gray for borders
+  const black = [0, 0, 0];
+  const darkGray = [50, 50, 50];
+  const borderColor = [200, 200, 200];
+  const lightGray = [240, 240, 240];
 
-  // Start from top margin (no header)
+  // Grid system for alignment
+  const gridCol1 = margin;
+  const gridCol2 = margin + 50;
+  const gridCol3 = margin + 120;
+  const gridCol4 = margin + 180;
+  const gridCol5 = pageWidth - margin - 25; // For ACADEMIC box
+
   let yPos = margin;
 
-  // IELTS Test Report Form Title Section
-  doc.setFontSize(20);
-  doc.setFont(undefined, 'bold');
-  doc.setTextColor(...primaryColor);
-  doc.text('IELTS', margin, yPos);
-  
-  doc.setFontSize(14);
-  doc.setFont(undefined, 'normal');
-  doc.setTextColor(...darkGray);
-  doc.text('Test Report Form', margin + 35, yPos);
-  
-  yPos += 20;
-
-  // Candidate Information Section
+  // Header: "INTERNATIONAL ENGLISH LANGUAGE TESTING SYSTEM"
   doc.setFontSize(10);
   doc.setFont(undefined, 'bold');
+  doc.setTextColor(...black);
+  doc.text('INTERNATIONAL ENGLISH LANGUAGE TESTING SYSTEM', margin, yPos);
+  
+  yPos += 5;
+  
+  // "Test Report Form"
+  doc.setFontSize(9);
+  doc.setFont(undefined, 'bold');
+  doc.text('Test Report Form', margin, yPos);
+  
+  // ACADEMIC module box at top right - smaller and more formal
+  const academicBoxWidth = 20;
+  const academicBoxHeight = 5;
+  const academicBoxX = gridCol5;
+  doc.setDrawColor(...black);
+  doc.setLineWidth(0.3);
+  doc.rect(academicBoxX, margin - 1, academicBoxWidth, academicBoxHeight);
+  doc.setFontSize(6);
+  doc.setFont(undefined, 'bold');
+  doc.text('ACADEMIC', academicBoxX + academicBoxWidth / 2, margin + 2.5, { align: 'center' });
+  
+  yPos += 7;
+
+  // NOTE section - reduced size
+  doc.setFontSize(6);
+  doc.setFont(undefined, 'normal');
   doc.setTextColor(...darkGray);
-  doc.text('Candidate Information', margin, yPos);
+  const noteText = 'NOTE: Admission to undergraduate and post graduate courses should be based on the ACADEMIC Reading and Writing Modules. GENERAL TRAINING Reading and Writing Modules are not designed to test the full range of language skills required for academic purposes. It is recommended that the candidate\'s language ability as indicated in this Test Report Form be re-assessed after two years from the date of the test.';
+  doc.text(noteText, margin, yPos, { maxWidth: pageWidth - 2 * margin });
   
   yPos += 8;
-  
-  // Draw border box for candidate info
-  const candidateInfoHeight = 50;
-  doc.setDrawColor(...borderColor);
-  doc.setLineWidth(0.5);
-  doc.rect(margin, yPos, pageWidth - 2 * margin, candidateInfoHeight);
-  
-  // Candidate details
-  doc.setFontSize(9);
-  doc.setFont(undefined, 'normal');
-  doc.setTextColor(...darkGray);
-  
-  const nameParts = client.full_name ? client.full_name.split(' ') : ['', ''];
-  const familyName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0] || 'N/A';
-  const firstName = nameParts[0] || 'N/A';
-  
-  const infoLeftX = margin + 5;
-  const infoRightX = pageWidth / 2 + 10;
-  let infoY = yPos + 8;
-  
-  doc.setFont(undefined, 'bold');
-  doc.text('Family Name:', infoLeftX, infoY);
-  doc.setFont(undefined, 'normal');
-  doc.text(familyName, infoLeftX + 35, infoY);
-  
-  infoY += 7;
-  doc.setFont(undefined, 'bold');
-  doc.text('First Name:', infoLeftX, infoY);
-  doc.setFont(undefined, 'normal');
-  doc.text(firstName, infoLeftX + 35, infoY);
-  
-  infoY += 7;
-  doc.setFont(undefined, 'bold');
-  doc.text('Candidate ID:', infoLeftX, infoY);
-  doc.setFont(undefined, 'normal');
-  const candidateId = client.id ? String(client.id).slice(0, 8) : 'N/A';
-  doc.text(candidateId, infoLeftX + 35, infoY);
-  
-  // Email and Phone on the right
-  infoY = yPos + 8;
-  if (client.email) {
-    doc.setFont(undefined, 'bold');
-    doc.text('Email:', infoRightX, infoY);
-    doc.setFont(undefined, 'normal');
-    doc.text(client.email, infoRightX + 20, infoY);
-    infoY += 7;
-  }
-  
-  if (client.phone_number) {
-    doc.setFont(undefined, 'bold');
-    doc.text('Phone:', infoRightX, infoY);
-    doc.setFont(undefined, 'normal');
-    doc.text(client.phone_number, infoRightX + 20, infoY);
-  }
-  
-  yPos += candidateInfoHeight + 15;
 
-  // Test Results Section
-  doc.setFontSize(10);
+  // Centre Number, Date, Candidate Number row - using grid system
+  doc.setFontSize(7);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(...black);
+  
+  // Centre Number
   doc.setFont(undefined, 'bold');
-  doc.setTextColor(...darkGray);
-  doc.text('Test Results', margin, yPos);
+  doc.text('Centre Number:', gridCol1, yPos);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(settings?.centreNumber || '-'), gridCol2, yPos);
+  
+  // Date
+  doc.setFont(undefined, 'bold');
+  doc.text('Date:', gridCol3, yPos);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatDate(client.date || client.created_at), gridCol4, yPos);
+  
+  // Candidate Number
+  doc.setFont(undefined, 'bold');
+  doc.text('Candidate Number:', gridCol1, yPos + 5);
+  doc.setFont(undefined, 'normal');
+  const candidateNumber = client.id ? String(client.id).slice(0, 8) : '-';
+  doc.text(formatValue(candidateNumber), gridCol2, yPos + 5);
   
   yPos += 10;
 
-  // Results Table
-  const tableStartY = yPos;
-  const tableWidth = pageWidth - 2 * margin;
-  const colWidth = tableWidth / 5;
-  const rowHeight = 25;
-  const headerHeight = 12;
-
-  // Table header
-  doc.setFillColor(...primaryColor);
-  doc.rect(margin, yPos, tableWidth, headerHeight, 'F');
-  
+  // Candidate Details Section
   doc.setFontSize(9);
   doc.setFont(undefined, 'bold');
-  doc.setTextColor(255, 255, 255);
-  const headers = ['Listening', 'Reading', 'Writing', 'Speaking', 'Overall'];
-  headers.forEach((header, index) => {
-    const x = margin + (index * colWidth) + (colWidth / 2);
-    doc.text(header, x, yPos + headerHeight / 2 + 3, { align: 'center' });
-  });
+  doc.setTextColor(...black);
+  doc.text('Candidate Details', margin, yPos);
+  
+  yPos += 5;
 
-  yPos += headerHeight;
-
-  // Table body with scores
-  doc.setDrawColor(...borderColor);
+  // Create proper 2-column table with inner lines
+  const candidateBoxHeight = 50;
+  const candidateBoxWidth = pageWidth - 2 * margin;
+  const columnWidth = (candidateBoxWidth - 35) / 2; // Reserve space for photo
+  const photoBoxSize = 25;
+  const photoBoxX = pageWidth - margin - photoBoxSize - 5;
+  const photoBoxY = yPos + 3;
+  
+  // Outer border
+  doc.setDrawColor(...black);
   doc.setLineWidth(0.5);
-  doc.rect(margin, tableStartY, tableWidth, headerHeight + rowHeight);
+  doc.rect(margin, yPos, candidateBoxWidth, candidateBoxHeight);
   
-  // Vertical lines
-  for (let i = 1; i < 5; i++) {
-    const x = margin + (i * colWidth);
-    doc.line(x, tableStartY, x, tableStartY + headerHeight + rowHeight);
-  }
+  // Vertical line dividing columns
+  const verticalLineX = margin + columnWidth + 17.5;
+  doc.line(verticalLineX, yPos, verticalLineX, yPos + candidateBoxHeight);
   
-  // Horizontal line between header and body
-  doc.line(margin, tableStartY + headerHeight, margin + tableWidth, tableStartY + headerHeight);
-
-  // Scores - show 0 if score is 0, otherwise show score or 'N/A'
-  doc.setFontSize(16);
-  doc.setFont(undefined, 'bold');
-  doc.setTextColor(...darkGray);
-  
-  // Helper function to get score value (preserves 0, shows N/A only for null/undefined)
-  const getScore = (score) => {
-    if (score === null || score === undefined) return 'N/A';
-    return score;
-  };
-  
-  const listeningScore = getScore(results?.listening?.score);
-  const readingScore = getScore(results?.reading?.score);
-  const writingScore = getScore(results?.writing?.score);
-  const speakingScore = getScore(results?.speaking?.score);
-  const overallScore = getScore(client.total_score);
-  
-  const scores = [listeningScore, readingScore, writingScore, speakingScore, overallScore];
-  scores.forEach((score, index) => {
-    const x = margin + (index * colWidth) + (colWidth / 2);
-    doc.text(String(score), x, yPos + rowHeight / 2 + 4, { align: 'center' });
-  });
-
-  yPos += rowHeight + 20;
-
-  // Centre Stamp and Administrator's Signature Section
-  const stampY = yPos;
-  const stampSize = 60;
-  const stampX = margin + 30;
-  const signatureX = pageWidth - margin - 100;
-
-  // Centre Stamp box
-  doc.setDrawColor(...borderColor);
-  doc.setLineWidth(1);
-  doc.setFillColor(255, 255, 255);
-  doc.circle(stampX, stampY + stampSize / 2, stampSize / 2, 'FD');
-  
-  doc.setFontSize(8);
+  // Photo box on the right
+  doc.setDrawColor(...black);
+  doc.setLineWidth(0.5);
+  doc.rect(photoBoxX, photoBoxY, photoBoxSize, photoBoxSize);
+  doc.setFontSize(5);
   doc.setFont(undefined, 'normal');
-  doc.setTextColor(180, 180, 180);
-  doc.text('Centre Stamp', stampX, stampY + stampSize / 2, { align: 'center' });
-
-  // Administrator's Signature line
-  doc.setDrawColor(...darkGray);
-  doc.setLineWidth(0.5);
-  doc.line(signatureX, stampY + 40, signatureX + 100, stampY + 40);
-  
-  doc.setFontSize(8);
   doc.setTextColor(...darkGray);
-  doc.text('Administrator\'s Signature', signatureX + 50, stampY + 45, { align: 'center' });
+  doc.text('PHOTO', photoBoxX + photoBoxSize / 2, photoBoxY + photoBoxSize / 2 - 1.5, { align: 'center' });
+  doc.text('SEAL', photoBoxX + photoBoxSize / 2, photoBoxY + photoBoxSize / 2 + 2, { align: 'center' });
 
-  // Footer
-  const footerY = pageHeight - 15;
+  // Table rows configuration
+  const rowHeight = candidateBoxHeight / 6;
+  const leftColX = margin + 3;
+  const rightColX = verticalLineX + 3;
+  const labelWidth = 35;
+  const valueOffset = 40;
+  
   doc.setFontSize(7);
-  doc.setFont(undefined, 'italic');
-  doc.setTextColor(150, 150, 150);
-  doc.text(
-    'This is an unofficial test report form generated by IELTSCORE',
-    pageWidth / 2,
-    footerY,
-    { align: 'center' }
-  );
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(...black);
+  
+  const nameParts = client.full_name ? client.full_name.split(' ') : ['', ''];
+  const familyName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0] || '-';
+  const firstName = nameParts[0] || '-';
+  
+  // Left column fields
+  let currentY = yPos + rowHeight / 2;
+  
+  // Row 1: Family Name
+  doc.setFont(undefined, 'bold');
+  doc.text('Family Name:', leftColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(familyName), leftColX + valueOffset, currentY);
+  doc.line(margin, currentY + 2, verticalLineX, currentY + 2);
+  
+  currentY += rowHeight;
+  
+  // Row 2: First Name
+  doc.setFont(undefined, 'bold');
+  doc.text('First Name:', leftColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(firstName), leftColX + valueOffset, currentY);
+  doc.line(margin, currentY + 2, verticalLineX, currentY + 2);
+  
+  currentY += rowHeight;
+  
+  // Row 3: Candidate ID
+  doc.setFont(undefined, 'bold');
+  doc.text('Candidate ID:', leftColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(candidateNumber), leftColX + valueOffset, currentY);
+  doc.line(margin, currentY + 2, verticalLineX, currentY + 2);
+  
+  currentY += rowHeight;
+  
+  // Row 4: Date of Birth
+  doc.setFont(undefined, 'bold');
+  doc.text('Date of Birth:', leftColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatDate(client.date_of_birth), leftColX + valueOffset, currentY);
+  doc.line(margin, currentY + 2, verticalLineX, currentY + 2);
+  
+  currentY += rowHeight;
+  
+  // Row 5: Sex (M/F)
+  doc.setFont(undefined, 'bold');
+  doc.text('Sex (M/F):', leftColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(client.sex || '-'), leftColX + valueOffset, currentY);
+  doc.line(margin, currentY + 2, verticalLineX, currentY + 2);
+  
+  currentY += rowHeight;
+  
+  // Row 6: First Language
+  doc.setFont(undefined, 'bold');
+  doc.text('First Language:', leftColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(client.first_language || '-'), leftColX + valueOffset, currentY);
+  
+  // Right column fields
+  currentY = yPos + rowHeight / 2;
+  
+  // Row 1: Passport Number (NEW)
+  doc.setFont(undefined, 'bold');
+  doc.text('Passport Number:', rightColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(client.passport_number || '-'), rightColX + 35, currentY);
+  doc.line(verticalLineX, currentY + 2, photoBoxX - 5, currentY + 2);
+  
+  currentY += rowHeight;
+  
+  // Row 2: Scheme Code
+  doc.setFont(undefined, 'bold');
+  doc.text('Scheme Code:', rightColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(client.scheme_code || '-'), rightColX + 35, currentY);
+  doc.line(verticalLineX, currentY + 2, photoBoxX - 5, currentY + 2);
+  
+  currentY += rowHeight;
+  
+  // Row 3: Private Candidate checkbox
+  doc.setFont(undefined, 'bold');
+  doc.text('Private Candidate:', rightColX, currentY);
+  doc.setDrawColor(...black);
+  doc.setLineWidth(0.3);
+  const checkboxSize = 2.5;
+  const checkboxX = rightColX + 35;
+  const checkboxY = currentY - 2.5;
+  doc.rect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+  if (client.private_candidate) {
+    doc.setFontSize(5);
+    doc.text('✓', checkboxX + checkboxSize / 2, checkboxY + checkboxSize / 2 + 0.5, { align: 'center' });
+  }
+  doc.setFontSize(7);
+  doc.line(verticalLineX, currentY + 2, photoBoxX - 5, currentY + 2);
+  
+  currentY += rowHeight;
+  
+  // Row 4: Country or Region of Origin
+  doc.setFont(undefined, 'bold');
+  doc.text('Country/Region:', rightColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(client.country || client.region || '-'), rightColX + 35, currentY);
+  doc.line(verticalLineX, currentY + 2, photoBoxX - 5, currentY + 2);
+  
+  currentY += rowHeight;
+  
+  // Row 5: Repeating IELTS (Y/N)
+  doc.setFont(undefined, 'bold');
+  doc.text('Repeating IELTS:', rightColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(client.repeating_ielts || 'N'), rightColX + 35, currentY);
+  doc.line(verticalLineX, currentY + 2, photoBoxX - 5, currentY + 2);
+  
+  currentY += rowHeight;
+  
+  // Row 6: Test Type Code (NEW)
+  doc.setFont(undefined, 'bold');
+  doc.text('Test Type Code:', rightColX, currentY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(client.test_type_code || settings?.testTypeCode || 'A'), rightColX + 35, currentY);
+  
+  yPos += candidateBoxHeight + 8;
+
+  // Test Results Section
+  doc.setFontSize(9);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(...black);
+  doc.text('Test Results', margin, yPos);
+  
+  yPos += 6;
+
+  // Helper function to format score
+  const formatScore = (score) => {
+    if (score === null || score === undefined) return '-';
+    return score.toFixed(1);
+  };
+
+  // Score boxes in a row - all 5 boxes (Listening, Reading, Writing, Speaking, Overall Band Score)
+  const scoreBoxWidth = 18;
+  const scoreBoxHeight = 12;
+  const scoreBoxSpacing = 3;
+  const overallBoxWidth = 22; // Slightly wider for Overall Band Score
+  const overallBoxHeight = 12;
+  
+  const scoreLabels = ['Listening', 'Reading', 'Writing', 'Speaking'];
+  const scores = [
+    results?.listening?.score,
+    results?.reading?.score,
+    results?.writing?.score,
+    results?.speaking?.score
+  ];
+  
+  // Calculate overall score by averaging 4 sections
+  const overallScore = calculateOverallScore(scores) || client.total_score;
+  
+  // Calculate total width needed for all 5 boxes
+  const scoreStartX = margin;
+  
+  // Draw 4 section score boxes - WHITE with BLACK border
+  scoreLabels.forEach((label, index) => {
+    const boxX = scoreStartX + (index * (scoreBoxWidth + scoreBoxSpacing));
+    
+    // White box background with black border
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(...black);
+    doc.setLineWidth(0.8);
+    doc.rect(boxX, yPos, scoreBoxWidth, scoreBoxHeight, 'FD');
+    
+    // Score text - BLACK
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(...black);
+    const scoreValue = formatScore(scores[index]);
+    doc.text(scoreValue, boxX + scoreBoxWidth / 2, yPos + scoreBoxHeight / 2 + 2.5, { align: 'center' });
+    
+    // Label below
+    doc.setFontSize(7);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(...black);
+    doc.text(label, boxX + scoreBoxWidth / 2, yPos + scoreBoxHeight + 4, { align: 'center' });
+  });
+
+  // Overall Band Score box - positioned at the end (right side)
+  const overallBoxX = scoreStartX + (scoreBoxWidth * 6) + (scoreBoxSpacing * 5);
+  
+  // Thick black border box
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(...black);
+  doc.setLineWidth(1.2);
+  doc.rect(overallBoxX, yPos, overallBoxWidth, overallBoxHeight, 'FD');
+  
+  // Score text - BLACK
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(...black);
+  doc.text(formatScore(overallScore), overallBoxX + overallBoxWidth / 2, yPos + overallBoxHeight / 2 + 2.5, { align: 'center' });
+  
+  // Label below
+  doc.setFontSize(7);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(...black);
+  doc.text('Overall Band Score', overallBoxX + overallBoxWidth / 2, yPos + overallBoxHeight + 4, { align: 'center' });
+
+  yPos += scoreBoxHeight + 12;
+
+  // Bottom section: Writing Examiner Number, Speaking Examiner Number, Administrator's Signature
+  const bottomY = yPos;
+  
+  // Writing Examiner Number
+  doc.setFontSize(7);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(...black);
+  doc.text('Writing Examiner Number:', margin, bottomY);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(client.writing_examiner_number || '-'), margin, bottomY + 4);
+  
+  // Speaking Examiner Number
+  doc.setFont(undefined, 'bold');
+  doc.text('Speaking Examiner Number:', margin, bottomY + 8);
+  doc.setFont(undefined, 'normal');
+  doc.text(formatValue(client.speaking_examiner_number || '-'), margin, bottomY + 12);
+  
+  // Administrator's Signature (center)
+  const signatureX = pageWidth / 2 - 45;
+  doc.setDrawColor(...black);
+  doc.setLineWidth(0.5);
+  doc.line(signatureX, bottomY + 6, signatureX + 90, bottomY + 6);
+  
+  doc.setFontSize(7);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(...black);
+  doc.text('Administrator\'s Signature', signatureX + 45, bottomY + 11, { align: 'center' });
+  
+  doc.setFontSize(6);
+  const dateLabelX = signatureX + 10;
+  const dateValueX = dateLabelX + 18; // Small gap after "Date:"
+  doc.text('Date:', dateLabelX, bottomY + 16, { align: 'left' });
+  doc.text(formatDate(client.date || client.created_at), dateValueX, bottomY + 16, { align: 'left' });
+  
+  // // Centre Stamp (left)
+  // const stampX = margin + 15;
+  // const stampY = bottomY;
+  // const stampSize = 35;
+  // doc.setDrawColor(...borderColor);
+  // doc.setLineWidth(1);
+  // doc.setFillColor(255, 255, 255);
+  // doc.rect(stampX, stampY, stampSize, stampSize, 'FD');
+  
+  // doc.setFontSize(6);
+  // doc.setFont(undefined, 'normal');
+  // doc.setTextColor(150, 150, 150);
+  // doc.text('Centre Stamp', stampX + stampSize / 2, stampY + stampSize / 2, { align: 'center' });
+  
+  // Validation Stamp (right) - enhanced design
+  // const validationStampX = pageWidth - margin - stampSize - 15;
+  // const validationStampY = bottomY;
+  // const stampCenterX = validationStampX + stampSize / 2;
+  // const stampCenterY = validationStampY + stampSize / 2;
+  
+  // // Outer circle with thicker border
+  // doc.setDrawColor(...black);
+  // doc.setLineWidth(1.2);
+  // doc.setFillColor(255, 255, 255);
+  // doc.circle(stampCenterX, stampCenterY, stampSize / 2, 'FD');
+  
+  // // Inner decorative circle
+  // doc.setDrawColor(...darkGray);
+  // doc.setLineWidth(0.5);
+  // doc.circle(stampCenterX, stampCenterY, stampSize / 2 - 2, 'D');
+  
+  // IELTS text
+  // doc.setFontSize(6);
+  // doc.setFont(undefined, 'bold');
+  // doc.setTextColor(...black);
+  // doc.text('IELTS', stampCenterX, stampCenterY - 2, { align: 'center' });
+  
+  // // Validation text
+  // doc.setFontSize(4);
+  // doc.setFont(undefined, 'bold');
+  // doc.setTextColor(...black);
+  // doc.text('VALIDATION', stampCenterX, stampCenterY + 2, { align: 'center' });
+  
+  // // Decorative lines
+  // doc.setDrawColor(...darkGray);
+  // doc.setLineWidth(0.3);
+  // doc.line(stampCenterX - 6, stampCenterY - 4, stampCenterX + 6, stampCenterY - 4);
+  // doc.line(stampCenterX - 6, stampCenterY + 4, stampCenterX + 6, stampCenterY + 4);
+  
+  // Test Report Form Number (bottom right) - white background with black border
+  const formNumberY = pageHeight - 10;
+  const formNumber = client.id ? String(client.id).replace(/-/g, '').toUpperCase().slice(0, 20) : '-';
+  
+  // White box with black border for form number
+  const formNumberBoxWidth = 55;
+  const formNumberBoxHeight = 6;
+  const formNumberBoxX = pageWidth - margin - formNumberBoxWidth;
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(...black);
+  doc.setLineWidth(0.8);
+  doc.rect(formNumberBoxX, formNumberY - 4, formNumberBoxWidth, formNumberBoxHeight, 'FD');
+  
+  doc.setFontSize(6);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(...black);
+  doc.text(formatValue(formNumber), formNumberBoxX + formNumberBoxWidth / 2, formNumberY, { align: 'center' });
+  
+  doc.setFontSize(5);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(...darkGray);
+  doc.text('Test Report Form Number', formNumberBoxX + formNumberBoxWidth / 2, formNumberY + 4, { align: 'center' });
+  
+  // Add version number (bottom left)
+  doc.setFontSize(5);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(...darkGray);
+  const versionText = `Version: ${formatValue(client.version || settings?.version || '1.0')}`;
+  doc.text(versionText, margin, formNumberY);
 
   // Save PDF
-  const fileName = `IELTS_Mock_Test_Report_${candidateId}_${new Date().toISOString().split('T')[0]}.pdf`;
+  const fileName = `IELTS_Mock_Test_Report_${candidateNumber}_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
 };

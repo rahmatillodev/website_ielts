@@ -88,10 +88,10 @@ const MockTestResults = ({ mockTestId, results, onBack }) => {
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/mock-tests')}
               className="px-8 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-all shadow-md"
             >
-              Go to Dashboard
+              Go to Mock Tests
             </button>
 
             

@@ -18,20 +18,13 @@ export default function ProtectedRoute({ children }) {
     // Preserve the current route in the redirect so we can redirect back after login
     const redirectPath = location.pathname + location.search
     
-    // Store access mode in sessionStorage if coming from mock test route
+    // Store access mode in sessionStorage based on route type
+    // This ensures login page knows which platform the user is trying to access
     const isMockRoute = isMockTestRoute(location.pathname);
     const modeToSet = isMockRoute ? 'mockTest' : 'regular';
     
-    console.log('[ProtectedRoute] User not authenticated:', {
-      pathname: location.pathname,
-      isMockRoute,
-      modeToSet,
-      currentMode: sessionStorage.getItem('accessMode')
-    });
-    
+    // Set access mode - this will be used by login page to determine redirect target
     sessionStorage.setItem('accessMode', modeToSet);
-    
-    console.log('[ProtectedRoute] After setting mode:', sessionStorage.getItem('accessMode'));
     
     return <Navigate to={`/login?redirect=${encodeURIComponent(redirectPath)}`} replace />
   }

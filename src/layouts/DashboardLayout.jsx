@@ -7,6 +7,7 @@ import RotationModal, { DISMISS_KEY } from '@/components/modal/RotationModal'
 import { useSmallScreen } from '@/hooks/useSmallScreen'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Outlet } from 'react-router-dom'
+import { useAuthStore } from '@/store/authStore'
 
 const FEEDBACK_MODAL_SHOWN_KEY = "feedback_modal_shown"
 
@@ -16,6 +17,7 @@ const DashboardLayout = () => {
   const isSmallScreen = useSmallScreen();
   const [showModal, setShowModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const authUser = useAuthStore((state) => state.authUser)
 
   // Set access mode to regular when accessing dashboard routes
   useEffect(() => {
@@ -31,21 +33,24 @@ const DashboardLayout = () => {
     }
   }, [pathname])
 
-  // Redirect users away from dashboard routes if they're in mock test mode
+  // Redirect mock test users away from regular dashboard routes
   useEffect(() => {
-    const accessMode = sessionStorage.getItem('accessMode');
-    // Only redirect if they're trying to access dashboard routes (not practice pages)
-    const isDashboardRoute = pathname === '/dashboard' || 
-                             pathname === '/reading' || 
-                             pathname === '/listening' || 
-                             pathname === '/writing' || 
-                             pathname === '/speaking' || 
-                             pathname === '/analytics';
-    
-    if (accessMode === 'mockTest' && isDashboardRoute) {
-      navigate('/mock-tests', { replace: true });
+    if (authUser) {
+      const accessMode = sessionStorage.getItem('accessMode');
+      // Only redirect if they're trying to access dashboard routes (not practice pages)
+      const isDashboardRoute = pathname === '/dashboard' || 
+                               pathname === '/reading' || 
+                               pathname === '/listening' || 
+                               pathname === '/writing' || 
+                               pathname === '/speaking' || 
+                               pathname === '/analytics';
+      
+      if (accessMode === 'mockTest' && isDashboardRoute) {
+        console.log('[DashboardLayout] Mock test user detected in regular dashboard, redirecting to mock-tests');
+        navigate('/mock-tests', { replace: true });
+      }
     }
-  }, [pathname, navigate])
+  }, [pathname, navigate, authUser])
   
   useEffect(() => {
     // Check if modal was previously dismissed

@@ -29,50 +29,29 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Set access mode when page loads based on redirect parameter
-  // This ensures sessionStorage is set even if user navigates directly to login
+  // This ensures sessionStorage is set BEFORE login so it's preserved
   useEffect(() => {
     const redirectPath = searchParams.get("redirect");
-    const currentMode = sessionStorage.getItem('accessMode');
-    
-    console.log('[LoginPage] useEffect on mount/redirect change:', {
-      redirectPath,
-      currentMode
-    });
     
     if (redirectPath) {
       const redirectPathname = redirectPath.split('?')[0];
       const isMockRoute = isMockTestRoute(redirectPathname);
       
-      console.log('[LoginPage] Redirect path found:', {
-        redirectPathname,
-        isMockRoute
-      });
-      
+      // Set access mode based on redirect route - this determines the platform
       if (isMockRoute) {
-        console.log('[LoginPage] Setting mockTest mode from redirect');
         sessionStorage.setItem('accessMode', 'mockTest');
-        console.log('[LoginPage] After setting:', sessionStorage.getItem('accessMode'));
       } else {
-        // Only set regular if not already set to mockTest
-        if (currentMode !== 'mockTest') {
-          console.log('[LoginPage] Setting regular mode from redirect');
-          sessionStorage.setItem('accessMode', 'regular');
-        } else {
-          console.log('[LoginPage] Preserving existing mockTest mode');
-        }
+        // Regular dashboard route
+        sessionStorage.setItem('accessMode', 'regular');
       }
     } else {
-      // If no redirect parameter, preserve existing accessMode if it exists
-      // Otherwise, check if we should set it based on referrer or other indicators
+      // If no redirect parameter, check if there's an existing mode
+      // If not, default to regular (for direct login page access)
       const existingMode = sessionStorage.getItem('accessMode');
-      console.log('[LoginPage] No redirect path, existing mode:', existingMode);
       if (!existingMode) {
-        // Default to regular if nothing is set
-        console.log('[LoginPage] No existing mode, setting default regular');
         sessionStorage.setItem('accessMode', 'regular');
-      } else {
-        console.log('[LoginPage] Preserving existing mode:', existingMode);
       }
+      // If existing mode is set, preserve it (user might have come from a mock test link)
     }
   }, [searchParams]);
 
@@ -95,43 +74,24 @@ function LoginPage() {
     const result = await signIn(email, password);
 
     if (result?.success) {
+      // Get the access mode that was set in useEffect (based on redirect parameter)
+      const accessMode = sessionStorage.getItem('accessMode');
       const redirectPath = searchParams.get("redirect");
       const redirectPathname = redirectPath ? redirectPath.split('?')[0] : null;
-      const savedMode = sessionStorage.getItem('accessMode');
-      
-      console.log('[LoginPage] Login successful - Debug info:', {
-        redirectPath,
-        redirectPathname,
-        savedMode,
-        isMockTestRoute: redirectPathname ? isMockTestRoute(redirectPathname) : false
-      });
     
       let targetPath = "/dashboard";
-      let finalMode = "regular";
     
-      // AGAR: 
-      // a) URLda redirect=/mock... bo'lsa
-      // b) YOKI xotirada mockTest rejimi saqlangan bo'lsa
-      if ((redirectPathname && isMockTestRoute(redirectPathname)) || savedMode === 'mockTest') {
-        finalMode = "mockTest";
-        // Agar redirectPathname bo'lsa o'sha yo'lga, bo'lmasa asosiy mock-tests'ga
+      // Determine target path based on access mode
+      if (accessMode === 'mockTest') {
+        // User is in mock test mode - redirect to mock test platform
         targetPath = redirectPathname || "/mock-tests";
+      } else {
+        // User is in regular mode - redirect to regular dashboard
+        targetPath = redirectPathname || "/dashboard";
       }
       
-      console.log('[LoginPage] Before setting sessionStorage:', {
-        finalMode,
-        targetPath,
-        currentSessionStorage: sessionStorage.getItem('accessMode')
-      });
-    
-      // MAJBURIY YANGILASH
-      sessionStorage.setItem('accessMode', finalMode);
-      
-      console.log('[LoginPage] After setting sessionStorage:', {
-        setMode: finalMode,
-        verified: sessionStorage.getItem('accessMode'),
-        navigatingTo: targetPath
-      });
+      // Ensure accessMode is set (should already be set from useEffect, but double-check)
+      sessionStorage.setItem('accessMode', accessMode || 'regular');
       
       toast.success("Welcome back!");
       navigate(targetPath, { replace: true });

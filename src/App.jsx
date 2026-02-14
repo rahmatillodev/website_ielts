@@ -37,6 +37,8 @@ import FeedbackModal from "./components/modal/FeedbackModal";
 import WritingPracticePage from "./pages/dashboard/writing/WritingPracticePage";
 import WritingHistoryPage from "./pages/dashboard/writing/WritingHistoryPage";
 import MockTestResults from "./pages/dashboard/mock/MockTestResults";
+import MockTestRoute from "./components/MockTestRoute";
+import RegularDashboardRoute from "./components/RegularDashboardRoute";
 // Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -79,31 +81,26 @@ function App() {
       return;
     }
 
-    const currentMode = sessionStorage.getItem('accessMode');
-    
-    // Set access mode based on route type
+    // Set access mode based on route type - STRICT separation
     if (isMockTestRoute(location.pathname)) {
-      // Always set mockTest for mock test routes - this is the priority
+      // Always set mockTest for mock test routes
       sessionStorage.setItem('accessMode', 'mockTest');
     } else if (location.pathname !== '/' && 
                location.pathname !== '/login' && 
                location.pathname !== '/signup') {
-      // Only set regular mode if:
-      // 1. Current mode is NOT mockTest (NEVER overwrite mockTest mode)
-      // 2. User is actually on a regular dashboard route (not practice pages that can be from either mode)
+      // Set regular mode for regular dashboard routes
+      // Practice pages will inherit the mode from their parent route
       const isPracticePage = location.pathname.includes('/reading-practice') || 
                             location.pathname.includes('/listening-practice') || 
                             location.pathname.includes('/writing-practice') ||
                             location.pathname.includes('/reading-result') ||
                             location.pathname.includes('/listening-result');
       
-      
-      // CRITICAL: Never overwrite mockTest mode, even if on regular routes
-      // This ensures users in mock test mode stay in mock test mode
-      if (!currentMode && !isPracticePage) {
+      // For practice pages, preserve current mode (they can be accessed from either platform)
+      // For regular routes, set to regular
+      if (!isPracticePage) {
         sessionStorage.setItem('accessMode', 'regular');
-      } 
-      // If currentMode is 'mockTest', do nothing - preserve it
+      }
     }
   }, [location.pathname, user]);
 
@@ -149,8 +146,8 @@ function App() {
             
           :
           <>
-            {/* Mock Test Routes - Separate Layout */}
-            <Route element={<MockTestLayout />}>
+            {/* Mock Test Routes - Separate Layout with Route Guard */}
+            <Route element={<MockTestRoute><MockTestLayout /></MockTestRoute>}>
               <Route path="/mock-tests" element={<MockTestsPage />} />
               <Route path="/mock" element={<MockTestsPage />} />
               <Route path="/mock/select" element={<MockTypeSelectionPage />} />
@@ -158,18 +155,18 @@ function App() {
               <Route path="/mock/center" element={<MockCenterPage />} />
               <Route path="/mock-test/flow/:mockTestId" element={<MockTestFlow />} />
               <Route path="/mock-test/results" element={<MockTestResults />} />
-              {/* Practice pages accessible from mock test routes */}
+              {/* Practice pages accessible from mock test routes - only if in mockTest mode */}
               <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
               <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
               <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
               <Route path="/reading-result/:id" element={<ReadingResultPage />} />
               <Route path="/listening-result/:id" element={<ListeningResultPage />} />
-              {/* Profile is accessible from both layouts */}
+              {/* Profile accessible from mock test layout */}
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
-            {/* Regular Dashboard Routes */}
-            <Route element={<DashboardLayout />}>
+            {/* Regular Dashboard Routes with Route Guard */}
+            <Route element={<RegularDashboardRoute><DashboardLayout /></RegularDashboardRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/reading" element={<ReadingPage />} />
               <Route path="/listening" element={<ListeningPage />} />
@@ -179,6 +176,7 @@ function App() {
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/own-writing" element={<OwnWritingPage />} />
               <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
+              {/* Practice pages accessible from regular dashboard - only if in regular mode */}
               <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
               <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
               <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
@@ -189,13 +187,14 @@ function App() {
         }
         <Route
           path="*"
-          element={user ? (
-            isMockTestRoute(location.pathname) ? (
-              <Navigate to="/mock-tests" replace />
-            ) : (
-              <Navigate to="/dashboard" replace />
-            )
-          ) : (
+          element={user ? (() => {
+            // Check access mode to determine where to redirect
+            const accessMode = sessionStorage.getItem('accessMode');
+            if (accessMode === 'mockTest') {
+              return <Navigate to="/mock-tests" replace />;
+            }
+            return <Navigate to="/dashboard" replace />;
+          })() : (
             <Navigate to="/login" replace />
           )}
         />

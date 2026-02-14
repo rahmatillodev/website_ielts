@@ -42,6 +42,12 @@ const MockTestClientResults = ({
       setIsPdfLoading(false)
     }
   }
+  const formatTime = (time) => {
+    const hours = Math.floor(time / 3600)
+    const minutes = Math.floor((time % 3600) / 60)
+    const seconds = time % 60
+    return `${hours}h ${minutes}m ${seconds}s`
+  }
 
   const ResultAccordionItem = ({ value, title, item, icon: Icon }) => (
     <AccordionItem value={value} className="border-none mb-4 bg-white rounded-xl shadow-sm overflow-hidden">
@@ -66,13 +72,13 @@ const MockTestClientResults = ({
                 <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
                   <div className='p-3 bg-gray-50 rounded-lg'>
                     <p className='text-xs text-gray-500 uppercase font-bold mb-1'>Score</p>
-                    <p className='text-xl font-black text-indigo-600'>{item.score ?? 'N/A'}</p>
+                    <p className='text-xl font-black text-indigo-600'>{item.score?.toFixed(1) ?? 'N/A'}</p>
                   </div>
                   <div className='p-3 bg-gray-50 rounded-lg'>
                     <p className='text-xs text-gray-500 uppercase font-bold mb-1'>Time Taken</p>
                     <div className='flex items-center gap-1 text-gray-700'>
                       <Clock size={14} />
-                      <span className='font-semibold'>{item.time_taken ? `${item.time_taken}s` : 'N/A'}</span>
+                      <span className='font-semibold'>{item.time_taken ? `${ formatTime(item.time_taken)}` : 'N/A'}</span>
                     </div>
                   </div>
                   {title !== "Writing" && title !== "Speaking" && (
@@ -123,6 +129,7 @@ const MockTestClientResults = ({
             <h1 className='text-3xl font-black text-gray-900 tracking-tight'>Mock Test Result Dashboard</h1>
             <p className='text-gray-500'>Detailed performance analysis per module</p>
           </div>
+          <div className='flex items-center gap-4'>
           {client?.total_score && (
             <div className="bg-white shadow-sm border border-indigo-100 p-4 rounded-2xl flex items-center gap-4">
                <div className="bg-indigo-600 p-2 rounded-lg text-white">
@@ -130,7 +137,7 @@ const MockTestClientResults = ({
                </div>
                <div>
                   <p className="text-xs font-bold text-gray-400 uppercase">Overall Score</p>
-                  <p className="text-2xl font-black text-indigo-600">{client.total_score}</p>
+                  <p className="text-2xl font-black text-indigo-600">{client.total_score.toFixed(1)}</p>
                </div>
             </div>
           )}
@@ -141,6 +148,8 @@ const MockTestClientResults = ({
             {isPdfLoading ? 'Generating...' : 'Print PDF'}
             <PrinterIcon className="w-4 h-4" />
           </Button>
+          </div>
+
         </header>
 
         <Accordion
