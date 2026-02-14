@@ -147,12 +147,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
               const isActive = currentPart === partNumber;
 
               return (
-                <div
-  key={part.id}
-  className="flex flex-col items-center h-full shrink-0"
-
-                  
-                >
+                <div key={part.id} className="flex flex-col flex-1 items-center h-full shrink-0">
                   {isActive ? (
                     // Active part: Part label and question numbers in same row
                     <div className='w-full h-20' style={{ backgroundColor: themeColors.backgroundColor !== '#000000' ? '#E0E0E0' : themeColors.backgroundColor }}>

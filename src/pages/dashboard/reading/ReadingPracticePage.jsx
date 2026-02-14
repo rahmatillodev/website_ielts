@@ -91,6 +91,7 @@ const ReadingPracticePageContent = () => {
   const [activeQuestion, setActiveQuestion] = useState(null);
   const hasAutoSubmittedRef = useRef(false); // Prevent multiple auto-submissions
   const isSubmittingRef = useRef(false); // Track submission state to prevent race conditions
+  const isMountedRef = useRef(true); // Track if component is mounted
 
   const [leftWidth, setLeftWidth] = useState(50);
   const containerRef = useRef(null);
@@ -509,13 +510,17 @@ const ReadingPracticePageContent = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isStarted, hasInteracted, isPaused, timeRemaining, startTime]);
+    // Remove timeRemaining from dependencies to prevent effect from re-running every second
+    // The functional update pattern (prev => ...) ensures we always use the latest value
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStarted, hasInteracted, isPaused, startTime]);
 
   // Auto-submit when timer reaches zero
   useEffect(() => {
-    let isMounted = true;
+    // Check if timer has reached zero (allow for <= 0 to catch edge cases)
     if (
-      timeRemaining === 0 &&
+      timeRemaining !== null &&
+      timeRemaining <= 0 &&
       (isStarted || hasInteracted) &&
       status === 'taking' &&
       authUser &&
@@ -523,7 +528,7 @@ const ReadingPracticePageContent = () => {
       currentTest &&
       !hasAutoSubmittedRef.current &&
       !isSubmittingRef.current &&
-      isMounted
+      isMountedRef.current
     ) {
       // Auto-submit the test when timer reaches zero
       hasAutoSubmittedRef.current = true;
@@ -532,15 +537,29 @@ const ReadingPracticePageContent = () => {
           const result = await handleSubmitTest();
           console.log('[ReadingPracticePage] Auto-submit result:', result);
           
-          // Only navigate if component is still mounted and submission was successful
-          if (isMounted && result && result.success) {
+          // Navigate if submission was successful (navigation is safe even if component is unmounting)
+          // Check isMountedRef for state updates, but always navigate if submission succeeded
+          if (result && result.success) {
             // In mock test mode, completion is handled via localStorage polling in MockTestReading
             // Don't navigate - let the parent component handle the transition
-            if (!isMockTest) {
-              console.log('[ReadingPracticePage] Navigating to result page');
+            // Double-check isMockTest to ensure we don't navigate for mock tests
+            const currentIsMockTest = searchParams.get('mockTest') === 'true' || 
+                                     new URLSearchParams(window.location.search).get('mockTest') === 'true';
+            if (!currentIsMockTest && effectiveTestId) {
+              console.log('[ReadingPracticePage] Navigating to result page (non-mock test)', {
+                effectiveTestId,
+                result: result.success,
+                isMockTest: currentIsMockTest
+              });
               navigate(`/reading-result/${effectiveTestId}`);
+            } else {
+              console.log('[ReadingPracticePage] Auto-submit successful but skipping navigation', {
+                isMockTest: currentIsMockTest,
+                effectiveTestId,
+                reason: currentIsMockTest ? 'mock test' : 'no test ID'
+              });
             }
-          } else if (isMounted && result && !result.success) {
+          } else if (result && !result.success && isMountedRef.current) {
             console.error('[ReadingPracticePage] Auto-submit failed:', result.error);
             // Reset the flag so user can try again
             hasAutoSubmittedRef.current = false;
@@ -550,7 +569,7 @@ const ReadingPracticePageContent = () => {
         } catch (error) {
           console.error('[ReadingPracticePage] Auto-submit error:', error);
           // Reset the flag on error
-          if (isMounted) {
+          if (isMountedRef.current) {
             hasAutoSubmittedRef.current = false;
             isSubmittingRef.current = false;
             setIsSubmitting(false);
@@ -560,13 +579,20 @@ const ReadingPracticePageContent = () => {
       autoSubmit();
     }
     return () => {
-      isMounted = false;
       if (status !== 'taking') {
         hasAutoSubmittedRef.current = false;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest]);
+  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest, isMockTest, searchParams, navigate]);
+
+  // Set mounted ref to false when component unmounts
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // persist data on change
   useEffect(() => {

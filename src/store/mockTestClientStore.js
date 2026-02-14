@@ -148,7 +148,7 @@ export const useMockTestClientStore = create((set) => ({
     /**
      * Fetch client attempts for a mock test
      * @param {string} userId - The user ID to fetch mock_test and attempts
-     * @returns {Promise<{client: object, mockTest: object, results: {listening: object|null, reading: object|null, writing: object|null}}>}
+     * @returns {Promise<{client: object, mockTest: object, results: {listening: object|null, reading: object|null, writing: object|null, speaking: object|null}}>}
      */
     fetchClientAttempts: async (userId) => {
         set({ loading: true, error: null });
@@ -185,7 +185,8 @@ export const useMockTestClientStore = create((set) => ({
             const { listening_id, reading_id, writing_id } = mockTest;
 
             // 3. Get user attempts for this user and mock client
-            const { data: attempts, error: attemptsError } = await supabase
+            // First try with mock_id filter
+            let { data: attempts, error: attemptsError } = await supabase
                 .from('user_attempts')
                 .select(`
                     id,
@@ -204,12 +205,114 @@ export const useMockTestClientStore = create((set) => ({
 
             if (attemptsError) throw attemptsError;
 
-            
+            // If no attempts found with mock_id, try fallback: get attempts matching test IDs
+            // This handles cases where attempts might not have mock_id set
+            if (!attempts || attempts.length === 0) {
+                console.warn('No attempts found with mock_id, trying fallback query by test IDs');
+                
+                // Get all attempts for user and filter by test IDs in memory
+                const { data: allAttempts, error: allAttemptsError } = await supabase
+                    .from('user_attempts')
+                    .select(`
+                        id,
+                        test_id,
+                        writing_id,
+                        score,
+                        feedback,
+                        correct_answers,
+                        total_questions,
+                        time_taken,
+                        completed_at,
+                        mock_id
+                    `)
+                    .eq('user_id', userId)
+                    .order('completed_at', { ascending: false });
 
-            // 4. Map attempts to listening, reading, and writing
-            const listening = attempts?.find(a => a.test_id === listening_id) || null;
-            const reading = attempts?.find(a => a.test_id === reading_id) || null;
-            const writing = attempts?.find(a => a.writing_id === writing_id) || null;
+                if (allAttemptsError) {
+                    console.warn('Error fetching fallback attempts:', allAttemptsError);
+                } else if (allAttempts) {
+                    // Filter attempts to only those matching mock test IDs
+                    const testIdsToMatch = [listening_id, reading_id].filter(Boolean);
+                    const writingIdsToMatch = [writing_id].filter(Boolean);
+                    
+                    attempts = allAttempts.filter(attempt => {
+                        const attemptTestId = attempt.test_id?.toString();
+                        const attemptWritingId = attempt.writing_id?.toString();
+                        
+                        const matchesTestId = testIdsToMatch.some(id => id?.toString() === attemptTestId);
+                        const matchesWritingId = writingIdsToMatch.some(id => id?.toString() === attemptWritingId);
+                        
+                        return matchesTestId || matchesWritingId;
+                    });
+                    
+                    console.log('Filtered attempts via fallback query:', attempts);
+                }
+            }
+
+            // Debug logging
+            console.log('Mock Test IDs:', { listening_id, reading_id, writing_id });
+            console.log('All attempts:', attempts);
+            console.log('Attempt test_ids:', attempts?.map(a => a.test_id));
+            console.log('Attempt writing_ids:', attempts?.map(a => a.writing_id));
+
+            // 4. Get test IDs from attempts and fetch their types from test table
+            const testIds = attempts
+                ?.filter(a => a.test_id)
+                .map(a => a.test_id) || [];
+            
+            // Create a map of test_id -> test_type
+            const testTypeMap = {};
+            if (testIds.length > 0) {
+                const { data: tests, error: testsError } = await supabase
+                    .from('test')
+                    .select('id, type')
+                    .in('id', testIds);
+                
+                if (testsError) {
+                    console.warn('Error fetching test types:', testsError);
+                } else if (tests) {
+                    tests.forEach(test => {
+                        testTypeMap[test.id] = test.type;
+                    });
+                }
+            }
+
+            // 5. Map attempts to listening, reading, writing, and speaking
+            // Match by test type instead of exact ID, since attempts may have different test IDs
+            // but should still be associated with the correct mock test via mock_id
+            
+            let listening = null;
+            let reading = null;
+            let writing = null;
+            let speaking = null;
+
+            attempts?.forEach(attempt => {
+                // Writing attempts have writing_id but no test_id
+                if (attempt.writing_id && !attempt.test_id) {
+                    if (!writing) {
+                        writing = attempt;
+                        console.log('Found writing match:', attempt);
+                    }
+                }
+                // Other attempts have test_id - match by type
+                else if (attempt.test_id) {
+                    const testType = testTypeMap[attempt.test_id];
+                    console.log(`Attempt ${attempt.id} has test_id ${attempt.test_id} with type: ${testType}`);
+                    
+                    if (testType === 'listening' && !listening) {
+                        listening = attempt;
+                        console.log('Found listening match:', attempt);
+                    } else if (testType === 'reading' && !reading) {
+                        reading = attempt;
+                        console.log('Found reading match:', attempt);
+                    } else if (testType === 'speaking' && !speaking) {
+                        speaking = attempt;
+                        console.log('Found speaking match:', attempt);
+                    }
+                }
+            });
+
+            console.log('Mapped results:', { listening, reading, writing, speaking });
 
             const result = {
                 client,
@@ -218,6 +321,7 @@ export const useMockTestClientStore = create((set) => ({
                     listening,
                     reading,
                     writing,
+                    speaking,
                 }
             };
 

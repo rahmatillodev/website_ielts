@@ -7,16 +7,40 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion"
 import { motion, AnimatePresence } from "framer-motion"
-import { User, Headset, BookOpen, PenTool, Clock, CheckCircle2, Trophy } from "lucide-react"
+import { User, Headset, BookOpen, PenTool, Clock, CheckCircle2, Trophy, PrinterIcon, Mic } from "lucide-react"
+import { Button } from '@/components/ui/button'
+import { generateMockTestPDF } from '@/utils/mockTestPdf'
+import { useSettingsStore } from "@/store/systemStore"
+import { toast } from 'sonner'
 
 const MockTestClientResults = ({
   client,
-  results = { listening: null, reading: null, writing: null }
+  results = { listening: null, reading: null, writing: null, speaking: null }
 }) => {
   const [openItems, setOpenItems] = React.useState(["client"])
+  const [isPdfLoading, setIsPdfLoading] = React.useState(false)
+  const settings = useSettingsStore((state) => state.settings)
 
   const handleOpenChange = (values) => {
     setOpenItems(values)
+  }
+
+  const handlePrintPDF = async () => {
+    if (!client) {
+      toast.error('Client information is required to generate PDF')
+      return
+    }
+
+    setIsPdfLoading(true)
+    try {
+      await generateMockTestPDF(client, results, settings)
+      toast.success('PDF generated successfully')
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Failed to generate PDF. Please try again.')
+    } finally {
+      setIsPdfLoading(false)
+    }
   }
 
   const ResultAccordionItem = ({ value, title, item, icon: Icon }) => (
@@ -51,7 +75,7 @@ const MockTestClientResults = ({
                       <span className='font-semibold'>{item.time_taken ? `${item.time_taken}s` : 'N/A'}</span>
                     </div>
                   </div>
-                  {title !== "Writing" && (
+                  {title !== "Writing" && title !== "Speaking" && (
                     <>
                       <div className='p-3 bg-gray-50 rounded-lg'>
                         <p className='text-xs text-gray-500 uppercase font-bold mb-1'>Questions</p>
@@ -110,6 +134,13 @@ const MockTestClientResults = ({
                </div>
             </div>
           )}
+          <Button 
+            onClick={handlePrintPDF}
+            disabled={isPdfLoading}
+          >
+            {isPdfLoading ? 'Generating...' : 'Print PDF'}
+            <PrinterIcon className="w-4 h-4" />
+          </Button>
         </header>
 
         <Accordion
@@ -158,6 +189,7 @@ const MockTestClientResults = ({
           <ResultAccordionItem value="listening" title='Listening' item={results.listening} icon={Headset} />
           <ResultAccordionItem value="reading" title='Reading' item={results.reading} icon={BookOpen} />
           <ResultAccordionItem value="writing" title='Writing' item={results.writing} icon={PenTool} />
+          <ResultAccordionItem value="speaking" title='Speaking' item={results.speaking} icon={Mic} />
         </Accordion>
       </div>
     </div>
