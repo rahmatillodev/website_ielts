@@ -27,6 +27,11 @@ export default function MockTestRoute({ children }) {
     return children
   }
   
+  // Allow profile page access from both platforms
+  if (location.pathname === '/profile') {
+    return children
+  }
+  
   // If user is authenticated but in regular mode, block access to mock test routes
   if (accessMode === 'regular') {
     console.log('[MockTestRoute] Regular user trying to access mock test route, redirecting to dashboard')

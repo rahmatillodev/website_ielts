@@ -21,6 +21,11 @@ const DashboardLayout = () => {
 
   // Set access mode to regular when accessing dashboard routes
   useEffect(() => {
+    // Profile page is accessible from both platforms - preserve current accessMode
+    if (pathname === '/profile') {
+      return;
+    }
+    
     // Only set to regular if not accessing practice pages (practice pages can be from either mode)
     const isPracticePage = pathname.includes('/reading-practice') || 
                           pathname.includes('/listening-practice') || 
@@ -37,6 +42,11 @@ const DashboardLayout = () => {
   useEffect(() => {
     if (authUser) {
       const accessMode = sessionStorage.getItem('accessMode');
+      // Profile page is accessible from both platforms - don't redirect
+      if (pathname === '/profile') {
+        return;
+      }
+      
       // Only redirect if they're trying to access dashboard routes (not practice pages)
       const isDashboardRoute = pathname === '/dashboard' || 
                                pathname === '/reading' || 

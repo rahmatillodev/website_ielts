@@ -19,6 +19,10 @@ const MockTestLayout = () => {
 
   // Set access mode to mock test when accessing mock test routes
   useEffect(() => {
+    // Profile page is accessible from both platforms - preserve current accessMode
+    if (pathname === '/profile') {
+      return;
+    }
     sessionStorage.setItem('accessMode', 'mockTest');
   }, [pathname])
   
@@ -26,6 +30,11 @@ const MockTestLayout = () => {
   useEffect(() => {
     if (authUser) {
       const accessMode = sessionStorage.getItem('accessMode');
+      // Profile page is accessible from both platforms - don't redirect
+      if (pathname === '/profile') {
+        return;
+      }
+      
       if (accessMode === 'regular') {
         console.log('[MockTestLayout] Regular user detected in mock test layout, redirecting to dashboard');
         navigate('/dashboard', { replace: true });

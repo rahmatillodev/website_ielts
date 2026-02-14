@@ -81,6 +81,11 @@ function App() {
       return;
     }
 
+    // Profile page is accessible from both platforms - preserve current accessMode
+    if (location.pathname === '/profile') {
+      return;
+    }
+
     // Set access mode based on route type - STRICT separation
     if (isMockTestRoute(location.pathname)) {
       // Always set mockTest for mock test routes
