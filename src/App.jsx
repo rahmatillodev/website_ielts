@@ -24,6 +24,9 @@ import ListeningPracticePage from "./pages/dashboard/listening/ListeningPractice
 
 import WritingPage from "./pages/dashboard/writing/WritingPage";
 import SpeakingPage from "./pages/dashboard/SpeakingPage";
+import SpeakingPracticePage from "./pages/dashboard/speaking/SpeakingPracticePage";
+import SpeakingTaskPage from "./pages/dashboard/speaking/speakingtypes/textToSpeach/SpeakingTaskPage";
+import SpeakingResultPage from "./pages/dashboard/speaking/SpeakingResultPage";
 import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
 import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
 import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
@@ -98,8 +101,10 @@ function App() {
       const isPracticePage = location.pathname.includes('/reading-practice') || 
                             location.pathname.includes('/listening-practice') || 
                             location.pathname.includes('/writing-practice') ||
+                            location.pathname.includes('/speaking-practice') ||
                             location.pathname.includes('/reading-result') ||
-                            location.pathname.includes('/listening-result');
+                            location.pathname.includes('/listening-result') ||
+                            location.pathname.includes('/speaking-result');
       
       // For practice pages, preserve current mode (they can be accessed from either platform)
       // For regular routes, set to regular
@@ -115,7 +120,8 @@ function App() {
   location.pathname.includes("/writing-practice") || 
   location.pathname.includes("/speaking-practice") || 
   location.pathname.includes("/own-writing") ||
-  location.pathname.includes("/mock-test/flow")
+  location.pathname.includes("/mock-test/flow") || 
+  location.pathname.includes("/speaking-result");
 
   // Helper function to check if a route is a mock test route
   const isMockTestRoute = (path) => {
@@ -160,7 +166,7 @@ function App() {
               <Route path="/mock/center" element={<MockCenterPage />} />
               <Route path="/mock-test/flow/:mockTestId" element={<MockTestFlow />} />
               <Route path="/mock-test/results" element={<MockTestResults />} />
-              {/* Practice pages accessible from mock test routes - only if in mockTest mode */}
+
               <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
               <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
               <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
@@ -184,9 +190,12 @@ function App() {
               {/* Practice pages accessible from regular dashboard - only if in regular mode */}
               <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
               <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
+              <Route path="/speaking-practice/:id/session" element={<SpeakingTaskPage />} />
+              <Route path="/speaking-practice/:id" element={<SpeakingPracticePage />} />
               <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
               <Route path="/reading-result/:id" element={<ReadingResultPage />} />
               <Route path="/listening-result/:id" element={<ListeningResultPage />} />
+              <Route path="/speaking-result/:id" element={<SpeakingResultPage />} />
             </Route>
           </>
         }

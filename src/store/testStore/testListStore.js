@@ -11,6 +11,7 @@ const DEFAULT_TIMEOUT_MS = 15000;
 export const useTestListStore = create((set, get) => ({
   test_reading: [],
   test_listening: [],
+  test_speaking: [],
   loading: false,
   error: null,
   loaded: false,
@@ -19,13 +20,14 @@ export const useTestListStore = create((set, get) => ({
     const currentState = get();
     
     // Allow refetch if data is empty even if loaded is true
-    const hasData = (currentState.test_reading?.length > 0 || currentState.test_listening?.length > 0);
+    const hasData = (currentState.test_reading?.length > 0 || currentState.test_listening?.length > 0 || currentState.test_speaking?.length > 0);
     
     // Return early only if already loaded with data AND not currently loading AND not forcing refresh
     if (currentState.loaded && hasData && !currentState.loading && !forceRefresh) {
       return {
         test_reading: currentState.test_reading || [],
         test_listening: currentState.test_listening || [],
+        test_speaking: currentState.test_speaking || [],
         loaded: currentState.loaded,
       };
     }
@@ -35,6 +37,7 @@ export const useTestListStore = create((set, get) => ({
       return {
         test_reading: currentState.test_reading || [],
         test_listening: currentState.test_listening || [],
+        test_speaking: currentState.test_speaking || [],
         loaded: currentState.loaded,
       };
     }
@@ -93,6 +96,9 @@ export const useTestListStore = create((set, get) => ({
       const filtered_data_listening = tests.filter(
         (test) => test.type === "listening"
       );
+      const filtered_data_speaking = tests.filter(
+        (test) => test.type === "speaking"
+      );
 
       // Fetch question types for all tests
       const allTestIds = tests.map(test => test.id);
@@ -116,12 +122,18 @@ export const useTestListStore = create((set, get) => ({
         question_types: questionTypesMap[test.id] || new Set(),
       }));
 
+      const enriched_speaking = filtered_data_speaking.map(test => ({
+        ...test,
+        question_types: questionTypesMap[test.id] || new Set(),
+      }));
+
       // IMPORTANT: Set loaded to true even if arrays are empty
       // Empty arrays are a valid state (e.g., no listening tests exist)
       // This prevents infinite loading states in the UI
       set({
         test_reading: enriched_reading,
         test_listening: enriched_listening,
+        test_speaking: enriched_speaking,
         loaded: true, // Always set to true after successful fetch, even with empty data
         error: null,
       });
@@ -129,6 +141,7 @@ export const useTestListStore = create((set, get) => ({
       return {
         test_reading: enriched_reading,
         test_listening: enriched_listening,
+        test_speaking: enriched_speaking,
       };
     } catch (error) {
       // Handle AbortError (cancelled requests)
@@ -138,6 +151,7 @@ export const useTestListStore = create((set, get) => ({
         return {
           test_reading: currentState.test_reading || [],
           test_listening: currentState.test_listening || [],
+          test_speaking: currentState.test_speaking || [],
           loaded: currentState.loaded,
         };
       }

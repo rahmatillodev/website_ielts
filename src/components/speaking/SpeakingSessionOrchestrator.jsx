@@ -6,7 +6,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSpeakingSessionStore, SESSION_STATUS, SPEAKING_RESULT_STORAGE_KEY, getFlatQuestions } from "@/store/speakingSessionStore";
-import { getSpeakingPartsForTest } from "@/pages/dashboard/speaking/speakingtypes/textToSpeach/mockSpeakingQuestions";
+import { getSpeakingPartsFromStore } from "@/pages/dashboard/speaking/speakingtypes/textToSpeach/speakingPartsFromStore";
 import { SpeakingSessionContext } from "./SpeakingSessionContext";
 import AudioRecorder from "./audio/AudioRecorder";
 import SpeakingQuestionTTS from "./SpeakingQuestionTTS";
@@ -17,7 +17,7 @@ export default function SpeakingSessionOrchestrator({ children, getPartsForTest,
   const navigate = useNavigate();
   const hasNavigatedRef = useRef(false);
 
-  const fetchParts = getPartsForTest || getSpeakingPartsForTest;
+  const fetchParts = getPartsForTest ?? getSpeakingPartsFromStore;
 
   const status = useSpeakingSessionStore((s) => s.status);
   const mode = useSpeakingSessionStore((s) => s.mode);
@@ -58,13 +58,29 @@ export default function SpeakingSessionOrchestrator({ children, getPartsForTest,
   useEffect(() => {
     if (!testId) return;
     let cancelled = false;
-    fetchParts(testId).then((parts) => {
+    const timeoutMs = 15000;
+    const timeoutId = setTimeout(() => {
       if (cancelled) return;
-      initSession(testId, parts, { mode: sessionMode });
+      initSession(testId, [], { mode: sessionMode });
       startSession();
-    });
+    }, timeoutMs);
+    fetchParts(testId)
+      .then((parts) => {
+        if (cancelled) return;
+        clearTimeout(timeoutId);
+        initSession(testId, Array.isArray(parts) ? parts : [], { mode: sessionMode });
+        startSession();
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        clearTimeout(timeoutId);
+        console.warn("[SpeakingSessionOrchestrator] fetchParts failed:", err);
+        initSession(testId, [], { mode: sessionMode });
+        startSession();
+      });
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, [testId, fetchParts, initSession, startSession, sessionMode]);
 

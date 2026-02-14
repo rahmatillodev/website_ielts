@@ -65,7 +65,12 @@ export const useSpeakingSessionStore = create((set, get) => ({
     const steps = getFlatQuestions(get().parts);
     const step = steps[get().currentStep];
     if (!step) return null;
-    return { id: step.id, question: step.question ?? step.phrase, durationSec: step.durationSec };
+    return {
+      id: step.id,
+      question: step.question ?? step.phrase,
+      durationSec: step.durationSec,
+      instruction: step.instruction ?? null,
+    };
   },
   getCurrentYoutubeUrl: () => {
     const steps = getFlatQuestions(get().parts);
@@ -132,7 +137,7 @@ export const useSpeakingSessionStore = create((set, get) => ({
   },
 
   setRecordingResult: (stepIndex, blob) => {
-    const { parts: p, recordingResults, mode } = get();
+    const { parts: p, recordingResults, mode, finishRequested } = get();
     if (mode === "human") return; // Human uses full-session recording; result set via setHumanSessionRecordingResult
     const questions = getFlatQuestions(p);
     const question = questions[stepIndex];
@@ -148,12 +153,14 @@ export const useSpeakingSessionStore = create((set, get) => ({
     const total = questions.length;
     const isLast = stepIndex >= total - 1;
 
-    if (isLast) {
+    if (finishRequested || isLast) {
       set({
         recordingResults: nextResults,
         currentStep: stepIndex + 1,
         status: SESSION_STATUS.FINISHED,
         stepStartedAt: null,
+        finishRequested: false,
+        nextRequested: false,
       });
     } else {
       const nextStatus =
