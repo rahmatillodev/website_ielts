@@ -353,7 +353,7 @@ const SimpleCalendar = ({ userAttempts = [] }) => {
             {d}
           </div>
         ))}
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
           {calendarCells.map((c, index) =>
             c.blank ? (
               <div key={c.key} className="aspect-square min-w-0" />
