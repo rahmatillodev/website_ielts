@@ -2,191 +2,221 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-
-// Layouts
 import PublicLayout from "./layouts/LandingLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
-
-// Landing pages
+import MockTestLayout from "./layouts/MockTestLayout";
+// import Settings from './pages/Settings'
 import PricingPage from "./pages/landing/PricingPage";
+import DashboardPage from "./pages/dashboard/DashboardPage";
 import LoginPage from "./pages/landing/LoginPage";
 import SignUpPage from "./pages/landing/SignUpPage";
 import LandingPage from "./pages/landing/LandingPage";
-
-// Dashboard pages
-import DashboardPage from "./pages/dashboard/DashboardPage";
 import ReadingPage from "./pages/dashboard/reading/ReadingPage";
 import ReadingPracticePage from "./pages/dashboard/reading/ReadingPracticePage";
-import ReadingResultPage from "./pages/dashboard/reading/ReadingResultPage";
-
-import ListeningPage from "./pages/dashboard/listening/ListeningPage";
-import ListeningPracticePage from "./pages/dashboard/listening/ListeningPracticePage";
-import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
-
-import WritingPage from "./pages/dashboard/writing/WritingPage";
-import WritingPracticePage from "./pages/dashboard/writing/WritingPracticePage";
-import WritingHistoryPage from "./pages/dashboard/writing/WritingHistoryPage";
-import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
-
-import SpeakingPage from "./pages/dashboard/speaking/SpeakingPage";
-import SpeakingPracticePage from "./pages/dashboard/speaking/SpeakingPracticePage";
-import SpeakingTaskPage from "./pages/dashboard/speaking/speakingtypes/textToSpeach/SpeakingTaskPage";
-
-
-import SpeakingShadowingTask from "./pages/dashboard/speaking/speakingtypes/shadowingSpeach/SpeakingShadowingTask";
-import SpeakingHumanPage from "./pages/dashboard/speaking/speakingtypes/humanSpeach/speakingHumanPage";
-
-import SpeakingResultPage from "./pages/dashboard/speaking/SpeakingResultPage";
-
 import ProfilePage from "./pages/dashboard/ProfilePage";
-import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
-import MockTestsPage from "./pages/dashboard/mock/MockTestsPage";
-
-// Stores
+import ReadingResultPage from "./pages/dashboard/reading/ReadingResultPage";
 import { useAuthStore } from "./store/authStore";
+import { ToastContainer } from "react-toastify";
 import { useSettingsStore } from "./store/systemStore";
 import { useTestStore } from "./store/testStore";
+import ListeningPage from "./pages/dashboard/listening/ListeningPage";
+import ListeningPracticePage from "./pages/dashboard/listening/ListeningPracticePage";
 
-// UI
-import { ToastContainer } from "react-toastify";
-import FeedbackModal from "./components/modal/FeedbackModal";
-
+import WritingPage from "./pages/dashboard/writing/WritingPage";
+import SpeakingPage from "./pages/dashboard/SpeakingPage";
+import SpeakingPracticePage from "./pages/dashboard/speaking/SpeakingPracticePage";
+import SpeakingTaskPage from "./pages/dashboard/speaking/speakingtypes/textToSpeach/SpeakingTaskPage";
+import SpeakingResultPage from "./pages/dashboard/speaking/SpeakingResultPage";
+import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
+import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
+import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
+import MockTestsPage from "./pages/dashboard/mock/MockTestsPage";
+import MockTypeSelectionPage from "./pages/dashboard/mock/MockTypeSelectionPage";
+import MockOnlinePage from "./pages/dashboard/mock/MockOnlinePage";
+import MockCenterPage from "./pages/dashboard/mock/MockCenterPage";
+import MockTestFlow from "./pages/dashboard/mock/MockTestFlow";
 import "./App.css";
-
+import FeedbackModal from "./components/modal/FeedbackModal";
+import WritingPracticePage from "./pages/dashboard/writing/WritingPracticePage";
+import WritingHistoryPage from "./pages/dashboard/writing/WritingHistoryPage";
+import MockTestResults from "./pages/dashboard/mock/MockTestResults";
+// Main App component with routing
 function App() {
   const initializeSession = useAuthStore((state) => state.initializeSession);
+  const validateSessionAgainstDatabase = useAuthStore(
+    (state) => state.validateSessionAgainstDatabase
+  );
   const user = useAuthStore((state) => state.authUser);
   const loading = useAuthStore((state) => state.loading);
   const isInitialized = useAuthStore((state) => state.isInitialized);
-
-  const { fetchSettings } = useSettingsStore();
+  const { fetchSettings } = useSettingsStore()
   const { fetchTests } = useTestStore();
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
 
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const location = useLocation();
 
-  // Init auth
   useEffect(() => {
+    // Initialize session on app load
     initializeSession();
   }, []);
 
-  // Fetch settings + tests (SAFE)
   useEffect(() => {
-    if (!isInitialized || !user) return;
+      fetchSettings();
+    
+  }, [fetchSettings]);
 
-    fetchSettings();
+  useEffect(() => {
+    if (isInitialized && user) {
+      fetchTests();
+    }
+  }, [fetchTests, isInitialized, user])
 
-    const path = location.pathname;
-
-    // ❌ PRACTICE PAGES — 
-    if (
-      path.startsWith("/reading-practice") ||
-      path.startsWith("/listening-practice") ||
-      path.startsWith("/writing-practice") ||
-      path.startsWith("/speaking-practice") ||
-      path.startsWith("/own-writing")
-    ) {
+  // Set access mode in sessionStorage based on current route
+  // This works for both logged in and logged out users
+  useEffect(() => {
+    
+    // Don't set access mode for public pages (login, signup, landing)
+    if (location.pathname === '/' || 
+        location.pathname === '/login' || 
+        location.pathname === '/signup') {
       return;
     }
 
-    // ✅ ONLY LIST / DASHBOARD PAGES
-    fetchTests();
-  }, [isInitialized, user, location.pathname, fetchSettings, fetchTests]);
+    const currentMode = sessionStorage.getItem('accessMode');
+    
+    // Set access mode based on route type
+    if (isMockTestRoute(location.pathname)) {
+      // Always set mockTest for mock test routes - this is the priority
+      sessionStorage.setItem('accessMode', 'mockTest');
+    } else if (location.pathname !== '/' && 
+               location.pathname !== '/login' && 
+               location.pathname !== '/signup') {
+      // Only set regular mode if:
+      // 1. Current mode is NOT mockTest (NEVER overwrite mockTest mode)
+      // 2. User is actually on a regular dashboard route (not practice pages that can be from either mode)
+      const isPracticePage = location.pathname.includes('/reading-practice') || 
+                            location.pathname.includes('/listening-practice') || 
+                            location.pathname.includes('/writing-practice') ||
+                            location.pathname.includes('/speaking-practice') ||
+                            location.pathname.includes('/reading-result') ||
+                            location.pathname.includes('/listening-result') ||
+                            location.pathname.includes('/speaking-result');
+      
+      
+      // CRITICAL: Never overwrite mockTest mode, even if on regular routes
+      // This ensures users in mock test mode stay in mock test mode
+      if (!currentMode && !isPracticePage) {
+        sessionStorage.setItem('accessMode', 'regular');
+      } 
+      // If currentMode is 'mockTest', do nothing - preserve it
+    }
+  }, [location.pathname, user]);
 
-  const isPracticePage =
-    location.pathname.startsWith("/reading-practice") ||
-    location.pathname.startsWith("/listening-practice") ||
-    location.pathname.startsWith("/writing-practice") ||
-    location.pathname.startsWith("/speaking-practice") ||
-    location.pathname.startsWith("/speaking-result") ||
-    location.pathname.startsWith("/own-writing");
+  const isPracticePage = 
+  location.pathname.includes("/reading-practice") || 
+  location.pathname.includes("/listening-practice") || 
+  location.pathname.includes("/writing-practice") || 
+  location.pathname.includes("/speaking-practice") || 
+  location.pathname.includes("/own-writing") ||
+  location.pathname.includes("/mock-test/flow") || 
+  location.pathname.includes("/speaking-result");
 
+  // Helper function to check if a route is a mock test route
+  const isMockTestRoute = (path) => {
+    return path.startsWith("/mock-test") || 
+           path.startsWith("/mock-tests") || 
+           path.startsWith("/mock/") || 
+           path === "/mock";
+  }
+
+  // Show loading state while initializing authentication
   if (loading && !isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
+  
 
   return (
     <DndProvider backend={HTML5Backend}>
       <Routes>
-        {/* PUBLIC */}
-        {!user ? (
+       
+        {!user ?
           <Route element={<PublicLayout />}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
           </Route>
-        ) : (
-          /* DASHBOARD */
-          <Route element={<DashboardLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
+            
+          :
+          <>
+            {/* Mock Test Routes - Separate Layout */}
+            <Route element={<MockTestLayout />}>
+              <Route path="/mock-tests" element={<MockTestsPage />} />
+              <Route path="/mock" element={<MockTestsPage />} />
+              <Route path="/mock/select" element={<MockTypeSelectionPage />} />
+              <Route path="/mock/online" element={<MockOnlinePage />} />
+              <Route path="/mock/center" element={<MockCenterPage />} />
+              <Route path="/mock-test/flow/:mockTestId" element={<MockTestFlow />} />
+              <Route path="/mock-test/results" element={<MockTestResults />} />
+              {/* Practice pages accessible from mock test routes (speaking-practice only in DashboardLayout so Start Exam doesn't redirect) */}
+              <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
+              <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
+              <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
+              <Route path="/reading-result/:id" element={<ReadingResultPage />} />
+              <Route path="/listening-result/:id" element={<ListeningResultPage />} />
+              {/* Profile is accessible from both layouts */}
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
 
-            <Route path="/reading" element={<ReadingPage />} />
-            <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
-            <Route path="/reading-result/:id" element={<ReadingResultPage />} />
-
-            <Route path="/listening" element={<ListeningPage />} />
-            <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
-            <Route path="/listening-result/:id" element={<ListeningResultPage />} />
-
-            <Route path="/writing" element={<WritingPage />} />
-            <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
-            <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
-            <Route path="/own-writing" element={<OwnWritingPage />} />
-
-            <Route path="/speaking" element={<SpeakingPage />} />
-            <Route path="/speaking-practice/:id" element={<SpeakingPracticePage />} />
-            <Route path="/speaking-practice" element={<SpeakingPracticePage />} />
-            <Route path="/speaking-practice/:id/session" element={<SpeakingTaskPage />} />
-            <Route path="/speaking-practice/:id/shadowing" element={<SpeakingShadowingTask />} />
-            <Route path="/speaking-practice/:id/human" element={<SpeakingHumanPage />} />
-            <Route path="/speaking-result/:id" element={<SpeakingResultPage />} />
-
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-
-            {/* Mock Tests */}
-            <Route path="/mock-tests" element={<MockTestsPage />} />
-          </Route>
-        )}
-
-        {/* FALLBACK */}
+            {/* Regular Dashboard Routes */}
+            <Route element={<DashboardLayout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/reading" element={<ReadingPage />} />
+              <Route path="/listening" element={<ListeningPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/writing" element={<WritingPage />} />
+              <Route path="/speaking" element={<SpeakingPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/own-writing" element={<OwnWritingPage />} />
+              <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
+              <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
+              <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
+              <Route path="/speaking-practice/:id/session" element={<SpeakingTaskPage />} />
+              <Route path="/speaking-practice/:id" element={<SpeakingPracticePage />} />
+              <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
+              <Route path="/reading-result/:id" element={<ReadingResultPage />} />
+              <Route path="/listening-result/:id" element={<ListeningResultPage />} />
+              <Route path="/speaking-result/:id" element={<SpeakingResultPage />} />
+            </Route>
+          </>
+        }
         <Route
           path="*"
-          element={
-            user ? <Navigate to="/dashboard" replace /> : <Navigate to="/" replace />
-          }
+          element={user ? (
+            isMockTestRoute(location.pathname) ? (
+              <Navigate to="/mock-tests" replace />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )
+          ) : (
+            <Navigate to="/login" replace />
+          )}
         />
-      </Routes>
 
+      </Routes>
       <ToastContainer duration={2000} />
       <FeedbackModal isOpen={feedbackOpen} setFeedbackOpen={setFeedbackOpen} />
+      {!isPracticePage && <div className='fixed_bottom_right_container'>
 
-      {!isPracticePage && <div className="fixed_bottom_right_container" />}
+      </div>}
     </DndProvider>
   );
 }
 
 export default App;
-
-
-
-
-
-/// pdf ni to'grilash high
-/// sidebarni ranglari  done
-/// resultni ishlatish kerak orqaga qaytganda high
-/// pendingni to'g'rilash kerak orqaga qaytganda high
-/// tab almashganlarda  done
-/// image upload qilish kerak bo'ladi userda  done
-/// admimnda contextlarni to'grilsh kerak high
-/// highlight delete qilish kerak  done
-/// listening resultni to'g'rilash kerak 
-/// bookmarkni kattalshtirish kerak va 
-/// reaview qilish patdi va redo qilish tekshirish 
-/// send telegram button qilish kerak 
-/// channel qo'shish kerak 

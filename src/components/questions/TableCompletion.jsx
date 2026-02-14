@@ -66,6 +66,7 @@ const TableCompletion = ({
         className="inline-flex items-center relative align-middle group"
       >
         <Input
+          spellCheck="false"
           type="text"
           value={isReviewMode ? `[${qNumber}] ${answer}` : answer}
           onChange={(e) => {

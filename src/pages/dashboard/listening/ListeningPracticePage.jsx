@@ -5,6 +5,7 @@ import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import PracticeFooter from "@/components/questions/PracticeFooter";
 import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData, clearAudioPosition } from "@/store/LocalStorage/listeningStorage";
+import { saveSectionData, loadSectionData } from "@/store/LocalStorage/mockTestStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
@@ -19,6 +20,8 @@ import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext"
 import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip";
 import NoteSidebar from "@/components/sidebar/NoteSidebar";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
+import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
+import MockTestExitModal from "@/components/modal/MockTestExitModal";
 
 const ListeningPracticePageContent = () => {
   const { id } = useParams();
@@ -30,6 +33,41 @@ const ListeningPracticePageContent = () => {
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const [fetchError, setFetchError] = useState(null);
+  const timerInitializedRef = useRef(false);
+  
+  // Check if this is a mock test (check both searchParams and window.location.search)
+  // Use useMemo to prevent recalculation on every render
+  const urlSearchParams = React.useMemo(() => new URLSearchParams(window.location.search), []);
+  const isMockTest = React.useMemo(() => 
+    searchParams.get('mockTest') === 'true' || urlSearchParams.get('mockTest') === 'true',
+    [searchParams, urlSearchParams]
+  );
+  const mockTestId = React.useMemo(() => 
+    searchParams.get('mockTestId') || urlSearchParams.get('mockTestId'),
+    [searchParams, urlSearchParams]
+  );
+  const mockClientId = React.useMemo(() => 
+    searchParams.get('mockClientId') || urlSearchParams.get('mockClientId'),
+    [searchParams, urlSearchParams]
+  );
+  
+  // Get effective test ID from URL (handles history.replaceState case)
+  // For mock test, the testId is passed via URL params, so check both useParams and URL
+  const getEffectiveTestId = () => {
+    // First try useParams (should work after URL is updated)
+    if (id) return id;
+    
+    // Then try to extract from current URL path (handles history.replaceState)
+    const pathMatch = window.location.pathname.match(/\/listening-practice\/([^\/\?]+)/);
+    if (pathMatch && pathMatch[1]) {
+      return pathMatch[1];
+    }
+    
+    return null;
+  };
+  
+  // Re-compute effectiveTestId on every render to catch URL updates
+  const effectiveTestId = getEffectiveTestId();
 
   // ====== TIMER/CONTROL STATE ======
   // Status: 'taking', 'completed', 'reviewing'
@@ -46,6 +84,8 @@ const ListeningPracticePageContent = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [startTime, setStartTime] = useState(null);
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [isEarlyExit, setIsEarlyExit] = useState(false);
   
 
   const [answers, setAnswers] = useState({});
@@ -75,6 +115,16 @@ const ListeningPracticePageContent = () => {
   const selectableContentRef = useRef(null);
   const universalContentRef = useRef(null);
 
+  // Security hook for mock test mode (applies on refresh too)
+  const { resetExitModal, forceFullscreen } = useMockTestSecurity(
+    () => {
+      if (isMockTest) {
+        setShowExitModal(true);
+      }
+    },
+    isMockTest // Only active in mock test mode
+  );
+
   // AUDIO URL
   const audioUrl = React.useMemo(() => {
     if (!currentTest?.parts || currentTest.parts.length === 0) return null;
@@ -96,8 +146,40 @@ const ListeningPracticePageContent = () => {
 
   // ====== LOAD TEST/DATA & STATE FROM LOCALSTORAGE ======
   useEffect(() => {
-    if (!id || (typeof id !== 'string' && typeof id !== 'number')) {
-      console.error('[ListeningPracticePage] Invalid test ID:', id);
+    const testIdToUse = effectiveTestId;
+    
+    if (!testIdToUse || (typeof testIdToUse !== 'string' && typeof testIdToUse !== 'number')) {
+      // For mock test, the URL should be updated by MockTestListening before this renders
+      // If we still don't have an ID, wait a bit and retry (handles login/refresh timing)
+      if (isMockTest) {
+        const retryTimeout = setTimeout(() => {
+          // Re-extract test ID from URL
+          let retryId = id;
+          if (!retryId) {
+            const pathMatch = window.location.pathname.match(/\/listening-practice\/([^\/\?]+)/);
+            if (pathMatch && pathMatch[1]) {
+              retryId = pathMatch[1];
+            }
+          }
+          
+          if (retryId) {
+            // Retry loading with the ID we found
+            console.log('[ListeningPracticePage] Retry loading with ID:', retryId);
+            // The effect will re-run when effectiveTestId changes
+          } else {
+            console.warn('[ListeningPracticePage] Still waiting for test ID in mock test mode...', {
+              id,
+              effectiveTestId,
+              pathname: window.location.pathname,
+              search: window.location.search
+            });
+          }
+        }, 500);
+        
+        return () => clearTimeout(retryTimeout);
+      }
+      
+      console.error('[ListeningPracticePage] Invalid test ID:', testIdToUse, 'id:', id, 'effectiveTestId:', effectiveTestId, 'isMockTest:', isMockTest, 'pathname:', window.location.pathname, 'search:', window.location.search);
       setFetchError('Invalid test ID');
       toast.error('Invalid test ID. Please try again.');
       return;
@@ -120,7 +202,7 @@ const ListeningPracticePageContent = () => {
         }
         const isReviewMode = searchParams.get('mode') === 'review';
         const includeCorrectAnswers = isReviewMode;
-        await fetchTestById(id, false, includeCorrectAnswers);
+        await fetchTestById(testIdToUse, false, includeCorrectAnswers);
 
         if (!isMounted) return;
 
@@ -147,25 +229,48 @@ const ListeningPracticePageContent = () => {
         }
 
         // Load/restore progress on refresh
-        const savedData = loadListeningPracticeData(id);
-        if (savedData && isMounted) {
-          if (savedData.answers && Object.keys(savedData.answers).length > 0) {
-            setAnswers(savedData.answers);
-            setHasInteracted(true);
+        if (isMockTest && mockTestId) {
+          // For mock test, use mock test storage
+          const savedData = loadSectionData(mockTestId, 'listening');
+          if (savedData && isMounted) {
+            if (savedData.answers && Object.keys(savedData.answers).length > 0) {
+              setAnswers(savedData.answers);
+              setHasInteracted(true);
+            }
+            // For mock test, restore time remaining and let auto-start resume the timer
+            // The auto-start effect will handle starting the timer automatically
+            if (savedData.timeRemaining !== undefined && savedData.timeRemaining !== null && savedData.timeRemaining > 0) {
+              setTimeRemaining(savedData.timeRemaining);
+              // Don't set isStarted/isPaused here - let the auto-start effect handle it
+              // This allows the timer to auto-resume for mock tests after refresh
+            }
+            if (savedData.startTime) {
+              setStartTime(savedData.startTime);
+            }
+            // Note: bookmarks are not stored in mock test storage currently
           }
-          if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
-            setBookmarks(new Set(savedData.bookmarks));
-          }
-          // If user had started the test previously or interacted:
-          // On refresh, the timer should be *paused* (time does not continue)
-          // Thus, we load paused state, setIsStarted(false).
-          if (savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
-            setTimeRemaining(savedData.timeRemaining);
-            setIsStarted(false);      // timer is stopped after refresh
-            setIsPaused(true);        // set paused so start button works
-          }
-          if (savedData.startTime) {
-            setStartTime(savedData.startTime);
+        } else if (!isMockTest) {
+          // For regular practice, use listening storage
+          const savedData = loadListeningPracticeData(testIdToUse || effectiveTestId);
+          if (savedData && isMounted) {
+            if (savedData.answers && Object.keys(savedData.answers).length > 0) {
+              setAnswers(savedData.answers);
+              setHasInteracted(true);
+            }
+            if (savedData.bookmarks && Array.isArray(savedData.bookmarks)) {
+              setBookmarks(new Set(savedData.bookmarks));
+            }
+            // If user had started the test previously or interacted:
+            // On refresh, the timer should be *paused* (time does not continue)
+            // Thus, we load paused state, setIsStarted(false).
+            if (savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
+              setTimeRemaining(savedData.timeRemaining);
+              setIsStarted(false);      // timer is stopped after refresh
+              setIsPaused(true);        // set paused so start button works
+            }
+            if (savedData.startTime) {
+              setStartTime(savedData.startTime);
+            }
           }
         }
       } catch (error) {
@@ -187,48 +292,76 @@ const ListeningPracticePageContent = () => {
       clearCurrentTest(false);
     };
     // eslint-disable-next-line
-  }, [id, fetchTestById]);
+  }, [effectiveTestId, fetchTestById, isMockTest]);
 
   // Initialize timeRemaining from test duration when currentTest loads (if not loaded from storage)
+  // For mock test: use duration from URL param (2400 seconds = 40 minutes) or test duration
+  // But only if no saved time remaining exists
   useEffect(() => {
-    let isMounted = true;
+    if (!currentTest) return;
+    
+    // Only initialize once per test load - use ref to prevent reset loops
+    if (timerInitializedRef.current) return;
 
-    if (
-      currentTest &&
-      timeRemaining === null &&
-      !isStarted &&
-      !hasInteracted &&
-      isMounted
-    ) {
-      const durationInSeconds = convertDurationToSeconds(currentTest.duration);
-      setTimeRemaining(durationInSeconds);
-    } else if (
-      currentTest &&
-      timeRemaining !== null &&
-      !isStarted &&
-      !hasInteracted &&
-      isMounted
-    ) {
-      const savedData = loadListeningPracticeData(id);
-      if (!savedData?.startTime && isMounted) {
-        const durationInSeconds = convertDurationToSeconds(currentTest.duration);
-        setTimeRemaining(durationInSeconds);
+    // For mock test, check if we have saved time remaining first
+    if (isMockTest && mockTestId) {
+      const savedData = loadSectionData(mockTestId, 'listening');
+      if (savedData && savedData.timeRemaining !== undefined && savedData.timeRemaining !== null && savedData.timeRemaining > 0) {
+        // Use saved time remaining - don't reset to full duration
+        setTimeRemaining(savedData.timeRemaining);
+        timerInitializedRef.current = true;
+        return;
       }
     }
 
-    return () => { isMounted = false; };
-  }, [currentTest, timeRemaining, isStarted, hasInteracted, id]);
+    // If no saved data or not mock test, initialize from duration
+    // For mock test, check URL for duration param (in seconds)
+    let durationInSeconds;
+    if (isMockTest) {
+      const durationParam = searchParams.get('duration') || urlSearchParams.get('duration');
+      durationInSeconds = durationParam ? parseInt(durationParam, 10) : convertDurationToSeconds(currentTest.duration);
+    } else {
+      durationInSeconds = convertDurationToSeconds(currentTest.duration);
+    }
 
-  // ========== TIMER LOGIC ==========
-  // Timer counts down only if not paused and started (and not after refresh until re-enabled)
+    // Set time remaining only if not already set
+    // Don't check timeRemaining value - just set it once when test loads
+    setTimeRemaining(durationInSeconds);
+    timerInitializedRef.current = true;
+  }, [currentTest, isMockTest, searchParams, urlSearchParams, mockTestId]);
+  
+  // Reset initialization flag when test ID changes (new test loaded)
   useEffect(() => {
+    timerInitializedRef.current = false;
+  }, [effectiveTestId]);
+
+  // ========== TIMER AUTO-START LOGIC (Mock Test) ==========
+  // For mock test, timer should auto-start immediately when timeRemaining is set
+  useEffect(() => {
+    // In mock test mode, ensure timer starts automatically when timeRemaining is set
+    if (isMockTest && currentTest && timeRemaining !== null && timeRemaining > 0 && !isStarted) {
+      setIsStarted(true);
+      setIsPaused(false);
+      if (!startTime) {
+        setStartTime(Date.now());
+      }
+      setHasInteracted(true);
+    }
+  }, [isMockTest, currentTest, timeRemaining, isStarted, startTime]);
+
+  // Timer countdown interval - this is the actual timer that decrements
+  useEffect(() => {
+    // Don't start timer if conditions aren't met
     if (!isStarted || isPaused) return;
     if (!hasInteracted) return;
-    if (timeRemaining === null) return;
+    if (timeRemaining === null || timeRemaining <= 0) return;
 
-    // Set startTime if not set
-    if (!startTime) setStartTime(Date.now());
+    // Set startTime if not set (safety check)
+    if (!startTime) {
+      setStartTime(Date.now());
+    }
 
+    // Start the countdown interval
     const interval = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev === null || prev <= 1) {
@@ -240,7 +373,7 @@ const ListeningPracticePageContent = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isStarted, hasInteracted, isPaused, startTime, timeRemaining]);
+  }, [isStarted, hasInteracted, isPaused, timeRemaining, startTime]);
 
   // Auto-submit when timer reaches zero
   useEffect(() => {
@@ -250,19 +383,18 @@ const ListeningPracticePageContent = () => {
       (isStarted || hasInteracted) &&
       status === 'taking' &&
       authUser &&
-      id &&
+      effectiveTestId &&
       currentTest &&
       !hasAutoSubmittedRef.current &&
       !isSubmittingRef.current &&
-      !isSubmitting &&
       isMounted
     ) {
       // Auto-submit the test when timer reaches zero
       hasAutoSubmittedRef.current = true;
       const autoSubmit = async () => {
         try {
-          if (id) {
-            clearAudioPosition(id);
+          if (effectiveTestId) {
+            clearAudioPosition(effectiveTestId);
             if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
               audioPlayerRef.current.clearPosition();
             }
@@ -272,18 +404,26 @@ const ListeningPracticePageContent = () => {
           
           // Only navigate if component is still mounted and submission was successful
           if (isMounted && result && result.success) {
-            console.log('[ListeningPracticePage] Navigating to result page');
-            navigate(`/listening-result/${id}`);
+            // In mock test mode, completion is handled via localStorage polling in MockTestListening
+            // Don't navigate - let the parent component handle the transition
+            if (!isMockTest) {
+              console.log('[ListeningPracticePage] Navigating to result page');
+              navigate(`/listening-result/${effectiveTestId}`);
+            }
           } else if (isMounted && result && !result.success) {
             console.error('[ListeningPracticePage] Auto-submit failed:', result.error);
             // Reset the flag so user can try again
             hasAutoSubmittedRef.current = false;
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
           }
         } catch (error) {
           console.error('[ListeningPracticePage] Auto-submit error:', error);
           // Reset the flag on error
           if (isMounted) {
             hasAutoSubmittedRef.current = false;
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
           }
         }
       };
@@ -296,11 +436,22 @@ const ListeningPracticePageContent = () => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, status, isStarted, hasInteracted, authUser, id, currentTest, isSubmitting]);
+  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest]);
 
   // persist data on change
   useEffect(() => {
-    if (id && hasInteracted) {
+    if (!hasInteracted) return;
+    
+    if (isMockTest && mockTestId) {
+      // For mock test, use mock test storage
+      saveSectionData(mockTestId, 'listening', {
+        answers,
+        timeRemaining,
+        startTime,
+        completed: false,
+      });
+    } else if (id) {
+      // For regular practice, use listening storage
       saveListeningPracticeData(id, {
         answers,
         timeRemaining,
@@ -308,25 +459,36 @@ const ListeningPracticePageContent = () => {
         bookmarks,
       });
     }
-  }, [answers, id, hasInteracted, timeRemaining, startTime, bookmarks]);
+  }, [answers, id, hasInteracted, timeRemaining, startTime, bookmarks, isMockTest, mockTestId]);
 
   // persist data every 5s if interacting
   useEffect(() => {
-    if (!id || (!isStarted && !hasInteracted)) return;
+    if ((!id && !mockTestId) || (!isStarted && !hasInteracted)) return;
 
     const interval = setInterval(() => {
       if (hasInteracted) {
-        saveListeningPracticeData(id, {
-          answers,
-          timeRemaining,
-          startTime,
-          bookmarks,
-        });
+        if (isMockTest && mockTestId) {
+          // For mock test, use mock test storage
+          saveSectionData(mockTestId, 'listening', {
+            answers,
+            timeRemaining,
+            startTime,
+            completed: false,
+          });
+        } else if (id) {
+          // For regular practice, use listening storage
+          saveListeningPracticeData(id, {
+            answers,
+            timeRemaining,
+            startTime,
+            bookmarks,
+          });
+        }
       }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [id, timeRemaining, answers, hasInteracted, isStarted, startTime, bookmarks]);
+  }, [id, mockTestId, timeRemaining, answers, hasInteracted, isStarted, startTime, bookmarks, isMockTest]);
 
   // Question scroll and intersection observer
   useEffect(() => {
@@ -389,7 +551,14 @@ const ListeningPracticePageContent = () => {
     setStartTime(Date.now());
     setHasInteracted(true);
     // persist resumed state
-    if (id) {
+    if (isMockTest && mockTestId) {
+      saveSectionData(mockTestId, 'listening', {
+        answers,
+        timeRemaining,
+        startTime: Date.now(),
+        completed: false,
+      });
+    } else if (id) {
       saveListeningPracticeData(id, {
         answers,
         timeRemaining,
@@ -418,6 +587,11 @@ const ListeningPracticePageContent = () => {
   };
 
   const handleBack = () => {
+    // In mock test mode, show exit modal instead of navigating
+    if (isMockTest) {
+      setShowExitModal(true);
+      return;
+    }
     if (id) {
       clearListeningPracticeData(id);
       clearAudioPosition(id);
@@ -425,12 +599,33 @@ const ListeningPracticePageContent = () => {
     navigate("/dashboard");
   };
 
+  const handleExitConfirm = async () => {
+    setShowExitModal(false);
+    resetExitModal();
+    // Mark as early exit so we navigate to results after submission
+    setIsEarlyExit(true);
+    // Trigger submission via custom event
+    // Note: Don't set isSubmitting here - let handleSubmitTest manage its own state
+    // Setting it here causes a race condition where the event handler sees isSubmitting=true
+    // and returns early before calling handleSubmitTest
+    window.dispatchEvent(new CustomEvent('mockTestForceSubmit', {
+      detail: { section: 'listening', mockTestId }
+    }));
+  };
+
+  const handleExitCancel = () => {
+    setShowExitModal(false);
+    resetExitModal();
+    forceFullscreen();
+  };
+
   const handleSubmitTest = async () => {
     // Prevent duplicate submissions using ref
     if (isSubmittingRef.current || isSubmitting) {
       return { success: false, error: 'Submission already in progress' };
     }
-    if (!authUser || !id || !currentTest) {
+    
+    if (!authUser || !effectiveTestId || !currentTest) {
       return { success: false, error: 'Missing required information' };
     }
 
@@ -443,18 +638,46 @@ const ListeningPracticePageContent = () => {
         ? Math.floor((Date.now() - startTime) / 1000)
         : null;
 
+      // Prepare mock test context if in mock test mode
+      const mockTestContext = isMockTest && mockClientId ? {
+        mockTestId: mockTestId,
+        mockClientId: mockClientId,
+        section: 'listening'
+      } : null;
+
       // Submit test attempt to backend
-      const result = await submitTestAttempt(id, answers, currentTest, timeTaken, 'listening');
+      const result = await submitTestAttempt(effectiveTestId, answers, currentTest, timeTaken, 'listening', mockTestContext);
 
       if (result.success) {
         // Clear audio position and practice data on successful submission
-        if (id) {
-          clearAudioPosition(id);
-          clearListeningPracticeData(id);
+        if (effectiveTestId) {
+          clearAudioPosition(effectiveTestId);
+          clearListeningPracticeData(effectiveTestId);
           if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
             audioPlayerRef.current.clearPosition();
           }
         }
+        
+        // If mock test, trigger completion callback via localStorage
+        if (isMockTest && mockTestId) {
+          const completionKey = `mock_test_${mockTestId}_listening_completed`;
+          const resultKey = `mock_test_${mockTestId}_listening_result`;
+          const resultData = {
+            success: true,
+            attemptId: result.attemptId,
+            score: result.score,
+            correctCount: result.correctCount,
+            totalQuestions: result.totalQuestions,
+          };
+          localStorage.setItem(completionKey, 'true');
+          localStorage.setItem(resultKey, JSON.stringify(resultData));
+        }
+        
+        // Reset submission state after successful submission
+        // This prevents the component from being stuck in loading state
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+        
         return { success: true, attemptId: result.attemptId, score: result.score };
       } else {
         // Reset submission state on failure
@@ -472,6 +695,70 @@ const ListeningPracticePageContent = () => {
       return { success: false, error: error.message };
     }
   };
+
+  /* ================= FORCE SUBMIT HANDLER (Mock Test) ================= */
+  // Listen for forced submission when user confirms exit
+  // Only active in mock test mode
+  useEffect(() => {
+    if (!isMockTest || !mockTestId) return;
+
+    const handleForceSubmit = async (event) => {
+      const { section, mockTestId: eventMockTestId } = event.detail || {};
+      
+      // Only handle if it's for listening section and matches our mockTestId
+      if (section === 'listening' && eventMockTestId === mockTestId) {
+        // Prevent duplicate submissions - only check ref to avoid stale closure issues
+        // The ref is set inside handleSubmitTest, so this accurately reflects submission state
+        if (isSubmittingRef.current) {
+          console.warn('[ListeningPracticePage] Submission already in progress, ignoring duplicate request');
+          return;
+        }
+
+        // Validate all required data is available before attempting submission
+        // This ensures we only submit when we have all necessary information
+        if (!authUser || !effectiveTestId || !currentTest) {
+          console.error('[ListeningPracticePage] Cannot force submit: Missing required data', {
+            hasAuthUser: !!authUser,
+            hasEffectiveTestId: !!effectiveTestId,
+            hasCurrentTest: !!currentTest,
+            isMockTest,
+            mockTestId
+          });
+          toast.error('Cannot submit: Test data not fully loaded. Please wait and try again.');
+          return;
+        }
+
+        try {
+          // Call handleSubmitTest which handles all the submission logic
+          // handleSubmitTest will set both isSubmittingRef and isSubmitting state
+          const result = await handleSubmitTest();
+          
+          if (!result || !result.success) {
+            console.error('[ListeningPracticePage] Force submit failed:', result?.error);
+            toast.error(result?.error || 'Failed to submit test attempt');
+            // handleSubmitTest already resets the state on failure, but ensure it's reset here too
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
+          }
+          // On success, handleSubmitTest manages state and localStorage completion signal
+          // The completion will be detected by MockTestListening's polling mechanism
+        } catch (error) {
+          console.error('[ListeningPracticePage] Error force-submitting listening:', error);
+          toast.error('An error occurred while submitting your test');
+          // Reset state on unexpected error
+          isSubmittingRef.current = false;
+          setIsSubmitting(false);
+        }
+      }
+    };
+
+    window.addEventListener('mockTestForceSubmit', handleForceSubmit);
+
+    return () => {
+      window.removeEventListener('mockTestForceSubmit', handleForceSubmit);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMockTest, mockTestId, authUser, effectiveTestId, currentTest]);
 
   const handleReviewTest = async () => {
     if (!authUser || !id || !currentTest) {
@@ -598,13 +885,23 @@ const ListeningPracticePageContent = () => {
       setStartTime(newStartTime);
       setHasInteracted(true);
       // Persist started state
-      if (id) {
-        saveListeningPracticeData(id, {
+      if (isMockTest && mockTestId) {
+        saveSectionData(mockTestId, 'listening', {
           answers,
           timeRemaining,
           startTime: newStartTime,
-          bookmarks,
+          completed: false,
         });
+      } else {
+        const testIdToUse = id || searchParams.get('testId');
+        if (testIdToUse) {
+          saveListeningPracticeData(testIdToUse, {
+            answers,
+            timeRemaining,
+            startTime: newStartTime,
+            bookmarks,
+          });
+        }
       }
     }
   };
@@ -771,6 +1068,7 @@ const ListeningPracticePageContent = () => {
       // Some components use question.id, others use question_number
       const questionId = q.id;
       const questionNumber = q.question_number;
+      const groupQuestionId = q.question_id; // For multiple_answers, answer is stored at group level
       
       // First check by question.id (UUID) - this is what most components use
       if (questionId && answers[questionId] && answers[questionId].toString().trim() !== '') {
@@ -779,6 +1077,12 @@ const ListeningPracticePageContent = () => {
       
       // Then check by question_number - for backward compatibility and matching_information type
       if (questionNumber && answers[questionNumber] && answers[questionNumber].toString().trim() !== '') {
+        return true;
+      }
+      
+      // For multiple_answers and other group-based types, check group-level question_id
+      // The answer is stored using the group-level question.id (not individual question.id)
+      if (groupQuestionId && answers[groupQuestionId] && answers[groupQuestionId].toString().trim() !== '') {
         return true;
       }
       
@@ -864,6 +1168,15 @@ const ListeningPracticePageContent = () => {
         transition: 'font-size 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out'
       }}
     >
+      {/* Exit Modal for mock test mode */}
+      {isMockTest && (
+        <MockTestExitModal
+          isOpen={showExitModal}
+          onConfirm={handleExitConfirm}
+          onCancel={handleExitCancel}
+          isSubmitting={isSubmitting}
+        />
+      )}
       {/* Text Selection Tooltip - Rendered at top level */}
       <TextSelectionTooltip
         universalContentRef={universalContentRef}
@@ -875,14 +1188,14 @@ const ListeningPracticePageContent = () => {
 
       <QuestionHeader
         currentTest={currentTest}
-        id={id}
+        id={effectiveTestId || id}
         timeRemaining={timeRemaining}
         isStarted={isStarted}
         hasInteracted={hasInteracted}
         isPaused={isPaused}
         handleStart={handleStart}
         handlePause={handlePause}
-        onBack={handleBack}
+        onBack={isMockTest ? undefined : handleBack}
         showCorrectAnswers={showCorrectAnswers}
         onToggleShowCorrect={(checked) => setShowCorrectAnswers(checked)}
         status={status}
@@ -1062,9 +1375,10 @@ const ListeningPracticePageContent = () => {
                     volume={volume}
                     onVolumeChange={setVolume}
                     autoPlay={shouldAutoPlay && status === 'taking' && !isPaused}
-                    testId={id}
-                    onPlay={status === 'taking' ? () => {
+                    testId={effectiveTestId || id}
+                    onPlay={status === 'taking' && !isMockTest ? () => {
                       // Start the timer when audio begins playing (if not already started)
+                      // In mock test mode, timer starts automatically, don't trigger here
                       if (!isStarted) {
                         handleStart();
                       }
@@ -1300,12 +1614,13 @@ const ListeningPracticePageContent = () => {
         loading={isSubmitting}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        link={`/listening-result/${id}`}
-        testId={id}
+        link={`/listening-result/${effectiveTestId || id}`}
+        testId={effectiveTestId || id}
         onSubmit={handleSubmitTest}
+        isMockTest={isMockTest}
       />
 
-      <NoteSidebar />
+      {!isMockTest && <NoteSidebar />}
     </div>
   );
 };

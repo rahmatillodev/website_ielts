@@ -30,6 +30,11 @@ export default function SpeakingQuestionView() {
       <p className="text-lg text-text-light">
         {currentQuestion.question}
       </p>
+      {currentQuestion.instruction != null && currentQuestion.instruction !== "" && (
+        <p className="mt-2 text-sm text-text-secondary-light">
+          {currentQuestion.instruction}
+        </p>
+      )}
       {isReadingQuestion && (
         <p className="mt-4 text-sm text-primary font-medium">Reading question aloud…</p>
       )}

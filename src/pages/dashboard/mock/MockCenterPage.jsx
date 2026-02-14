@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Mic, BookOpen } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, Mic, BookOpen, Info, DollarSign, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatISO } from "date-fns";
 
@@ -14,6 +15,7 @@ import CenterMapCard from "./components/CenterMapCard";
 
 // Utils
 import { fetchAvailableSlots, fetchAvailableDates } from "./utils/mockTestApi";
+import PaymentBotNotice from "./components/PaymentBotNotice";
 
 // Center information data - will be fetched from API later
 const centerInfo = {
@@ -22,6 +24,12 @@ const centerInfo = {
   phone: "+998 90 123 45 67",
   description: "Our mock test center provides a real exam environment with professional supervision, proper timing, and authentic test conditions to help you prepare for your actual exam.",
   mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d158857.839886527!2d-0.2664029401218982!3d51.52873980508681!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47d8a00baf21de75%3A0x52963a5addd52a99!2sLondon%2C%20Buyuk%20Britaniya!5e0!3m2!1suz!2s!4v1770445848812!5m2!1suz!2s",
+};
+
+// Pricing information - will be fetched from API later
+const pricingInfo = {
+  fullMockTest: 500000, // Price in UZS
+  currency: "UZS",
 };
 
 const MockCenterPage = () => {
@@ -231,9 +239,13 @@ const MockCenterPage = () => {
           </p>
         </motion.div>
 
+        {/* Flexible Scheduling Feature Info */}
+       
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Right Side - Booking Section */}
-          <div className="space-y-6">
+          <div className="space-y-6 order-2 lg:order-1">
+          
             {/* Speaking Test - Calendar */}
             <div className="grid lg:grid-cols-2 grid-cols-1 gap-6">
 
@@ -297,6 +309,7 @@ const MockCenterPage = () => {
               </div>
             </div>
 
+            <PaymentBotNotice/>
             {/* Book Button */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -318,9 +331,112 @@ const MockCenterPage = () => {
             </motion.div>
           </div>
 
-          {/* Left Side - Center Info and Map */}
-          <div className=" space-y-6">
+          {/* Left Side - Center Info, Pricing, and Map */}
+          <div className="space-y-6 order-1 lg:order-2">
+          <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-8"
+        >
+          <Card className="rounded-2xl shadow-sm border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                
+                <div className="flex-1">
+                  <div className="flex gap-2 justify-between">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <span>Flexible Scheduling Feature</span>
+                    <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
+                      NEW
+                    </span>
+                  </h3>
+                  <div className="shrink-0">
+                  <Info className="w-6 h-6 text-blue-600" />
+                </div>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-gray-700 leading-relaxed">
+                      With a <strong className="text-gray-900">single payment</strong>, you have the flexibility to complete your mock test in two parts:
+                    </p>
+                    <div className="grid md:grid-cols-2 gap-4 mt-4">
+                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-blue-100">
+                        <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-gray-900 mb-1">Part 1: Reading, Writing & Listening</p>
+                          <p className="text-sm text-gray-600">
+                            Complete all three sections in one session on your chosen date and time.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-blue-100">
+                        <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-gray-900 mb-1">Part 2: Speaking Test</p>
+                          <p className="text-sm text-gray-600">
+                            Schedule your speaking test on the same day or come back at any time that suits you. Practice with our professional examiners.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-3 italic">
+                      * You can schedule both parts on the same day or split them across different dates - the choice is yours!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
             <CenterInfoCard centerInfo={centerInfo} />
+            
+            {/* Pricing Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card className="rounded-2xl shadow-sm border-2 border-green-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <DollarSign className="w-6 h-6 text-green-600" />
+                    <h2 className="text-2xl font-semibold">Pricing</h2>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-semibold text-gray-900">Full Mock Test</span>
+                        <span className="text-2xl font-bold text-green-600">
+                          {pricingInfo.fullMockTest.toLocaleString()} {pricingInfo.currency}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Includes Reading, Writing, Listening, and Speaking tests
+                      </p>
+                    </div>
+                    <div className="pt-4 border-t space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <span>One-time payment for complete test</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <span>Flexible scheduling - split into 2 parts</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <span>Professional examiners for speaking test</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <span>Real exam environment and conditions</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
             <CenterMapCard mapUrl={centerInfo.mapUrl} />
           </div>
         </div>

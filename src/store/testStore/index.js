@@ -26,6 +26,7 @@ export const useTestStore = create((set, get) => {
     return {
       test_reading: listState.test_reading,
       test_listening: listState.test_listening,
+      test_speaking: listState.test_speaking,
       loading: listState.loading,
       loaded: listState.loaded,
       currentTest: detailState.currentTest,
@@ -64,6 +65,7 @@ export const useTestStore = create((set, get) => {
         useTestListStore.setState({
           test_reading: [],
           test_listening: [],
+          test_speaking: [],
           loaded: false,
         });
       }
@@ -96,6 +98,7 @@ export const useTestStore = create((set, get) => {
       useTestListStore.setState({
         test_reading: [],
         test_listening: [],
+        test_speaking: [],
         loading: false,
         loaded: false,
         error: null,
@@ -120,6 +123,7 @@ useTestListStore.subscribe(() => {
   useTestStore.setState({
     test_reading: listState.test_reading,
     test_listening: listState.test_listening,
+    test_speaking: listState.test_speaking,
     loading: listState.loading,
     loaded: listState.loaded,
     error: listState.error || detailState.error,
@@ -142,4 +146,6 @@ useTestCompletionStore.subscribe(() => {
     test_completed: completionState.test_completed,
   });
 });
+
+export { useSpeakingDetailStore } from "./speakingDetailStore";
 

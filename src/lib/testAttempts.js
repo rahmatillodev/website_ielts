@@ -22,7 +22,7 @@ const getUserIdFromLocalStorage = () => {
   }
 };
 
-export const submitTestAttempt = async (testId, answers, currentTest, timeTaken = null, type) => {
+export const submitTestAttempt = async (testId, answers, currentTest, timeTaken = null, type, mockTestContext = null) => {
   try {
     // Get user id from localStorage
     const authenticatedUserId = getUserIdFromLocalStorage();
@@ -58,24 +58,45 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
       ? Math.max(1, Math.floor(timeTaken))
       : 1;
 
+    // Prepare attempt data
+    const attemptDataToInsert = {
+      user_id: authenticatedUserId,
+      test_id: testId,
+      score: bandScore,
+      total_questions: totalQuestions,
+      correct_answers: correctCount,
+      time_taken: timeTakenSeconds, // Store in seconds
+      completed_at: new Date().toISOString(),
+    };
+
+    // Add mock test context if provided
+    // mock_id should reference mock_test_clients.id, not mock_test.id
+    if (mockTestContext && mockTestContext.mockClientId) {
+      attemptDataToInsert.mock_id = mockTestContext.mockClientId;
+    }
+
     // 1. Create user_attempt record
     const { data: attemptData, error: attemptError } = await supabase
       .from('user_attempts')
-      .insert({
-        user_id: authenticatedUserId,
-        test_id: testId,
-        score: bandScore,
-        total_questions: totalQuestions,
-        correct_answers: correctCount,
-        time_taken: timeTakenSeconds, // Store in seconds
-        completed_at: new Date().toISOString(),
-      })
+      .insert(attemptDataToInsert)
       .select()
       .single();
 
     if (attemptError) throw attemptError;
 
     const attemptId = attemptData.id;
+
+    // If this is a mock test, save completion status to localStorage for flow management
+    if (mockTestContext) {
+      localStorage.setItem(`mock_test_${mockTestContext.mockTestId}_${mockTestContext.section}_completed`, 'true');
+      localStorage.setItem(`mock_test_${mockTestContext.mockTestId}_${mockTestContext.section}_result`, JSON.stringify({
+        success: true,
+        attemptId,
+        score: bandScore,
+        correctCount,
+        totalQuestions,
+      }));
+    }
 
     // 2. Create user_answers records
     const answersToInsert = answerResults.map((result) => ({

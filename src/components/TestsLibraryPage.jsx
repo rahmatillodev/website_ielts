@@ -14,10 +14,12 @@ import CardLocked from "./cards/CardLocked";
 import CardOpen from "./cards/CardOpen";
 import { motion } from "framer-motion";
 import { LibraryCardShimmer } from "@/components/ui/shimmer";
-import { Button } from "./ui/button";
 import { useResponsiveGridCols } from "@/hooks/useResponsiveGridCols";
-
-
+import { CiFilter } from "react-icons/ci";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "./ui/button";
 const TestsLibraryPage = ({
   title,
   description,
@@ -46,10 +48,10 @@ const TestsLibraryPage = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState([]); // Multi-select question types (for reading/listening)
   const [selectedTaskTypes, setSelectedTaskTypes] = useState([]); // Multi-select task types (for writing)
-  const [sortOrder, setSortOrder] = useState("newest"); // Sort by oldest/newest
+  const [sortOrder, setSortOrder] = useState("oldest"); // Sort by oldest/newest
   const [filterOpen, setFilterOpen] = useState(false); // Control filter popover
   const [tempSelectedTypes, setTempSelectedTypes] = useState([]); // Temporary state for filter panel
-  const [tempSortOrder, setTempSortOrder] = useState("newest"); // Temporary sort state
+  const [tempSortOrder, setTempSortOrder] = useState("oldest"); // Temporary sort state
   const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
   const itemsPerLoad = 9; // Items to load per scroll
   const scrollContainerRef = useRef(null);
@@ -157,7 +159,7 @@ const TestsLibraryPage = ({
   }, [allTests, searchQuery, activeTab, selectedQuestionTypes, selectedTaskTypes, sortOrder, testType]);
 
   const handleViewChange = (value) => {
-   
+
     localStorage.setItem('testsLibraryView', value);
     setIsGridView(value === 'grid' ? true : false);
   };
@@ -311,11 +313,21 @@ const TestsLibraryPage = ({
   };
 
   const handleFilterClear = () => {
-    /// close modal and reset the state
+    // Reset temp states
     setTempSelectedTypes([]);
-    setFilterOpen(false);
-    setTempSortOrder("newest");
+    setTempSortOrder("oldest");
+  
+    // Reset real filter states
+    if (testType === "writing") {
+      setSelectedTaskTypes([]);
+    } else {
+      setSelectedQuestionTypes([]);
+    }
+  
+    setSortOrder("oldest");
+    handleFilterClose()
   };
+  
 
   const handleFilterSearch = () => {
     if (testType === "writing") {
@@ -430,7 +442,125 @@ const TestsLibraryPage = ({
 
           <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">
 
-            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto ">
+              {/* filter question_type or task_type */}
+              {(testType === "reading" || testType === "listening" || testType === "writing") && (
+                <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      onClick={handleFilterOpen}
+                      className="relative rounded-2xl bg-white border-2 border-gray-300 shadow-md text-base focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-center hover:bg-gray-50 hover:border-blue-400 hover:shadow-lg"
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                      }}
+                    >
+                      <CiFilter className="w-6 h-6" />
+                      {((testType === "writing" && selectedTaskTypes.length > 0) || 
+                        ((testType === "reading" || testType === "listening") && selectedQuestionTypes.length > 0)) && (
+                        <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-md">
+                          {testType === "writing" ? selectedTaskTypes.length : selectedQuestionTypes.length}
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="end"
+                    sideOffset={8}
+                    className={cn(
+                      "z-50 w-[380px] rounded-xl border bg-white p-4 shadow-lg"
+                    )}
+                  >
+                    {/* Question Types or Task Types Section */}
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          {testType === "writing" ? "Task Types" : "Question Types"}
+                        </h3>
+                        <Button
+                          onClick={handleFilterClear}
+                          variant="ghost"
+                          className="text-sm text-gray-600 hover:text-gray-900 p-0 h-auto border-none hover:bg-transparent"
+                        >
+                          Clear All
+                        </Button>
+
+                      </div>
+                      <div className="">
+                        {(testType === "writing" ? WRITING_TASK_TYPES : QUESTION_TYPE_GROUPS).map((type) => {
+                          const isChecked = tempSelectedTypes.includes(type);
+                          return (
+                            <label
+                              key={type}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                            >
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => toggleType(type)}
+                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer accent-blue-600"
+                              />
+                              <span className="text-sm text-gray-700 font-medium">
+                                {testType === "writing" 
+                                  ? getWritingTaskTypeDisplayName(type)
+                                  : getQuestionTypeDisplayName(type)}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Separator */}
+                    <div className="border-t border-gray-200 my-2" />
+
+                    {/* Sort Section */}
+                    <div className="mb-2">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-1">Sort By</h3>
+                      <div className="space-y-0.5">
+                        <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                          <input
+                            type="radio"
+                            name="sortOrder"
+                            value="newest"
+                            checked={tempSortOrder === "newest"}
+                            onChange={() => setTempSortOrder("newest")}
+                            className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-700 font-medium">Newest First</span>
+                        </label>
+                        <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                          <input
+                            type="radio"
+                            name="sortOrder"
+                            value="oldest"
+                            checked={tempSortOrder === "oldest"}
+                            onChange={() => setTempSortOrder("oldest")}
+                            className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-700 font-medium">Oldest First</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-2 border-t border-gray-200">
+
+                      <Button
+                        onClick={handleFilterCancel}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleFilterSearch}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Search
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
               {/* Search */}
               <div className="relative flex-1 md:w-80">
                 <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm md:text-base" />
@@ -511,7 +641,7 @@ const TestsLibraryPage = ({
                     className="flex flex-col items-center text-center gap-2 py-16"
                   >
                     <div className="text-gray-700 font-semibold text-base md:text-lg">
-                      We couldn't find any {testType === "listening" ? "listening" : "reading"} materials at the moment.
+                      We couldn't find any {testType} materials at the moment.
                     </div>
                     <div className="text-gray-400 text-sm md:text-base">
                       Please check back later or try again soon.
@@ -523,10 +653,14 @@ const TestsLibraryPage = ({
           ) : /* Third Priority: No Search Results - Show message when data exists but filtered results are empty */
             allTests.length > 0 && filteredData.length === 0 ? (
               <>
-                {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab })} */}
-                <div className="flex flex-1 items-center justify-center min-h-[300px]">
+                {/* {console.log("[TestsLibraryPage] [RENDER] State=allTests exist, filteredData.length===0", { allTests, filteredData, searchQuery, activeTab, questionType })} */}
+                  <div className="flex flex-1 items-center justify-center min-h-[300px]">
                   <div className="py-20 text-center text-gray-400 font-semibold w-full whitespace-pre-line">
-                    {searchQuery.trim() !== "" && emptySearchMessage ? (
+                    {(testType === "writing" && selectedTaskTypes.length > 0) ? (
+                      `No tests found with task type${selectedTaskTypes.length > 1 ? 's' : ''}: ${selectedTaskTypes.map(type => getWritingTaskTypeDisplayName(type)).join(', ')}.`
+                    ) : ((testType === "reading" || testType === "listening") && selectedQuestionTypes.length > 0) ? (
+                      `No tests found with question type${selectedQuestionTypes.length > 1 ? 's' : ''}: ${selectedQuestionTypes.map(type => getQuestionTypeDisplayName(type)).join(', ')}.`
+                    ) : searchQuery.trim() !== "" && emptySearchMessage ? (
                       emptySearchMessage
                     ) : activeTab === "free" && emptyFreeMessage ? (
                       emptyFreeMessage
@@ -551,13 +685,13 @@ const TestsLibraryPage = ({
                   <motion.div
                     className={
                       isGridView
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-16"
+                        ? ` grid ${cols} gap-4 md:gap-6 lg:gap-8 mb-16`
                         : "flex flex-col gap-1 mb-16"
                     }
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    key={`${activeTab}-${searchQuery}-${isGridView}`}
+                    key={`${activeTab}-${searchQuery}-${testType === "writing" ? selectedTaskTypes.join(',') : selectedQuestionTypes.join(',')}-${sortOrder}-${isGridView}`}
                   >
                     {currentItems.map((test, index) => {
                       const subscriptionStatus = userProfile?.subscription_status ?? "free";
@@ -573,7 +707,7 @@ const TestsLibraryPage = ({
                             <CardOpen
                               {...test}
                               isGridView={isGridView}
-                              testType={test.testType ?? testType}
+                              testType={testType}
                             />
                           ) : (
                             <CardLocked

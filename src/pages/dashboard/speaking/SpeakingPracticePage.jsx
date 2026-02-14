@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
-import SpeakingTaskPage from "./speakingtypes/textToSpeach/SpeakingTaskPage";
 
 /**
  
@@ -34,9 +33,6 @@ const SpeakingPracticePage = () => {
    * ========================================================= */
   const EQUIPMENT_BLUE = "#2D9CDB";
   const [showEquipmentCheck, setShowEquipmentCheck] = useState(true);
-  // Gate to ensure the speaking exam (timers/recording/questions) does NOT start
-  // until Equipment Check is fully completed.
-  const [isEquipmentCheckCompleted, setIsEquipmentCheckCompleted] = useState(false);
   const [deviceType, setDeviceType] = useState("Device");
 
   const [microphones, setMicrophones] = useState([]);
@@ -451,14 +447,9 @@ const SpeakingPracticePage = () => {
 
   return (
     <>
-      {/* Background selection (NON-DESTRUCTIVE):
-          - We keep legacy UI code unchanged (below), but we do NOT remove it.
-          - We ONLY mount the new speaking exam flow AFTER Equipment Check is completed.
-            This is the blocking condition that prevents the exam from starting early. */}
-      {isEquipmentCheckCompleted ? <SpeakingTaskPage /> : null}
-
-      {/* Legacy UI (kept): do NOT render during Equipment Check, and do NOT render for the new flow. */}
-      {!showEquipmentCheck && !isEquipmentCheckCompleted ? (
+      {/* Equipment check only. Exam is at /speaking-practice/:id/session (Start Exam navigates there). */}
+      {/* Legacy UI (kept): do NOT render during Equipment Check. */}
+      {!showEquipmentCheck ? (
         <div className="flex h-[calc(100vh-64px)] p-4 gap-4 bg-gray-50">
           {/* LEFT — QUESTIONS */}
           <div className="w-1/3 bg-white border rounded-xl p-4 overflow-y-auto">
@@ -804,8 +795,8 @@ const SpeakingPracticePage = () => {
                       navigate(`/speaking-practice/human/human`);
                       return;
                     }
-                    setIsEquipmentCheckCompleted(true);
                     setShowEquipmentCheck(false);
+                    navigate(`/speaking-practice/${id}/session`);
                   }}
                   className="flex-1 h-10 rounded-xl text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ backgroundColor: EQUIPMENT_BLUE }}

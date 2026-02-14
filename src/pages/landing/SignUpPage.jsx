@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,18 @@ import AnimatedPolygonDecoration from "@/components/AnimatedPolygonDecoration";
 import { motion } from "framer-motion";
 import { MdAutoStories } from "react-icons/md";
 
+// Helper function to check if a route is a mock test route
+const isMockTestRoute = (path) => {
+  return path.startsWith("/mock-test") || 
+         path.startsWith("/mock-tests") || 
+         path.startsWith("/mock/") || 
+         path === "/mock";
+}
+
 // Public Sign Up page
 function SignUpPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const signUp = useAuthStore((state) => state.signUp);
   const loading = useAuthStore((state) => state.loading);
 
@@ -20,6 +29,32 @@ function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Set access mode when page loads based on redirect parameter
+  // This ensures sessionStorage is set even if user navigates directly to signup
+  useEffect(() => {
+    const redirectPath = searchParams.get("redirect");
+    if (redirectPath) {
+      const redirectPathname = redirectPath.split('?')[0];
+      if (isMockTestRoute(redirectPathname)) {
+        sessionStorage.setItem('accessMode', 'mockTest');
+      } else {
+        // Only set regular if not already set to mockTest
+        const currentMode = sessionStorage.getItem('accessMode');
+        if (currentMode !== 'mockTest') {
+          sessionStorage.setItem('accessMode', 'regular');
+        }
+      }
+    } else {
+      // If no redirect parameter, preserve existing accessMode if it exists
+      // Otherwise, check if we should set it based on referrer or other indicators
+      const existingMode = sessionStorage.getItem('accessMode');
+      if (!existingMode) {
+        // Default to regular if nothing is set
+        sessionStorage.setItem('accessMode', 'regular');
+      }
+    }
+  }, [searchParams]);
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -32,8 +67,31 @@ function SignUpPage() {
     const result = await signUp(email, password, fullName);
 
     if (result?.success) {
+      const redirectPath = searchParams.get("redirect");
+      const redirectPathname = redirectPath ? redirectPath.split('?')[0] : null;
+  
+      let targetPath = "/dashboard";
+      let finalMode = "regular"; // Default holat
+  
+      // 1. Agar redirect URL bo'lsa, o'shanga qarab rejimni aniqlaymiz
+      if (redirectPathname && isMockTestRoute(redirectPathname)) {
+        finalMode = "mockTest";
+        targetPath = "/mock-tests";
+      } 
+      // 2. Agar redirect yo'q bo'lsa, lekin foydalanuvchi hozirgina 
+      // mock-test bo'limidan kelgan bo'lsa (sessionStorage orqali)
+      else if (!redirectPathname && sessionStorage.getItem('accessMode') === 'mockTest') {
+        finalMode = "mockTest";
+        targetPath = "/mock-tests";
+      }
+  
+      // MAJBURIY YANGILASH - Set synchronously BEFORE navigation
+      // This ensures the mode is set before App.jsx useEffect runs
+      sessionStorage.setItem('accessMode', finalMode);
+      
       toast.success("Account created successfully!");
-      navigate("/dashboard");
+      // Navigate immediately - App.jsx will see the correct mode in sessionStorage
+      navigate(targetPath, { replace: true });
     } else {
       toast.error(result?.error || "Failed to create account");
     }
@@ -84,7 +142,7 @@ function SignUpPage() {
           {/* Tab Switcher */}
           <div className="flex items-center gap-1 mb-8 bg-gray-100 rounded-lg p-1">
             <Link
-              to="/login"
+              to={searchParams.get("redirect") ? `/login?redirect=${encodeURIComponent(searchParams.get("redirect"))}` : "/login"}
               className="flex-1 px-4 py-2 rounded-md text-gray-600 font-medium text-sm hover:text-gray-900 transition-all text-center"
             >
               Sign In
@@ -182,7 +240,7 @@ function SignUpPage() {
               <p className="text-sm text-gray-600">
                 Already have an account?{" "}
                 <Link
-                  to="/login"
+                  to={searchParams.get("redirect") ? `/login?redirect=${encodeURIComponent(searchParams.get("redirect"))}` : "/login"}
                   className="text-primary hover:text-primary-dark font-medium"
                 >
                   Sign In

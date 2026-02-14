@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
-import { Clock, Calendar, Loader2 } from "lucide-react";
+import { Clock, Calendar, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatTime, getTimePeriod } from "../utils/dateHelpers";
+import { formatTime } from "../utils/dateHelpers";
 
 const getSlotStatusColor = (status) => {
   switch (status) {
@@ -27,16 +27,33 @@ const TimeSlotSelector = ({
   slots,
   loading,
 }) => {
-  // Group slots by time period
-  const groupedSlots = React.useMemo(() => {
-    if (!slots || slots.length === 0) return {};
-    
-    return slots.reduce((acc, slot) => {
-      const period = getTimePeriod(slot.time);
-      if (!acc[period]) acc[period] = [];
-      acc[period].push(slot);
-      return acc;
-    }, {});
+  const [showCustomNote, setShowCustomNote] = useState(false);
+  const noteTimeoutRef = useRef(null);
+
+  const handleCustomFocus = () => {
+    setShowCustomNote(true);
+
+    if (noteTimeoutRef.current) clearTimeout(noteTimeoutRef.current);
+    noteTimeoutRef.current = setTimeout(() => {
+      setShowCustomNote(false);
+    }, 7000);
+  };
+
+  // Hide the note immediately if input loses focus
+  const handleCustomBlur = () => {
+    setShowCustomNote(false);
+    if (noteTimeoutRef.current) clearTimeout(noteTimeoutRef.current);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (noteTimeoutRef.current) clearTimeout(noteTimeoutRef.current);
+    };
+  }, []);
+
+  const sortedSlots = React.useMemo(() => {
+    if (!slots || slots.length === 0) return [];
+    return [...slots].sort((a, b) => a.time.localeCompare(b.time));
   }, [slots]);
 
   return (
@@ -51,7 +68,7 @@ const TimeSlotSelector = ({
             <Clock className={`w-5 h-5 ${iconColor}`} />
             <h3 className="text-xl font-semibold">{title}</h3>
           </div>
-          
+          {/* Slots section */}
           {!selectedDate ? (
             <div className="text-center py-8 text-gray-500">
               <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -62,46 +79,62 @@ const TimeSlotSelector = ({
               <Loader2 className={`w-6 h-6 animate-spin ${iconColor}`} />
               <span className="ml-2 text-gray-600">Loading time slots...</span>
             </div>
-          ) : slots.length === 0 ? (
+          ) : sortedSlots.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No time slots available for this date</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {Object.entries(groupedSlots).map(([period, periodSlots]) => (
-                <div key={period}>
-                  <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">
-                    {period}
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {periodSlots.map((slot, index) => (
-                      <button
-                        key={`${slot.time}-${index}`}
-                        onClick={() =>
-                          slot.status === "available" && onSlotSelect(slot.time)
-                        }
-                        disabled={slot.status !== "available"}
-                        className={cn(
-                          "p-4 rounded-xl border-2 font-medium transition-all text-center flex flex-col items-center justify-center",
-                          getSlotStatusColor(slot.status),
-                          selectedSlot === slot.time && `ring-4 ${iconColor.includes('purple') ? 'ring-purple-300' : 'ring-green-300'} ring-offset-2`
-                        )}
-                      >
-                        <span className="text-lg font-semibold">
-                          {formatTime(slot.time)}
-                        </span>
-                        {slot.status === "booked" && (
-                          <span className="block text-xs mt-1 font-normal">Booked</span>
-                        )}
-                        {slot.status === "pending" && (
-                          <span className="block text-xs mt-1 font-normal">Pending</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              {sortedSlots.map((slot, index) => (
+                <button
+                  key={`${slot.time}-${index}`}
+                  onClick={() =>
+                    slot.status === "available" && onSlotSelect(slot.time)
+                  }
+                  disabled={slot.status !== "available"}
+                  className={cn(
+                    "p-4 rounded-xl border-2 font-medium transition-all text-center flex flex-col items-center justify-center",
+                    getSlotStatusColor(slot.status),
+                    selectedSlot === slot.time &&
+                      `ring-4 ${
+                        iconColor.includes("purple") ? "ring-purple-300" : "ring-green-300"
+                      } ring-offset-2`
+                  )}
+                >
+                  <span className="text-lg font-semibold">{formatTime(slot.time)}</span>
+                  {slot.status === "booked" && (
+                    <span className="block text-xs mt-1 font-normal">Booked</span>
+                  )}
+                  {slot.status === "pending" && (
+                    <span className="block text-xs mt-1 font-normal">Pending</span>
+                  )}
+                </button>
               ))}
+            </div>
+          )}
+
+          {/* Custom time input */}
+          {selectedDate && (
+            <div className="mt-6 relative w-full max-w-sm">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Enter your preferred time
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., 14:30"
+                onFocus={handleCustomFocus}
+                onBlur={handleCustomBlur}
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+
+              {showCustomNote && (
+                <div className="absolute top-full mt-2 left-0 bg-yellow-50 border-l-4 border-yellow-300 text-yellow-700 p-3 rounded-lg text-sm shadow-md">
+                  The time you enter may change depending on our speakers availability or
+                  the number of available spots. If any changes occur, we will contact you
+                  to confirm and discuss the new schedule.
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -111,4 +144,3 @@ const TimeSlotSelector = ({
 };
 
 export default TimeSlotSelector;
-

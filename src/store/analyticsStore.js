@@ -162,7 +162,6 @@ export const useAnalyticsStore = create((set, get) => ({
       .order('completed_at', { ascending: false });
     
 
-       console.log(attemptsData);
 
       if (attemptsError) throw attemptsError;
 

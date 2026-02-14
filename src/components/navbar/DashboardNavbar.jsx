@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  LuUser, 
-  LuLogOut, 
+import {
+  LuUser,
+  LuLogOut,
   LuCreditCard,
   LuMenu
 } from "react-icons/lu";
@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import LogoutModal from '../modal/LogoutModal';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
@@ -82,6 +82,7 @@ const DashboardNavbar = ({ onMenuClick }) => {
               </div>
 
               <Avatar className="size-10 shadow-sm">
+                <AvatarImage src={userProfile?.avatar_image || ""} className="object-cover" />
                 <AvatarFallback className="bg-[#00838f] text-white font-medium">
                   {getInitials()[0]}
                 </AvatarFallback>
@@ -94,9 +95,18 @@ const DashboardNavbar = ({ onMenuClick }) => {
             className="w-[280px] mt-2 rounded-[24px] p-0 shadow-2xl"
           >
             <div className="p-4 text-center">
-              <div className="size-16 mx-auto bg-[#00838f] rounded-full flex items-center justify-center text-white text-2xl font-semibold">
-                {getInitials()[0]}
-              </div>
+              {userProfile?.avatar_image ? (
+                <img
+                  src={`${userProfile.avatar_image}?t=${Date.now()}`}
+                  alt="avatar"
+                  className="size-16 mx-auto rounded-full object-cover"
+                />
+              ) : (
+                <div className="size-16 mx-auto bg-[#00838f] rounded-full flex items-center justify-center text-white text-2xl font-semibold">
+                  {getInitials()[0]}
+                </div>
+              )}
+
               <h2 className="mt-2 font-bold">{displayName}</h2>
               <p className="text-xs text-gray-500">{email}</p>
             </div>

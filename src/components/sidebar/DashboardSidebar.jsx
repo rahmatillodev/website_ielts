@@ -204,14 +204,7 @@ const DashboardSidebar = ({ onNavigate }) => {
             Tests & Analytics
           </div>
         )}
-        <SidebarItem
-          icon={IoDocumentAttachOutline}
-          label="Mock Tests"
-          link="/mock-tests"
-          isActive={checkActive("/mock-tests")}
-          onNavigate={onNavigate}
-          isCollapsed={effectiveIsCollapsed}
-        />
+        
         <SidebarItem
           icon={FaChartSimple}
           label="Analytics"
