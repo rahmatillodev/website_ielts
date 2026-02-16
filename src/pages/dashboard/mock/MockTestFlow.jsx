@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useMockTestClientStore } from '@/store/mockTestClientStore';
 import { useAuthStore } from '@/store/authStore';
 import { saveMockTestData, loadMockTestData, clearMockTestData, clearAllMockTestDataForId } from '@/store/LocalStorage/mockTestStorage';
@@ -17,12 +17,16 @@ import InstructionalVideo from '@/components/mock/InstructionalVideo';
 const MockTestFlow = () => {
   const { mockTestId: paramMockTestId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { userProfile } = useAuthStore();
   const { fetchMockTestByUserId, fetchMockTestById, mockTest, client, loading, error, updateClientStatus, hasUserCompletedMockTest } = useMockTestClientStore();
+  const appliedAudioCheckDoneRef = useRef(false);
 
   const [currentSection, setCurrentSection] = useState('audioCheck'); // 'audioCheck' | 'intro' | 'listening' | 'reading' | 'writing' | 'results'
   const [showIntroVideo, setShowIntroVideo] = useState(false);
   const [audioCheckComplete, setAudioCheckComplete] = useState(false);
+  /** When restoring progress, show intro video first then go to this section */
+  const [resumeSectionAfterIntro, setResumeSectionAfterIntro] = useState(null);
   const [sectionResults, setSectionResults] = useState({
     listening: null,
     reading: null,
@@ -63,24 +67,42 @@ const MockTestFlow = () => {
   // Use param mockTestId if available, otherwise use fetched mockTest
   const effectiveMockTestId = paramMockTestId || mockTest?.id;
 
-  // Load saved progress
+  // When coming from MockTestsPage after device check: skip device check and show intro video
   useEffect(() => {
-    if (effectiveMockTestId) {
-      const savedData = loadMockTestData(effectiveMockTestId);
-      if (savedData) {
-        // Restore section state (but skip audioCheck if already completed)
-        if (savedData.currentSection && savedData.currentSection !== 'audioCheck') {
+    if (appliedAudioCheckDoneRef.current) return;
+    if (location.state?.audioCheckDone) {
+      appliedAudioCheckDoneRef.current = true;
+      setAudioCheckComplete(true);
+      setShowIntroVideo(true);
+      setCurrentSection('intro');
+    }
+  }, [location.state]);
+
+  // Load saved progress (only if we didn't just come from MockTestsPage with device check done)
+  useEffect(() => {
+    if (appliedAudioCheckDoneRef.current || !effectiveMockTestId) return;
+    const savedData = loadMockTestData(effectiveMockTestId);
+    if (savedData) {
+      // Restore section state (but skip audioCheck if already completed)
+      if (savedData.currentSection && savedData.currentSection !== 'audioCheck') {
+        setAudioCheckComplete(true);
+        if (savedData.currentSection === 'intro') {
+          setCurrentSection('intro');
+          setShowIntroVideo(true);
+        } else if (['listening', 'reading', 'writing'].includes(savedData.currentSection)) {
+          // Always show intro video first, then resume to saved section
+          setCurrentSection('intro');
+          setShowIntroVideo(true);
+          setResumeSectionAfterIntro(savedData.currentSection);
+        } else {
+          // results or other
           setCurrentSection(savedData.currentSection);
-          // If we're past audioCheck, mark it as complete
-          if (savedData.currentSection !== 'intro') {
-            setAudioCheckComplete(true);
-            setShowIntroVideo(false); // Don't show intro video again
-          }
+          setShowIntroVideo(false);
         }
-        // Restore results
-        if (savedData.sectionResults) {
-          setSectionResults(savedData.sectionResults);
-        }
+      }
+      // Restore results
+      if (savedData.sectionResults) {
+        setSectionResults(savedData.sectionResults);
       }
     }
   }, [effectiveMockTestId]);
