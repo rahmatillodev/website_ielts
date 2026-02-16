@@ -65,9 +65,9 @@ const MockTestsPage = () => {
 
   const handleStartTest = () => {
     setShowStartModal(false);
-    // Navigate to mock test flow - audio check will be shown first
+    // Navigate to mock test flow; pass state so flow skips device check and shows intro video
     if (mockTest?.id) {
-      navigate(`/mock-test/flow/${mockTest.id}`);
+      navigate(`/mock-test/flow/${mockTest.id}`, { state: { audioCheckDone: true } });
     } else {
       console.error('Mock test not found');
       alert('Mock test configuration not found. Please contact support.');
