@@ -1,7 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import DashboardNavbar from '@/components/navbar/DashboardNavbar';
-import MockTestSidebar from '@/components/sidebar/MockTestSidebar';
 import React, { useState, useEffect } from 'react'
 import RotationModal, { DISMISS_KEY } from '@/components/modal/RotationModal'
 import { useSmallScreen } from '@/hooks/useSmallScreen'
@@ -77,28 +76,12 @@ const MockTestLayout = () => {
   return (
     <ProtectedRoute>
       <div className="flex h-screen overflow-hidden bg-background-light">
-        
-        {/* Desktop Sidebar */}
-        {!isHideByPath && !isSmallScreen && (
-          <aside className="sticky top-0 h-screen z-50">
-            <MockTestSidebar  />
-          </aside>
-        )}
-
-        {/* Mobile Sidebar Sheet */}
-        {!isHideByPath && isSmallScreen && (
-          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetContent side="left" className="w-[320px] p-0">
-              <MockTestSidebar onNavigate={() => setSidebarOpen(false)} />
-            </SheetContent>
-          </Sheet>
-        )}
-
+      
         <div className="flex flex-col flex-1 overflow-y-auto">
           
           {!isHideByPath && (
             <header className="sticky top-0 z-40 w-full">
-              <DashboardNavbar onMenuClick={handleMenuClick} />
+              <DashboardNavbar onMenuClick={handleMenuClick} flow="mockTest" />
             </header>
           )}
 

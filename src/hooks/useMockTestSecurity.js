@@ -159,11 +159,15 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
     };
 
     const handleVisibilityChange = () => {
-      // Just prevent tab switching, no modal
+      // Show modal when user switches tabs or minimizes window
+      if (document.hidden) {
+        onExitAttempt();
+      }
     };
 
     const handleBlur = () => {
-      // Just prevent window blur, no modal
+      // Show modal when window loses focus
+      onExitAttempt();
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -175,7 +179,7 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [isActive]);
+  }, [isActive, onExitAttempt]);
 
   // Function to reset exit modal flag (kept for backward compatibility, but no longer needed)
   const resetExitModal = useCallback(() => {
@@ -190,7 +194,8 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       if (e.code === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        // Block ESC key, no modal
+        // Show modal when user tries to exit fullscreen with ESC
+        onExitAttempt();
         return false;
       }
     };
@@ -201,7 +206,7 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
     return () => {
       document.removeEventListener('keydown', handleEsc, true);
     };
-  }, [isActive]);
+  }, [isActive, onExitAttempt]);
 
 
   // === DEVELOPER HOTKEY: Shift + 1 + 2 to bypass security and navigate back ===
@@ -284,6 +289,9 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       // Prevent the default back navigation
       e.preventDefault();
 
+      // Show modal when user tries to navigate back
+      onExitAttempt();
+
       // Push again to block back navigation
       window.history.pushState(null, '', window.location.href);
     };
@@ -350,7 +358,7 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       document.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('wheel', handleWheel);
     };
-  }, [isActive]);
+  }, [isActive, onExitAttempt]);
 
 
   // === FULLSCREEN EXIT DETECTION ===
@@ -372,10 +380,10 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
         document.mozFullScreenElement ||
         document.msFullscreenElement;
 
-      // If user exits fullscreen (was fullscreen, now not) → just track it
-      // No modal shown
+      // If user exits fullscreen (was fullscreen, now not) → show modal
       if (wasFullscreen && !isFullscreen) {
-        // Fullscreen exit detected, but no action taken
+        // Fullscreen exit detected - show exit modal
+        onExitAttempt();
       }
 
       // Update tracked state
@@ -393,7 +401,7 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
       document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
     };
-  }, [isActive]);
+  }, [isActive, onExitAttempt]);
 
 
   // === Helper function to force fullscreen again ===

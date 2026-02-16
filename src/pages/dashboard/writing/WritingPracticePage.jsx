@@ -15,7 +15,6 @@ import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext"
 import { useWritingCompletedStore } from "@/store/testStore/writingCompletedStore";
 import { useAuthStore } from "@/store/authStore";
 import { useMockTestClientStore } from "@/store/mockTestClientStore";
-import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
 
 import {
   saveWritingPracticeData,
@@ -90,17 +89,8 @@ const WritingPracticePageContent = () => {
     notes,
   } = useAnnotation();
 
-  // Security hook for mock test mode (applies on refresh too)
-  // Note: MockTestExitModal is rendered in MockTestWriting wrapper, not here
-  // This hook is only for security restrictions, not for showing modal
-  // Use the improved isMockTest detection that checks multiple sources
-  const { resetExitModal, forceFullscreen } = useMockTestSecurity(
-    () => {
-      // Modal is handled by MockTestWriting wrapper, not here
-      // This is just for security restrictions
-    },
-    isMockTest // Only active in mock test mode - uses improved detection above
-  );
+  // Security hook is handled by MockTestWriting wrapper, not here
+  // This prevents conflicts and ensures the exit modal works correctly
 
   const [currentTaskType, setCurrentTaskType] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -334,12 +324,8 @@ const WritingPracticePageContent = () => {
           setStartTime(Date.now());
         }
         
-        // Update mock_test_clients status to 'started' if not already started
-        if (mockClientId) {
-          updateClientStatus(mockClientId, 'started').catch(err => {
-            console.error('Error updating mock test client status to started:', err);
-          });
-        }
+        // Note: Status is set to 'started' when listening section begins (first section)
+        // No need to set it again here when writing starts
         
         mockTestInitializedRef.current = true;
       }
@@ -755,20 +741,7 @@ const WritingPracticePageContent = () => {
   }, [id, navigate, isMockTest]);
 
   // Exit handlers are handled by MockTestWriting wrapper, not here
-  // These are kept for compatibility but shouldn't be called
-  const handleExitConfirm = async () => {
-    // This should not be called - exit modal is in MockTestWriting wrapper
-    setIsEarlyExit(true);
-    window.dispatchEvent(new CustomEvent('mockTestForceSubmit', {
-      detail: { section: 'writing', mockTestId }
-    }));
-    setIsSaving(true);
-  };
-
-  const handleExitCancel = () => {
-    // This should not be called - exit modal is in MockTestWriting wrapper
-    forceFullscreen();
-  };
+  // These functions are not used - exit modal is handled in MockTestWriting wrapper
   
   
 

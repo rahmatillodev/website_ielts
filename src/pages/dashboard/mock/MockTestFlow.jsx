@@ -18,7 +18,7 @@ const MockTestFlow = () => {
   const { mockTestId: paramMockTestId } = useParams();
   const navigate = useNavigate();
   const { userProfile } = useAuthStore();
-  const { fetchMockTestByUserId, mockTest, client, loading, error } = useMockTestClientStore();
+  const { fetchMockTestByUserId, fetchMockTestById, mockTest, client, loading, error, updateClientStatus, hasUserCompletedMockTest } = useMockTestClientStore();
 
   const [currentSection, setCurrentSection] = useState('audioCheck'); // 'audioCheck' | 'intro' | 'listening' | 'reading' | 'writing' | 'results'
   const [showIntroVideo, setShowIntroVideo] = useState(false);
@@ -31,10 +31,34 @@ const MockTestFlow = () => {
 
   // Load mock test data on mount
   useEffect(() => {
-    if (userProfile?.id) {
+    if (paramMockTestId) {
+      // If mockTestId is in route params (accessed via password), fetch by ID
+      fetchMockTestById(paramMockTestId);
+    } else if (userProfile?.id) {
+      // Otherwise, use the old method for backward compatibility
       fetchMockTestByUserId(userProfile.id);
     }
-  }, [userProfile?.id, fetchMockTestByUserId]);
+  }, [paramMockTestId, userProfile?.id, fetchMockTestById, fetchMockTestByUserId]);
+
+  // Check if user has already completed the mock test after it's loaded
+  useEffect(() => {
+    const checkCompletion = async () => {
+      if (!userProfile?.id || !mockTest?.id) return;
+      
+      const hasCompleted = await hasUserCompletedMockTest(userProfile.id, mockTest.id);
+      if (hasCompleted) {
+        // User has already completed this test, redirect to mock tests page
+        navigate('/mock-tests', { 
+          replace: true,
+          state: { 
+            error: 'You have already completed this mock test. You cannot access it again.' 
+          }
+        });
+      }
+    };
+    
+    checkCompletion();
+  }, [userProfile?.id, mockTest?.id, hasUserCompletedMockTest, navigate]);
 
   // Use param mockTestId if available, otherwise use fetched mockTest
   const effectiveMockTestId = paramMockTestId || mockTest?.id;
@@ -72,8 +96,20 @@ const MockTestFlow = () => {
     }
   }, [currentSection, sectionResults, effectiveMockTestId]);
 
-  const handleIntroVideoComplete = () => {
+  const handleIntroVideoComplete = async () => {
     setShowIntroVideo(false);
+    
+    // Update mock_test_clients status to 'started' when test begins (listening is first section)
+    if (client?.id) {
+      try {
+        await updateClientStatus(client.id, 'started');
+        console.log('[MockTestFlow] Mock test client status updated to started');
+      } catch (err) {
+        console.error('[MockTestFlow] Error updating mock test client status to started:', err);
+        // Don't block navigation if status update fails
+      }
+    }
+    
     setCurrentSection('listening');
   };
 
@@ -95,13 +131,38 @@ const MockTestFlow = () => {
     setCurrentSection('writing');
   };
 
-  const handleWritingComplete = (result) => {
+  const handleWritingComplete = async (result) => {
     console.log('[MockTestFlow] Writing completed, result:', result);
     const updatedResults = {
       ...sectionResults,
       writing: result,
     };
     setSectionResults(updatedResults);
+    
+    // Update mock_test_clients status to 'completed' when all sections are done
+    // Try to get client ID from component state, or from store if not available
+    let clientIdToUpdate = client?.id;
+    if (!clientIdToUpdate) {
+      // Try to get from store
+      const storeState = useMockTestClientStore.getState();
+      clientIdToUpdate = storeState.client?.id;
+    }
+    
+    if (clientIdToUpdate) {
+      try {
+        const updateResult = await updateClientStatus(clientIdToUpdate, 'completed');
+        if (updateResult.success) {
+          console.log('[MockTestFlow] Mock test client status updated to completed');
+        } else {
+          console.error('[MockTestFlow] Failed to update status:', updateResult.error);
+        }
+      } catch (err) {
+        console.error('[MockTestFlow] Error updating mock test client status to completed:', err);
+        // Don't block navigation if status update fails
+      }
+    } else {
+      console.warn('[MockTestFlow] Cannot update status to completed: client.id is not available in state or store');
+    }
     
     // Clear all mock test data from localStorage after all sections are completed
     // This includes main progress data and all completion signals

@@ -68,14 +68,14 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...black);
   doc.text('INTERNATIONAL ENGLISH LANGUAGE TESTING SYSTEM', margin, yPos);
-  
+
   yPos += 5;
-  
+
   // "Test Report Form"
   doc.setFontSize(9);
   doc.setFont(undefined, 'bold');
   doc.text('Test Report Form', margin, yPos);
-  
+
   // ACADEMIC module box at top right - smaller and more formal
   const academicBoxWidth = 20;
   const academicBoxHeight = 5;
@@ -86,7 +86,7 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   doc.setFontSize(6);
   doc.setFont(undefined, 'bold');
   doc.text('ACADEMIC', academicBoxX + academicBoxWidth / 2, margin + 2.5, { align: 'center' });
-  
+
   yPos += 7;
 
   // NOTE section - reduced size
@@ -95,33 +95,33 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   doc.setTextColor(...darkGray);
   const noteText = 'NOTE: Admission to undergraduate and post graduate courses should be based on the ACADEMIC Reading and Writing Modules. GENERAL TRAINING Reading and Writing Modules are not designed to test the full range of language skills required for academic purposes. It is recommended that the candidate\'s language ability as indicated in this Test Report Form be re-assessed after two years from the date of the test.';
   doc.text(noteText, margin, yPos, { maxWidth: pageWidth - 2 * margin });
-  
+
   yPos += 8;
 
   // Centre Number, Date, Candidate Number row - using grid system
   doc.setFontSize(7);
   doc.setFont(undefined, 'normal');
   doc.setTextColor(...black);
-  
+
   // Centre Number
   doc.setFont(undefined, 'bold');
   doc.text('Centre Number:', gridCol1, yPos);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(settings?.centreNumber || '-'), gridCol2, yPos);
-  
+
   // Date
   doc.setFont(undefined, 'bold');
-  doc.text('Date:', gridCol3, yPos);
-  doc.setFont(undefined, 'normal');
-  doc.text(formatDate(client.date || client.created_at), gridCol4, yPos);
-  
+// Date yozuvi va sana qiymati orasidagi masofani kamaytirish
+doc.text('Date:', gridCol3, yPos);
+doc.text(formatDate(client.date || client.created_at), gridCol3 + 15, yPos); // 180 o'rniga gridCol3 + 15
+
   // Candidate Number
   doc.setFont(undefined, 'bold');
   doc.text('Candidate Number:', gridCol1, yPos + 5);
   doc.setFont(undefined, 'normal');
   const candidateNumber = client.id ? String(client.id).slice(0, 8) : '-';
   doc.text(formatValue(candidateNumber), gridCol2, yPos + 5);
-  
+
   yPos += 10;
 
   // Candidate Details Section
@@ -129,7 +129,7 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...black);
   doc.text('Candidate Details', margin, yPos);
-  
+
   yPos += 5;
 
   // Create proper 2-column table with inner lines
@@ -139,16 +139,16 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   const photoBoxSize = 25;
   const photoBoxX = pageWidth - margin - photoBoxSize - 5;
   const photoBoxY = yPos + 3;
-  
+
   // Outer border
   doc.setDrawColor(...black);
   doc.setLineWidth(0.5);
   doc.rect(margin, yPos, candidateBoxWidth, candidateBoxHeight);
-  
+
   // Vertical line dividing columns
   const verticalLineX = margin + columnWidth + 17.5;
   doc.line(verticalLineX, yPos, verticalLineX, yPos + candidateBoxHeight);
-  
+
   // Photo box on the right
   doc.setDrawColor(...black);
   doc.setLineWidth(0.5);
@@ -165,90 +165,90 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   const rightColX = verticalLineX + 3;
   const labelWidth = 35;
   const valueOffset = 40;
-  
+
   doc.setFontSize(7);
   doc.setFont(undefined, 'normal');
   doc.setTextColor(...black);
-  
+
   const nameParts = client.full_name ? client.full_name.split(' ') : ['', ''];
   const familyName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0] || '-';
   const firstName = nameParts[0] || '-';
-  
+
   // Left column fields
   let currentY = yPos + rowHeight / 2;
-  
+
   // Row 1: Family Name
   doc.setFont(undefined, 'bold');
   doc.text('Family Name:', leftColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(familyName), leftColX + valueOffset, currentY);
   doc.line(margin, currentY + 2, verticalLineX, currentY + 2);
-  
+
   currentY += rowHeight;
-  
+
   // Row 2: First Name
   doc.setFont(undefined, 'bold');
   doc.text('First Name:', leftColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(firstName), leftColX + valueOffset, currentY);
   doc.line(margin, currentY + 2, verticalLineX, currentY + 2);
-  
+
   currentY += rowHeight;
-  
+
   // Row 3: Candidate ID
   doc.setFont(undefined, 'bold');
   doc.text('Candidate ID:', leftColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(candidateNumber), leftColX + valueOffset, currentY);
   doc.line(margin, currentY + 2, verticalLineX, currentY + 2);
-  
+
   currentY += rowHeight;
-  
+
   // Row 4: Date of Birth
   doc.setFont(undefined, 'bold');
   doc.text('Date of Birth:', leftColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatDate(client.date_of_birth), leftColX + valueOffset, currentY);
   doc.line(margin, currentY + 2, verticalLineX, currentY + 2);
-  
+
   currentY += rowHeight;
-  
+
   // Row 5: Sex (M/F)
   doc.setFont(undefined, 'bold');
   doc.text('Sex (M/F):', leftColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(client.sex || '-'), leftColX + valueOffset, currentY);
   doc.line(margin, currentY + 2, verticalLineX, currentY + 2);
-  
+
   currentY += rowHeight;
-  
+
   // Row 6: First Language
   doc.setFont(undefined, 'bold');
   doc.text('First Language:', leftColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(client.first_language || '-'), leftColX + valueOffset, currentY);
-  
+
   // Right column fields
   currentY = yPos + rowHeight / 2;
-  
+
   // Row 1: Passport Number (NEW)
   doc.setFont(undefined, 'bold');
   doc.text('Passport Number:', rightColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(client.passport_number || '-'), rightColX + 35, currentY);
   doc.line(verticalLineX, currentY + 2, photoBoxX - 5, currentY + 2);
-  
+
   currentY += rowHeight;
-  
+
   // Row 2: Scheme Code
   doc.setFont(undefined, 'bold');
   doc.text('Scheme Code:', rightColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(client.scheme_code || '-'), rightColX + 35, currentY);
   doc.line(verticalLineX, currentY + 2, photoBoxX - 5, currentY + 2);
-  
+
   currentY += rowHeight;
-  
+
   // Row 3: Private Candidate checkbox
   doc.setFont(undefined, 'bold');
   doc.text('Private Candidate:', rightColX, currentY);
@@ -264,33 +264,33 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   }
   doc.setFontSize(7);
   doc.line(verticalLineX, currentY + 2, photoBoxX - 5, currentY + 2);
-  
+
   currentY += rowHeight;
-  
+
   // Row 4: Country or Region of Origin
   doc.setFont(undefined, 'bold');
   doc.text('Country/Region:', rightColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(client.country || client.region || '-'), rightColX + 35, currentY);
   doc.line(verticalLineX, currentY + 2, photoBoxX - 5, currentY + 2);
-  
+
   currentY += rowHeight;
-  
+
   // Row 5: Repeating IELTS (Y/N)
   doc.setFont(undefined, 'bold');
   doc.text('Repeating IELTS:', rightColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(client.repeating_ielts || 'N'), rightColX + 35, currentY);
   doc.line(verticalLineX, currentY + 2, photoBoxX - 5, currentY + 2);
-  
+
   currentY += rowHeight;
-  
+
   // Row 6: Test Type Code (NEW)
   doc.setFont(undefined, 'bold');
   doc.text('Test Type Code:', rightColX, currentY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(client.test_type_code || settings?.testTypeCode || 'A'), rightColX + 35, currentY);
-  
+
   yPos += candidateBoxHeight + 8;
 
   // Test Results Section
@@ -298,7 +298,7 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...black);
   doc.text('Test Results', margin, yPos);
-  
+
   yPos += 6;
 
   // Helper function to format score
@@ -313,7 +313,7 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   const scoreBoxSpacing = 3;
   const overallBoxWidth = 22; // Slightly wider for Overall Band Score
   const overallBoxHeight = 12;
-  
+
   const scoreLabels = ['Listening', 'Reading', 'Writing', 'Speaking'];
   const scores = [
     results?.listening?.score,
@@ -321,30 +321,30 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
     results?.writing?.score,
     results?.speaking?.score
   ];
-  
+
   // Calculate overall score by averaging 4 sections
   const overallScore = calculateOverallScore(scores) || client.total_score;
-  
+
   // Calculate total width needed for all 5 boxes
   const scoreStartX = margin;
-  
+
   // Draw 4 section score boxes - WHITE with BLACK border
   scoreLabels.forEach((label, index) => {
     const boxX = scoreStartX + (index * (scoreBoxWidth + scoreBoxSpacing));
-    
+
     // White box background with black border
     doc.setFillColor(255, 255, 255);
     doc.setDrawColor(...black);
     doc.setLineWidth(0.8);
     doc.rect(boxX, yPos, scoreBoxWidth, scoreBoxHeight, 'FD');
-    
+
     // Score text - BLACK
     doc.setFontSize(10);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(...black);
     const scoreValue = formatScore(scores[index]);
-    doc.text(scoreValue, boxX + scoreBoxWidth / 2, yPos + scoreBoxHeight / 2 + 2.5, { align: 'center' });
-    
+    doc.text(scoreValue, boxX + scoreBoxWidth / 2, yPos + scoreBoxHeight / 2 + 1.5, { align: 'center' });
+
     // Label below
     doc.setFontSize(7);
     doc.setFont(undefined, 'normal');
@@ -354,19 +354,19 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
 
   // Overall Band Score box - positioned at the end (right side)
   const overallBoxX = scoreStartX + (scoreBoxWidth * 6) + (scoreBoxSpacing * 5);
-  
+
   // Thick black border box
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(...black);
-  doc.setLineWidth(1.2);
+  doc.setLineWidth(0.8);
   doc.rect(overallBoxX, yPos, overallBoxWidth, overallBoxHeight, 'FD');
-  
+
   // Score text - BLACK
   doc.setFontSize(10);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...black);
-  doc.text(formatScore(overallScore), overallBoxX + overallBoxWidth / 2, yPos + overallBoxHeight / 2 + 2.5, { align: 'center' });
-  
+  doc.text(formatScore(overallScore), overallBoxX + overallBoxWidth / 2, yPos + overallBoxHeight / 2 + 1.5, { align: 'center' });
+
   // Label below
   doc.setFontSize(7);
   doc.setFont(undefined, 'normal');
@@ -377,7 +377,7 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
 
   // Bottom section: Writing Examiner Number, Speaking Examiner Number, Administrator's Signature
   const bottomY = yPos;
-  
+
   // Writing Examiner Number
   doc.setFontSize(7);
   doc.setFont(undefined, 'bold');
@@ -385,83 +385,33 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   doc.text('Writing Examiner Number:', margin, bottomY);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(client.writing_examiner_number || '-'), margin, bottomY + 4);
-  
+
   // Speaking Examiner Number
   doc.setFont(undefined, 'bold');
   doc.text('Speaking Examiner Number:', margin, bottomY + 8);
   doc.setFont(undefined, 'normal');
   doc.text(formatValue(client.speaking_examiner_number || '-'), margin, bottomY + 12);
-  
+
   // Administrator's Signature (center)
   const signatureX = pageWidth / 2 - 45;
   doc.setDrawColor(...black);
   doc.setLineWidth(0.5);
   doc.line(signatureX, bottomY + 6, signatureX + 90, bottomY + 6);
-  
+
   doc.setFontSize(7);
   doc.setFont(undefined, 'normal');
   doc.setTextColor(...black);
   doc.text('Administrator\'s Signature', signatureX + 45, bottomY + 11, { align: 'center' });
-  
+
   doc.setFontSize(6);
-  const dateLabelX = signatureX + 10;
-  const dateValueX = dateLabelX + 18; // Small gap after "Date:"
-  doc.text('Date:', dateLabelX, bottomY + 16, { align: 'left' });
-  doc.text(formatDate(client.date || client.created_at), dateValueX, bottomY + 16, { align: 'left' });
-  
-  // // Centre Stamp (left)
-  // const stampX = margin + 15;
-  // const stampY = bottomY;
-  // const stampSize = 35;
-  // doc.setDrawColor(...borderColor);
-  // doc.setLineWidth(1);
-  // doc.setFillColor(255, 255, 255);
-  // doc.rect(stampX, stampY, stampSize, stampSize, 'FD');
-  
-  // doc.setFontSize(6);
-  // doc.setFont(undefined, 'normal');
-  // doc.setTextColor(150, 150, 150);
-  // doc.text('Centre Stamp', stampX + stampSize / 2, stampY + stampSize / 2, { align: 'center' });
-  
-  // Validation Stamp (right) - enhanced design
-  // const validationStampX = pageWidth - margin - stampSize - 15;
-  // const validationStampY = bottomY;
-  // const stampCenterX = validationStampX + stampSize / 2;
-  // const stampCenterY = validationStampY + stampSize / 2;
-  
-  // // Outer circle with thicker border
-  // doc.setDrawColor(...black);
-  // doc.setLineWidth(1.2);
-  // doc.setFillColor(255, 255, 255);
-  // doc.circle(stampCenterX, stampCenterY, stampSize / 2, 'FD');
-  
-  // // Inner decorative circle
-  // doc.setDrawColor(...darkGray);
-  // doc.setLineWidth(0.5);
-  // doc.circle(stampCenterX, stampCenterY, stampSize / 2 - 2, 'D');
-  
-  // IELTS text
-  // doc.setFontSize(6);
-  // doc.setFont(undefined, 'bold');
-  // doc.setTextColor(...black);
-  // doc.text('IELTS', stampCenterX, stampCenterY - 2, { align: 'center' });
-  
-  // // Validation text
-  // doc.setFontSize(4);
-  // doc.setFont(undefined, 'bold');
-  // doc.setTextColor(...black);
-  // doc.text('VALIDATION', stampCenterX, stampCenterY + 2, { align: 'center' });
-  
-  // // Decorative lines
-  // doc.setDrawColor(...darkGray);
-  // doc.setLineWidth(0.3);
-  // doc.line(stampCenterX - 6, stampCenterY - 4, stampCenterX + 6, stampCenterY - 4);
-  // doc.line(stampCenterX - 6, stampCenterY + 4, stampCenterX + 6, stampCenterY + 4);
-  
+  // Date yozuvi va sana qiymati orasidagi masofani kamaytirish
+  doc.text('Date:', gridCol3, yPos);
+  doc.text(formatDate(client.date || client.created_at), gridCol3 + 15, yPos); // 180 o'rniga gridCol3 + 15
+
   // Test Report Form Number (bottom right) - white background with black border
   const formNumberY = pageHeight - 10;
   const formNumber = client.id ? String(client.id).replace(/-/g, '').toUpperCase().slice(0, 20) : '-';
-  
+
   // White box with black border for form number
   const formNumberBoxWidth = 55;
   const formNumberBoxHeight = 6;
@@ -470,17 +420,17 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   doc.setDrawColor(...black);
   doc.setLineWidth(0.8);
   doc.rect(formNumberBoxX, formNumberY - 4, formNumberBoxWidth, formNumberBoxHeight, 'FD');
-  
+
   doc.setFontSize(6);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...black);
   doc.text(formatValue(formNumber), formNumberBoxX + formNumberBoxWidth / 2, formNumberY, { align: 'center' });
-  
+
   doc.setFontSize(5);
   doc.setFont(undefined, 'normal');
   doc.setTextColor(...darkGray);
   doc.text('Test Report Form Number', formNumberBoxX + formNumberBoxWidth / 2, formNumberY + 4, { align: 'center' });
-  
+
   // Add version number (bottom left)
   doc.setFontSize(5);
   doc.setFont(undefined, 'normal');

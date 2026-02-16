@@ -16,9 +16,10 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import LogoutModal from '../modal/LogoutModal';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
+import LogoDesign from '../LogoDesign';
 
 
-const DashboardNavbar = ({ onMenuClick }) => {
+const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
   const navigate = useNavigate();
   const authUser = useAuthStore((state) => state.authUser);
   const userProfile = useAuthStore((state) => state.userProfile);
@@ -55,6 +56,20 @@ const DashboardNavbar = ({ onMenuClick }) => {
       <div className="h-full px-4 md:px-8 flex items-center justify-between">
 
         {/* ===== LEFT ===== */}
+        {flow === 'mockTest' && (
+            <div className="flex items-center gap-3">
+                {/* <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
+                  <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
+                </div>
+                <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
+                  IELTSCORE
+                </span> */}
+                <LogoDesign />
+                <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                  Mock Test
+                </span>
+              </div>
+        )}
         <div className="flex items-center gap-3">
           {onMenuClick && (
             <button
@@ -112,7 +127,8 @@ const DashboardNavbar = ({ onMenuClick }) => {
             </div>
 
             <div className="px-2 pb-2">
-              <DropdownMenuItem asChild className="hover:bg-gray-50">
+              {flow !== 'mockTest' && (
+                <DropdownMenuItem asChild className="hover:bg-gray-50">
                 <Link
                   to="/profile"
                   className="flex items-center gap-3 px-3 py-2 rounded-xl"
@@ -121,6 +137,7 @@ const DashboardNavbar = ({ onMenuClick }) => {
                   Profile Settings
                 </Link>
               </DropdownMenuItem>
+              )}
 
               <LogoutModal onConfirm={handleLogout}>
                 <DropdownMenuItem

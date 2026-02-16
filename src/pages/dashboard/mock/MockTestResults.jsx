@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaTelegramPlane } from 'react-icons/fa';
 import { MdSchedule, MdCheckCircleOutline } from 'react-icons/md';
-import { clearAllMockTestDataForId } from '@/store/LocalStorage/mockTestStorage';
+import { clearAllMockTestDataForId, clearAllMockTestData } from '@/store/LocalStorage/mockTestStorage';
 
 /**
  * Mock Test Results Page (Pending Evaluation)
@@ -16,12 +16,13 @@ const MockTestResults = ({ mockTestId, results, onBack }) => {
   // Log when results page is displayed and ensure localStorage is cleared
   useEffect(() => {
     console.log('[MockTestResults] Results page displayed', { mockTestId, results });
-    
+
     // Ensure all localStorage data is cleared when results page loads
     // This is a safety measure in case cleanup didn't happen earlier
     if (mockTestId) {
       console.log('[MockTestResults] Ensuring localStorage cleanup for mock test:', mockTestId);
       clearAllMockTestDataForId(mockTestId);
+      clearAllMockTestData();
     }
   }, [mockTestId, results]);
 
@@ -44,7 +45,7 @@ const MockTestResults = ({ mockTestId, results, onBack }) => {
 
           {/* Main Message */}
           <p className="text-gray-600 text-base md:text-lg mb-8 leading-relaxed">
-            Your answers have been successfully recorded. 
+            Your answers have been successfully recorded.
             The evaluation process is currently in progress.
           </p>
 
@@ -88,13 +89,17 @@ const MockTestResults = ({ mockTestId, results, onBack }) => {
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => navigate('/mock-tests')}
+              onClick={() => {
+                navigate('/mock-tests');
+                clearAllMockTestDataForId(mockTestId);
+                clearAllMockTestData();
+              }}
               className="px-8 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-all shadow-md"
             >
               Go to Mock Tests
             </button>
 
-            
+
           </div>
 
         </div>

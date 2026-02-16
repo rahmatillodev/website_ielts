@@ -40,6 +40,8 @@ import FeedbackModal from "./components/modal/FeedbackModal";
 import WritingPracticePage from "./pages/dashboard/writing/WritingPracticePage";
 import WritingHistoryPage from "./pages/dashboard/writing/WritingHistoryPage";
 import MockTestResults from "./pages/dashboard/mock/MockTestResults";
+import MockTestHistoryPage from "./pages/dashboard/mock/MockTestHistoryPage";
+import MockTestClientResultsPage from "./pages/dashboard/mock/MockTestClientResultsPage";
 import MockTestRoute from "./components/MockTestRoute";
 import RegularDashboardRoute from "./components/RegularDashboardRoute";
 // Main App component with routing
@@ -166,6 +168,8 @@ function App() {
               <Route path="/mock/center" element={<MockCenterPage />} />
               <Route path="/mock-test/flow/:mockTestId" element={<MockTestFlow />} />
               <Route path="/mock-test/results" element={<MockTestResults />} />
+              <Route path="/mock-test/history" element={<MockTestHistoryPage />} />
+              <Route path="/mock-test/results/:clientId" element={<MockTestClientResultsPage />} />
 
               <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
               <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
