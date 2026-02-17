@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import PublicLayout from "./layouts/LandingLayout";
@@ -58,6 +58,7 @@ function App() {
   const [feedbackOpen, setFeedbackOpen] = useState(false)
 
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
 
   useEffect(() => {
     // Initialize session on app load
@@ -75,10 +76,28 @@ function App() {
     }
   }, [fetchTests, isInitialized, user])
 
+  // Helper function to check if a route is a mock test route
+  const isMockTestRoute = (path) => {
+    return path.startsWith("/mock-test") || 
+           path.startsWith("/mock-tests") || 
+           path.startsWith("/mock/") || 
+           path === "/mock";
+  }
+
+  // Helper function to check if a route is a practice page
+  const isPracticePageRoute = (path) => {
+    return path.includes('/reading-practice') || 
+           path.includes('/listening-practice') || 
+           path.includes('/writing-practice') ||
+           path.includes('/speaking-practice') ||
+           path.includes('/reading-result') ||
+           path.includes('/listening-result') ||
+           path.includes('/speaking-result');
+  }
+
   // Set access mode in sessionStorage based on current route
   // This works for both logged in and logged out users
   useEffect(() => {
-    
     // Don't set access mode for public pages (login, signup, landing)
     if (location.pathname === '/' || 
         location.pathname === '/login' || 
@@ -91,47 +110,130 @@ function App() {
       return;
     }
 
-    // Set access mode based on route type - STRICT separation
+    // If user is not authenticated, only set accessMode for mock test routes
+    // This ensures mock test users have accessMode set even before login
+    if (!user) {
+      if (isMockTestRoute(location.pathname)) {
+        sessionStorage.setItem('accessMode', 'mockTest');
+      }
+      return;
+    }
+
+    // For authenticated users, set access mode based on route type
+    // Practice pages accessed from mock test routes should preserve mockTest mode
+    if (isPracticePageRoute(location.pathname)) {
+      // If accessMode is not set, try to infer from URL params or set based on context
+      const currentAccessMode = sessionStorage.getItem('accessMode');
+      if (!currentAccessMode) {
+        // Check if there's a mockTest param in the URL
+        const isMockTestParam = searchParams.get('mockTest') === 'true';
+        if (isMockTestParam) {
+          sessionStorage.setItem('accessMode', 'mockTest');
+        } else {
+          // Default to regular if no indication of mock test
+          sessionStorage.setItem('accessMode', 'regular');
+        }
+      }
+      // Otherwise preserve existing accessMode
+      return;
+    }
+
+    // Set access mode based on route type
     if (isMockTestRoute(location.pathname)) {
       // Always set mockTest for mock test routes
       sessionStorage.setItem('accessMode', 'mockTest');
-    } else if (location.pathname !== '/' && 
-               location.pathname !== '/login' && 
-               location.pathname !== '/signup') {
+    } else {
       // Set regular mode for regular dashboard routes
-      // Practice pages will inherit the mode from their parent route
-      const isPracticePage = location.pathname.includes('/reading-practice') || 
-                            location.pathname.includes('/listening-practice') || 
-                            location.pathname.includes('/writing-practice') ||
-                            location.pathname.includes('/speaking-practice') ||
-                            location.pathname.includes('/reading-result') ||
-                            location.pathname.includes('/listening-result') ||
-                            location.pathname.includes('/speaking-result');
-      
-      // For practice pages, preserve current mode (they can be accessed from either platform)
-      // For regular routes, set to regular
-      if (!isPracticePage) {
+      sessionStorage.setItem('accessMode', 'regular');
+    }
+  }, [location.pathname, location.search, user]);
+
+  // Helper function to check if a route is a practice page (for UI display)
+  const isPracticePage = 
+    location.pathname.includes("/reading-practice") || 
+    location.pathname.includes("/listening-practice") || 
+    location.pathname.includes("/writing-practice") || 
+    location.pathname.includes("/speaking-practice") || 
+    location.pathname.includes("/own-writing") ||
+    location.pathname.includes("/mock-test/flow") || 
+    location.pathname.includes("/speaking-result");
+
+  // Centralized redirect logic based on accessMode
+  // Use useEffect to handle redirects to prevent infinite loops
+  const navigate = useNavigate();
+  const lastRedirectRef = useRef(null);
+
+  useEffect(() => {
+    if (!user || loading || !isInitialized) {
+      return;
+    }
+    
+    let accessMode = sessionStorage.getItem('accessMode');
+    const pathname = location.pathname;
+    
+    // If accessMode is not set, try to infer from route
+    if (!accessMode) {
+      if (isMockTestRoute(pathname)) {
+        accessMode = 'mockTest';
+        sessionStorage.setItem('accessMode', 'mockTest');
+      } else if (isPracticePageRoute(pathname)) {
+        // Check URL params for mockTest indicator
+        const isMockTestParam = searchParams.get('mockTest') === 'true';
+        accessMode = isMockTestParam ? 'mockTest' : 'regular';
+        sessionStorage.setItem('accessMode', accessMode);
+      } else {
+        // Default to regular for other routes
+        accessMode = 'regular';
         sessionStorage.setItem('accessMode', 'regular');
       }
     }
-  }, [location.pathname, user]);
-
-  const isPracticePage = 
-  location.pathname.includes("/reading-practice") || 
-  location.pathname.includes("/listening-practice") || 
-  location.pathname.includes("/writing-practice") || 
-  location.pathname.includes("/speaking-practice") || 
-  location.pathname.includes("/own-writing") ||
-  location.pathname.includes("/mock-test/flow") || 
-  location.pathname.includes("/speaking-result");
-
-  // Helper function to check if a route is a mock test route
-  const isMockTestRoute = (path) => {
-    return path.startsWith("/mock-test") || 
-           path.startsWith("/mock-tests") || 
-           path.startsWith("/mock/") || 
-           path === "/mock";
-  }
+    
+    // Allow practice pages and profile from both platforms
+    if (pathname === '/profile' || isPracticePageRoute(pathname)) {
+      lastRedirectRef.current = null;
+      return;
+    }
+    
+    // Allow public pages
+    if (pathname === '/' || pathname === '/login' || pathname === '/signup') {
+      lastRedirectRef.current = null;
+      return;
+    }
+    
+    let target = null;
+    
+    // If accessMode is mockTest, redirect away from regular dashboard routes
+    if (accessMode === 'mockTest') {
+      const isRegularDashboardRoute = pathname === '/dashboard' || 
+                                      pathname === '/reading' || 
+                                      pathname === '/listening' || 
+                                      pathname === '/writing' || 
+                                      pathname === '/speaking' || 
+                                      pathname === '/analytics' ||
+                                      pathname === '/own-writing' ||
+                                      pathname.startsWith('/writing/writing-history');
+      
+      if (isRegularDashboardRoute) {
+        target = '/mock-tests';
+      }
+    }
+    
+    // If accessMode is regular, redirect away from mock test routes
+    if (accessMode === 'regular') {
+      if (isMockTestRoute(pathname)) {
+        target = '/dashboard';
+      }
+    }
+    
+    // Only redirect if we have a target, it's different from current path, and we haven't already redirected to this target
+    if (target && target !== pathname && lastRedirectRef.current !== `${pathname}->${target}`) {
+      lastRedirectRef.current = `${pathname}->${target}`;
+      navigate(target, { replace: true });
+    } else if (!target) {
+      // Reset the ref if no redirect is needed
+      lastRedirectRef.current = null;
+    }
+  }, [location.pathname, location.search, user, loading, isInitialized, navigate]);
 
   // Show loading state while initializing authentication
   if (loading && !isInitialized) {
@@ -144,7 +246,6 @@ function App() {
       </div>
     );
   }
-  
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -191,7 +292,7 @@ function App() {
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/own-writing" element={<OwnWritingPage />} />
               <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
-              {/* Practice pages accessible from regular dashboard - only if in regular mode */}
+              {/* Practice pages accessible from regular dashboard */}
               <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
               <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
               <Route path="/speaking-practice/:id/session" element={<SpeakingTaskPage />} />

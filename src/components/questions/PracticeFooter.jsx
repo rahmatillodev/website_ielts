@@ -153,7 +153,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                     <div className='w-full h-20' style={{ backgroundColor: themeColors.backgroundColor !== '#000000' ? '#E0E0E0' : themeColors.backgroundColor }}>
                       <div className="flex items-center justify-start w-full h-full min-w-0 px-2">
                         {/* LEFT: Part X + question numbers in one row */}
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex items-center justify-center flex-1 min-w-0">
                           <div
                             className="font-semibold text-md text-center shrink-0"
                             style={{ color: themeColors.text }}
@@ -161,7 +161,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                             Part {partNumber}
                           </div>
                           {partQuestions.length > 0 && (
-                            <div className="flex flex-col flex-1 min-w-0 w-full items-center">
+                            <div className="flex flex-col min-w-0 items-center">
                           {/* Progress bars above question buttons */}
                           <div className="flex items-center gap-x-1 overflow-x-auto max-w-full">
                             {[...partQuestions]

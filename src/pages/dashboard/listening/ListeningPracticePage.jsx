@@ -625,7 +625,13 @@ const ListeningPracticePageContent = () => {
       clearListeningPracticeData(id);
       clearAudioPosition(id);
     }
-    navigate("/dashboard");
+    // Navigate based on accessMode to prevent redirect loops
+    const accessMode = sessionStorage.getItem('accessMode');
+    if (accessMode === 'mockTest') {
+      navigate("/mock-tests");
+    } else {
+      navigate("/dashboard");
+    }
   };
 
   const handleExitConfirm = async () => {
@@ -1283,7 +1289,13 @@ const ListeningPracticePageContent = () => {
                     <button
                       onClick={() => {
                         toast.error(fetchError);
-                        navigate("/dashboard");
+                        // Navigate based on accessMode to prevent redirect loops
+                        const accessMode = sessionStorage.getItem('accessMode');
+                        if (accessMode === 'mockTest') {
+                          navigate("/mock-tests");
+                        } else {
+                          navigate("/dashboard");
+                        }
                       }}
                       className="px-4 py-2 rounded-lg text-sm border transition-all hover:scale-[1.02]"
                       style={{

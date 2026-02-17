@@ -48,6 +48,19 @@ const DashboardLayout = () => {
         return;
       }
       
+      // Practice pages are accessible from both platforms - preserve accessMode, don't redirect
+      const isPracticePage = pathname.includes('/reading-practice') || 
+                            pathname.includes('/listening-practice') || 
+                            pathname.includes('/writing-practice') ||
+                            pathname.includes('/speaking-practice') ||
+                            pathname.includes('/reading-result') ||
+                            pathname.includes('/listening-result') ||
+                            pathname.includes('/speaking-result');
+      
+      if (isPracticePage) {
+        return;
+      }
+      
       // Only redirect if they're trying to access dashboard routes (not practice pages)
       const isDashboardRoute = pathname === '/dashboard' || 
                                pathname === '/reading' || 

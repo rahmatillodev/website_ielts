@@ -34,6 +34,19 @@ const MockTestLayout = () => {
         return;
       }
       
+      // Practice pages are accessible from both platforms - preserve accessMode, don't redirect
+      const isPracticePage = pathname.includes('/reading-practice') || 
+                            pathname.includes('/listening-practice') || 
+                            pathname.includes('/writing-practice') ||
+                            pathname.includes('/speaking-practice') ||
+                            pathname.includes('/reading-result') ||
+                            pathname.includes('/listening-result') ||
+                            pathname.includes('/speaking-result');
+      
+      if (isPracticePage) {
+        return;
+      }
+      
       if (accessMode === 'regular') {
         console.log('[MockTestLayout] Regular user detected in mock test layout, redirecting to dashboard');
         navigate('/dashboard', { replace: true });
