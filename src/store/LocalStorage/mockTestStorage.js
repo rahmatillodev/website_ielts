@@ -151,9 +151,15 @@ export const clearAllMockTestDataForId = (mockTestId) => {
  */
 export const saveSectionData = (mockTestId, section, sectionData) => {
   const currentData = loadMockTestData(mockTestId) || {};
+  // Always use sectionData.answers if provided, even if it's an empty object
+  // This ensures answers are saved correctly and not lost
+  const answersToSave = sectionData.answers !== undefined 
+    ? sectionData.answers 
+    : (currentData[`${section}Answers`] || {});
+  
   const updatedData = {
     ...currentData,
-    [`${section}Answers`]: sectionData.answers || currentData[`${section}Answers`] || {},
+    [`${section}Answers`]: answersToSave,
     [`${section}TimeRemaining`]: sectionData.timeRemaining ?? currentData[`${section}TimeRemaining`],
     [`${section}StartTime`]: sectionData.startTime ?? currentData[`${section}StartTime`],
     [`${section}Completed`]: sectionData.completed ?? currentData[`${section}Completed`] ?? false,

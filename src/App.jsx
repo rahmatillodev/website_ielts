@@ -98,10 +98,19 @@ function App() {
   // Set access mode in sessionStorage based on current route
   // This works for both logged in and logged out users
   useEffect(() => {
-    // Don't set access mode for public pages (login, signup, landing)
-    if (location.pathname === '/' || 
-        location.pathname === '/login' || 
-        location.pathname === '/signup') {
+    // Don't set access mode for login/signup pages (preserve existing mode)
+    if (location.pathname === '/login' || location.pathname === '/signup') {
+      return;
+    }
+
+    // Landing page (/) - set to regular if not already set
+    if (location.pathname === '/') {
+      if (!user) {
+        const currentAccessMode = sessionStorage.getItem('accessMode');
+        if (!currentAccessMode) {
+          sessionStorage.setItem('accessMode', 'regular');
+        }
+      }
       return;
     }
 
@@ -110,11 +119,27 @@ function App() {
       return;
     }
 
-    // If user is not authenticated, only set accessMode for mock test routes
-    // This ensures mock test users have accessMode set even before login
+    // If user is not authenticated, set accessMode based on route type
+    // This ensures users have the correct accessMode set before login
     if (!user) {
       if (isMockTestRoute(location.pathname)) {
         sessionStorage.setItem('accessMode', 'mockTest');
+      } else if (isPracticePageRoute(location.pathname)) {
+        // Practice pages - check URL params or preserve existing
+        const currentAccessMode = sessionStorage.getItem('accessMode');
+        if (!currentAccessMode) {
+          const isMockTestParam = searchParams.get('mockTest') === 'true';
+          sessionStorage.setItem('accessMode', isMockTestParam ? 'mockTest' : 'regular');
+        }
+      } else if (location.pathname === '/dashboard' || 
+                 location.pathname === '/reading' ||
+                 location.pathname === '/listening' ||
+                 location.pathname === '/writing' ||
+                 location.pathname === '/speaking' ||
+                 location.pathname === '/analytics' ||
+                 location.pathname === '/own-writing') {
+        // Regular dashboard routes - set to regular
+        sessionStorage.setItem('accessMode', 'regular');
       }
       return;
     }

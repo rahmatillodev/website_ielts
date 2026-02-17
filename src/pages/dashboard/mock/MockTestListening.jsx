@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMockTestSecurity } from '@/hooks/useMockTestSecurity';
 import MockTestExitModal from '@/components/modal/MockTestExitModal';
@@ -27,8 +27,73 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
   // Track if this is an early exit submission
   const [isEarlyExit, setIsEarlyExit] = useState(false);
 
+  // Store callbacks in refs to avoid restarting polling when callbacks change
+  const onCompleteRef = useRef(onComplete);
+  const onEarlyExitRef = useRef(onEarlyExit);
+  const isEarlyExitRef = useRef(isEarlyExit);
+
+  // Update refs when callbacks or isEarlyExit change
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+    onEarlyExitRef.current = onEarlyExit;
+    isEarlyExitRef.current = isEarlyExit;
+   
+  }, [onComplete, onEarlyExit, isEarlyExit]);
+
   // Listen for completion from practice page via localStorage polling
   useEffect(() => {
+    if (!mockTestId) {
+      return;
+    }
+    
+ 
+    
+    // Check immediately on mount (in case completion signal was set before component mounted)
+    const checkImmediately = () => {
+      const completed = localStorage.getItem(`mock_test_${mockTestId}_listening_completed`);
+      if (completed === 'true') {
+        console.log('[MockTestListening] Completion detected immediately on mount!', { mockTestId, isEarlyExit: isEarlyExitRef.current });
+        const result = localStorage.getItem(`mock_test_${mockTestId}_listening_result`);
+        if (result) {
+          try {
+            const parsedResult = JSON.parse(result);
+            console.log('[MockTestListening] Parsed result:', parsedResult);
+            
+            // Reset submitting state when completion is detected
+            setIsSubmitting(false);
+            
+            // If this was an early exit, navigate to results instead of next section
+            if (isEarlyExitRef.current && onEarlyExitRef.current) {
+              onEarlyExitRef.current(parsedResult, 'listening');
+            } else if (onCompleteRef.current) {
+              onCompleteRef.current(parsedResult);
+            } else {
+              console.warn('[MockTestListening] No onComplete or onEarlyExit handler available!', {
+                isEarlyExit: isEarlyExitRef.current,
+                hasOnComplete: !!onCompleteRef.current,
+                hasOnEarlyExit: !!onEarlyExitRef.current
+              });
+            }
+            
+            localStorage.removeItem(`mock_test_${mockTestId}_listening_completed`);
+            localStorage.removeItem(`mock_test_${mockTestId}_listening_result`);
+            return true; // Signal that we handled it
+          } catch (e) {
+            console.error('[MockTestListening] Error parsing listening result:', e);
+            setIsSubmitting(false);
+          }
+        } else {
+          console.warn('[MockTestListening] Completion detected but no result data found');
+        }
+      }
+      return false;
+    };
+    
+    // Check immediately
+    if (checkImmediately()) {
+      return; // Already handled, no need to set up polling
+    }
+    
     const checkCompletion = setInterval(() => {
       const completed = localStorage.getItem(`mock_test_${mockTestId}_listening_completed`);
       if (completed === 'true') {
@@ -41,27 +106,37 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
             setIsSubmitting(false);
             
             // If this was an early exit, navigate to results instead of next section
-            if (isEarlyExit && onEarlyExit) {
-              // Pass result to onEarlyExit so it can save it and navigate to results
-              onEarlyExit(parsedResult, 'listening');
-            } else if (onComplete) {
-              // Normal completion - proceed to next section
-              onComplete(parsedResult);
+            if (isEarlyExitRef.current && onEarlyExitRef.current) {
+              onEarlyExitRef.current(parsedResult, 'listening');
+            } else if (onCompleteRef.current) {
+              console.log('[MockTestListening] Calling onComplete (normal completion)', parsedResult);
+              onCompleteRef.current(parsedResult);
+            } else {
+              console.warn('[MockTestListening] No onComplete or onEarlyExit handler available!', {
+                isEarlyExit: isEarlyExitRef.current,
+                hasOnComplete: !!onCompleteRef.current,
+                hasOnEarlyExit: !!onEarlyExitRef.current
+              });
             }
             
             localStorage.removeItem(`mock_test_${mockTestId}_listening_completed`);
             localStorage.removeItem(`mock_test_${mockTestId}_listening_result`);
+            clearInterval(checkCompletion);
           } catch (e) {
-            console.error('Error parsing listening result:', e);
+            console.error('[MockTestListening] Error parsing listening result:', e);
             setIsSubmitting(false);
           }
+        } else {
+          console.warn('[MockTestListening] Completion detected but no result data found');
         }
-        clearInterval(checkCompletion);
       }
     }, 1000);
 
-    return () => clearInterval(checkCompletion);
-  }, [mockTestId, onComplete, onEarlyExit, isEarlyExit]);
+    return () => {
+      console.log('[MockTestListening] Cleaning up completion polling');
+      clearInterval(checkCompletion);
+    };
+  }, [mockTestId]); // Only depend on mockTestId, not callbacks
 
   const handleExitConfirm = async () => {
     setShowExitModal(false);

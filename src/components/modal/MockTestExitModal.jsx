@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * Modal that appears when user tries to exit the mock test
@@ -20,7 +21,7 @@ const MockTestExitModal = ({ isOpen, onConfirm, onCancel, isSubmitting = false }
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
         <div className="text-center">
@@ -96,6 +97,7 @@ const MockTestExitModal = ({ isOpen, onConfirm, onCancel, isSubmitting = false }
       </div>
     </div>
   );
+  return createPortal(modalContent, document.body);
 };
 
 export default MockTestExitModal;

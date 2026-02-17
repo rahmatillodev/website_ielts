@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useMockTestClientStore } from '@/store/mockTestClientStore';
 import { useAuthStore } from '@/store/authStore';
@@ -79,33 +79,48 @@ const MockTestFlow = () => {
   }, [location.state]);
 
   // Load saved progress (only if we didn't just come from MockTestsPage with device check done)
-  useEffect(() => {
-    if (appliedAudioCheckDoneRef.current || !effectiveMockTestId) return;
-    const savedData = loadMockTestData(effectiveMockTestId);
-    if (savedData) {
-      // Restore section state (but skip audioCheck if already completed)
-      if (savedData.currentSection && savedData.currentSection !== 'audioCheck') {
+// Load saved progress
+useEffect(() => {
+  if (appliedAudioCheckDoneRef.current || !effectiveMockTestId) return;
+
+  const savedData = loadMockTestData(effectiveMockTestId);
+
+  if (savedData) {
+    console.log('[MockTestFlow] Loaded savedData:', savedData);
+
+    // Restore results
+    if (savedData.sectionResults) {
+      setSectionResults(savedData.sectionResults);
+    }
+
+    if (savedData.currentSection) {
+      const sec = savedData.currentSection;
+
+      // skip audioCheck if already done
+      if (sec === 'audioCheck') {
+        setAudioCheckComplete(false);
+        setCurrentSection('audioCheck');
+      } else {
+        // mark that audio check was done
         setAudioCheckComplete(true);
-        if (savedData.currentSection === 'intro') {
-          setCurrentSection('intro');
-          setShowIntroVideo(true);
-        } else if (['listening', 'reading', 'writing'].includes(savedData.currentSection)) {
-          // Always show intro video first, then resume to saved section
-          setCurrentSection('intro');
-          setShowIntroVideo(true);
-          setResumeSectionAfterIntro(savedData.currentSection);
-        } else {
-          // results or other
-          setCurrentSection(savedData.currentSection);
-          setShowIntroVideo(false);
-        }
       }
-      // Restore results
-      if (savedData.sectionResults) {
-        setSectionResults(savedData.sectionResults);
+
+      // direct restore without forcing intro video
+      if (sec === 'intro') {
+        setCurrentSection('intro');
+        setShowIntroVideo(true);
+      }
+      else if (sec === 'listening'
+           || sec === 'reading'
+           || sec === 'writing'
+           || sec === 'results') {
+        setShowIntroVideo(false);   // don’t show video again
+        setCurrentSection(sec);      // restore exact section
       }
     }
-  }, [effectiveMockTestId]);
+  }
+}, [effectiveMockTestId]);
+
 
   // Save progress whenever section or results change
   useEffect(() => {
@@ -135,40 +150,33 @@ const MockTestFlow = () => {
     setCurrentSection('listening');
   };
 
-  const handleListeningComplete = (result) => {
-    const updatedResults = {
-      ...sectionResults,
+  const handleListeningComplete = useCallback((result) => {
+    setSectionResults((prevResults) => ({
+      ...prevResults,
       listening: result,
-    };
-    setSectionResults(updatedResults);
+    }));
     setCurrentSection('reading');
-  };
+  }, []);
 
-  const handleReadingComplete = (result) => {
-    const updatedResults = {
-      ...sectionResults,
+  const handleReadingComplete = useCallback((result) => {
+    setSectionResults((prevResults) => ({
+      ...prevResults,
       reading: result,
-    };
-    setSectionResults(updatedResults);
+    }));
     setCurrentSection('writing');
-  };
+  }, []);
 
-  const handleWritingComplete = async (result) => {
+  const handleWritingComplete = useCallback(async (result) => {
     console.log('[MockTestFlow] Writing completed, result:', result);
-    const updatedResults = {
-      ...sectionResults,
+    setSectionResults((prevResults) => ({
+      ...prevResults,
       writing: result,
-    };
-    setSectionResults(updatedResults);
+    }));
     
     // Update mock_test_clients status to 'completed' when all sections are done
     // Try to get client ID from component state, or from store if not available
-    let clientIdToUpdate = client?.id;
-    if (!clientIdToUpdate) {
-      // Try to get from store
-      const storeState = useMockTestClientStore.getState();
-      clientIdToUpdate = storeState.client?.id;
-    }
+    const storeState = useMockTestClientStore.getState();
+    let clientIdToUpdate = storeState.client?.id;
     
     if (clientIdToUpdate) {
       try {
@@ -188,42 +196,41 @@ const MockTestFlow = () => {
     
     // Clear all mock test data from localStorage after all sections are completed
     // This includes main progress data and all completion signals
-    if (effectiveMockTestId) {
-      console.log('[MockTestFlow] Clearing all localStorage data for mock test:', effectiveMockTestId);
-      clearAllMockTestDataForId(effectiveMockTestId);
+    const currentMockTestId = paramMockTestId || storeState.mockTest?.id;
+    if (currentMockTestId) {
+      clearAllMockTestDataForId(currentMockTestId);
     }
     
     // Navigate to results page
     setCurrentSection('results');
     console.log('[MockTestFlow] Navigating to results page');
-  };
+  }, [paramMockTestId, updateClientStatus]);
 
   // Handler for early exit - navigates to results with only completed sections
   // Only the completed section's result is saved; skipped sections remain null
-  const handleEarlyExit = (result, section) => {
-    console.log('[MockTestFlow] Early exit triggered, navigating to results with completed sections only', { section, result });
+  const handleEarlyExit = useCallback((result, section) => {
     
     // Save the result for the current section if provided
     // This ensures only completed sections have results; skipped sections will be null
     if (result && section) {
-      const updatedResults = {
-        ...sectionResults,
+      setSectionResults((prevResults) => ({
+        ...prevResults,
         [section]: result,
-      };
-      setSectionResults(updatedResults);
+      }));
     }
     
     // Clear all mock test data from localStorage (including any partial progress for skipped sections)
     // This ensures no data is saved for sections that were skipped
-    if (effectiveMockTestId) {
-      console.log('[MockTestFlow] Clearing all localStorage data for mock test:', effectiveMockTestId);
-      clearAllMockTestDataForId(effectiveMockTestId);
+    const storeState = useMockTestClientStore.getState();
+    const currentMockTestId = paramMockTestId || storeState.mockTest?.id;
+    if (currentMockTestId) {
+      clearAllMockTestDataForId(currentMockTestId);
     }
     
     // Navigate to results page with current section results
     // Only completed sections will have results; skipped sections (reading/writing) will be null
     setCurrentSection('results');
-  };
+  }, [paramMockTestId]);
 
   const handleAudioCheckComplete = () => {
     setAudioCheckComplete(true);

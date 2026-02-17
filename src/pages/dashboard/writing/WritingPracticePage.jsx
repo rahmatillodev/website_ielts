@@ -287,7 +287,9 @@ const WritingPracticePageContent = () => {
           ? parseInt(durationParam, 10) 
           : convertDurationToSeconds(currentWriting.duration);
         
-        if (savedData && savedData.timeRemaining !== undefined && savedData.timeRemaining !== null && savedData.timeRemaining > 0) {
+       
+        
+        if (savedData && savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
           // Restore from saved data (refresh case)
           // Restore answers if available
           if (savedData.answers && Object.keys(savedData.answers).length > 0) {
@@ -313,9 +315,21 @@ const WritingPracticePageContent = () => {
           setStartTime(savedStartTime);
           
           // Auto-resume timer if time remaining > 0
-          setIsPracticeMode(true);
-          setIsStarted(true);
-          setIsPaused(false);
+          // If time is already expired (<= 0), trigger auto-submit immediately
+          if (remaining <= 0) {
+            console.log('[WritingPracticePage] Time already expired, will trigger auto-submit');
+            setIsPracticeMode(true);
+            setIsStarted(true); // Set started so auto-submit can trigger
+            setIsPaused(false);
+          } else {
+            setIsPracticeMode(true);
+            setIsStarted(true);
+            setIsPaused(false);
+          }
+          
+          // Reset submission state when loading saved data to ensure clean state
+          setIsAutoSubmitting(false);
+          setIsSaving(false);
         } else {
           // First time initialization - no saved data
           // Initialize answers if not set
@@ -509,14 +523,28 @@ const WritingPracticePageContent = () => {
 
   /* ================= TIMER ================= */
   useEffect(() => {
-    if (!isPracticeMode || !isStarted || isPaused || timeRemaining <= 0 || savingAttempt || isAutoSubmitting) return;
+    if (!isPracticeMode || !isStarted || isPaused || timeRemaining <= 0 || savingAttempt || isAutoSubmitting || isSaving) return;
 
     const interval = setInterval(() => {
+      // Stop timer immediately if submission has started (check both state variables)
+      if (isSaving || isAutoSubmitting || savingAttempt) {
+        setIsStarted(false);
+        setIsPaused(true);
+        clearInterval(interval);
+        return;
+      }
+      
       setTimeRemaining((t) => {
-        if (t <= 1) {
+        if (t === null || t <= 1) {
           clearInterval(interval);
+          // Stop timer immediately
+          setIsStarted(false);
+          setIsPaused(true);
           // Auto-submit when time runs out (no loading overlay)
-          handleAutoSubmit();
+          // Only call if not already submitting
+          if (!isAutoSubmitting && !isSaving) {
+            handleAutoSubmit();
+          }
           return 0;
         }
         return t - 1;
@@ -524,7 +552,7 @@ const WritingPracticePageContent = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPracticeMode, isStarted, isPaused, timeRemaining, savingAttempt, isAutoSubmitting]);
+  }, [isPracticeMode, isStarted, isPaused, timeRemaining, savingAttempt, isAutoSubmitting, isSaving, handleAutoSubmit]);
 
   // Update elapsed time
   useEffect(() => {
@@ -774,9 +802,13 @@ const WritingPracticePageContent = () => {
 
   // Auto-submit function (no loading overlay, no modal)
   const handleAutoSubmit = useCallback(async () => {
-    if (!currentWriting || !currentWriting.writing_tasks || isAutoSubmitting) return;
+    if (!currentWriting || !currentWriting.writing_tasks || isAutoSubmitting || isSaving) return;
 
+    // Stop timer immediately (set state first to stop timer interval)
     setIsAutoSubmitting(true);
+    setIsStarted(false);
+    setIsPaused(true);
+    
     toast.info("Time is up! Auto-submitting your writing...");
 
     try {
@@ -878,7 +910,11 @@ const WritingPracticePageContent = () => {
 
   const handleSubmitFinish = async () => {
     setIsFinishModalOpen(false);
+    
+    // Stop timer immediately when submission starts (set state first to stop timer interval)
     setIsSaving(true);
+    setIsStarted(false);
+    setIsPaused(true);
 
     try {
       // Calculate time taken before resetting state

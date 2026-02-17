@@ -168,12 +168,22 @@ const ReadingPracticePageContent = () => {
               setHasInteracted(true);
             }
             // For mock test, restore time remaining and let auto-start resume the timer
-            if (savedData.timeRemaining !== undefined && savedData.timeRemaining !== null && savedData.timeRemaining > 0) {
+            if (savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
               setTimeRemaining(savedData.timeRemaining);
+              
+              // If time is already expired (<= 0), trigger auto-submit immediately
+              if (savedData.timeRemaining <= 0) {
+                setHasInteracted(true);
+                setIsStarted(true); // Set started so auto-submit effect can trigger
+              }
             }
             if (savedData.startTime) {
               setStartTime(savedData.startTime);
             }
+            // Reset submission refs when loading saved data to ensure clean state
+            hasAutoSubmittedRef.current = false;
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
           }
         } else if (!isMockTest) {
           // For regular practice, use reading storage
@@ -232,8 +242,9 @@ const ReadingPracticePageContent = () => {
     // For mock test, check if we have saved time remaining first
     if (isMockTest && mockTestId) {
       const savedData = loadSectionData(mockTestId, 'reading');
-      if (savedData && savedData.timeRemaining !== undefined && savedData.timeRemaining !== null && savedData.timeRemaining > 0) {
+      if (savedData && savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
         // Use saved time remaining - don't reset to full duration
+        // If time remaining is 0 or negative, it will trigger auto-submit
         setTimeRemaining(savedData.timeRemaining);
         timerInitializedRef.current = true;
         return;
@@ -475,6 +486,20 @@ const ReadingPracticePageContent = () => {
   // ========== TIMER AUTO-START LOGIC (Mock Test) ==========
   // For mock test, timer should auto-start immediately when timeRemaining is set
   useEffect(() => {
+    // Don't auto-start if submission is in progress
+    if (isSubmitting || isSubmittingRef.current) {
+      return;
+    }
+    
+    // Don't auto-start if completion signal exists (submission was successful)
+    if (isMockTest && mockTestId) {
+      const completionKey = `mock_test_${mockTestId}_reading_completed`;
+      const isCompleted = localStorage.getItem(completionKey) === 'true';
+      if (isCompleted) {
+        return;
+      }
+    }
+    
     // In mock test mode, ensure timer starts automatically when timeRemaining is set
     if (isMockTest && currentTest && timeRemaining !== null && timeRemaining > 0 && !isStarted) {
       setIsStarted(true);
@@ -484,7 +509,7 @@ const ReadingPracticePageContent = () => {
       }
       setHasInteracted(true);
     }
-  }, [isMockTest, currentTest, timeRemaining, isStarted, startTime]);
+  }, [isMockTest, currentTest, timeRemaining, isStarted, startTime, isSubmitting, mockTestId]);
 
   // Timer countdown interval - this is the actual timer that decrements
   useEffect(() => {
@@ -492,6 +517,8 @@ const ReadingPracticePageContent = () => {
     if (!isStarted || isPaused) return;
     if (!hasInteracted) return;
     if (timeRemaining === null || timeRemaining <= 0) return;
+    // Stop timer if already submitting
+    if (isSubmitting || isSubmittingRef.current) return;
 
     // Set startTime if not set (safety check)
     if (!startTime) {
@@ -500,9 +527,18 @@ const ReadingPracticePageContent = () => {
 
     // Start the countdown interval
     const interval = setInterval(() => {
+      // Stop timer immediately if submission has started (check both ref and state)
+      if (isSubmittingRef.current || isSubmitting) {
+        setIsStarted(false);
+        setIsPaused(true);
+        clearInterval(interval);
+        return;
+      }
+      
       setTimeRemaining((prev) => {
         if (prev === null || prev <= 1) {
           setIsStarted(false);
+          setIsPaused(true);
           return 0;
         }
         return prev - 1;
@@ -513,7 +549,7 @@ const ReadingPracticePageContent = () => {
     // Remove timeRemaining from dependencies to prevent effect from re-running every second
     // The functional update pattern (prev => ...) ensures we always use the latest value
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStarted, hasInteracted, isPaused, startTime]);
+  }, [isStarted, hasInteracted, isPaused, startTime, isSubmitting]);
 
   // Auto-submit when timer reaches zero
   useEffect(() => {
@@ -530,6 +566,10 @@ const ReadingPracticePageContent = () => {
       !isSubmittingRef.current &&
       isMountedRef.current
     ) {
+      // Stop the timer immediately before auto-submitting
+      setIsStarted(false);
+      setIsPaused(true);
+      
       // Auto-submit the test when timer reaches zero
       hasAutoSubmittedRef.current = true;
       const autoSubmit = async () => {
@@ -587,8 +627,12 @@ const ReadingPracticePageContent = () => {
   }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest, isMockTest, searchParams, navigate]);
 
   // Set mounted ref to false when component unmounts
+  // Reset submission refs on mount to ensure clean state after refresh
   useEffect(() => {
     isMountedRef.current = true;
+    // Reset refs on mount to ensure clean state after refresh
+    hasAutoSubmittedRef.current = false;
+    isSubmittingRef.current = false;
     return () => {
       isMountedRef.current = false;
     };
@@ -802,8 +846,11 @@ const ReadingPracticePageContent = () => {
       return { success: false, error: 'Missing required information' };
     }
 
+    // Stop the timer immediately when submission starts (set ref first to stop timer interval)
     isSubmittingRef.current = true;
     setIsSubmitting(true);
+    setIsStarted(false);
+    setIsPaused(true);
 
     try {
       // Calculate time taken in seconds
