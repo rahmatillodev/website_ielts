@@ -28,7 +28,6 @@ const ComplatedCard = ({
   isCompleted,
   created_at,
   completed_at,
-  date,
   isGridView,
   is_premium,
   testType = 'reading', // 'reading' or 'listening'
@@ -36,7 +35,7 @@ const ComplatedCard = ({
 }) => {
   const navigate = useNavigate();
 
-  
+
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -58,7 +57,7 @@ const ComplatedCard = ({
       }
     }
     // Navigate using navigate to ensure localStorage is cleared first
-    const practiceLink =  `/writing-practice/${id}`;
+    const practiceLink = `/writing-practice/${id}`;
     navigate(practiceLink);
   };
 
@@ -86,13 +85,13 @@ const ComplatedCard = ({
       navigate(`/reading-practice/${id}?mode=review`);
     } else if (testType === 'writing') {
       // Include attemptId in URL if provided (for writing history)
-      const url = attemptId 
+      const url = attemptId
         ? `/writing-practice/${id}?mode=review&attemptId=${attemptId}`
         : `/writing-practice/${id}?mode=review`;
       navigate(url);
     }
   };
-  
+
   const cardStatus = is_premium ? "Premium" : "Free";
   const createdDate = created_at ? formatDateToDayMonth(created_at) : '';
   const completedDate = completed_at ? formatDateToDayMonth(completed_at) : '';
@@ -134,33 +133,19 @@ const ComplatedCard = ({
         }
 
         {/* Score Badge for Completed */}
-        {isCompleted && (
-          <div className="absolute top-10 right-3 z-10">
-            <div className="bg-white border border-gray-200 w-12 md:w-14 h-12 md:h-14 rounded-full p-2 flex items-center justify-center flex-col shadow-sm">
-              <p className="text-[10px] text-gray-500 font-semibold">Score</p>
-              <p className="text-sm md:text-base font-black text-green-600">{'--'}</p>
-            </div>
-          </div>
-        )}
+
 
         <div className="flex flex-col flex-1">
           {/* Icon */}
-          <div className={`size-12 md:size-14 mb-4 rounded-xl ${isCompleted
-            ? 'bg-green-50 text-green-500'
-            : is_premium
-              ? 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-500'
-              : 'bg-blue-50 text-blue-500'
-            } flex items-center justify-center shrink-0`}>
-            {isCompleted ? (
-              <MdCheckCircle className="text-2xl md:text-2xl" />
-            ) : (
-              testType === 'listening' ? (
-                <MdHeadset className="text-2xl md:text-2xl" />
-              ) : testType === 'writing' ? (
-                <FaPencilAlt className="text-2xl md:text-2xl" />
-              ) : (
-                <IoBookOutline className="text-2xl md:text-2xl" />
-              )
+          <div className="size-12 md:size-14 mb-4 flex items-center justify-center shrink-0">
+
+            {isCompleted && (
+              <div className="">
+                <div className="bg-white border border-gray-200 w-12 md:w-14 h-12 md:h-14 rounded-full p-2 flex items-center justify-center flex-col shadow-sm">
+                  <p className="text-[10px] text-gray-500 font-semibold">Score</p>
+                  <p className="text-sm md:text-base font-black text-green-600">{'--'}</p>
+                </div>
+              </div>
             )}
           </div>
 

@@ -115,9 +115,9 @@ function App() {
     }
 
     // Profile page is accessible from both platforms - preserve current accessMode
-    if (location.pathname === '/profile') {
-      return;
-    }
+    // if (location.pathname === '/profile') {
+    //   return;
+    // }
 
     // If user is not authenticated, set accessMode based on route type
     // This ensures users have the correct accessMode set before login
@@ -214,10 +214,10 @@ function App() {
     }
     
     // Allow practice pages and profile from both platforms
-    if (pathname === '/profile' || isPracticePageRoute(pathname)) {
-      lastRedirectRef.current = null;
-      return;
-    }
+    // if (pathname === '/profile' || isPracticePageRoute(pathname)) {
+    //   lastRedirectRef.current = null;
+    //   return;
+    // }
     
     // Allow public pages
     if (pathname === '/' || pathname === '/login' || pathname === '/signup') {
@@ -303,7 +303,6 @@ function App() {
               <Route path="/reading-result/:id" element={<ReadingResultPage />} />
               <Route path="/listening-result/:id" element={<ListeningResultPage />} />
               {/* Profile accessible from mock test layout */}
-              <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
             {/* Regular Dashboard Routes with Route Guard */}

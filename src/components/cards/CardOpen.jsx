@@ -7,7 +7,7 @@ import { clearListeningPracticeData } from "@/store/LocalStorage/listeningStorag
 import { IoBookOutline } from "react-icons/io5";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { motion } from "framer-motion";
-import { FaPencilAlt } from "react-icons/fa";
+import { FaCrown, FaPencilAlt } from "react-icons/fa";
 import { formatDateToDayMonth } from "@/utils/formatDate";
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
@@ -38,7 +38,9 @@ const CardOpen = ({
   const completionData = useDashboardStore((state) => state.getCompletion(id));
 
   const hasCompleted = useMemo(() => {
-    return completionData?.isCompleted || false;
+    if (testType !== 'speaking') { 
+      return completionData?.isCompleted || false;
+    }
   }, [completionData]);
 
   const attemptData = useMemo(() => {
@@ -147,7 +149,7 @@ const CardOpen = ({
               ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
               : "bg-green-500 text-white border-0 shadow-md"
               }`}>
-              {is_premium && <MdStar className="text-xs md:text-sm" />} {cardStatus}
+              {is_premium && <FaCrown className="text-xs md:text-sm" />} {cardStatus}
             </span>
           </div>
         }
@@ -288,7 +290,7 @@ const CardOpen = ({
               ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
               : "bg-green-500 text-white border-0 shadow-md"
               }`}>
-              {is_premium && <MdStar className="text-xs md:text-sm" />} {cardStatus}
+              {is_premium && <FaCrown className="text-xs md:text-sm" />} {cardStatus}
             </span>
 
           </div>

@@ -27,7 +27,7 @@ import {
   clearAllWritingPracticeData
 } from "@/store/LocalStorage/writingStore";
 
-import { saveSectionData, loadSectionData } from "@/store/LocalStorage/mockTestStorage";
+import { saveSectionData, loadSectionData, loadMockTestData } from "@/store/LocalStorage/mockTestStorage";
 import { convertDurationToSeconds } from "@/utils/testDuration";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
@@ -481,7 +481,7 @@ const WritingPracticePageContent = () => {
             : elapsedTime;
 
           // Save to database
-          const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, mockClientId);
+          const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockTestId : null);
 
           if (result.success) {
             // Signal completion via localStorage
@@ -552,7 +552,7 @@ const WritingPracticePageContent = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPracticeMode, isStarted, isPaused, timeRemaining, savingAttempt, isAutoSubmitting, isSaving, handleAutoSubmit]);
+  }, [isPracticeMode, isStarted, isPaused, timeRemaining, savingAttempt, isAutoSubmitting, isSaving]);
 
   // Update elapsed time
   useEffect(() => {
@@ -829,8 +829,8 @@ const WritingPracticePageContent = () => {
       }
 
       // Save to database (silently, no loading overlay)
-      // Pass mockClientId if in mock test mode
-      const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockClientId : null);
+      // Pass mockTestId if in mock test mode (will be stored in mock_id field)
+      const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockTestId : null);
 
       if (result.success) {
         // If mock test, signal completion via localStorage
@@ -843,6 +843,10 @@ const WritingPracticePageContent = () => {
           };
           localStorage.setItem(completionKey, 'true');
           localStorage.setItem(resultKey, JSON.stringify(resultData));
+          
+          // Navigate back to MockTestFlow so it can detect completion and move to results
+          // This ensures the flow continues even after refresh
+          navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
         }
 
         // Update mock_test_clients status to 'completed' if in mock test mode
@@ -886,7 +890,7 @@ const WritingPracticePageContent = () => {
           setIsSuccessModalOpen(true);
           toast.success("Your writing has been auto-submitted successfully!");
         } else {
-          // For mock test, just mark as submitting - MockTestWriting will handle navigation
+          // For mock test, navigation is handled above
           setIsAutoSubmitting(false);
         }
       } else {
@@ -934,8 +938,8 @@ const WritingPracticePageContent = () => {
       }
 
       // Save to database
-      // Pass mockClientId if in mock test mode
-      const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockClientId : null);
+      // Pass mockTestId if in mock test mode (will be stored in mock_id field)
+      const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockTestId : null);
 
       if (result.success) {
         // If mock test, signal completion via localStorage
@@ -948,6 +952,10 @@ const WritingPracticePageContent = () => {
           };
           localStorage.setItem(completionKey, 'true');
           localStorage.setItem(resultKey, JSON.stringify(resultData));
+          
+          // Navigate back to MockTestFlow so it can detect completion and move to results
+          // This ensures the flow continues even after refresh
+          navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
         }
 
         // Update mock_test_clients status to 'completed' if in mock test mode
@@ -990,11 +998,9 @@ const WritingPracticePageContent = () => {
           setIsSaving(false);
           setIsSuccessModalOpen(true);
         } else {
-          // For mock test, just mark as saving - MockTestWriting will handle navigation
+          // For mock test, navigation is handled above
           setIsSaving(false);
-
-          navigate('/mock-test/results');
-                }
+        }
       } else {
         setIsSaving(false);
         toast.error(result.error || 'Failed to save writing attempt');

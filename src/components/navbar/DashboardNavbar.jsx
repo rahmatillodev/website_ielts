@@ -142,9 +142,9 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
               <LogoutModal onConfirm={handleLogout}>
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
-                  className="text-red-600 font-semibold p-2 px-4 hover:text-red-600 rounded-xl"
+                  className="text-red-600 font-semibold p-2 px-3 hover:text-red-600 rounded-xl"
                 >
-                  <LuLogOut className="w-5 h-5 mr-2 text-red-600 hover:text-red-600 rounded-xl" />
+                  <LuLogOut className="w-5 h-5 mr-1 text-red-600 hover:text-red-600 rounded-xl" />
                   <span className="text-red-600 hover:text-red-600 rounded-xl">Log out</span>
                 </DropdownMenuItem>
               </LogoutModal>

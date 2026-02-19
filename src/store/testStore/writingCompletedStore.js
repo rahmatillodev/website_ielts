@@ -25,10 +25,10 @@ export const useWritingCompletedStore = create((set) => ({
    * @param {string} writingId - The writing ID
    * @param {object} answers - User answers object { "Task 1": "...", "Task 2": "..." }
    * @param {number} timeTaken - Time taken in seconds (stored as seconds, minimum 1 second)
-   * @param {string} [mockClientId] - Optional mock test client ID for mock test mode
+   * @param {string} [mockTestId] - Optional mock test ID (mock_test.id) for mock test mode - stored in mock_id field
    * @returns {Promise<{success: boolean, attemptId?: string, error?: string}>}
    */
-  submitWritingAttempt: async (writingId, answers, timeTaken, mockClientId = null) => {
+  submitWritingAttempt: async (writingId, answers, timeTaken, mockTestId = null) => {
     set({ loading: true, error: null });
 
     try {
@@ -90,8 +90,9 @@ export const useWritingCompletedStore = create((set) => ({
       };
 
       // Add mock_id if provided (for mock test mode)
-      if (mockClientId) {
-        attemptDataToInsert.mock_id = mockClientId;
+      // mock_id should reference mock_test.id, not mock_test_clients.id
+      if (mockTestId) {
+        attemptDataToInsert.mock_id = mockTestId;
       }
 
       // Insert into user_attempts table
@@ -118,8 +119,9 @@ export const useWritingCompletedStore = create((set) => ({
           };
 
           // Add mock_id if provided
-          if (mockClientId) {
-            retryDataToInsert.mock_id = mockClientId;
+          // mock_id should reference mock_test.id, not mock_test_clients.id
+          if (mockTestId) {
+            retryDataToInsert.mock_id = mockTestId;
           }
 
           const { data: retryData, error: retryError } = await supabase

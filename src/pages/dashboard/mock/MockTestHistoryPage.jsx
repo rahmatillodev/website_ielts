@@ -14,6 +14,7 @@ const MockTestHistoryPage = () => {
   // Custom hook for history business logic
   const { history, loading } = useMockTestHistory();
 
+
   if (loading) {
     return (
       <div className="w-full h-full max-w-7xl mx-auto p-4 md:p-6 bg-gray-50 flex items-center justify-center">

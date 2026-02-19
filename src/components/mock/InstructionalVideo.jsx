@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from 'react';
  */
 const InstructionalVideo = ({ 
   onComplete, 
+  onStart,
   countdownSeconds = 5,
   title = "Instructions",
   description = "Please watch this video before starting the section.",
@@ -22,6 +23,7 @@ const InstructionalVideo = ({
   const [videoEnded, setVideoEnded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hasCalledOnStart, setHasCalledOnStart] = useState(false);
   const videoRef = useRef(null);
   const countdownIntervalRef = useRef(null);
   const containerRef = useRef(null);
@@ -31,19 +33,35 @@ const InstructionalVideo = ({
 
   // Fullscreen mantiqi
   useEffect(() => {
-    if (autoFullscreen && containerRef.current) {
-      const enterFullscreen = async () => {
-        try {
-          const el = containerRef.current;
-          const requestMethod = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-          if (requestMethod) await requestMethod.call(el);
-          setIsFullscreen(true);
-        } catch (error) {
-          console.error('[InstructionalVideo] Error entering fullscreen:', error);
+    if (!autoFullscreen) return;
+    
+    const enterFullscreen = async () => {
+      try {
+        const el = containerRef.current;
+        // Check if element still exists before accessing properties
+        if (!el) {
+          console.warn('[InstructionalVideo] Container ref is null, cannot enter fullscreen');
+          return;
         }
-      };
-      setTimeout(enterFullscreen, 100);
-    }
+        
+        const requestMethod = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (requestMethod) {
+          await requestMethod.call(el);
+          setIsFullscreen(true);
+        } else {
+          console.warn('[InstructionalVideo] Fullscreen API not available');
+        }
+      } catch (error) {
+        console.error('[InstructionalVideo] Error entering fullscreen:', error);
+      }
+    };
+    
+    // Use a small delay to ensure ref is set, but check again inside the callback
+    const timeoutId = setTimeout(enterFullscreen, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [autoFullscreen]);
 
   // Fullscreen-dan chiqishni cheklash (Developer hotkey-dan tashqari)
@@ -122,6 +140,14 @@ const InstructionalVideo = ({
     }
   }, []);
 
+  // Call onStart when video starts playing (only once)
+  useEffect(() => {
+    if (isPlaying && !hasCalledOnStart && onStart) {
+      setHasCalledOnStart(true);
+      onStart();
+    }
+  }, [isPlaying, hasCalledOnStart, onStart]);
+
   const handleVideoEnd = () => {
     setVideoEnded(true);
     setIsPlaying(false);
@@ -155,7 +181,14 @@ const InstructionalVideo = ({
             {!isPlaying && !videoEnded && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                 <button 
-                  onClick={() => videoRef.current?.play()}
+                  onClick={() => {
+                    videoRef.current?.play();
+                    // Call onStart when user manually starts the video
+                    if (!hasCalledOnStart && onStart) {
+                      setHasCalledOnStart(true);
+                      onStart();
+                    }
+                  }}
                   className="bg-white/20 hover:bg-white/40 p-6 rounded-full transition"
                 >
                   <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">

@@ -52,8 +52,8 @@ const TestsLibraryPage = ({
   const [filterOpen, setFilterOpen] = useState(false); // Control filter popover
   const [tempSelectedTypes, setTempSelectedTypes] = useState([]); // Temporary state for filter panel
   const [tempSortOrder, setTempSortOrder] = useState("oldest"); // Temporary sort state
-  const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
-  const itemsPerLoad = 9; // Items to load per scroll
+  const [displayedItems, setDisplayedItems] = useState(12); // Initial items to display
+  const itemsPerLoad = 12; // Items to load per scroll
   const scrollContainerRef = useRef(null);
   const isLoadingMoreRef = useRef(false);
   const hasFetchedRef = useRef(false); // Track if we've attempted a fetch
@@ -212,7 +212,7 @@ const TestsLibraryPage = ({
 
   // Reset displayed items when filtered data changes (filters/search)
   useEffect(() => {
-    setDisplayedItems(9);
+    setDisplayedItems(12);
     isLoadingMoreRef.current = false; // Reset loading flag when filters change
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;

@@ -70,9 +70,9 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
     };
 
     // Add mock test context if provided
-    // mock_id should reference mock_test_clients.id, not mock_test.id
-    if (mockTestContext && mockTestContext.mockClientId) {
-      attemptDataToInsert.mock_id = mockTestContext.mockClientId;
+    // mock_id should reference mock_test.id, not mock_test_clients.id
+    if (mockTestContext && mockTestContext.mockTestId) {
+      attemptDataToInsert.mock_id = mockTestContext.mockTestId;
     }
 
     // 1. Create user_attempt record

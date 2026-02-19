@@ -106,11 +106,31 @@ export const useMockTestClientStore = create((set) => ({
                 throw new Error("Client not found");
             }
 
-            // Then, fetch the mock_test associated with this client
-            // Since there's no direct FK, we'll query mock_test where is_active = true
-            // and match by date or find the active mock test
-            // For now, we'll fetch the most recent active mock_test
-            // In production, you may need to add a mock_test_id to mock_test_clients
+            // Then, fetch the mock_test associated with this client using mock_test_id
+            if (client.mock_test_id) {
+                const { data, error } = await supabase
+                    .from("mock_test")
+                    .select(`
+                        id,
+                        writing_id,
+                        listening_id,
+                        reading_id,
+                        password_code,
+                        is_active,
+                        created_at
+                    `)
+                    .eq("id", client.mock_test_id)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (data) {
+                    set({ mockTest: data, loading: false });
+                    return data;
+                }
+            }
+
+            // Fallback: fetch the most recent active mock_test if client doesn't have mock_test_id
             const { data, error } = await supabase
                 .from("mock_test")
                 .select(`
@@ -145,16 +165,24 @@ export const useMockTestClientStore = create((set) => ({
      * Update mock_test_clients status
      * @param {string} clientId - The mock test client ID
      * @param {string} status - New status: 'booked' | 'started' | 'completed'
+     * @param {string} mockTestId - Optional mock test ID to set when status is 'started'
      * @returns {Promise<{success: boolean, error?: string}>}
      */
-    updateClientStatus: async (clientId, status) => {
+    updateClientStatus: async (clientId, status, mockTestId = null) => {
         try {
+            const updateData = {
+                status: status,
+                updated_at: new Date().toISOString()
+            };
+
+            // Set mock_test_id when status is 'started' if provided
+            if (status === 'started' && mockTestId) {
+                updateData.mock_test_id = mockTestId;
+            }
+
             const { error } = await supabase
                 .from("mock_test_clients")
-                .update({
-                    status: status,
-                    updated_at: new Date().toISOString()
-                })
+                .update(updateData)
                 .eq("id", clientId);
 
             if (error) throw error;
@@ -162,7 +190,7 @@ export const useMockTestClientStore = create((set) => ({
             // Update local client state if it matches
             const currentState = useMockTestClientStore.getState();
             if (currentState.client && currentState.client.id === clientId) {
-                set({ client: { ...currentState.client, status } });
+                set({ client: { ...currentState.client, status, ...(status === 'started' && mockTestId ? { mock_test_id: mockTestId } : {}) } });
             }
 
             return { success: true };
@@ -178,44 +206,65 @@ export const useMockTestClientStore = create((set) => ({
     /**
      * Fetch client attempts for a mock test
      * @param {string} userId - The user ID to fetch mock_test and attempts
+     * @param {string} mockTestId - Optional mock test ID to filter by
      * @returns {Promise<{client: object, mockTest: object, results: {listening: object|null, reading: object|null, writing: object|null, speaking: object|null}}>}
      */
-    fetchClientAttempts: async (userId) => {
+    fetchClientAttempts: async (userId, mockTestId = null) => {
         set({ loading: true, error: null });
 
         try {
-            // 1. Get the client using user_id
-            const { data: client, error: clientError } = await supabase
+            // 1. Get the client using user_id and optionally mock_test_id
+            let clientQuery = supabase
                 .from('mock_test_clients')
-                .select('id, user_id, total_score, status, full_name, email')
+                .select('id, user_id, total_score, status, full_name, email, mock_test_id')
                 .eq('user_id', userId)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
+                .order('created_at', { ascending: false });
+
+            if (mockTestId) {
+                clientQuery = clientQuery.eq('mock_test_id', mockTestId);
+            }
+
+            const { data: client, error: clientError } = await clientQuery.limit(1).maybeSingle();
 
             if (clientError) throw clientError;
             if (!client) {
                 throw new Error('Client not found');
             }
 
-            // 2. Get the active mock_test (using user_id as per requirement)
-            const { data: mockTest, error: mockTestError } = await supabase
-                .from('mock_test')
-                .select('id, listening_id, reading_id, writing_id, is_active')
-                .eq('is_active', true)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
+            // 2. Get the mock_test using client's mock_test_id or fallback to active mock test
+            let mockTest;
+            if (client.mock_test_id) {
+                const { data: mockTestData, error: mockTestError } = await supabase
+                    .from('mock_test')
+                    .select('id, listening_id, reading_id, writing_id, is_active')
+                    .eq('id', client.mock_test_id)
+                    .maybeSingle();
 
-            if (mockTestError) throw mockTestError;
+                if (mockTestError) throw mockTestError;
+                mockTest = mockTestData;
+            }
+
+            // Fallback: Get the active mock_test if client doesn't have mock_test_id
             if (!mockTest) {
-                throw new Error('Active mock test not found');
+                const { data: mockTestData, error: mockTestError } = await supabase
+                    .from('mock_test')
+                    .select('id, listening_id, reading_id, writing_id, is_active')
+                    .eq('is_active', true)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (mockTestError) throw mockTestError;
+                if (!mockTestData) {
+                    throw new Error('Active mock test not found');
+                }
+                mockTest = mockTestData;
             }
 
             const { listening_id, reading_id, writing_id } = mockTest;
 
-            // 3. Get user attempts for this user and mock client
-            // First try with mock_id filter
+            // 3. Get user attempts for this user and mock test
+            // mock_id references mock_test.id, not mock_test_clients.id
             let { data: attempts, error: attemptsError } = await supabase
                 .from('user_attempts')
                 .select(`
@@ -231,7 +280,7 @@ export const useMockTestClientStore = create((set) => ({
                     mock_id
                 `)
                 .eq('user_id', userId)
-                .eq('mock_id', client.id);
+                .eq('mock_id', mockTest.id);
 
             if (attemptsError) throw attemptsError;
 
@@ -391,68 +440,27 @@ export const useMockTestClientStore = create((set) => ({
 
     /**
      * Find the client record that belongs to a specific mock test
-     * Uses user_attempts to match clients to mock tests via test_id/writing_id
+     * Uses mock_test_id directly from mock_test_clients table
      * @param {string} userId - The user ID
      * @param {string} mockTestId - The mock test ID
      * @returns {Promise<{client: object|null, status: string|null}>} Client record and status
      */
     findClientForMockTest: async (userId, mockTestId) => {
         try {
-            // 1. Get the mock test to find its test IDs
-            const { data: mockTest, error: mockTestError } = await supabase
-                .from("mock_test")
-                .select("id, listening_id, reading_id, writing_id")
-                .eq("id", mockTestId)
+            // Query mock_test_clients directly using mock_test_id
+            const { data: client, error: clientError } = await supabase
+                .from("mock_test_clients")
+                .select("id, status, created_at, mock_test_id")
+                .eq("user_id", userId)
+                .eq("mock_test_id", mockTestId)
+                .order("created_at", { ascending: false })
+                .limit(1)
                 .maybeSingle();
 
-            if (mockTestError) throw mockTestError;
-            if (!mockTest) {
-                return { client: null, status: null };
-            }
+            if (clientError) throw clientError;
 
-            const { listening_id, reading_id, writing_id } = mockTest;
-
-            // 2. Get all user attempts for this user that have mock_id set
-            const { data: attempts, error: attemptsError } = await supabase
-                .from("user_attempts")
-                .select("mock_id, test_id, writing_id")
-                .eq("user_id", userId)
-                .not("mock_id", "is", null);
-
-            if (attemptsError) throw attemptsError;
-
-            if (!attempts || attempts.length === 0) {
-                return { client: null, status: null };
-            }
-
-            // 3. Find attempts that match this mock test's IDs
-            const matchingAttempts = attempts.filter(attempt => {
-                const matchesListening = listening_id && attempt.test_id === listening_id;
-                const matchesReading = reading_id && attempt.test_id === reading_id;
-                const matchesWriting = writing_id && attempt.writing_id === writing_id;
-                return matchesListening || matchesReading || matchesWriting;
-            });
-
-            if (matchingAttempts.length === 0) {
-                return { client: null, status: null };
-            }
-
-            // 4. Get unique client IDs from matching attempts
-            const clientIds = [...new Set(matchingAttempts.map(a => a.mock_id))];
-
-            // 5. Get the client record(s) - use the most recent one
-            const { data: clients, error: clientsError } = await supabase
-                .from("mock_test_clients")
-                .select("id, status, created_at")
-                .eq("user_id", userId)
-                .in("id", clientIds)
-                .order("created_at", { ascending: false })
-                .limit(1);
-
-            if (clientsError) throw clientsError;
-
-            if (clients && clients.length > 0) {
-                return { client: clients[0], status: clients[0].status };
+            if (client) {
+                return { client, status: client.status };
             }
 
             return { client: null, status: null };

@@ -6,7 +6,7 @@ import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import QuestionHeader from "@/components/questions/QuestionHeader";
 import { saveReadingPracticeData, loadReadingPracticeData, clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
-import { saveSectionData, loadSectionData } from "@/store/LocalStorage/mockTestStorage";
+import { saveSectionData, loadSectionData, loadMockTestData } from "@/store/LocalStorage/mockTestStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
@@ -113,6 +113,16 @@ const ReadingPracticePageContent = () => {
     isMockTest // Only active in mock test mode
   );
 
+  // ====== CHECK IF WE SHOULD REDIRECT TO MOCKTESTFLOW ======
+  useEffect(() => {
+    if (!isMockTest || !mockTestId) return;
+    
+    const savedFlowData = loadMockTestData(mockTestId);
+    
+    if (savedFlowData?.currentSection && savedFlowData.currentSection !== 'reading' && savedFlowData.currentSection !== 'audioCheck' && savedFlowData.currentSection !== 'intro') {
+      navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
+    }
+  }, [isMockTest, mockTestId, navigate]);
 
   useEffect(() => {
     const testIdToUse = effectiveTestId;
@@ -580,12 +590,19 @@ const ReadingPracticePageContent = () => {
           // Navigate if submission was successful (navigation is safe even if component is unmounting)
           // Check isMountedRef for state updates, but always navigate if submission succeeded
           if (result && result.success) {
-            // In mock test mode, completion is handled via localStorage polling in MockTestReading
-            // Don't navigate - let the parent component handle the transition
-            // Double-check isMockTest to ensure we don't navigate for mock tests
+            // Double-check isMockTest to ensure we navigate correctly
             const currentIsMockTest = searchParams.get('mockTest') === 'true' || 
                                      new URLSearchParams(window.location.search).get('mockTest') === 'true';
-            if (!currentIsMockTest && effectiveTestId) {
+            
+            if (currentIsMockTest && mockTestId) {
+              // In mock test mode, navigate back to MockTestFlow so it can detect completion and move to next section
+              // This ensures the flow continues even after refresh
+              console.log('[ReadingPracticePage] Auto-submit successful, navigating to MockTestFlow', {
+                mockTestId,
+                result: result.success
+              });
+              navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
+            } else if (!currentIsMockTest && effectiveTestId) {
               console.log('[ReadingPracticePage] Navigating to result page (non-mock test)', {
                 effectiveTestId,
                 result: result.success,
@@ -596,7 +613,7 @@ const ReadingPracticePageContent = () => {
               console.log('[ReadingPracticePage] Auto-submit successful but skipping navigation', {
                 isMockTest: currentIsMockTest,
                 effectiveTestId,
-                reason: currentIsMockTest ? 'mock test' : 'no test ID'
+                reason: currentIsMockTest ? 'no mockTestId' : 'no test ID'
               });
             }
           } else if (result && !result.success && isMountedRef.current) {
@@ -887,6 +904,10 @@ const ReadingPracticePageContent = () => {
           };
           localStorage.setItem(completionKey, 'true');
           localStorage.setItem(resultKey, JSON.stringify(resultData));
+          
+          // Navigate back to MockTestFlow so it can detect completion and move to next section
+          // This ensures the flow continues even after refresh
+          navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
         }
         
         // Reset submission state after successful submission
@@ -1069,7 +1090,8 @@ const ReadingPracticePageContent = () => {
     const newUrl = newSearchParams.toString()
       ? `/reading-practice/${id}?${newSearchParams.toString()}`
       : `/reading-practice/${id}`;
-    window.history.replaceState({}, '', newUrl);
+    navigate(newUrl, { replace: true });
+    // window.history.replaceState({}, '', newUrl);
     setSearchParams(newSearchParams, { replace: true });
 
     // Reset all state
@@ -1694,7 +1716,7 @@ const ReadingPracticePageContent = () => {
       />
 
       {/* Note Sidebar */}
-      {!isMockTest && <NoteSidebar />}
+      <NoteSidebar />
     </div>
   );
 };

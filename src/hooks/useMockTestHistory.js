@@ -35,10 +35,12 @@ export const useMockTestHistory = () => {
           total_score,
           created_at,
           full_name,
-          email
+          email,
+          mock_test_id
         `)
         .eq("user_id", userProfile.id)
         .in("status", ["completed", "checked", "notified"])
+        .not("mock_test_id", "is", null)
         .order("created_at", { ascending: false })
 
       if (clientError) throw clientError;
@@ -48,7 +50,8 @@ export const useMockTestHistory = () => {
       const historyItems = await Promise.all(
         (data || []).map(async (client) => {
           try {
-            // Fetch attempts for this specific client
+            // Fetch attempts for this specific mock test
+            // mock_id references mock_test.id, not mock_test_clients.id
             const { data: attempts, error: attemptsError } = await supabase
               .from('user_attempts')
               .select(`
@@ -63,8 +66,9 @@ export const useMockTestHistory = () => {
                 completed_at
               `)
               .eq('user_id', userProfile.id)
-              .eq('mock_id', client.id)
+              .eq('mock_id', client.mock_test_id)
               .order('completed_at', { ascending: false });
+              
 
             if (attemptsError) {
               console.error(`Error fetching attempts for client ${client.id}:`, attemptsError);
@@ -79,68 +83,76 @@ export const useMockTestHistory = () => {
             };
 
             if (attempts && attempts.length > 0) {
-              // Get test IDs from attempts to fetch their types
               const testIds = attempts
                 .filter(a => a.test_id)
                 .map(a => a.test_id);
-
-              // Create a map of test_id -> test_type
+            
+              const writingIds = attempts
+                .filter(a => a.writing_id)
+                .map(a => a.writing_id);
+            
+              // Fetch test types
               const testTypeMap = {};
+            
               if (testIds.length > 0) {
-                const { data: tests } = await supabase
+                const { data: testsData } = await supabase
                   .from('test')
                   .select('id, type')
                   .in('id', testIds);
-
-                if (tests) {
-                  tests.forEach(test => {
-                    testTypeMap[test.id] = test.type;
+            
+                if (testsData) {
+                  testsData.forEach(t => {
+                    testTypeMap[t.id] = t.type;
                   });
                 }
               }
-
-              // Get all active mock tests to match test_ids
-              const { data: mockTests } = await supabase
-                .from('mock_test')
-                .select('id, listening_id, reading_id, writing_id')
-                .eq('is_active', true)
-                .order('created_at', { ascending: false });
-
-              if (mockTests && mockTests.length > 0) {
-                // Find which mock test this client belongs to by matching attempt IDs
-                const matchingMockTest = mockTests.find(mt => {
-                  return attempts.some(attempt => 
-                    (mt.listening_id && attempt.test_id === mt.listening_id) ||
-                    (mt.reading_id && attempt.test_id === mt.reading_id) ||
-                    (mt.writing_id && attempt.writing_id === mt.writing_id)
-                  );
-                });
-
-                if (matchingMockTest) {
-                  // Match attempts to sections based on the mock test's IDs and test types
-                  attempts.forEach(attempt => {
-                    if (attempt.writing_id && !attempt.test_id) {
-                      // Writing attempt
-                      if (attempt.writing_id === matchingMockTest.writing_id) {
-                        results.writing = attempt;
-                      }
-                    } else if (attempt.test_id) {
-                      const testType = testTypeMap[attempt.test_id];
-                      
-                      // Match by exact ID for listening and reading
-                      if (attempt.test_id === matchingMockTest.listening_id) {
-                        results.listening = attempt;
-                      } else if (attempt.test_id === matchingMockTest.reading_id) {
-                        results.reading = attempt;
-                      } else if (testType === 'speaking') {
-                        // Match speaking by type (since there's no speaking_id in mock_test)
-                        results.speaking = attempt;
-                      }
-                    }
+            
+              // Fetch writings types too if any
+              if (writingIds.length > 0) {
+                const { data: writingsData } = await supabase
+                  .from('writings')
+                  .select('id')
+                  .in('id', writingIds);
+            
+                if (writingsData) {
+                  writingsData.forEach(w => {
+                    testTypeMap[w.id] = 'writing';
                   });
                 }
+              }
+            
+              // Get the mock test using client's mock_test_id
+              let matchingMockTest = null;
+              if (client.mock_test_id) {
+                const { data: mockTestData } = await supabase
+                  .from('mock_test')
+                  .select('id, listening_id, reading_id, writing_id')
+                  .eq('id', client.mock_test_id)
+                  .maybeSingle();
+                
+                matchingMockTest = mockTestData;
+              }
+            
+              if (matchingMockTest) {
+                // Assign results
+                attempts.forEach(attempt => {
+                  if (attempt.writing_id && attempt.writing_id === matchingMockTest.writing_id) {
+                    results.writing = attempt;
+                  } else if (attempt.test_id) {
+                    const type = testTypeMap[attempt.test_id];
+            
+                    if (attempt.test_id === matchingMockTest.listening_id) {
+                      results.listening = attempt;
+                    } else if (attempt.test_id === matchingMockTest.reading_id) {
+                      results.reading = attempt;
+                    } else if (type === 'speaking') {
+                      results.speaking = attempt;
+                    }
+                  }
+                });
               }
             }
+            
 
             return {
               client,
@@ -170,6 +182,7 @@ export const useMockTestHistory = () => {
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
+  console.log(['history', history]);
 
   return {
     history,

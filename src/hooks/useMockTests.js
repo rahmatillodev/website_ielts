@@ -49,40 +49,45 @@ export const useMockTests = () => {
     const clientIdMap = {};
     
     try {
-      // Fetch all client records for this user (all statuses)
+      // Fetch all client records for this user (all statuses) with mock_test_id
       const { data: clients, error: clientsError } = await supabase
         .from('mock_test_clients')
-        .select('id, status, created_at')
+        .select('id, status, created_at, mock_test_id')
         .eq('user_id', userProfile.id)
         .in('status', ['booked', 'started', 'completed', 'checked', 'notified'])
+        .not('mock_test_id', 'is', null)
         .order('created_at', { ascending: false });
 
       if (clientsError) {
         console.error('Error fetching clients:', clientsError);
       }
 
-      // For each mock test, find the matching client using user_attempts
-      const { findClientForMockTest } = useMockTestClientStore.getState();
-      
-      for (const test of mockTests) {
-        try {
-          // Find the client that belongs to this specific mock test
-          const { client, status } = await findClientForMockTest(userProfile.id, test.id);
-          
-          if (client && status) {
-            // User has a client record for this mock test
-            const completed = ['completed', 'checked', 'notified'].includes(status);
-            statusMap[test.id] = completed;
-            clientStatusMap[test.id] = status;
-            clientIdMap[test.id] = client.id;
-          } else {
-            // No client record found for this specific mock test
-            statusMap[test.id] = false;
-            clientStatusMap[test.id] = null;
-            clientIdMap[test.id] = null;
+      // Create a map of mock_test_id -> client for quick lookup
+      const clientByMockTestId = {};
+      if (clients) {
+        clients.forEach(client => {
+          if (client.mock_test_id) {
+            // If multiple clients exist for same mock_test_id, keep the most recent
+            if (!clientByMockTestId[client.mock_test_id] || 
+                new Date(client.created_at) > new Date(clientByMockTestId[client.mock_test_id].created_at)) {
+              clientByMockTestId[client.mock_test_id] = client;
+            }
           }
-        } catch (err) {
-          console.error(`Error checking completion for test ${test.id}:`, err);
+        });
+      }
+      
+      // For each mock test, find the matching client using mock_test_id
+      for (const test of mockTests) {
+        const client = clientByMockTestId[test.id];
+        
+        if (client) {
+          // User has a client record for this mock test
+          const completed = ['completed', 'checked', 'notified'].includes(client.status);
+          statusMap[test.id] = completed;
+          clientStatusMap[test.id] = client.status;
+          clientIdMap[test.id] = client.id;
+        } else {
+          // No client record found for this specific mock test
           statusMap[test.id] = false;
           clientStatusMap[test.id] = null;
           clientIdMap[test.id] = null;
@@ -95,7 +100,7 @@ export const useMockTests = () => {
     } catch (err) {
       console.error('Error loading completion status:', err);
     }
-  }, [userProfile?.id, mockTests, hasUserCompletedMockTest]);
+  }, [userProfile?.id, mockTests]);
 
   // Verify password and return mock test if valid
   // Accepts any password that matches any active mock test

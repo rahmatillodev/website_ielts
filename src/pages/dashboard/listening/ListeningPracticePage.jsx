@@ -5,7 +5,7 @@ import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import PracticeFooter from "@/components/questions/PracticeFooter";
 import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData, clearAudioPosition } from "@/store/LocalStorage/listeningStorage";
-import { saveSectionData, loadSectionData } from "@/store/LocalStorage/mockTestStorage";
+import { saveSectionData, loadSectionData, loadMockTestData } from "@/store/LocalStorage/mockTestStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
@@ -144,6 +144,19 @@ const ListeningPracticePageContent = () => {
       setFetchError(testError);
     }
   }, [testError, currentTest]);
+
+  // ====== CHECK IF WE SHOULD REDIRECT TO MOCKTESTFLOW ======
+  // If we're in mock test mode and refresh, check if MockTestFlow has saved progress
+  // If saved section doesn't match current route, redirect to MockTestFlow so it can restore
+  useEffect(() => {
+    if (!isMockTest || !mockTestId) return;
+    
+    const savedFlowData = loadMockTestData(mockTestId);
+    
+    if (savedFlowData?.currentSection && savedFlowData.currentSection !== 'listening' && savedFlowData.currentSection !== 'audioCheck' && savedFlowData.currentSection !== 'intro') {
+      navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
+    }
+  }, [isMockTest, mockTestId, navigate]);
 
   // ====== LOAD TEST/DATA & STATE FROM LOCALSTORAGE ======
   useEffect(() => {
@@ -451,15 +464,19 @@ const ListeningPracticePageContent = () => {
           // Navigate if submission was successful (navigation is safe even if component is unmounting)
           // Check isMountedRef for state updates, but always navigate if submission succeeded
           if (result && result.success) {
-            // In mock test mode, completion is handled via localStorage polling in MockTestListening
-            // Don't navigate - let the parent component handle the transition
-            // Double-check isMockTest to ensure we don't navigate for mock tests
+            // Double-check isMockTest to ensure we navigate correctly
             const currentIsMockTest = searchParams.get('mockTest') === 'true' ||
               new URLSearchParams(window.location.search).get('mockTest') === 'true';
-            console.log('currentIsMockTest', currentIsMockTest);
-            console.log('id', id);
-            console.log('effectiveTestId', effectiveTestId);
-            if (!currentIsMockTest && id) {
+            
+            if (currentIsMockTest && mockTestId) {
+              // In mock test mode, navigate back to MockTestFlow so it can detect completion and move to next section
+              // This ensures the flow continues even after refresh
+              console.log('[ListeningPracticePage] Auto-submit successful, navigating to MockTestFlow', {
+                mockTestId,
+                result: result.success
+              });
+              navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
+            } else if (!currentIsMockTest && id) {
               console.log('[ListeningPracticePage] Navigating to result page (non-mock test)', {
                 effectiveTestId,
                 result: result.success,
@@ -470,7 +487,7 @@ const ListeningPracticePageContent = () => {
               console.log('[ListeningPracticePage] Auto-submit successful but skipping navigation', {
                 isMockTest: currentIsMockTest,
                 effectiveTestId,
-                reason: currentIsMockTest ? 'mock test' : 'no test ID'
+                reason: currentIsMockTest ? 'no mockTestId' : 'no test ID'
               });
             }
           } else if (result && !result.success && isMountedRef.current) {
@@ -754,13 +771,16 @@ const ListeningPracticePageContent = () => {
           };
           localStorage.setItem(completionKey, 'true');
           localStorage.setItem(resultKey, JSON.stringify(resultData));
+          
+          // Navigate back to MockTestFlow so it can detect completion and move to next section
+          // This ensures the flow continues even after refresh
+          navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
         }
 
         // Reset submission state after successful submission
         // This prevents the component from being stuck in loading state
         isSubmittingRef.current = false;
         setIsSubmitting(false);
-
         return { success: true, attemptId: result.attemptId, score: result.score };
       } else {
         // Reset submission state on failure
@@ -930,7 +950,8 @@ const ListeningPracticePageContent = () => {
     const newUrl = newSearchParams.toString()
       ? `/listening-practice/${id}?${newSearchParams.toString()}`
       : `/listening-practice/${id}`;
-    window.history.replaceState({}, '', newUrl);
+    navigate(newUrl, { replace: true });
+    // window.history.replaceState({}, '', newUrl);
     setSearchParams(newSearchParams, { replace: true });
 
     setAnswers({});
@@ -1709,7 +1730,7 @@ const ListeningPracticePageContent = () => {
         isMockTest={isMockTest}
       />
 
-      {!isMockTest && <NoteSidebar />}
+      <NoteSidebar />
     </div>
   );
 };

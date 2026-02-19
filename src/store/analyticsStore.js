@@ -153,6 +153,7 @@ export const useAnalyticsStore = create((set, get) => ({
         test:test_id (
           id,
           title,
+          is_mock,
           type,
           difficulty
         )

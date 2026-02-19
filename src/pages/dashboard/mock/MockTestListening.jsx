@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useMockTestSecurity } from '@/hooks/useMockTestSecurity';
 import MockTestExitModal from '@/components/modal/MockTestExitModal';
 import ListeningPracticePage from '../listening/ListeningPracticePage';
@@ -15,6 +15,8 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [urlReady, setUrlReady] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Security hook
   const { resetExitModal, forceFullscreen  } = useMockTestSecurity(
@@ -158,9 +160,23 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
   };
 
   // Update URL to match practice page route - MUST happen before ListeningPracticePage renders
+  // Use location-based detection to ensure React Router has completed navigation
   useEffect(() => {
     if (!testId) return;
+
+    console.log('location.pathname', location.pathname);
+    console.log('testId', testId);
     
+    
+    const expectedPath = `/listening-practice/${testId}`;
+    
+    // Check if already on correct route
+    if (location.pathname === expectedPath) {
+      setUrlReady(true);
+      return;
+    }
+    
+    // Navigate to practice route
     const searchParams = new URLSearchParams({
       mockTest: 'true',
       mockTestId: mockTestId || '',
@@ -168,17 +184,18 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
       duration: '2400'
     });
     
-    const newUrl = `/listening-practice/${testId}?${searchParams.toString()}`;
-    
-    // Update URL immediately
-    window.history.replaceState({}, '', newUrl);
-    
-    // Mark as ready after ensuring URL is updated
-    // Use requestAnimationFrame to ensure DOM/React Router has processed the change
-    requestAnimationFrame(() => {
+    navigate(`/listening-practice/${testId}?${searchParams.toString()}`, { replace: true });
+  }, [testId, mockTestId, mockClientId, location.pathname, navigate]);
+
+  // Set urlReady when location matches expected route
+  // This ensures React Router has fully processed the navigation before rendering practice page
+  useEffect(() => {
+    if (testId && location.pathname === `/listening-practice/${testId}`) {
       setUrlReady(true);
-    });
-  }, [testId, mockTestId, mockClientId]);
+    } else {
+      setUrlReady(false);
+    }
+  }, [location.pathname, testId]);
 
   // Auto-fullscreen after URL is ready
   useEffect(() => {

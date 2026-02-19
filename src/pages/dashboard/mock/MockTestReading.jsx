@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useMockTestSecurity } from '@/hooks/useMockTestSecurity';
 import MockTestExitModal from '@/components/modal/MockTestExitModal';
 import InstructionalVideo from '@/components/mock/InstructionalVideo';
@@ -13,13 +13,14 @@ import ReadingPracticePage from '../reading/ReadingPracticePage';
  * - Auto-submit on time expiry
  */
 const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack }) => {
-  const navigate = useNavigate();
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVideo, setShowVideo] = useState(true);
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [urlReady, setUrlReady] = useState(false);
   const [isEarlyExit, setIsEarlyExit] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Security hook
   const { resetExitModal, forceFullscreen } = useMockTestSecurity(
@@ -157,9 +158,19 @@ const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onEarly
   };
 
   // Update URL to match practice page route - MUST happen before ReadingPracticePage renders
+  // Use location-based detection to ensure React Router has completed navigation
   useEffect(() => {
     if (!testId || showVideo) return;
     
+    const expectedPath = `/reading-practice/${testId}`;
+    
+    // Check if already on correct route
+    if (location.pathname === expectedPath) {
+      setUrlReady(true);
+      return;
+    }
+    
+    // Navigate to practice route
     const searchParams = new URLSearchParams({
       mockTest: 'true',
       mockTestId: mockTestId || '',
@@ -167,17 +178,18 @@ const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onEarly
       duration: '3600' // 60 minutes for reading
     });
     
-    const newUrl = `/reading-practice/${testId}?${searchParams.toString()}`;
-    
-    // Update URL immediately
-    window.history.replaceState({}, '', newUrl);
-    
-    // Mark as ready after ensuring URL is updated
-    // Use requestAnimationFrame to ensure DOM/React Router has processed the change
-    requestAnimationFrame(() => {
+    navigate(`/reading-practice/${testId}?${searchParams.toString()}`, { replace: true });
+  }, [testId, mockTestId, mockClientId, showVideo, location.pathname, navigate]);
+
+  // Set urlReady when location matches expected route
+  // This ensures React Router has fully processed the navigation before rendering practice page
+  useEffect(() => {
+    if (testId && !showVideo && location.pathname === `/reading-practice/${testId}`) {
       setUrlReady(true);
-    });
-  }, [testId, mockTestId, showVideo]);
+    } else {
+      setUrlReady(false);
+    }
+  }, [location.pathname, testId, showVideo]);
 
   // Early return for video - must be AFTER all hooks
   if (showVideo) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useMockTestSecurity } from '@/hooks/useMockTestSecurity';
 import MockTestExitModal from '@/components/modal/MockTestExitModal';
 import InstructionalVideo from '@/components/mock/InstructionalVideo';
@@ -15,6 +15,7 @@ import WritingPracticePage from '../writing/WritingPracticePage';
  */
 const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Check if video was already completed (persisted in localStorage)
@@ -26,6 +27,11 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [urlReady, setUrlReady] = useState(false);
   const [isEarlyExit, setIsEarlyExit] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(() => {
+    // Check for completion immediately on mount
+    if (!mockTestId) return false;
+    return localStorage.getItem(`mock_test_${mockTestId}_writing_completed`) === 'true';
+  });
 
   // Security hook - always active in mock test mode
   // WritingPracticePage will also call this hook, but having both active ensures security works
@@ -63,6 +69,8 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
       const completed = localStorage.getItem(`mock_test_${mockTestId}_writing_completed`);
       if (completed === 'true') {
         console.log('[MockTestWriting] Completion detected immediately on mount!', { mockTestId, isEarlyExit: isEarlyExitRef.current });
+        setIsCompleted(true); // Mark as completed to prevent rendering WritingPracticePage
+        setUrlReady(false); // Prevent URL navigation
         const result = localStorage.getItem(`mock_test_${mockTestId}_writing_result`);
         if (result) {
           try {
@@ -102,6 +110,8 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
     const checkCompletion = setInterval(() => {
       const completed = localStorage.getItem(`mock_test_${mockTestId}_writing_completed`);
       if (completed === 'true') {
+        setIsCompleted(true); // Mark as completed to prevent rendering WritingPracticePage
+        setUrlReady(false); // Prevent URL navigation
         const result = localStorage.getItem(`mock_test_${mockTestId}_writing_result`);
         if (result) {
           try {
@@ -168,10 +178,20 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
   };
 
   // Update URL to match practice page route - MUST happen before WritingPracticePage renders
-  // Use React Router's navigate to properly update useParams()
+  // Use location-based detection to ensure React Router has completed navigation
+  // BUT: Don't navigate if completion is already detected
   useEffect(() => {
-    if (!writingId || showVideo) return;
+    if (!writingId || showVideo || isCompleted) return;
     
+    const expectedPath = `/writing-practice/${writingId}`;
+    
+    // Check if already on correct route
+    if (location.pathname === expectedPath) {
+      setUrlReady(true);
+      return;
+    }
+    
+    // Navigate to practice route
     const searchParams = new URLSearchParams({
       mockTest: 'true',
       mockTestId: mockTestId || '',
@@ -179,19 +199,23 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
       duration: '3600' // 60 minutes for writing
     });
     
-    const newUrl = `/writing-practice/${writingId}?${searchParams.toString()}`;
-    
-    // Use React Router's navigate with replace to properly update useParams()
-    // This ensures WritingPracticePage can get the id from useParams()
-    navigate(newUrl, { replace: true });
-    
-    // Mark as ready after a short delay to ensure React Router has processed the navigation
-    const timer = setTimeout(() => {
+    navigate(`/writing-practice/${writingId}?${searchParams.toString()}`, { replace: true });
+  }, [writingId, mockTestId, mockClientId, showVideo, location.pathname, navigate, isCompleted]);
+
+  // Set urlReady when location matches expected route
+  // This ensures React Router has fully processed the navigation before rendering practice page
+  // BUT: Don't set urlReady if completion is detected
+  useEffect(() => {
+    if (isCompleted) {
+      setUrlReady(false);
+      return;
+    }
+    if (writingId && !showVideo && location.pathname === `/writing-practice/${writingId}`) {
       setUrlReady(true);
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [writingId, mockTestId, mockClientId, showVideo, navigate]);
+    } else {
+      setUrlReady(false);
+    }
+  }, [location.pathname, writingId, showVideo, isCompleted]);
 
   // Early return for video - must be AFTER all hooks
   if (showVideo) {
@@ -216,6 +240,19 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
           }}
         />
       </>
+    );
+  }
+
+  // If completion is detected, don't render WritingPracticePage
+  // The completion handler will navigate to results
+  if (isCompleted) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600">Completing writing section...</p>
+        </div>
+      </div>
     );
   }
 

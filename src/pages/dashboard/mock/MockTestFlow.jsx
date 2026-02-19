@@ -19,19 +19,20 @@ const MockTestFlow = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userProfile } = useAuthStore();
-  const { fetchMockTestByUserId, fetchMockTestById, mockTest, client, loading, error, updateClientStatus, hasUserCompletedMockTest } = useMockTestClientStore();
+  const { fetchMockTestByUserId, fetchMockTestById, mockTest, client, loading, error, updateClientStatus, hasUserCompletedMockTest, findClientForMockTest, fetchClientById } = useMockTestClientStore();
   const appliedAudioCheckDoneRef = useRef(false);
+  const restorationAttemptedRef = useRef(false);
 
   const [currentSection, setCurrentSection] = useState('audioCheck'); // 'audioCheck' | 'intro' | 'listening' | 'reading' | 'writing' | 'results'
   const [showIntroVideo, setShowIntroVideo] = useState(false);
   const [audioCheckComplete, setAudioCheckComplete] = useState(false);
   /** When restoring progress, show intro video first then go to this section */
-  const [resumeSectionAfterIntro, setResumeSectionAfterIntro] = useState(null);
   const [sectionResults, setSectionResults] = useState({
     listening: null,
     reading: null,
     writing: null,
   });
+
 
   // Load mock test data on mount
   useEffect(() => {
@@ -43,6 +44,37 @@ const MockTestFlow = () => {
       fetchMockTestByUserId(userProfile.id);
     }
   }, [paramMockTestId, userProfile?.id, fetchMockTestById, fetchMockTestByUserId]);
+
+  // Fetch client when mock test is loaded (for password-based access)
+  useEffect(() => {
+    const loadClient = async () => {
+      if (!mockTest?.id || !userProfile?.id) return;
+      
+      // If client is already loaded, skip
+      const currentState = useMockTestClientStore.getState();
+      if (currentState.client) return;
+      
+      try {
+        // Try to find client for this mock test
+        const { client: foundClient } = await findClientForMockTest(userProfile.id, mockTest.id);
+        
+        if (foundClient) {
+          // Client found, update store
+          useMockTestClientStore.setState({ client: foundClient });
+        } else {
+          // No client found - try fetching by user_id (for backward compatibility)
+          const clientByUserId = await fetchClientById(userProfile.id);
+          if (clientByUserId) {
+            useMockTestClientStore.setState({ client: clientByUserId });
+          }
+        }
+      } catch (err) {
+        console.error('[MockTestFlow] Error loading client:', err);
+      }
+    };
+    
+    loadClient();
+  }, [mockTest?.id, userProfile?.id, findClientForMockTest, fetchClientById]);
 
   // Check if user has already completed the mock test after it's loaded
   useEffect(() => {
@@ -67,6 +99,7 @@ const MockTestFlow = () => {
   // Use param mockTestId if available, otherwise use fetched mockTest
   const effectiveMockTestId = paramMockTestId || mockTest?.id;
 
+
   // When coming from MockTestsPage after device check: skip device check and show intro video
   useEffect(() => {
     if (appliedAudioCheckDoneRef.current) return;
@@ -78,52 +111,104 @@ const MockTestFlow = () => {
     }
   }, [location.state]);
 
-  // Load saved progress (only if we didn't just come from MockTestsPage with device check done)
-// Load saved progress
-useEffect(() => {
-  if (appliedAudioCheckDoneRef.current || !effectiveMockTestId) return;
-
-  const savedData = loadMockTestData(effectiveMockTestId);
-
-  if (savedData) {
-    console.log('[MockTestFlow] Loaded savedData:', savedData);
-
-    // Restore results
-    if (savedData.sectionResults) {
-      setSectionResults(savedData.sectionResults);
+  // Load saved progress
+  useEffect(() => {
+    if (appliedAudioCheckDoneRef.current) {
+      restorationAttemptedRef.current = true;
+      return;
     }
 
-    if (savedData.currentSection) {
-      const sec = savedData.currentSection;
+    if (!effectiveMockTestId) {
+      return;
+    }
 
-      // skip audioCheck if already done
-      if (sec === 'audioCheck') {
-        setAudioCheckComplete(false);
-        setCurrentSection('audioCheck');
-      } else {
-        // mark that audio check was done
-        setAudioCheckComplete(true);
+    // Check for completion signals BEFORE restoring state
+    // This prevents restoring to a section that was just completed
+    const writingCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_writing_completed`);
+    const readingCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_reading_completed`);
+    const listeningCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_listening_completed`);
+
+    const savedData = loadMockTestData(effectiveMockTestId);
+
+    // Mark restoration as attempted
+    restorationAttemptedRef.current = true;
+
+    // First, check completion signals to determine the correct next section
+    // This ensures we advance past completed sections even if saved data is stale
+    if (writingCompleted === 'true') {
+      console.log('[MockTestFlow] Writing section completed, advancing to results');
+      setAudioCheckComplete(true);
+      setCurrentSection('results');
+      setShowIntroVideo(false);
+      if (savedData?.sectionResults) {
+        setSectionResults(savedData.sectionResults);
+      }
+      return;
+    }
+    if (readingCompleted === 'true') {
+      console.log('[MockTestFlow] Reading section completed, advancing to writing');
+      setAudioCheckComplete(true);
+      setCurrentSection('writing');
+      setShowIntroVideo(false);
+      if (savedData?.sectionResults) {
+        setSectionResults(savedData.sectionResults);
+      }
+      return;
+    }
+    if (listeningCompleted === 'true') {
+      console.log('[MockTestFlow] Listening section completed, advancing to reading');
+      setAudioCheckComplete(true);
+      setCurrentSection('reading');
+      setShowIntroVideo(false);
+      if (savedData?.sectionResults) {
+        setSectionResults(savedData.sectionResults);
+      }
+      return;
+    }
+
+    if (savedData) {
+      // Restore results
+      if (savedData.sectionResults) {
+        setSectionResults(savedData.sectionResults);
       }
 
-      // direct restore without forcing intro video
-      if (sec === 'intro') {
-        setCurrentSection('intro');
-        setShowIntroVideo(true);
-      }
-      else if (sec === 'listening'
-           || sec === 'reading'
-           || sec === 'writing'
-           || sec === 'results') {
-        setShowIntroVideo(false);   // don’t show video again
-        setCurrentSection(sec);      // restore exact section
+      if (savedData.currentSection) {
+        const sec = savedData.currentSection;
+
+        // skip audioCheck if already done
+        if (sec === 'audioCheck') {
+          setAudioCheckComplete(false);
+          setCurrentSection('audioCheck');
+        } else {
+          // mark that audio check was done
+          setAudioCheckComplete(true);
+        }
+
+        // direct restore without forcing intro video
+        if (sec === 'intro') {
+          setCurrentSection('intro');
+          setShowIntroVideo(true);
+        }
+        else if (sec === 'listening'
+             || sec === 'reading'
+             || sec === 'writing'
+             || sec === 'results') {
+          setShowIntroVideo(false);   // don't show video again
+          setCurrentSection(sec);      // restore exact section
+        }
       }
     }
-  }
-}, [effectiveMockTestId]);
+  }, [effectiveMockTestId]);
 
 
   // Save progress whenever section or results change
+  // IMPORTANT: Don't save until restoration has been attempted to prevent overwriting saved data
   useEffect(() => {
+    // Don't save until restoration has been attempted (prevents overwriting saved data on mount)
+    if (!restorationAttemptedRef.current) {
+      return;
+    }
+
     if (effectiveMockTestId && currentSection !== 'intro') {
       saveMockTestData(effectiveMockTestId, {
         currentSection,
@@ -133,20 +218,36 @@ useEffect(() => {
     }
   }, [currentSection, sectionResults, effectiveMockTestId]);
 
-  const handleIntroVideoComplete = async () => {
-    setShowIntroVideo(false);
+  // Handler for when intro video starts - update status to 'started'
+  const handleIntroVideoStart = useCallback(async () => {
+    // Update mock_test_clients status to 'started' when user starts viewing the instruction video
+    // Try to get client ID from component state, or from store if not available
+    const storeState = useMockTestClientStore.getState();
+    let clientIdToUpdate = client?.id || storeState.client?.id;
+    const mockTestIdToSet = effectiveMockTestId || storeState.mockTest?.id;
     
-    // Update mock_test_clients status to 'started' when test begins (listening is first section)
-    if (client?.id) {
+    if (clientIdToUpdate && mockTestIdToSet) {
       try {
-        await updateClientStatus(client.id, 'started');
-        console.log('[MockTestFlow] Mock test client status updated to started');
+        const updateResult = await updateClientStatus(clientIdToUpdate, 'started', mockTestIdToSet);
+        if (updateResult.success) {
+          console.log('[MockTestFlow] Mock test client status updated to started (video started) with mock_test_id:', mockTestIdToSet);
+        } else {
+          console.error('[MockTestFlow] Failed to update status to started:', updateResult.error);
+        }
       } catch (err) {
         console.error('[MockTestFlow] Error updating mock test client status to started:', err);
-        // Don't block navigation if status update fails
+        // Don't block video if status update fails
       }
+    } else {
+      console.warn('[MockTestFlow] Cannot update status to started: client.id or mockTest.id is not available', {
+        clientId: clientIdToUpdate,
+        mockTestId: mockTestIdToSet
+      });
     }
-    
+  }, [client?.id, effectiveMockTestId, updateClientStatus]);
+
+  const handleIntroVideoComplete = async () => {
+    setShowIntroVideo(false);
     setCurrentSection('listening');
   };
 
@@ -173,10 +274,10 @@ useEffect(() => {
       writing: result,
     }));
     
-    // Update mock_test_clients status to 'completed' when all sections are done
+    // Update mock_test_clients status to 'completed' when writing section is finished
     // Try to get client ID from component state, or from store if not available
     const storeState = useMockTestClientStore.getState();
-    let clientIdToUpdate = storeState.client?.id;
+    let clientIdToUpdate = client?.id || storeState.client?.id;
     
     if (clientIdToUpdate) {
       try {
@@ -184,7 +285,7 @@ useEffect(() => {
         if (updateResult.success) {
           console.log('[MockTestFlow] Mock test client status updated to completed');
         } else {
-          console.error('[MockTestFlow] Failed to update status:', updateResult.error);
+          console.error('[MockTestFlow] Failed to update status to completed:', updateResult.error);
         }
       } catch (err) {
         console.error('[MockTestFlow] Error updating mock test client status to completed:', err);
@@ -280,6 +381,7 @@ useEffect(() => {
     return (
       <InstructionalVideo
         onComplete={handleIntroVideoComplete}
+        onStart={handleIntroVideoStart}
         countdownSeconds={0}
         title="Welcome to the Mock Test"
         description="This test consists of three sections: Listening, Reading, and Writing. Please follow the instructions carefully."
@@ -350,7 +452,50 @@ useEffect(() => {
           </div>
         );
       }
-      // If audio check is complete but we're in an unknown section, go to listening
+      // If audio check is complete but we're in an unknown section, check completion signals
+      // to determine the correct next section
+      const writingCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_writing_completed`);
+      const readingCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_reading_completed`);
+      const listeningCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_listening_completed`);
+      
+      if (writingCompleted === 'true') {
+        // Writing completed, go to results
+        setCurrentSection('results');
+        return (
+          <MockTestResults
+            results={sectionResults}
+            mockTestId={effectiveMockTestId}
+            onBack={() => navigate('/mock-tests')}
+          />
+        );
+      } else if (readingCompleted === 'true') {
+        // Reading completed, go to writing
+        setCurrentSection('writing');
+        return (
+          <MockTestWriting
+            writingId={mockTest.writing_id}
+            mockTestId={mockTest.id}
+            mockClientId={client?.id}
+            onComplete={handleWritingComplete}
+            onEarlyExit={handleEarlyExit}
+            onBack={() => navigate('/mock-tests')}
+          />
+        );
+      } else if (listeningCompleted === 'true') {
+        // Listening completed, go to reading
+        setCurrentSection('reading');
+        return (
+          <MockTestReading
+            testId={mockTest.reading_id}
+            mockTestId={mockTest.id}
+            mockClientId={client?.id}
+            onComplete={handleReadingComplete}
+            onEarlyExit={handleEarlyExit}
+            onBack={() => navigate('/mock-tests')}
+          />
+        );
+      }
+      // No sections completed, default to listening (first section)
       return (
         <MockTestListening
           testId={mockTest.listening_id}

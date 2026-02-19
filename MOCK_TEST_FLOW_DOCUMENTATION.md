@@ -58,6 +58,7 @@ sectionResults: { listening, reading, writing }
 
 **Key Handlers**:
 - `handleAudioCheckComplete()`: Sets `audioCheckComplete = true`, `showIntroVideo = true`, `currentSection = 'intro'`
+- `handleIntroVideoStart()`: Updates `mock_test_clients` status to `'started'` and sets `mock_test_id` to link client to the test
 - `handleIntroVideoComplete()`: Sets `currentSection = 'listening'`
 - `handleListeningComplete(result)`: Saves result, sets `currentSection = 'reading'`
 - `handleReadingComplete(result)`: Saves result, sets `currentSection = 'writing'`
@@ -188,6 +189,18 @@ if (mockTestContext && mockTestContext.mockClientId) {
    - `user_answer`: User's answer
    - `is_correct`: Boolean
    - `correct_answer`: Correct answer
+
+3. **mock_test_clients**:
+   - `id`: Primary key (UUID)
+   - `user_id`: References `auth.users(id)`
+   - `mock_test_id`: **References `mock_test(id)`** - Direct link to the mock test
+   - `status`: Status enum ('booked', 'started', 'completed', 'checked', 'notified')
+   - `total_score`: Overall band score (0-9)
+   - `speaking_id`: Optional reference to speaking test
+   - `full_name`, `email`, `phone_number`: User information
+   - `created_at`, `updated_at`: Timestamps
+
+**Key Change**: The `mock_test_id` field directly links clients to mock tests, simplifying queries. When status is updated to `'started'`, the `mock_test_id` is automatically set.
 
 ---
 
@@ -397,6 +410,7 @@ MockTestsPage
 MockTestFlow (currentSection: 'audioCheck')
   ↓ (audio check complete)
 MockTestFlow (currentSection: 'intro', showIntroVideo: true)
+  ↓ (video starts → updates mock_test_clients.status = 'started', sets mock_test_id)
   ↓ (video complete)
 MockTestFlow (currentSection: 'listening')
   ↓
@@ -462,4 +476,5 @@ MockTestFlow (currentSection: 'results')
 - Timer auto-starts only in mock test mode
 - LocalStorage is used for completion signaling between components
 - Security restrictions apply throughout mock test flow
+- **Client-to-Test Relationship**: The `mock_test_clients.mock_test_id` field directly links clients to mock tests, simplifying queries. This field is set when the status is updated to `'started'` (when intro video starts). All client lookups now use `mock_test_id` instead of matching via `user_attempts`.
 
