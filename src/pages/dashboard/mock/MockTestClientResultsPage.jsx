@@ -45,7 +45,19 @@ const MockTestClientResultsPage = () => {
           throw new Error('Client not found');
         }
 
-        setClient(clientData);
+        // Load profile photo (avatar) from users table for PDF and display
+        let clientWithAvatar = { ...clientData };
+        if (clientData.user_id) {
+          const { data: userRow } = await supabase
+            .from('users')
+            .select('avatar_image')
+            .eq('id', clientData.user_id)
+            .maybeSingle();
+          if (userRow?.avatar_image) {
+            clientWithAvatar = { ...clientData, avatar_image: userRow.avatar_image };
+          }
+        }
+        setClient(clientWithAvatar);
 
         // Fetch results if client has user_id and mock_test_id
         if (!clientData.user_id || !clientData.mock_test_id) {
