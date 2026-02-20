@@ -259,6 +259,7 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
 
   doc.rect(photoX, photoY, photoW, photoH);
   const photoSource = client.photo_url || client.photo || client.avatar_image;
+  let photoDrawn = false;
   if (photoSource) {
     try {
       let photoData = photoSource;
@@ -275,9 +276,28 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
         const imgH = photoH - 2;
         const format = typeof photoData === "string" && photoData.startsWith("data:image/png") ? "PNG" : "JPEG";
         doc.addImage(photoData, format, photoX + 1, photoY + 1, imgW, imgH);
+        photoDrawn = true;
       }
     } catch (_) {
-      // leave photo block empty on load/embed error
+      // fall through to fallback
+    }
+  }
+  if (!photoDrawn) {
+    try {
+      const fallbackUrl = "/images/humans/avatar/useravatar.png";
+      const fallbackData = await imageToBase64(fallbackUrl, {
+        maxWidth: 400,
+        maxHeight: 400,
+        format: "image/png",
+        quality: 0.9,
+      });
+      if (fallbackData) {
+        const imgW = photoW - 2;
+        const imgH = photoH - 2;
+        doc.addImage(fallbackData, "PNG", photoX + 1, photoY + 1, imgW, imgH);
+      }
+    } catch (_) {
+      // block stays empty if fallback also fails
     }
   }
 
