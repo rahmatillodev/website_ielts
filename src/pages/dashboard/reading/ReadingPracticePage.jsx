@@ -659,7 +659,7 @@ const ReadingPracticePageContent = () => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest, isMockTest, mockTestId, searchParams, navigate, handleSubmitTest]);
+  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest, isMockTest, mockTestId, searchParams, navigate, ]);
 
   // Set mounted ref to false when component unmounts
   // Reset submission refs on mount to ensure clean state after refresh
