@@ -588,18 +588,36 @@ const ReadingPracticePageContent = () => {
           console.log('[ReadingPracticePage] Auto-submit result:', result);
           
           // Navigate if submission was successful (navigation is safe even if component is unmounting)
-          // Check isMountedRef for state updates, but always navigate if submission succeeded
+          // Note: handleSubmitTest already navigates for mock tests, but we check here as a fallback
           if (result && result.success) {
             // Double-check isMockTest to ensure we navigate correctly
             const currentIsMockTest = searchParams.get('mockTest') === 'true' || 
                                      new URLSearchParams(window.location.search).get('mockTest') === 'true';
             
+            // Only navigate if handleSubmitTest didn't already navigate (for non-mock tests)
+            // For mock tests, handleSubmitTest already navigates, so this is just a safety check
             if (currentIsMockTest && mockTestId) {
-              // In mock test mode, navigate back to MockTestFlow so it can detect completion and move to next section
-              // This ensures the flow continues even after refresh
+              // In mock test mode, handleSubmitTest should have already navigated
+              // But if it didn't (edge case), navigate here as fallback
+              const completionKey = `mock_test_${mockTestId}_reading_completed`;
+              const isCompleted = localStorage.getItem(completionKey) === 'true';
+              if (!isCompleted) {
+                console.warn('[ReadingPracticePage] Completion signal not set, setting it now');
+                const resultKey = `mock_test_${mockTestId}_reading_result`;
+                const resultData = {
+                  success: true,
+                  attemptId: result.attemptId,
+                  score: result.score,
+                  correctCount: result.correctCount,
+                  totalQuestions: result.totalQuestions,
+                };
+                localStorage.setItem(completionKey, 'true');
+                localStorage.setItem(resultKey, JSON.stringify(resultData));
+              }
               console.log('[ReadingPracticePage] Auto-submit successful, navigating to MockTestFlow', {
                 mockTestId,
-                result: result.success
+                result: result.success,
+                completionSet: localStorage.getItem(completionKey) === 'true'
               });
               navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
             } else if (!currentIsMockTest && effectiveTestId) {
@@ -641,7 +659,7 @@ const ReadingPracticePageContent = () => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest, isMockTest, searchParams, navigate]);
+  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest, isMockTest, mockTestId, searchParams, navigate, handleSubmitTest]);
 
   // Set mounted ref to false when component unmounts
   // Reset submission refs on mount to ensure clean state after refresh

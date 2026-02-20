@@ -200,6 +200,73 @@ const MockTestFlow = () => {
     }
   }, [effectiveMockTestId]);
 
+  // Poll for completion signals when navigating back from practice pages (e.g., after auto-submit)
+  // This ensures we detect completion even if the component was already mounted
+  useEffect(() => {
+    if (!effectiveMockTestId || !restorationAttemptedRef.current) {
+      return;
+    }
+
+    // Check immediately on mount/navigation
+    const checkCompletion = () => {
+      const writingCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_writing_completed`);
+      const readingCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_reading_completed`);
+      const listeningCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_listening_completed`);
+
+      const savedData = loadMockTestData(effectiveMockTestId);
+
+      // Check completion signals and advance to next section
+      if (writingCompleted === 'true' && currentSection !== 'results') {
+        console.log('[MockTestFlow] Writing section completed (polling), advancing to results');
+        setAudioCheckComplete(true);
+        setCurrentSection('results');
+        setShowIntroVideo(false);
+        if (savedData?.sectionResults) {
+          setSectionResults(savedData.sectionResults);
+        }
+        return true; // Signal that we handled it
+      }
+      if (readingCompleted === 'true' && currentSection !== 'writing' && currentSection !== 'results') {
+        console.log('[MockTestFlow] Reading section completed (polling), advancing to writing');
+        setAudioCheckComplete(true);
+        setCurrentSection('writing');
+        setShowIntroVideo(false);
+        if (savedData?.sectionResults) {
+          setSectionResults(savedData.sectionResults);
+        }
+        return true;
+      }
+      if (listeningCompleted === 'true' && currentSection !== 'reading' && currentSection !== 'writing' && currentSection !== 'results') {
+        console.log('[MockTestFlow] Listening section completed (polling), advancing to reading');
+        setAudioCheckComplete(true);
+        setCurrentSection('reading');
+        setShowIntroVideo(false);
+        if (savedData?.sectionResults) {
+          setSectionResults(savedData.sectionResults);
+        }
+        return true;
+      }
+      return false;
+    };
+
+    // Check immediately
+    if (checkCompletion()) {
+      return; // Already handled, no need to set up polling
+    }
+
+    // Set up polling to check for completion signals
+    // This is important when auto-submit navigates back to MockTestFlow
+    const pollInterval = setInterval(() => {
+      if (checkCompletion()) {
+        clearInterval(pollInterval);
+      }
+    }, 1000); // Check every second
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [effectiveMockTestId, currentSection]);
+
 
   // Save progress whenever section or results change
   // IMPORTANT: Don't save until restoration has been attempted to prevent overwriting saved data

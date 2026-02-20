@@ -103,13 +103,10 @@ function App() {
       return;
     }
 
-    // Landing page (/) - set to regular if not already set
-    if (location.pathname === '/') {
+    // Landing page (/) - always set to regular
+    if (location.pathname === '/' ||  location.pathname === '/dashboard') {
       if (!user) {
-        const currentAccessMode = sessionStorage.getItem('accessMode');
-        if (!currentAccessMode) {
-          sessionStorage.setItem('accessMode', 'regular');
-        }
+        sessionStorage.setItem('accessMode', 'regular');
       }
       return;
     }

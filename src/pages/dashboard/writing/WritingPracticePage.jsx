@@ -908,7 +908,7 @@ const WritingPracticePageContent = () => {
       setIsPaused(false);
       setIsStarted(true);
     }
-  }, [currentWriting, answers, startTime, elapsedTime, id, searchParams, setSearchParams, submitWritingAttempt, isAutoSubmitting, isMockTest, mockTestId, mockClientId, updateClientStatus]);
+  }, [currentWriting, answers, startTime, elapsedTime, id, searchParams, setSearchParams, submitWritingAttempt, isAutoSubmitting, isSaving, isMockTest, mockTestId, mockClientId, updateClientStatus, navigate]);
 
   // If all tasks have at least one word, open the finish modal and save the writing
 
