@@ -3,7 +3,7 @@
  * @param {string} url - The image URL
  * @returns {Promise<string>} - Base64 data URL
  */
-const imageToBase64 = (url, options = {}) => {
+export const imageToBase64 = (url, options = {}) => {
   const {
     maxWidth = 64,
     maxHeight = 64,
