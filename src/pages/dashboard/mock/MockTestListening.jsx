@@ -2,18 +2,23 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMockTestSecurity } from '@/hooks/useMockTestSecurity';
 import MockTestExitModal from '@/components/modal/MockTestExitModal';
+import InstructionalVideo from '@/components/mock/InstructionalVideo';
 import ListeningPracticePage from '../listening/ListeningPracticePage';
 
 /**
  * Mock Test Listening Section Wrapper
+ * - Shows listening video (serves as intro video for entire mock test)
+ * - Auto-advances to listening after video
  * - 40-minute fixed timer (handled by practice page with URL param)
  * - Security restrictions
  * - Auto-submit on time expiry
  * - Can proceed early
  */
-const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack }) => {
+const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack, videoSrc, onVideoStart }) => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showVideo, setShowVideo] = useState(true);
+  const [videoCompleted, setVideoCompleted] = useState(false);
   const [urlReady, setUrlReady] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -159,15 +164,17 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
     forceFullscreen();
   };
 
+
+  const handleVideoComplete = () => {
+    setVideoCompleted(true);
+    setShowVideo(false);
+  };
+
   // Update URL to match practice page route - MUST happen before ListeningPracticePage renders
   // Use location-based detection to ensure React Router has completed navigation
   useEffect(() => {
-    if (!testId) return;
+    if (!testId || showVideo) return;
 
-    console.log('location.pathname', location.pathname);
-    console.log('testId', testId);
-    
-    
     const expectedPath = `/listening-practice/${testId}`;
     
     // Check if already on correct route
@@ -185,20 +192,44 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
     });
     
     navigate(`/listening-practice/${testId}?${searchParams.toString()}`, { replace: true });
-  }, [testId, mockTestId, mockClientId, location.pathname, navigate]);
+  }, [testId, mockTestId, mockClientId, showVideo, location.pathname, navigate]);
 
   // Set urlReady when location matches expected route
   // This ensures React Router has fully processed the navigation before rendering practice page
   useEffect(() => {
-    if (testId && location.pathname === `/listening-practice/${testId}`) {
+    if (testId && !showVideo && location.pathname === `/listening-practice/${testId}`) {
       setUrlReady(true);
     } else {
       setUrlReady(false);
     }
-  }, [location.pathname, testId]);
+  }, [location.pathname, testId, showVideo]);
 
-  // Fullscreen is now handled by ListeningPracticePage when in mock test mode
-  // No need for duplicate logic here
+  // Early return for video - must be AFTER all hooks
+  if (showVideo) {
+    return (
+      <>
+        <MockTestExitModal
+          isOpen={showExitModal}
+          onConfirm={handleExitConfirm}
+          onCancel={handleExitCancel}
+          isSubmitting={isSubmitting}
+        />
+        <InstructionalVideo
+          onComplete={handleVideoComplete}
+          onStart={onVideoStart}
+          countdownSeconds={0}
+          title="Listening Section Instructions"
+          description="You will have 40 minutes to complete the listening section. The test will start automatically after this video."
+          autoFullscreen={true}
+          videoSrc={videoSrc || "/videos/listeningVideo.mp4"}
+          onExit={() => {
+            setShowVideo(false);
+            if (onBack) onBack();
+          }}
+        />
+      </>
+    );
+  }
 
   // Don't render ListeningPracticePage until URL is ready
   if (!testId || !urlReady) {
@@ -220,7 +251,7 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
         onCancel={handleExitCancel}
         isSubmitting={isSubmitting}
       />
-      <ListeningPracticePage />
+      {!showVideo && <ListeningPracticePage />}
     </>
   );
 };

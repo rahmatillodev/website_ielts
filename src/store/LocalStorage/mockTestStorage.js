@@ -103,6 +103,8 @@ export const clearAllMockTestDataForId = (mockTestId) => {
     const keysToRemove = [
       // Main progress data
       `${STORAGE_KEY_PREFIX}${mockTestId}`,
+      // Audio check state
+      `${STORAGE_KEY_PREFIX}${mockTestId}_audio_check`,
       // Listening completion signals
       `${STORAGE_KEY_PREFIX}${mockTestId}_listening_completed`,
       `${STORAGE_KEY_PREFIX}${mockTestId}_listening_result`,
@@ -184,5 +186,60 @@ export const loadSectionData = (mockTestId, section) => {
     startTime: data[`${section}StartTime`],
     completed: data[`${section}Completed`] || false,
   };
+};
+
+/**
+ * Save audio check state
+ * @param {string} mockTestId - Mock test ID
+ * @param {object} audioCheckState - Audio check state
+ * @param {boolean} audioCheckState.micSuccess - Whether microphone check passed
+ * @param {boolean} audioCheckState.speakerSuccess - Whether speaker check passed
+ * @param {boolean} audioCheckState.completed - Whether audio check is fully completed
+ */
+export const saveAudioCheckState = (mockTestId, audioCheckState) => {
+  try {
+    if (!mockTestId) return;
+    const key = `${STORAGE_KEY_PREFIX}${mockTestId}_audio_check`;
+    const storageData = {
+      ...audioCheckState,
+      mockTestId,
+      lastSaved: Date.now(),
+    };
+    localStorage.setItem(key, JSON.stringify(storageData));
+  } catch (error) {
+    console.error('[mockTestStorage] Error saving audio check state:', error);
+  }
+};
+
+/**
+ * Load audio check state
+ * @param {string} mockTestId - Mock test ID
+ * @returns {object|null} Audio check state or null
+ */
+export const loadAudioCheckState = (mockTestId) => {
+  try {
+    if (!mockTestId) return null;
+    const key = `${STORAGE_KEY_PREFIX}${mockTestId}_audio_check`;
+    const data = localStorage.getItem(key);
+    if (!data) return null;
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('[mockTestStorage] Error loading audio check state:', error);
+    return null;
+  }
+};
+
+/**
+ * Clear audio check state
+ * @param {string} mockTestId - Mock test ID
+ */
+export const clearAudioCheckState = (mockTestId) => {
+  try {
+    if (!mockTestId) return;
+    const key = `${STORAGE_KEY_PREFIX}${mockTestId}_audio_check`;
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.error('[mockTestStorage] Error clearing audio check state:', error);
+  }
 };
 

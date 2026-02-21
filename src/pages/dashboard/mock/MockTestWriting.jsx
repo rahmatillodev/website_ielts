@@ -13,7 +13,7 @@ import WritingPracticePage from '../writing/WritingPracticePage';
  * - Auto-submit on time expiry
  * - Timer starts automatically after intro (no button needed)
  */
-const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack }) => {
+const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack, videoSrc }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showExitModal, setShowExitModal] = useState(false);
@@ -233,7 +233,7 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
           title="Writing Section Instructions"
           description="You will have 60 minutes to complete the writing section. The test will start automatically after this video."
           autoFullscreen={true}
-          videoSrc="/videos/introVideo.mp4"
+          videoSrc={videoSrc || "/videos/writingVideo.mp4"}
           onExit={() => {
             setShowVideo(false);
             if (onBack) onBack();

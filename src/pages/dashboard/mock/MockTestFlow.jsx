@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useMockTestClientStore } from '@/store/mockTestClientStore';
 import { useAuthStore } from '@/store/authStore';
-import { saveMockTestData, loadMockTestData, clearMockTestData, clearAllMockTestDataForId } from '@/store/LocalStorage/mockTestStorage';
+import { saveMockTestData, loadMockTestData, clearMockTestData, clearAllMockTestDataForId, loadAudioCheckState, saveAudioCheckState } from '@/store/LocalStorage/mockTestStorage';
 import MockTestListening from './MockTestListening';
 import MockTestReading from './MockTestReading';
 import MockTestWriting from './MockTestWriting';
@@ -23,8 +23,7 @@ const MockTestFlow = () => {
   const appliedAudioCheckDoneRef = useRef(false);
   const restorationAttemptedRef = useRef(false);
 
-  const [currentSection, setCurrentSection] = useState('audioCheck'); // 'audioCheck' | 'intro' | 'listening' | 'reading' | 'writing' | 'results'
-  const [showIntroVideo, setShowIntroVideo] = useState(false);
+  const [currentSection, setCurrentSection] = useState('audioCheck'); // 'audioCheck' | 'listening' | 'reading' | 'writing' | 'results'
   const [audioCheckComplete, setAudioCheckComplete] = useState(false);
   /** When restoring progress, show intro video first then go to this section */
   const [sectionResults, setSectionResults] = useState({
@@ -33,6 +32,9 @@ const MockTestFlow = () => {
     writing: null,
   });
 
+  const listeningVideoSrc = "/videos/listeningVideo.mp4";
+  const readingVideoSrc = "/videos/readingVideo.mp4";
+  const writingVideoSrc = "/videos/writingVideo.mp4";
 
   // Load mock test data on mount
   useEffect(() => {
@@ -100,14 +102,13 @@ const MockTestFlow = () => {
   const effectiveMockTestId = paramMockTestId || mockTest?.id;
 
 
-  // When coming from MockTestsPage after device check: skip device check and show intro video
+  // When coming from MockTestsPage after device check: skip device check and go to listening
   useEffect(() => {
     if (appliedAudioCheckDoneRef.current) return;
     if (location.state?.audioCheckDone) {
       appliedAudioCheckDoneRef.current = true;
       setAudioCheckComplete(true);
-      setShowIntroVideo(true);
-      setCurrentSection('intro');
+      setCurrentSection('listening');
     }
   }, [location.state]);
 
@@ -139,7 +140,6 @@ const MockTestFlow = () => {
       console.log('[MockTestFlow] Writing section completed, advancing to results');
       setAudioCheckComplete(true);
       setCurrentSection('results');
-      setShowIntroVideo(false);
       if (savedData?.sectionResults) {
         setSectionResults(savedData.sectionResults);
       }
@@ -149,7 +149,6 @@ const MockTestFlow = () => {
       console.log('[MockTestFlow] Reading section completed, advancing to writing');
       setAudioCheckComplete(true);
       setCurrentSection('writing');
-      setShowIntroVideo(false);
       if (savedData?.sectionResults) {
         setSectionResults(savedData.sectionResults);
       }
@@ -159,11 +158,17 @@ const MockTestFlow = () => {
       console.log('[MockTestFlow] Listening section completed, advancing to reading');
       setAudioCheckComplete(true);
       setCurrentSection('reading');
-      setShowIntroVideo(false);
       if (savedData?.sectionResults) {
         setSectionResults(savedData.sectionResults);
       }
       return;
+    }
+
+    // Check for saved audio check state
+    const audioCheckState = loadAudioCheckState(effectiveMockTestId);
+    if (audioCheckState?.completed) {
+      // Audio check was already completed, skip it
+      setAudioCheckComplete(true);
     }
 
     if (savedData) {
@@ -177,26 +182,38 @@ const MockTestFlow = () => {
 
         // skip audioCheck if already done
         if (sec === 'audioCheck') {
-          setAudioCheckComplete(false);
-          setCurrentSection('audioCheck');
+          // Only show audio check if it wasn't completed
+          if (!audioCheckState?.completed) {
+            setAudioCheckComplete(false);
+            setCurrentSection('audioCheck');
+          } else {
+            // Audio check was completed, go to listening
+            setAudioCheckComplete(true);
+            setCurrentSection('listening');
+          }
         } else {
           // mark that audio check was done
           setAudioCheckComplete(true);
         }
 
-        // direct restore without forcing intro video
+        // direct restore - skip intro section
         if (sec === 'intro') {
-          setCurrentSection('intro');
-          setShowIntroVideo(true);
+          // Intro section no longer exists, go to listening instead
+          setCurrentSection('listening');
         }
         else if (sec === 'listening'
              || sec === 'reading'
              || sec === 'writing'
              || sec === 'results') {
-          setShowIntroVideo(false);   // don't show video again
           setCurrentSection(sec);      // restore exact section
         }
+      } else if (audioCheckState?.completed) {
+        // No saved section but audio check was completed, go to listening
+        setCurrentSection('listening');
       }
+    } else if (audioCheckState?.completed) {
+      // No saved data but audio check was completed, go to listening
+      setCurrentSection('listening');
     }
   }, [effectiveMockTestId]);
 
@@ -220,7 +237,6 @@ const MockTestFlow = () => {
         console.log('[MockTestFlow] Writing section completed (polling), advancing to results');
         setAudioCheckComplete(true);
         setCurrentSection('results');
-        setShowIntroVideo(false);
         if (savedData?.sectionResults) {
           setSectionResults(savedData.sectionResults);
         }
@@ -230,7 +246,6 @@ const MockTestFlow = () => {
         console.log('[MockTestFlow] Reading section completed (polling), advancing to writing');
         setAudioCheckComplete(true);
         setCurrentSection('writing');
-        setShowIntroVideo(false);
         if (savedData?.sectionResults) {
           setSectionResults(savedData.sectionResults);
         }
@@ -240,7 +255,6 @@ const MockTestFlow = () => {
         console.log('[MockTestFlow] Listening section completed (polling), advancing to reading');
         setAudioCheckComplete(true);
         setCurrentSection('reading');
-        setShowIntroVideo(false);
         if (savedData?.sectionResults) {
           setSectionResults(savedData.sectionResults);
         }
@@ -285,9 +299,10 @@ const MockTestFlow = () => {
     }
   }, [currentSection, sectionResults, effectiveMockTestId]);
 
-  // Handler for when intro video starts - update status to 'started'
-  const handleIntroVideoStart = useCallback(async () => {
-    // Update mock_test_clients status to 'started' when user starts viewing the instruction video
+  // Handler for when listening video starts - update status to 'started'
+  // The listening video serves as the intro video for the entire mock test
+  const handleListeningVideoStart = useCallback(async () => {
+    // Update mock_test_clients status to 'started' when user starts viewing the listening video
     // Try to get client ID from component state, or from store if not available
     const storeState = useMockTestClientStore.getState();
     let clientIdToUpdate = client?.id || storeState.client?.id;
@@ -297,7 +312,7 @@ const MockTestFlow = () => {
       try {
         const updateResult = await updateClientStatus(clientIdToUpdate, 'started', mockTestIdToSet);
         if (updateResult.success) {
-          console.log('[MockTestFlow] Mock test client status updated to started (video started) with mock_test_id:', mockTestIdToSet);
+          console.log('[MockTestFlow] Mock test client status updated to started (listening video started) with mock_test_id:', mockTestIdToSet);
         } else {
           console.error('[MockTestFlow] Failed to update status to started:', updateResult.error);
         }
@@ -312,11 +327,6 @@ const MockTestFlow = () => {
       });
     }
   }, [client?.id, effectiveMockTestId, updateClientStatus]);
-
-  const handleIntroVideoComplete = async () => {
-    setShowIntroVideo(false);
-    setCurrentSection('listening');
-  };
 
   const handleListeningComplete = useCallback((result) => {
     setSectionResults((prevResults) => ({
@@ -401,9 +411,17 @@ const MockTestFlow = () => {
   }, [paramMockTestId]);
 
   const handleAudioCheckComplete = () => {
+    // Save audio check completion state
+    if (effectiveMockTestId) {
+      saveAudioCheckState(effectiveMockTestId, {
+        micSuccess: true,
+        speakerSuccess: true,
+        completed: true,
+      });
+    }
     setAudioCheckComplete(true);
-    setShowIntroVideo(true);
-    setCurrentSection('intro');
+    // Go directly to listening section (listening video serves as intro)
+    setCurrentSection('listening');
   };
 
   if (loading) {
@@ -437,28 +455,8 @@ const MockTestFlow = () => {
   if (currentSection === 'audioCheck' && !audioCheckComplete) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <MockTestStart onStart={handleAudioCheckComplete} />
+        <MockTestStart onStart={handleAudioCheckComplete} mockTestId={effectiveMockTestId} />
       </div>
-    );
-  }
-
-  // Show intro video after audio check
-  // Check both showIntroVideo flag and currentSection to ensure video shows
-  if ((showIntroVideo || currentSection === 'intro') && audioCheckComplete) {
-    return (
-      <InstructionalVideo
-        onComplete={handleIntroVideoComplete}
-        onStart={handleIntroVideoStart}
-        countdownSeconds={0}
-        title="Welcome to the Mock Test"
-        description="This test consists of three sections: Listening, Reading, and Writing. Please follow the instructions carefully."
-        autoFullscreen={true}
-        onExit={() => {
-          setShowIntroVideo(false);
-          setCurrentSection('audioCheck');
-          navigate('/mock-tests');
-        }}
-      />
     );
   }
 
@@ -473,6 +471,8 @@ const MockTestFlow = () => {
           onComplete={handleListeningComplete}
           onEarlyExit={handleEarlyExit}
           onBack={() => navigate('/mock-tests')}
+          videoSrc={listeningVideoSrc}
+          onVideoStart={handleListeningVideoStart}
         />
       );
 
@@ -485,6 +485,7 @@ const MockTestFlow = () => {
           onComplete={handleReadingComplete}
           onEarlyExit={handleEarlyExit}
           onBack={() => navigate('/mock-tests')}
+          videoSrc={readingVideoSrc}
         />
       );
 
@@ -497,6 +498,7 @@ const MockTestFlow = () => {
           onComplete={handleWritingComplete}
           onEarlyExit={handleEarlyExit}
           onBack={() => navigate('/mock-tests')}
+          videoSrc={writingVideoSrc}
         />
       );
 
@@ -515,7 +517,7 @@ const MockTestFlow = () => {
       if (!audioCheckComplete) {
         return (
           <div className="flex items-center justify-center min-h-screen">
-            <MockTestStart onStart={handleAudioCheckComplete} />
+            <MockTestStart onStart={handleAudioCheckComplete} mockTestId={effectiveMockTestId} />
           </div>
         );
       }
@@ -546,6 +548,7 @@ const MockTestFlow = () => {
             onComplete={handleWritingComplete}
             onEarlyExit={handleEarlyExit}
             onBack={() => navigate('/mock-tests')}
+            videoSrc={writingVideoSrc}
           />
         );
       } else if (listeningCompleted === 'true') {
@@ -559,6 +562,7 @@ const MockTestFlow = () => {
             onComplete={handleReadingComplete}
             onEarlyExit={handleEarlyExit}
             onBack={() => navigate('/mock-tests')}
+            videoSrc={readingVideoSrc}
           />
         );
       }
@@ -571,6 +575,8 @@ const MockTestFlow = () => {
           onComplete={handleListeningComplete}
           onEarlyExit={handleEarlyExit}
           onBack={() => navigate('/mock-tests')}
+          videoSrc={listeningVideoSrc}
+          onVideoStart={handleListeningVideoStart}
         />
       );
   }

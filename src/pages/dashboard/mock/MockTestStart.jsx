@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { MdMic, MdVolumeUp, MdCheckCircle } from "react-icons/md";
 import { FaCheck } from "react-icons/fa";
+import { saveAudioCheckState, loadAudioCheckState } from "@/store/LocalStorage/mockTestStorage";
 
 // Custom Audio Visualizer Component with Gradient
 const GradientAudioVisualizer = ({ stream, width = 350, height = 100 }) => {
@@ -95,7 +96,7 @@ const GradientAudioVisualizer = ({ stream, width = 350, height = 100 }) => {
   );
 };
 
-const MockTestStart = ({ onStart }) => {
+const MockTestStart = ({ onStart, mockTestId }) => {
   const [micStreamActive, setMicStreamActive] = useState(false);
   const [micSuccess, setMicSuccess] = useState(false);
   const [speakerSuccess, setSpeakerSuccess] = useState(false);
@@ -106,7 +107,42 @@ const MockTestStart = ({ onStart }) => {
   const audioContextRef = useRef(null);
   const oscillatorRef = useRef(null);
   const gainRef = useRef(null);
+  const micSuccessTimeoutRef = useRef(null);
+  const speakerSuccessTimeoutRef = useRef(null);
 
+
+  // Load saved audio check state on mount
+  useEffect(() => {
+    if (mockTestId) {
+      const savedState = loadAudioCheckState(mockTestId);
+      if (savedState) {
+        setMicSuccess(savedState.micSuccess || false);
+        setSpeakerSuccess(savedState.speakerSuccess || false);
+      }
+    }
+  }, [mockTestId]);
+
+  // Check if both checks were already successful from saved state
+  const [wasRestored, setWasRestored] = useState(false);
+  useEffect(() => {
+    if (mockTestId && micSuccess && speakerSuccess) {
+      const savedState = loadAudioCheckState(mockTestId);
+      if (savedState?.completed) {
+        setWasRestored(true);
+      }
+    }
+  }, [mockTestId, micSuccess, speakerSuccess]);
+
+  // Save audio check state whenever it changes
+  useEffect(() => {
+    if (mockTestId && (micSuccess || speakerSuccess)) {
+      saveAudioCheckState(mockTestId, {
+        micSuccess,
+        speakerSuccess,
+        completed: micSuccess && speakerSuccess,
+      });
+    }
+  }, [micSuccess, speakerSuccess, mockTestId]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -121,12 +157,21 @@ const MockTestStart = ({ onStart }) => {
         testAudioRef.current.pause();
         testAudioRef.current = null;
       }
+      if (micSuccessTimeoutRef.current) {
+        clearTimeout(micSuccessTimeoutRef.current);
+      }
+      if (speakerSuccessTimeoutRef.current) {
+        clearTimeout(speakerSuccessTimeoutRef.current);
+      }
     };
   }, []);
 
   const handleMicCheck = async () => {
     try {
       setMicSuccess(false);
+      if (micSuccessTimeoutRef.current) {
+        clearTimeout(micSuccessTimeoutRef.current);
+      }
 
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -139,6 +184,18 @@ const MockTestStart = ({ onStart }) => {
 
       streamRef.current = stream;
       setMicStreamActive(true);
+
+      // Auto-detect mic success after 2 seconds of active stream
+      // This gives the visualizer time to show activity
+      micSuccessTimeoutRef.current = setTimeout(() => {
+        // Check if stream is still active and has active tracks
+        if (streamRef.current && streamRef.current.active) {
+          const audioTracks = streamRef.current.getAudioTracks();
+          if (audioTracks.length > 0 && audioTracks[0].readyState === 'live') {
+            setMicSuccess(true);
+          }
+        }
+      }, 2000);
     } catch (err) {
       console.error("Microphone error:", err);
       alert("Microphone not detected or permission denied. Please allow microphone access to continue.");
@@ -148,11 +205,19 @@ const MockTestStart = ({ onStart }) => {
   };
 
   const handleMicStop = () => {
+    const wasActive = streamRef.current?.active;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     setMicStreamActive(false);
+    if (micSuccessTimeoutRef.current) {
+      clearTimeout(micSuccessTimeoutRef.current);
+    }
+    // If mic was working when stopped, mark as successful
+    if (!micSuccess && wasActive) {
+      setMicSuccess(true);
+    }
   };
 
   const handleSpeakerTest = () => {
@@ -178,6 +243,10 @@ const MockTestStart = ({ onStart }) => {
         audioContextRef.current = null;
       }
 
+      if (speakerSuccessTimeoutRef.current) {
+        clearTimeout(speakerSuccessTimeoutRef.current);
+      }
+
       setSpeakerTesting(false);
       return;
     }
@@ -192,9 +261,14 @@ const MockTestStart = ({ onStart }) => {
 
       audio.onended = () => {
         setSpeakerTesting(false);
+        // Auto-mark speaker as successful if audio played successfully
+        if (!speakerSuccess) {
+          setSpeakerSuccess(true);
+        }
       };
 
       audio.onerror = () => {
+        // Fallback to oscillator if MP3 fails
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         audioContextRef.current = audioContext;
 
@@ -213,13 +287,34 @@ const MockTestStart = ({ onStart }) => {
 
         oscillator.start();
 
+        // Auto-mark speaker as successful after oscillator plays for 1 second
+        speakerSuccessTimeoutRef.current = setTimeout(() => {
+          if (!speakerSuccess) {
+            setSpeakerSuccess(true);
+          }
+        }, 1000);
+
         oscillator.onended = () => {
           setSpeakerTesting(false);
+          if (speakerSuccessTimeoutRef.current) {
+            clearTimeout(speakerSuccessTimeoutRef.current);
+          }
         };
       };
 
-      audio.play().catch(() => {
+      audio.play().then(() => {
+        // Auto-mark speaker as successful when audio starts playing
+        // Wait a bit to ensure it's actually playing
+        speakerSuccessTimeoutRef.current = setTimeout(() => {
+          if (!speakerSuccess && !audio.paused) {
+            setSpeakerSuccess(true);
+          }
+        }, 500);
+      }).catch(() => {
         setSpeakerTesting(false);
+        if (speakerSuccessTimeoutRef.current) {
+          clearTimeout(speakerSuccessTimeoutRef.current);
+        }
       });
 
     } catch (err) {
@@ -247,7 +342,9 @@ const MockTestStart = ({ onStart }) => {
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold mb-2 text-gray-900">Audio Check</h2>
           <p className="text-gray-600">
-            Please ensure your microphone and speaker are working before starting the test.
+            {wasRestored
+              ? "Your audio devices were previously verified. You can re-test them or proceed to start the test."
+              : "Please ensure your microphone and speaker are working before starting the test."}
           </p>
         </div>
 
@@ -270,8 +367,10 @@ const MockTestStart = ({ onStart }) => {
             <div className="flex-1 min-w-0 pr-2">
               <h3 className="font-semibold text-gray-900 mb-1">Microphone</h3>
               <p className="text-sm text-gray-600">
-                {micStreamActive
-                  ? ""
+                {micSuccess
+                  ? "Microphone is working correctly"
+                  : micStreamActive
+                  ? "Speak into your microphone to test"
                   : "Click to start microphone check"}
               </p>
             </div>
@@ -320,24 +419,23 @@ const MockTestStart = ({ onStart }) => {
               </AnimatePresence>
             </div>
 
-            {/* Success Toggle */}
+            {/* Success Indicator */}
             <div className="shrink-0">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setMicSuccess(!micSuccess)}
-                // disabled={!micStreamActive}
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${micSuccess
+              <motion.div
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                  micSuccess
                     ? "bg-green-500 text-white shadow-lg"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  } ${micStreamActive && !micSuccess ? "bg-gray-300 text-gray-600 cursor-pointer" : ""}`}
+                    : "bg-gray-200 text-gray-400"
+                }`}
+                animate={micSuccess ? { scale: [1, 1.1, 1] } : {}}
+                transition={{ duration: 0.3 }}
               >
                 {micSuccess ? (
                   <FaCheck className="w-6 h-6" />
                 ) : (
                   <MdCheckCircle className="w-6 h-6" />
                 )}
-              </motion.button>
+              </motion.div>
             </div>
           </motion.div>
 
@@ -359,7 +457,9 @@ const MockTestStart = ({ onStart }) => {
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-gray-900 mb-1">Speaker</h3>
               <p className="text-sm text-gray-600">
-                {speakerTesting
+                {speakerSuccess
+                  ? "Speaker is working correctly"
+                  : speakerTesting
                   ? "Playing test sound..."
                   : "Click to test your speaker"}
               </p>
@@ -381,23 +481,23 @@ const MockTestStart = ({ onStart }) => {
               </Button>
             </div>
 
-            {/* Success Toggle */}
+            {/* Success Indicator */}
             <div className="shrink-0">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setSpeakerSuccess(!speakerSuccess)}
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${speakerSuccess
+              <motion.div
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                  speakerSuccess
                     ? "bg-green-500 text-white shadow-lg"
-                    : "bg-gray-200 text-gray-600 cursor-pointer hover:bg-gray-300"
-                  }`}
+                    : "bg-gray-200 text-gray-400"
+                }`}
+                animate={speakerSuccess ? { scale: [1, 1.1, 1] } : {}}
+                transition={{ duration: 0.3 }}
               >
                 {speakerSuccess ? (
                   <FaCheck className="w-6 h-6" />
                 ) : (
                   <MdCheckCircle className="w-6 h-6" />
                 )}
-              </motion.button>
+              </motion.div>
             </div>
           </motion.div>
         </div>

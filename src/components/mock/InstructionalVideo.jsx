@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 
 /**
  * Instructional video component for mock test sections
- * - Asset ichidagi (public/video/introVideo.mp4) videoni ishlatadi
  * - Auto-plays video
  * - Shows countdown timer
  * - Auto-advances after video completion
@@ -28,8 +27,7 @@ const InstructionalVideo = ({
   const countdownIntervalRef = useRef(null);
   const containerRef = useRef(null);
   
-  // Use prop videoSrc if provided, otherwise default to introVideo2.mp4
-  const videoSrc = propVideoSrc || "/videos/introVideo2.mp4"; 
+  const videoSrc = propVideoSrc; 
 
   // Fullscreen mantiqi
   useEffect(() => {

@@ -12,7 +12,7 @@ import ReadingPracticePage from '../reading/ReadingPracticePage';
  * - Security restrictions
  * - Auto-submit on time expiry
  */
-const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack }) => {
+const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack, videoSrc }) => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVideo, setShowVideo] = useState(true);
@@ -237,7 +237,7 @@ const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onEarly
           title="Reading Section Instructions"
           description="You will have 60 minutes to complete the reading section. The test will start automatically after this video."
           autoFullscreen={true}
-          videoSrc="/videos/introVideo.mp4"
+          videoSrc={videoSrc || "/videos/readingVideo.mp4"}
           onExit={() => {
             setShowVideo(false);
             if (onBack) onBack();
