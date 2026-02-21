@@ -17,6 +17,7 @@ import { useWritingCompletedStore } from "@/store/testStore/writingCompletedStor
 import { useAuthStore } from "@/store/authStore";
 import { useMockTestClientStore } from "@/store/mockTestClientStore";
 import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
+import { autoEnterFullscreen, monitorFullscreen } from "@/utils/mockTestFullscreen";
 
 import {
   saveWritingPracticeData,
@@ -101,6 +102,37 @@ const WritingPracticePageContent = () => {
     },
     isMockTest // Only active in mock test mode
   );
+
+  // Auto-enter fullscreen when entering practice page (mock test only)
+  useEffect(() => {
+    if (!isMockTest) return;
+
+    const cleanup = autoEnterFullscreen(
+      () => {
+        console.log('[WritingPracticePage] Fullscreen entered successfully');
+      },
+      () => {
+        console.log('[WritingPracticePage] Fullscreen requires user interaction');
+      }
+    );
+
+    return cleanup;
+  }, [isMockTest]);
+
+  // Monitor fullscreen changes and show exit modal only when user tries to exit
+  useEffect(() => {
+    if (!isMockTest) return;
+
+    const cleanup = monitorFullscreen(
+      () => {
+        // User tried to exit fullscreen - show modal
+        setShowExitModal(true);
+      },
+      false // Don't auto re-enter, let modal handle it
+    );
+
+    return cleanup;
+  }, [isMockTest]);
 
   const [currentTaskType, setCurrentTaskType] = useState(null);
   const [answers, setAnswers] = useState({});

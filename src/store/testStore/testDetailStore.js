@@ -123,7 +123,11 @@ export const useTestDetailStore = create((set, get) => {
           const queryDuration = Date.now() - queryStartTime;
         } catch (error) {
           timeout.cancel(); // Always cancel timeout
-          checkAborted(); // Check if this was an abort
+          // If request was cancelled, re-throw immediately without checking again
+          if (error.message === 'Request cancelled') {
+            throw error;
+          }
+          checkAborted(); // Check if this was an abort (may throw if aborted)
           const queryDuration = Date.now() - queryStartTime;
           // Re-throw the error to be caught by outer catch
           throw error;
@@ -144,15 +148,20 @@ export const useTestDetailStore = create((set, get) => {
             testData = nestedResult.data;
             useNestedQuery = true;
           } else {
-            // No data found (test doesn't exist or is inactive)
-            set({ currentTest: null, loadingTest: false, error: null });
-            return null;
+            // No data found in nested query - fall back to step-by-step approach
+            // This can happen if relationships aren't configured or nested query fails silently
+            useNestedQuery = false;
+            // Don't return null here - let it fall through to step-by-step approach
           }
         } else {
           // Invalid response structure
           useNestedQuery = false;
         }
       } catch (nestedError) {
+        // If request was cancelled, don't fall back - just return
+        if (nestedError.message === 'Request cancelled') {
+          throw nestedError; // Re-throw to be handled by outer catch
+        }
         // If nested query fails, fall back to step-by-step approach
         console.warn('Nested query failed, falling back to step-by-step approach:', nestedError);
         useNestedQuery = false;
@@ -186,7 +195,11 @@ export const useTestDetailStore = create((set, get) => {
           checkAborted();
         } catch (error) {
           metadataTimeout.cancel();
-          checkAborted();
+          // If request was cancelled, re-throw immediately without checking again
+          if (error.message === 'Request cancelled') {
+            throw error;
+          }
+          checkAborted(); // Check if this was an abort (may throw if aborted)
           throw error;
         }
 

@@ -22,6 +22,7 @@ import NoteSidebar from "@/components/sidebar/NoteSidebar";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
 import MockTestExitModal from "@/components/modal/MockTestExitModal";
+import { autoEnterFullscreen, monitorFullscreen } from "@/utils/mockTestFullscreen";
 
 const ListeningPracticePageContent = () => {
   const { id } = useParams();
@@ -125,6 +126,37 @@ const ListeningPracticePageContent = () => {
     },
     isMockTest // Only active in mock test mode
   );
+
+  // Auto-enter fullscreen when entering practice page (mock test only)
+  useEffect(() => {
+    if (!isMockTest) return;
+
+    const cleanup = autoEnterFullscreen(
+      () => {
+        console.log('[ListeningPracticePage] Fullscreen entered successfully');
+      },
+      () => {
+        console.log('[ListeningPracticePage] Fullscreen requires user interaction');
+      }
+    );
+
+    return cleanup;
+  }, [isMockTest]);
+
+  // Monitor fullscreen changes and show exit modal only when user tries to exit
+  useEffect(() => {
+    if (!isMockTest) return;
+
+    const cleanup = monitorFullscreen(
+      () => {
+        // User tried to exit fullscreen - show modal
+        setShowExitModal(true);
+      },
+      false // Don't auto re-enter, let modal handle it
+    );
+
+    return cleanup;
+  }, [isMockTest]);
 
   // AUDIO URL
   const audioUrl = React.useMemo(() => {
@@ -1282,7 +1314,7 @@ const ListeningPracticePageContent = () => {
 
   return (
     <div
-      className="flex flex-col h-screen"
+      className="flex flex-col h-screen overflow-hidden"
       style={{
         backgroundColor: themeColors.background,
         color: themeColors.text,

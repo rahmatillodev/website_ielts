@@ -326,7 +326,7 @@ const MockTestStart = ({ onStart }) => {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setMicSuccess(!micSuccess)}
-                disabled={!micStreamActive}
+                // disabled={!micStreamActive}
                 className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${micSuccess
                     ? "bg-green-500 text-white shadow-lg"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"

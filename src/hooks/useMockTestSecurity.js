@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { monitorFullscreen } from '@/utils/mockTestFullscreen';
 
 /**
  * Hook to enforce security measures during mock test
@@ -362,45 +363,20 @@ export const useMockTestSecurity = (onExitAttempt, isActive = true) => {
 
 
   // === FULLSCREEN EXIT DETECTION ===
+  // Use the utility function to monitor fullscreen changes
+  // This ensures we don't show the exit modal on initial entry
   useEffect(() => {
     if (!isActive) return;
 
-    // Track initial fullscreen state
-    let wasFullscreen = !!(
-      document.fullscreenElement ||
-      document.webkitFullscreenElement ||
-      document.mozFullScreenElement ||
-      document.msFullscreenElement
+    const cleanup = monitorFullscreen(
+      () => {
+        // User tried to exit fullscreen - show exit modal
+        onExitAttempt();
+      },
+      false // Don't auto re-enter, let modal handle it
     );
 
-    const handleFullscreenChange = () => {
-      const isFullscreen =
-        document.fullscreenElement ||
-        document.webkitFullscreenElement ||
-        document.mozFullScreenElement ||
-        document.msFullscreenElement;
-
-      // If user exits fullscreen (was fullscreen, now not) → show modal
-      if (wasFullscreen && !isFullscreen) {
-        // Fullscreen exit detected - show exit modal
-        onExitAttempt();
-      }
-
-      // Update tracked state
-      wasFullscreen = isFullscreen;
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-    };
+    return cleanup;
   }, [isActive, onExitAttempt]);
 
 

@@ -22,6 +22,7 @@ import parse from "html-react-parser";
 import PracticeFooter from "@/components/questions/PracticeFooter";
 import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
 import MockTestExitModal from "@/components/modal/MockTestExitModal";
+import { autoEnterFullscreen, monitorFullscreen } from "@/utils/mockTestFullscreen";
 
 
 
@@ -92,6 +93,7 @@ const ReadingPracticePageContent = () => {
   const hasAutoSubmittedRef = useRef(false); // Prevent multiple auto-submissions
   const isSubmittingRef = useRef(false); // Track submission state to prevent race conditions
   const isMountedRef = useRef(true); // Track if component is mounted
+  const lastFetchKeyRef = useRef(null); // Track last fetch to prevent duplicates
 
   const [leftWidth, setLeftWidth] = useState(50);
   const containerRef = useRef(null);
@@ -113,19 +115,67 @@ const ReadingPracticePageContent = () => {
     isMockTest // Only active in mock test mode
   );
 
+  // Auto-enter fullscreen when entering practice page (mock test only)
+  useEffect(() => {
+    if (!isMockTest) return;
+
+    const cleanup = autoEnterFullscreen(
+      () => {
+        console.log('[ReadingPracticePage] Fullscreen entered successfully');
+      },
+      () => {
+        console.log('[ReadingPracticePage] Fullscreen requires user interaction');
+      }
+    );
+
+    return cleanup;
+  }, [isMockTest]);
+
+  // Monitor fullscreen changes and show exit modal only when user tries to exit
+  useEffect(() => {
+    if (!isMockTest) return;
+
+    const cleanup = monitorFullscreen(
+      () => {
+        // User tried to exit fullscreen - show modal
+        setShowExitModal(true);
+      },
+      false // Don't auto re-enter, let modal handle it
+    );
+
+    return cleanup;
+  }, [isMockTest]);
+
   // ====== CHECK IF WE SHOULD REDIRECT TO MOCKTESTFLOW ======
+  // Only redirect if we're definitely in the wrong section (e.g., writing or results)
+  // Don't redirect if currentSection is 'reading' or undefined (allows reading to load)
   useEffect(() => {
     if (!isMockTest || !mockTestId) return;
     
     const savedFlowData = loadMockTestData(mockTestId);
+    const currentSection = savedFlowData?.currentSection;
     
-    if (savedFlowData?.currentSection && savedFlowData.currentSection !== 'reading' && savedFlowData.currentSection !== 'audioCheck' && savedFlowData.currentSection !== 'intro') {
+    // Only redirect if we're in a section that's definitely not reading
+    // Allow reading, audioCheck, intro, and undefined (fresh start)
+    if (currentSection && 
+        currentSection !== 'reading' && 
+        currentSection !== 'audioCheck' && 
+        currentSection !== 'intro') {
+      console.log('[ReadingPracticePage] Redirecting to MockTestFlow - currentSection is:', currentSection);
       navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
     }
   }, [isMockTest, mockTestId, navigate]);
 
   useEffect(() => {
     const testIdToUse = effectiveTestId;
+    
+    // Prevent duplicate fetches - use ref to track if fetch is in progress
+    const fetchKey = `${testIdToUse}-${isMockTest}-${status}`;
+    
+    if (lastFetchKeyRef.current === fetchKey) {
+      console.log('[ReadingPracticePage] Skipping duplicate fetch:', fetchKey);
+      return;
+    }
     
     if (!testIdToUse || (typeof testIdToUse !== 'string' && typeof testIdToUse !== 'number')) {
       if (isMockTest) {
@@ -161,12 +211,32 @@ const ReadingPracticePageContent = () => {
 
     const loadTestData = async () => {
       try {
+        // Mark this fetch as in progress
+        lastFetchKeyRef.current = fetchKey;
+        
         const isReviewMode = status === 'reviewing';
         const includeCorrectAnswers = isReviewMode;
+
+        console.log('[ReadingPracticePage] Fetching test data:', {
+          testIdToUse,
+          isMockTest,
+          mockTestId,
+          isReviewMode,
+          includeCorrectAnswers
+        });
 
         await fetchTestById(testIdToUse, false, includeCorrectAnswers);
 
         if (!isMounted) return;
+
+        // Verify test data was loaded
+        const state = useTestStore.getState();
+        console.log('[ReadingPracticePage] Test data loaded:', {
+          hasCurrentTest: !!state.currentTest,
+          testId: state.currentTest?.id,
+          partsCount: state.currentTest?.parts?.length,
+          isMockTest
+        });
 
         // Load/restore progress on refresh
         if (isMockTest && mockTestId) {
@@ -327,6 +397,21 @@ const ReadingPracticePageContent = () => {
 
   // Get current part data from the fetched test - using part_number
   const currentPartData = currentTest?.parts?.find(part => part.part_number === currentPart);
+
+  // Debug: Log when currentTest changes
+  useEffect(() => {
+    if (currentTest) {
+      console.log('[ReadingPracticePage] currentTest updated:', {
+        testId: currentTest.id,
+        partsCount: currentTest.parts?.length,
+        parts: currentTest.parts?.map(p => ({ id: p.id, part_number: p.part_number })),
+        currentPart,
+        currentPartData: currentPartData ? { id: currentPartData.id, part_number: currentPartData.part_number } : null,
+        isMockTest,
+        mockTestId
+      });
+    }
+  }, [currentTest, currentPart, currentPartData, isMockTest, mockTestId]);
 
   // Get question groups from current part (already structured from store)
   // Sort groups by the minimum question_number in each group
@@ -1294,7 +1379,7 @@ const ReadingPracticePageContent = () => {
 
   return (
     <div
-      className="flex flex-col h-screen"
+      className="flex flex-col h-screen overflow-hidden"
       style={{
         backgroundColor: themeColors.backgroundColor,
         color: themeColors.text,
@@ -1385,6 +1470,25 @@ const ReadingPracticePageContent = () => {
                 >
                   ⬅ Back to Reading
                 </button>
+              </div>
+            </div>
+          ) : !currentTest ? (
+            <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
+              <div className="text-gray-500">Waiting for test data...</div>
+            </div>
+          ) : !currentTest.parts || currentTest.parts.length === 0 ? (
+            <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
+              <div className="text-gray-500">
+                <p>Test data loaded but no parts found.</p>
+                <p className="text-xs mt-2">Test ID: {currentTest.id}</p>
+                <p className="text-xs">Parts: {currentTest.parts?.length || 0}</p>
+              </div>
+            </div>
+          ) : !currentPartData ? (
+            <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
+              <div className="text-gray-500">
+                <p>Part {currentPart} not found in test data.</p>
+                <p className="text-xs mt-2">Available parts: {currentTest.parts?.map(p => p.part_number || p.id).join(', ')}</p>
               </div>
             </div>
           ) : currentPartData ? (
