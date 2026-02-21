@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import UpgradeModal from "../modal/UpgradeModal";
 import { formatDateToDayMonth } from "@/utils/formatDate";
+import { FaCrown } from "react-icons/fa";
 
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
@@ -63,7 +64,7 @@ const CardLocked = ({
             ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
             : "bg-green-500 text-white border-0 shadow-md"
             }`}>
-            {is_premium && <MdStar className="text-xs md:text-sm" />} {cardStatus}
+            {is_premium && <FaCrown className="text-xs md:text-sm" />} {cardStatus}
           </span>
         </div>
 
@@ -178,7 +179,7 @@ const CardLocked = ({
                 ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
                 : "bg-green-500 text-white border-0 shadow-md"
                 }`}>
-                {is_premium && <MdStar className="text-xs md:text-sm" />} {cardStatus}
+                {is_premium && <FaCrown className="text-xs md:text-sm" />} {cardStatus}
               </span>
             )}
           </div>

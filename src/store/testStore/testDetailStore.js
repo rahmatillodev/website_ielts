@@ -73,7 +73,6 @@ export const useTestDetailStore = create((set, get) => {
       // Try nested query approach first (more efficient if relationships are configured)
       let testData = null;
       let useNestedQuery = false;
-      console.log("testId", testId);
       
       checkAborted();
 
@@ -96,9 +95,6 @@ export const useTestDetailStore = create((set, get) => {
           .eq("is_active", true)
           .maybeSingle();
 
-        console.log("Executing nested query for testId:", testId);
-        console.log("Supabase client:", supabase ? 'available' : 'missing');
-        console.log(nestedQueryPromise);
         
         
         // Supabase query builders return thenables (objects with .then() method)
@@ -122,16 +118,17 @@ export const useTestDetailStore = create((set, get) => {
           });
           
           nestedResult = await Promise.race([nestedQueryPromise, timeout, abortPromise]);
-          console.log(nestedResult);
           timeout.cancel(); // Cancel timeout if query completes
           checkAborted(); // Check again after completion
           const queryDuration = Date.now() - queryStartTime;
-          console.log(`Nested query completed in ${queryDuration}ms`);
         } catch (error) {
           timeout.cancel(); // Always cancel timeout
-          checkAborted(); // Check if this was an abort
+          // If request was cancelled, re-throw immediately without checking again
+          if (error.message === 'Request cancelled') {
+            throw error;
+          }
+          checkAborted(); // Check if this was an abort (may throw if aborted)
           const queryDuration = Date.now() - queryStartTime;
-          console.error(`Nested query failed after ${queryDuration}ms:`, error.message);
           // Re-throw the error to be caught by outer catch
           throw error;
         }
@@ -151,15 +148,20 @@ export const useTestDetailStore = create((set, get) => {
             testData = nestedResult.data;
             useNestedQuery = true;
           } else {
-            // No data found (test doesn't exist or is inactive)
-            set({ currentTest: null, loadingTest: false, error: null });
-            return null;
+            // No data found in nested query - fall back to step-by-step approach
+            // This can happen if relationships aren't configured or nested query fails silently
+            useNestedQuery = false;
+            // Don't return null here - let it fall through to step-by-step approach
           }
         } else {
           // Invalid response structure
           useNestedQuery = false;
         }
       } catch (nestedError) {
+        // If request was cancelled, don't fall back - just return
+        if (nestedError.message === 'Request cancelled') {
+          throw nestedError; // Re-throw to be handled by outer catch
+        }
         // If nested query fails, fall back to step-by-step approach
         console.warn('Nested query failed, falling back to step-by-step approach:', nestedError);
         useNestedQuery = false;
@@ -168,7 +170,6 @@ export const useTestDetailStore = create((set, get) => {
       // If nested query didn't work or returned no data, use step-by-step approach
       if (!testData || !useNestedQuery) {
         checkAborted();
-        console.log('Using step-by-step approach for testId:', testId);
         
         // Step 1: Fetch test metadata
         const metadataQuery = supabase
@@ -194,7 +195,11 @@ export const useTestDetailStore = create((set, get) => {
           checkAborted();
         } catch (error) {
           metadataTimeout.cancel();
-          checkAborted();
+          // If request was cancelled, re-throw immediately without checking again
+          if (error.message === 'Request cancelled') {
+            throw error;
+          }
+          checkAborted(); // Check if this was an abort (may throw if aborted)
           throw error;
         }
 

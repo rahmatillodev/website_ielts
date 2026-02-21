@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,15 +9,51 @@ import LogoDesign from "@/components/LogoDesign";
 import { motion } from "framer-motion";
 import AnimatedPolygonDecoration from "@/components/AnimatedPolygonDecoration";
 
+// Helper function to check if a route is a mock test route
+const isMockTestRoute = (path) => {
+  return path.startsWith("/mock-test") || 
+         path.startsWith("/mock-tests") || 
+         path.startsWith("/mock/") || 
+         path === "/mock";
+}
+
 // Public Login page
 function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const signIn = useAuthStore((state) => state.signIn);
   const loading = useAuthStore((state) => state.loading);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Set access mode when page loads based on redirect parameter
+  // This ensures sessionStorage is set BEFORE login so it's preserved
+  useEffect(() => {
+    const redirectPath = searchParams.get("redirect");
+    
+    if (redirectPath) {
+      const redirectPathname = redirectPath.split('?')[0];
+      const isMockRoute = isMockTestRoute(redirectPathname);
+      
+      // Set access mode based on redirect route - this determines the platform
+      if (isMockRoute) {
+        sessionStorage.setItem('accessMode', 'mockTest');
+      } else {
+        // Regular dashboard route
+        sessionStorage.setItem('accessMode', 'regular');
+      }
+    } else {
+      // If no redirect parameter, check if there's an existing mode
+      // If not, default to regular (for direct login page access)
+      const existingMode = sessionStorage.getItem('accessMode');
+      if (!existingMode) {
+        sessionStorage.setItem('accessMode', 'regular');
+      }
+      // If existing mode is set, preserve it (user might have come from a mock test link)
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -38,10 +74,27 @@ function LoginPage() {
     const result = await signIn(email, password);
 
     if (result?.success) {
+      // Get the access mode that was set in useEffect (based on redirect parameter)
+      const accessMode = sessionStorage.getItem('accessMode');
+      const redirectPath = searchParams.get("redirect");
+      const redirectPathname = redirectPath ? redirectPath.split('?')[0] : null;
+    
+      let targetPath = "/dashboard";
+    
+      // Determine target path based on access mode
+      if (accessMode === 'mockTest') {
+        // User is in mock test mode - redirect to mock test platform
+        targetPath = redirectPathname || "/mock-tests";
+      } else {
+        // User is in regular mode - redirect to regular dashboard
+        targetPath = redirectPathname || "/dashboard";
+      }
+      
+      // Ensure accessMode is set (should already be set from useEffect, but double-check)
+      sessionStorage.setItem('accessMode', accessMode || 'regular');
+      
       toast.success("Welcome back!");
-      navigate("/dashboard");
-    } else {
-      toast.error(result?.error || "Invalid email or password");
+      navigate(targetPath, { replace: true });
     }
   };
 
@@ -94,7 +147,7 @@ function LoginPage() {
               Sign In
             </button>
             <Link
-              to="/signup"
+              to={searchParams.get("redirect") ? `/signup?redirect=${encodeURIComponent(searchParams.get("redirect"))}` : "/signup"}
               className="flex-1 px-4 py-2 rounded-md text-gray-600 font-medium text-sm hover:text-gray-900 transition-all text-center"
             >
               Sign Up
@@ -172,7 +225,7 @@ function LoginPage() {
               <p className="text-sm text-gray-600">
                 Don't have an account?{" "}
                 <Link
-                  to="/signup"
+                  to={searchParams.get("redirect") ? `/signup?redirect=${encodeURIComponent(searchParams.get("redirect"))}` : "/signup"}
                   className="text-[#136dec] hover:text-[#136dec]-dark font-medium"
                 >
                   Sign Up

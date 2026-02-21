@@ -48,12 +48,12 @@ const TestsLibraryPage = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState([]); // Multi-select question types (for reading/listening)
   const [selectedTaskTypes, setSelectedTaskTypes] = useState([]); // Multi-select task types (for writing)
-  const [sortOrder, setSortOrder] = useState("newest"); // Sort by oldest/newest
+  const [sortOrder, setSortOrder] = useState("oldest"); // Sort by oldest/newest
   const [filterOpen, setFilterOpen] = useState(false); // Control filter popover
   const [tempSelectedTypes, setTempSelectedTypes] = useState([]); // Temporary state for filter panel
-  const [tempSortOrder, setTempSortOrder] = useState("newest"); // Temporary sort state
-  const [displayedItems, setDisplayedItems] = useState(9); // Initial items to display
-  const itemsPerLoad = 9; // Items to load per scroll
+  const [tempSortOrder, setTempSortOrder] = useState("oldest"); // Temporary sort state
+  const [displayedItems, setDisplayedItems] = useState(12); // Initial items to display
+  const itemsPerLoad = 12; // Items to load per scroll
   const scrollContainerRef = useRef(null);
   const isLoadingMoreRef = useRef(false);
   const hasFetchedRef = useRef(false); // Track if we've attempted a fetch
@@ -212,7 +212,7 @@ const TestsLibraryPage = ({
 
   // Reset displayed items when filtered data changes (filters/search)
   useEffect(() => {
-    setDisplayedItems(9);
+    setDisplayedItems(12);
     isLoadingMoreRef.current = false; // Reset loading flag when filters change
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
@@ -313,11 +313,21 @@ const TestsLibraryPage = ({
   };
 
   const handleFilterClear = () => {
-    /// close modal and reset the state
+    // Reset temp states
     setTempSelectedTypes([]);
-    setFilterOpen(false);
-    setTempSortOrder("newest");
+    setTempSortOrder("oldest");
+  
+    // Reset real filter states
+    if (testType === "writing") {
+      setSelectedTaskTypes([]);
+    } else {
+      setSelectedQuestionTypes([]);
+    }
+  
+    setSortOrder("oldest");
+    handleFilterClose()
   };
+  
 
   const handleFilterSearch = () => {
     if (testType === "writing") {

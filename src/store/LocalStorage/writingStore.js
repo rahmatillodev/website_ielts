@@ -2,7 +2,6 @@
  * localStorage utility for Reading Practice
  * Stores answers and elapsed time for a specific test
  */
-import { v4 as uuidv4 } from 'uuid';
 const STORAGE_KEY_PREFIX = 'writing_practice_';
 
 /**

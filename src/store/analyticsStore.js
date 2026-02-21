@@ -153,6 +153,7 @@ export const useAnalyticsStore = create((set, get) => ({
         test:test_id (
           id,
           title,
+          is_mock,
           type,
           difficulty
         )
@@ -162,7 +163,6 @@ export const useAnalyticsStore = create((set, get) => ({
       .order('completed_at', { ascending: false });
     
 
-       console.log(attemptsData);
 
       if (attemptsError) throw attemptsError;
 

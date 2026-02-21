@@ -90,7 +90,7 @@ const DashboardSidebar = ({ onNavigate }) => {
     const result = await signOut();
     if (result.success) {
       toast.success("Logged out successfully");
-      navigate("/");
+      navigate("/login");
     } else {
       toast.error(result.error);
     }
@@ -204,14 +204,7 @@ const DashboardSidebar = ({ onNavigate }) => {
             Tests & Analytics
           </div>
         )}
-        <SidebarItem
-          icon={IoDocumentAttachOutline}
-          label="Mock Tests"
-          link="/mock-tests"
-          isActive={checkActive("/mock-tests")}
-          onNavigate={onNavigate}
-          isCollapsed={effectiveIsCollapsed}
-        />
+        
         <SidebarItem
           icon={FaChartSimple}
           label="Analytics"

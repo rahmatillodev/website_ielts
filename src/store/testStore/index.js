@@ -26,6 +26,7 @@ export const useTestStore = create((set, get) => {
     return {
       test_reading: listState.test_reading,
       test_listening: listState.test_listening,
+      test_speaking: listState.test_speaking,
       loading: listState.loading,
       loaded: listState.loaded,
       currentTest: detailState.currentTest,
@@ -47,9 +48,22 @@ export const useTestStore = create((set, get) => {
 
     // Actions from test detail store
     fetchTestById: async (testId, forceRefresh = false, includeCorrectAnswers = false,) => {
-      const result = await useTestDetailStore.getState().fetchTestById(testId, forceRefresh, includeCorrectAnswers);
-      set(syncState());
-      return result;
+      try {
+        console.log('[TestStore] fetchTestById called with:', { testId, forceRefresh, includeCorrectAnswers });
+        const result = await useTestDetailStore.getState().fetchTestById(testId, forceRefresh, includeCorrectAnswers);
+        console.log('[TestStore] fetchTestById result:', result);
+        // Force sync state after fetch completes
+        const syncedState = syncState();
+        set(syncedState);
+        // Also ensure subscription updates are applied
+        return result;
+      } catch (error) {
+        console.log('[TestStore] fetchTestById error:', error);
+        // Sync state even on error to ensure error state is reflected
+        const syncedState = syncState();
+        set(syncedState);
+        throw error;
+      }
     },
 
     cancelFetch: () => {
@@ -64,6 +78,7 @@ export const useTestStore = create((set, get) => {
         useTestListStore.setState({
           test_reading: [],
           test_listening: [],
+          test_speaking: [],
           loaded: false,
         });
       }
@@ -96,6 +111,7 @@ export const useTestStore = create((set, get) => {
       useTestListStore.setState({
         test_reading: [],
         test_listening: [],
+        test_speaking: [],
         loading: false,
         loaded: false,
         error: null,
@@ -120,6 +136,7 @@ useTestListStore.subscribe(() => {
   useTestStore.setState({
     test_reading: listState.test_reading,
     test_listening: listState.test_listening,
+    test_speaking: listState.test_speaking,
     loading: listState.loading,
     loaded: listState.loaded,
     error: listState.error || detailState.error,
@@ -127,6 +144,7 @@ useTestListStore.subscribe(() => {
 });
 
 useTestDetailStore.subscribe(() => {
+  // Get fresh state when subscription fires
   const listState = useTestListStore.getState();
   const detailState = useTestDetailStore.getState();
   useTestStore.setState({
@@ -142,4 +160,6 @@ useTestCompletionStore.subscribe(() => {
     test_completed: completionState.test_completed,
   });
 });
+
+export { useSpeakingDetailStore } from "./speakingDetailStore";
 

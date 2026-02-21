@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button'
-import { useWritingCompletedStore } from '@/store/WritingCompletedStore';
 import React, { useEffect, useState, useMemo } from 'react'
 import { FaArrowLeft, FaClock, FaFileAlt, FaArrowRight, FaHistory, FaSearch, FaArrowUp, FaArrowDown  } from 'react-icons/fa'
 import { useNavigate, useParams } from 'react-router-dom';
@@ -15,6 +14,7 @@ import { CiFilter } from "react-icons/ci";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useWritingCompletedStore } from '@/store/testStore/writingCompletedStore';
 
 const WritingHistoryPage = () => {
   const navigate = useNavigate();
@@ -26,11 +26,11 @@ const WritingHistoryPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("All Tests");
   const [isGridView, setIsGridView] = useState(true);
-  const [sortOrder, setSortOrder] = useState("newest"); // Sort by newest/oldest
+  const [sortOrder, setSortOrder] = useState("oldest"); // Sort by newest/oldest
   const [selectedTaskTypes, setSelectedTaskTypes] = useState([]); // Multi-select task types
   const [filterOpen, setFilterOpen] = useState(false); // Control filter popover
   const [tempSelectedTypes, setTempSelectedTypes] = useState([]); // Temporary state for filter panel
-  const [tempSortOrder, setTempSortOrder] = useState("newest"); // Temporary sort state
+  const [tempSortOrder, setTempSortOrder] = useState("oldest"); // Temporary sort state
 
   const handleGridViewChange = (value) => {
     setIsGridView(value === "grid");
@@ -158,11 +158,17 @@ const WritingHistoryPage = () => {
   };
 
   const handleFilterClear = () => {
-    /// close modal and reset the state
     setFilterOpen(false);
+  
+    // vaqtinchalik filterlarni tozalash
     setTempSelectedTypes([]);
-    setTempSortOrder("newest");
+    setTempSortOrder("oldest");
+  
+    // haqiqiy filterlarni ham tozalash
+    setSelectedTaskTypes([]);
+    setSortOrder("oldest");
   };
+  
 
   const handleFilterSearch = () => {
     setSelectedTaskTypes([...tempSelectedTypes]);

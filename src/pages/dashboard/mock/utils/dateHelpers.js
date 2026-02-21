@@ -9,13 +9,7 @@ export const formatTime = (timeString) => {
   return `${displayHour}:${minutes} ${ampm}`;
 };
 
-// Helper function to get time period label (Morning, Afternoon, Evening)
-export const getTimePeriod = (timeString) => {
-  const hour = parseInt(timeString.split(":")[0], 10);
-  if (hour < 12) return "Morning";
-  if (hour < 17) return "Afternoon";
-  return "Evening";
-};
+
 
 // Check if a date should be disabled (past dates or no available slots)
 export const isDateDisabled = (date, availableDates, today) => {
