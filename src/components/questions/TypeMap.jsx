@@ -132,7 +132,7 @@ const TypeMap = ({
   return (
     <div className="space-y-6 mb-6">
       {/* Instructions */}
-      {instruction && (
+      {/* {instruction && (
         <div 
           className="text-sm leading-relaxed"
           data-selectable="true"
@@ -140,7 +140,7 @@ const TypeMap = ({
         >
           {parse(instruction, { allowDangerousHtml: true })}
         </div>
-      )}
+      )} */}
       {/* Map Image */}
       {imageUrl && (
         <div className="mb-6">

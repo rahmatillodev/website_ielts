@@ -246,12 +246,11 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   const photoY = y;
 
   const nameParts = client.full_name ? client.full_name.trim().split(/\s+/) : ["", ""];
-  const familyName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : nameParts[0] || "";
   const firstName = nameParts[0] || "";
   const candidateId = formatValue(client.candidate_id || (client.id ? String(client.id).slice(0, 8) : ""));
 
   let fieldY = y;
-  fieldY = drawLabelLeftBoxRight(doc, MARGIN, candBoxX, fieldY, candBoxW, CANDIDATE_FIELD_HEIGHT, "Family Name", formatValue(familyName), { paddingLeft: idBoxPaddingMm, valueFill: true });
+  fieldY = drawLabelLeftBoxRight(doc, MARGIN, candBoxX, fieldY, candBoxW, CANDIDATE_FIELD_HEIGHT, "Email", formatValue(client.email), { paddingLeft: idBoxPaddingMm, valueFill: true });
   fieldY += candFieldGap;
   fieldY = drawLabelLeftBoxRight(doc, MARGIN, candBoxX, fieldY, candBoxW, CANDIDATE_FIELD_HEIGHT, "First Name", formatValue(firstName), { paddingLeft: idBoxPaddingMm, valueFill: true });
   fieldY += candFieldGap;
