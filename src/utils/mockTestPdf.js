@@ -21,10 +21,157 @@ const FILL_LIGHT_GRAY = [224, 224, 224]; // #E0E0E0 — фон полей с д�
 const LABEL_TO_BOX_GAP = 1.5;   // небольшой отступ между подписью и полем (не склеены, но вместе)
 const BETWEEN_GROUPS_GAP = 5;   // отступ между группами label+block (чтобы различать блоки)
 const PHOTO_EXTRA_HEIGHT = 12;  // дополнительная высота блока для картинки (мм)
+/** Larger edge margins for PDF pages after the 1st sheet (feedback pages only) */
+const FEEDBACK_PAGE_MARGIN = 18; // mm
 
 const formatValue = (value) => {
   if (value === null || value === undefined || value === "") return "";
   return String(value).trim();
+};
+
+/** Strip HTML tags for plain-text (e.g. empty check) */
+const stripHtml = (html) => {
+  if (html === null || html === undefined) return "";
+  const str = String(html).trim();
+  if (!str) return "";
+  return str.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+};
+
+/**
+ * Parse HTML into a list of draw ops: { type: 'text'|'newline'|'block', text?, bold?, italic?, bullet? }
+ * Uses DOMParser when available (browser); otherwise falls back to stripHtml for plain text.
+ */
+const parseHtmlToOps = (html) => {
+  if (html === null || html === undefined) return [];
+  const str = String(html).trim();
+  if (!str) return [];
+
+  const ops = [];
+  const blockTags = /^(P|DIV|BR|LI|H[1-6]|UL|OL|TR|TD|TH)$/i;
+  const boldTags = /^(STRONG|B)$/i;
+  const italicTags = /^(EM|I)$/i;
+
+  const decodeEntities = (s) => {
+    const div = typeof document !== "undefined" ? document.createElement("div") : null;
+    if (div) {
+      div.innerHTML = s;
+      return div.textContent || div.innerText || s;
+    }
+    return s.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+  };
+
+  const walk = (node, state = { bold: false, italic: false, listBullet: null }) => {
+    if (!node) return;
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = decodeEntities((node.textContent || "").trim());
+      if (text) ops.push({ type: "text", text, bold: state.bold, italic: state.italic, bullet: state.listBullet });
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+    const tag = node.tagName || "";
+    const nextState = { ...state };
+
+    if (blockTags.test(tag)) {
+      if (ops.length > 0 && ops[ops.length - 1].type !== "newline") ops.push({ type: "newline" });
+      if (tag === "BR") {
+        ops.push({ type: "newline" });
+        node.childNodes.forEach((c) => walk(c, nextState));
+        return;
+      }
+      if (tag === "LI") {
+        const parent = node.parentElement;
+        const isOl = parent && parent.tagName === "OL";
+        const idx = parent ? Array.from(parent.children).indexOf(node) + 1 : 0;
+        nextState.listBullet = isOl ? `${idx}.` : "•";
+      }
+      if (/^H[1-6]$/i.test(tag)) nextState.bold = true;
+    }
+    if (boldTags.test(tag)) nextState.bold = true;
+    if (italicTags.test(tag)) nextState.italic = true;
+
+    for (const child of node.childNodes) walk(child, nextState);
+
+    if (blockTags.test(tag) && tag !== "BR") {
+      ops.push({ type: "newline" });
+      if (/^H[1-6]$/i.test(tag)) ops.push({ type: "newline" });
+    }
+  };
+
+  try {
+    if (typeof DOMParser !== "undefined") {
+      const doc = new DOMParser().parseFromString(`<div>${str}</div>`, "text/html");
+      const root = doc.body && doc.body.firstElementChild ? doc.body.firstElementChild : doc.body;
+      if (root) {
+        root.childNodes.forEach((n) => walk(n, {}));
+      }
+    } else {
+      const plain = stripHtml(str);
+      if (plain) ops.push({ type: "text", text: plain, bold: false, italic: false });
+    }
+  } catch (_) {
+    const plain = stripHtml(str);
+    if (plain) ops.push({ type: "text", text: plain, bold: false, italic: false });
+  }
+
+  return ops;
+};
+
+/**
+ * Draw parsed HTML ops into the PDF with formatting; handles page breaks.
+ * Returns final y position (mm).
+ * 
+ * Fix: Ensure font size is restored after a page break so that sizes do not reduce when moving to next page.
+ */
+const drawHtmlOps = (doc, ops, x, startY, maxWidth, pageHeight, options = {}) => {
+  const { fontSize = 9, lineHeight = 4.5 } = options;
+  const margin = options.margin ?? 4.76;
+  const pageWidth = doc.internal.pageSize.getWidth(); // Qo'shildi
+  let y = startY;
+  const pageHeightSafe = pageHeight - margin;
+
+  doc.setFontSize(fontSize);
+
+  ops.forEach((op) => {
+    if (op.type === "newline") {
+      y += lineHeight;
+      if (y > pageHeightSafe) {
+        // Yangi sahifaga o'tishdan oldin footer chizamiz
+        drawVersionFooter(doc, pageWidth, pageHeight, margin); 
+        doc.addPage();
+        y = margin;
+        // Fix: restore font size if it was set in options (prevents unwanted font size reduction)
+        doc.setFontSize(fontSize);
+      }
+      return;
+    }
+    if (op.type === "text" && op.text) {
+      const bullet = op.bullet ? `${op.bullet} ` : "";
+      const fullText = bullet + op.text;
+      let style = "normal";
+      if (op.bold && op.italic) style = "bolditalic";
+      else if (op.bold) style = "bold";
+      else if (op.italic) style = "italic";
+      doc.setFont(undefined, style);
+      const lines = doc.splitTextToSize(fullText, op.bullet ? maxWidth - 4 : maxWidth);
+      
+      lines.forEach((line) => {
+        if (y > pageHeightSafe) {
+          drawVersionFooter(doc, pageWidth, pageHeight, margin); // Footer chizish
+          doc.addPage();
+          y = margin;
+          // Fix: restore font size after new page (for both normal & style)
+          doc.setFontSize(fontSize);
+          doc.setFont(undefined, style);
+        }
+        doc.text(line, x + (op.bullet ? 4 : 0), y + 1.5);
+        y += lineHeight;
+      });
+      doc.setFont(undefined, "normal");
+    }
+  });
+
+  return y;
 };
 
 const formatDate = (date) => {
@@ -70,26 +217,26 @@ const scoreToCEFR = (score) => {
  * valueFill: true — заливка поля светло-серым как на оригинале TRF.
  * Returns y after the block.
  */
-const drawLabelValueBox = (doc, x, y, width, boxHeight, label, value, options = {}) => {
-  const { paddingLeft = 6 * PX, valueFill = false } = options;
-  doc.setFontSize(FONT_SMALL);
-  doc.setFont(undefined, "normal");
-  doc.setTextColor(0, 0, 0);
-  doc.text(label, x, y + 3);
-  const boxY = y + LABEL_ABOVE;
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(BORDER);
-  if (valueFill) {
-    doc.setFillColor(...FILL_LIGHT_GRAY);
-    doc.rect(x, boxY, width, boxHeight, "FD");
-  } else {
-    doc.rect(x, boxY, width, boxHeight);
-  }
-  doc.setFont(undefined, "bold");
-  const valueY = boxY + boxHeight / 2 + 1.5;
-  doc.text(value !== "" ? value : "", x + paddingLeft, valueY);
-  return boxY + boxHeight;
-};
+// const drawLabelValueBox = (doc, x, y, width, boxHeight, label, value, options = {}) => {
+//   const { paddingLeft = 6 * PX, valueFill = false } = options;
+//   doc.setFontSize(FONT_SMALL);
+//   doc.setFont(undefined, "normal");
+//   doc.setTextColor(0, 0, 0);
+//   doc.text(label, x, y + 3);
+//   const boxY = y + LABEL_ABOVE;
+//   doc.setDrawColor(0, 0, 0);
+//   doc.setLineWidth(BORDER);
+//   if (valueFill) {
+//     doc.setFillColor(...FILL_LIGHT_GRAY);
+//     doc.rect(x, boxY, width, boxHeight, "FD");
+//   } else {
+//     doc.rect(x, boxY, width, boxHeight);
+//   }
+//   doc.setFont(undefined, "bold");
+//   const valueY = boxY + boxHeight / 2 + 1.5;
+//   doc.text(value !== "" ? value : "", x + paddingLeft, valueY);
+//   return boxY + boxHeight;
+// };
 
 /**
  * Draw one row: label on the left, bordered value box on the right (label и блок в одну линию, блоки друг под другом).
@@ -134,6 +281,14 @@ const drawJustifiedText = (doc, text, x, y, maxWidth) => {
   doc.setFont(undefined, "normal");
   doc.text(lines, x, y);
   return y + lines.length * 3.5;
+};
+
+/** Draw the version footer (e.g. IELTSCORE.UZ) at bottom-right of the current page. */
+const drawVersionFooter = (doc, pageWidth, pageHeight, rightMargin) => {
+  const versionText = "IELTSCORE.UZ";
+  doc.setFontSize(FONT_SMALL);
+  doc.setFont(undefined, "normal");
+  doc.text(versionText, pageWidth - rightMargin, pageHeight - rightMargin, { align: "right" });
 };
 
 export const generateMockTestPDF = async (client, results, settings = {}) => {
@@ -474,15 +629,74 @@ export const generateMockTestPDF = async (client, results, settings = {}) => {
   doc.text(formNumber || "", rightThirdX + 2, y + bottomLabelH + bottomValueH / 2 + 1.5);
   y += bottomRowH + 6;
 
-  // ----- FOOTER: centered verification sentence 7px -----
-  doc.setFontSize(FONT_SMALL);
-  doc.setFont(undefined, "normal");
-  const verificationText = "The validity of this IELTS Test Report Form can be verified online by recognising organisations at ielts.org/verify";
-  doc.text(verificationText, pageWidth / 2, Math.min(y, pageHeight - MARGIN - 4), { align: "center" });
+  // ----- FOOTER: version on every page (page 1 here; feedback pages below) -----
+  drawVersionFooter(doc, pageWidth, pageHeight, MARGIN);
 
-  const versionText = `Version: ${formatValue(client.version || settings?.version || "1.0")}`;
-  doc.setFontSize(6);
-  doc.text(versionText, pageWidth - MARGIN, pageHeight - MARGIN, { align: "right" });
+
+
+
+
+
+  // ----- FEEDBACK PAGES (page 1 unchanged; feedback on following pages, one list with spacing) -----
+  const feedbackSections = [
+    { label: "Listening", feedback: results?.listening?.feedback },
+    { label: "Reading", feedback: results?.reading?.feedback },
+    { label: "Writing", feedback: results?.writing?.feedback },
+    { label: "Speaking", feedback: results?.speaking?.feedback },
+  ].filter((s) => s.feedback && stripHtml(s.feedback).length > 0);
+
+  const FEEDBACK_BLOCK_GAP = 8; // distance between each section (not separate pages)
+  const FEEDBACK_TITLE_SIZE = 12;
+  const FEEDBACK_BODY_SIZE = FONT_BASE; // same as main body, do not reduce
+  const feedbackContentWidth = pageWidth - 2 * FEEDBACK_PAGE_MARGIN;
+
+  // ... (oldingi kodlar)
+
+  // 1-sahifa uchun footerni chizamiz (Feedbackdan oldin)
+  drawVersionFooter(doc, pageWidth, pageHeight, MARGIN);
+
+  if (feedbackSections.length > 0) {
+    doc.addPage();
+    let fy = FEEDBACK_PAGE_MARGIN + 6;
+    
+    // Feedback sarlavhasi
+    doc.setFontSize(FONT_IELTS);
+    doc.setFont(undefined, "bold");
+    doc.text("Feedback", FEEDBACK_PAGE_MARGIN, fy);
+    fy += 12;
+
+    feedbackSections.forEach((section, index) => {
+        // Agar sarlavha sahifaga sig'masa
+        if (fy > pageHeight - FEEDBACK_PAGE_MARGIN - 20) {
+            drawVersionFooter(doc, pageWidth, pageHeight, FEEDBACK_PAGE_MARGIN);
+            doc.addPage();
+            fy = FEEDBACK_PAGE_MARGIN;
+            // Fix: restore Feedback title font size when new page for section title
+            doc.setFontSize(FEEDBACK_TITLE_SIZE);
+            doc.setFont(undefined, "bold");
+        }
+
+        doc.setFontSize(FEEDBACK_TITLE_SIZE);
+        doc.setFont(undefined, "bold");
+        doc.text(section.label, FEEDBACK_PAGE_MARGIN, fy);
+        fy += 6;
+
+        const htmlOps = parseHtmlToOps(section.feedback);
+        // drawHtmlOps endi ichida drawVersionFooter-ni chaqiradi
+        fy = drawHtmlOps(doc, htmlOps, FEEDBACK_PAGE_MARGIN, fy, feedbackContentWidth, pageHeight, {
+            fontSize: FEEDBACK_BODY_SIZE,
+            lineHeight: 4.5,
+            margin: FEEDBACK_PAGE_MARGIN
+        });
+        
+        fy += FEEDBACK_BLOCK_GAP;
+    });
+
+    // Eng oxirgi sahifaga ham footerni qo'yamiz
+    drawVersionFooter(doc, pageWidth, pageHeight, FEEDBACK_PAGE_MARGIN);
+  }
+
+  // ... (PDF saqlash)
 
   const fileName = `IELTS_TRF_${candidateId || "report"}_${new Date().toISOString().split("T")[0]}.pdf`;
   doc.save(fileName);

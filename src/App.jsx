@@ -16,6 +16,7 @@ import ReadingPracticePage from "./pages/dashboard/reading/ReadingPracticePage";
 import ProfilePage from "./pages/dashboard/ProfilePage";
 import ReadingResultPage from "./pages/dashboard/reading/ReadingResultPage";
 import { useAuthStore } from "./store/authStore";
+import { useMockTestClientStore } from "./store/mockTestClientStore";
 import { ToastContainer } from "react-toastify";
 import { useSettingsStore } from "./store/systemStore";
 import { useTestStore } from "./store/testStore";
@@ -74,7 +75,14 @@ function App() {
     if (isInitialized && user) {
       fetchTests();
     }
-  }, [fetchTests, isInitialized, user])
+  }, [fetchTests, isInitialized, user]);
+
+  const checkUserIsMockTestClient = useMockTestClientStore((state) => state.checkUserIsMockTestClient);
+  useEffect(() => {
+    if (isInitialized && user?.id) {
+      checkUserIsMockTestClient(user.id);
+    }
+  }, [isInitialized, user?.id, checkUserIsMockTestClient]);
 
   // Helper function to check if a route is a mock test route
   const isMockTestRoute = (path) => {
@@ -82,6 +90,14 @@ function App() {
            path.startsWith("/mock-tests") || 
            path.startsWith("/mock/") || 
            path === "/mock";
+  }
+
+  // History and client results: do not change session accessMode; user returns to context they came from
+  const isHistoryOrResultsPath = (path) => {
+    return path === '/mock-test/history' ||
+           path === '/mock-test/history-regular' ||
+           path.startsWith('/mock-test/results/') ||
+           path.startsWith('/mock-test/results-regular/');
   }
 
   // Helper function to check if a route is a practice page
@@ -160,6 +176,11 @@ function App() {
       return;
     }
 
+    // Do not change accessMode on history/results – preserve so user returns to same context
+    if (isHistoryOrResultsPath(location.pathname)) {
+      return;
+    }
+
     // Set access mode based on route type
     if (isMockTestRoute(location.pathname)) {
       // Always set mockTest for mock test routes
@@ -184,6 +205,7 @@ function App() {
   // Use useEffect to handle redirects to prevent infinite loops
   const navigate = useNavigate();
   const lastRedirectRef = useRef(null);
+  const isMockTestClient = useMockTestClientStore((state) => state.isMockTestClient);
 
   useEffect(() => {
     if (!user || loading || !isInitialized) {
@@ -224,6 +246,13 @@ function App() {
     
     let target = null;
     
+    // Mock test history and client results: accessible from both contexts; do not redirect (session store unchanged)
+    const isHistoryOrResultsRoute =
+      pathname === '/mock-test/history' ||
+      pathname === '/mock-test/history-regular' ||
+      pathname.startsWith('/mock-test/results/') ||
+      pathname.startsWith('/mock-test/results-regular/');
+    
     // If accessMode is mockTest, redirect away from regular dashboard routes
     if (accessMode === 'mockTest') {
       const isRegularDashboardRoute = pathname === '/dashboard' || 
@@ -240,10 +269,14 @@ function App() {
       }
     }
     
-    // If accessMode is regular, redirect away from mock test routes
+    // If accessMode is regular, redirect away from mock test routes (except history/results when user is a mock test client)
     if (accessMode === 'regular') {
       if (isMockTestRoute(pathname)) {
-        target = '/dashboard';
+        if (isHistoryOrResultsRoute && isMockTestClient === true) {
+          // Allow: user is in mock_test_clients
+        } else {
+          target = '/dashboard';
+        }
       }
     }
     
@@ -255,7 +288,7 @@ function App() {
       // Reset the ref if no redirect is needed
       lastRedirectRef.current = null;
     }
-  }, [location.pathname, location.search, user, loading, isInitialized, navigate]);
+  }, [location.pathname, location.search, user, loading, isInitialized, navigate, isMockTestClient]);
 
   // Show loading state while initializing authentication
   if (loading && !isInitialized) {
@@ -291,14 +324,14 @@ function App() {
               <Route path="/mock/center" element={<MockCenterPage />} />
               <Route path="/mock-test/flow/:mockTestId" element={<MockTestFlow />} />
               <Route path="/mock-test/results" element={<MockTestResults />} />
-              <Route path="/mock-test/history" element={<MockTestHistoryPage />} />
-              <Route path="/mock-test/results/:clientId" element={<MockTestClientResultsPage />} />
 
               <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
               <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
               <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
               <Route path="/reading-result/:id" element={<ReadingResultPage />} />
               <Route path="/listening-result/:id" element={<ListeningResultPage />} />
+              <Route path="/mock-test/history" element={<MockTestHistoryPage from="mockTest" />} />
+              <Route path="/mock-test/results/:clientId" element={<MockTestClientResultsPage />} />
               {/* Profile accessible from mock test layout */}
             </Route>
 
@@ -322,6 +355,8 @@ function App() {
               <Route path="/reading-result/:id" element={<ReadingResultPage />} />
               <Route path="/listening-result/:id" element={<ListeningResultPage />} />
               <Route path="/speaking-result/:id" element={<SpeakingResultPage />} />
+              <Route path="/mock-test/history-regular" element={<MockTestHistoryPage from="regular" />} />
+              <Route path="/mock-test/results-regular/:clientId" element={<MockTestClientResultsPage />} />
             </Route>
           </>
         }

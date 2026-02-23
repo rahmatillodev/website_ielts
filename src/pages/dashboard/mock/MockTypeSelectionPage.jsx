@@ -35,7 +35,7 @@ const MockTypeSelectionPage = () => {
     <div className="w-full min-h-screen p-6 md:p-12">
       <div className="max-w-5xl mx-auto">
         {/* Back Button */}
-        <motion.button
+         <motion.button
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           onClick={() => navigate("/mock")}

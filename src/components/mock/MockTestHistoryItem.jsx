@@ -7,11 +7,14 @@ import { formatDateToDayMonth } from "@/utils/formatDate";
  * Pure presentation component for a single history item
  * Receives all data as props
  */
-const MockTestHistoryItem = ({ client, results, completedAt }) => {
+const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }) => {
   const navigate = useNavigate();
-  
+  const resultsPath = from === 'mockTest'
+    ? `/mock-test/results/${client.id}`
+    : `/mock-test/results-regular/${client.id}`;
+
   const handleViewResults = () => {
-    navigate(`/mock-test/results/${client.id}`);
+    navigate(resultsPath);
   };
   const completedDate = completedAt 
     ? formatDateToDayMonth(completedAt)

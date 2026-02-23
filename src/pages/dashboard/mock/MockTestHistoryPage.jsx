@@ -1,21 +1,25 @@
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import { useMockTestHistory } from "@/hooks/useMockTestHistory";
 import MockTestHistoryItem from "@/components/mock/MockTestHistoryItem";
 import { motion } from "framer-motion";
 import { MdArrowBack, MdSchedule } from "react-icons/md";
+import { useMockTestClientStore } from "@/store/mockTestClientStore";
 
 /**
  * MockTestHistoryPage - Main page component
- * Uses custom hook for business logic separation
+ * Accessible only if the user is in the mock_test_clients table (session store does not matter).
  */
-const MockTestHistoryPage = () => {
+const MockTestHistoryPage = ({ from = "mockTest" }) => {
   const navigate = useNavigate();
-  
-  // Custom hook for history business logic
+  const isMockTestClient = useMockTestClientStore((state) => state.isMockTestClient);
+
   const { history, loading } = useMockTestHistory();
 
+  if (isMockTestClient === false) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
-  if (loading) {
+  if (isMockTestClient === null || loading) {
     return (
       <div className="w-full h-full max-w-7xl mx-auto p-4 md:p-6 bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -30,19 +34,23 @@ const MockTestHistoryPage = () => {
     <div className="w-full h-full max-w-7xl mx-auto p-4 md:p-6 bg-gray-50">
       {/* Header */}
       <div className="mb-6">
-        <button
-          onClick={() => navigate('/mock-tests')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-        >
-          <MdArrowBack className="text-xl" />
-          <span className="font-semibold">Back to Mock Tests</span>
-        </button>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-          Mock Test History
-        </h1>
-        <p className="text-gray-600">
-          View your completed mock tests and results.
-        </p>
+        {from === "mockTest"  ? (
+          <button
+            onClick={() => navigate('/mock-tests')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <MdArrowBack className="text-xl" />
+            <span className="font-semibold">Back to Mock Tests</span>
+          </button>
+        ) : 
+         <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <MdArrowBack className="text-xl" />
+            <span className="font-semibold">Back to Dashboard</span>
+          </button>
+        }
       </div>
 
       {/* History List */}
@@ -73,6 +81,7 @@ const MockTestHistoryPage = () => {
                 client={item.client}
                 results={item.results}
                 completedAt={item.completedAt}
+                from={from}
               />
             </motion.div>
           ))}

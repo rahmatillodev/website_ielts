@@ -55,6 +55,17 @@ function LoginPage() {
     }
   }, [searchParams]);
 
+  // Hide back button when in mock test flow (from session or redirect)
+  const isMockTestMode =
+    (() => {
+      const redirectPath = searchParams.get("redirect");
+      if (redirectPath) {
+        const pathname = redirectPath.split("?")[0];
+        if (isMockTestRoute(pathname)) return true;
+      }
+      return sessionStorage.getItem("accessMode") === "mockTest";
+    })();
+
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -105,15 +116,17 @@ function LoginPage() {
       <AnimatedPolygonDecoration />
       {/* Right Panel - Login Form */}
       <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center bg-white relative">
-        {/* Back Button - Responsive */}
-        <button
-          onClick={() => navigate(-1)}
-          className="absolute lg:hidden top-9 left-8 flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors text-sm"
-          aria-label="Go back"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
+        {/* Back Button - Responsive (hidden in mock test flow) */}
+        {!isMockTestMode && (
+          <button
+            onClick={() => navigate(-1)}
+            className="absolute lg:hidden top-9 left-8 flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors text-sm"
+            aria-label="Go back"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+        )}
 
         <div className="w-full max-w-md">
           {/* Logo - Mobile */}

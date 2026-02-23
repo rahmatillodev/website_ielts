@@ -134,7 +134,13 @@ const MockTestClientResults = ({
                       <h4 className="text-blue-800 font-bold flex items-center gap-2 mb-2">
                         Feedback
                       </h4>
-                      <div className="text-gray-700 text-sm leading-relaxed prose prose-sm max-w-none">
+                      <div
+                        className="text-sm leading-relaxed prose prose-sm  prose prose-slate max-w-none 
+                        [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4
+                        [&_li]:mb-2 
+                        text-gray-800" 
+                        data-selectable="true"
+                      >
                         {parse(item.feedback)}
                       </div>
                     </div>

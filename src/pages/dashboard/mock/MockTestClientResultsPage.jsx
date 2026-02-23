@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import supabase from '@/lib/supabase';
 import MockTestClientResults from './MockTestClientResults';
 import { MdArrowBack } from 'react-icons/md';
+import { useMockTestClientStore } from '@/store/mockTestClientStore';
 
 /**
  * Page wrapper for MockTestClientResults
- * Fetches client data by clientId and displays results
+ * Accessible only if the user is in the mock_test_clients table.
+ * Fetches client data by clientId and displays results.
  */
 const MockTestClientResultsPage = () => {
   const { clientId } = useParams();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const isMockTestClient = useMockTestClientStore((state) => state.isMockTestClient);
+  const fromRegular = pathname.startsWith('/mock-test/results-regular/');
   const [client, setClient] = useState(null);
   const [results, setResults] = useState({
     listening: null,
@@ -20,6 +25,10 @@ const MockTestClientResultsPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  if (isMockTestClient === false) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   useEffect(() => {
     const loadData = async () => {
@@ -175,7 +184,7 @@ const MockTestClientResultsPage = () => {
   }, [clientId]);
 
   const handleBack = () => {
-    navigate('/mock-test/history');
+    navigate(fromRegular ? '/mock-test/history-regular' : '/mock-test/history');
   };
 
   if (loading) {
