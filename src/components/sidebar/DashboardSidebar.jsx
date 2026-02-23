@@ -13,6 +13,7 @@ import {
 import { FaChartSimple } from "react-icons/fa6";
 import { Button } from "../ui/button";
 import { useAuthStore } from "@/store/authStore";
+import { useMockTestClientStore } from "@/store/mockTestClientStore";
 import LogoutModal from "../modal/LogoutModal";
 import { toast } from "react-toastify";
 import { TfiWrite } from "react-icons/tfi";
@@ -64,6 +65,7 @@ const DashboardSidebar = ({ onNavigate }) => {
   const authUser = useAuthStore((state) => state.authUser);
   const userProfile = useAuthStore((state) => state.userProfile);
   const signOut = useAuthStore((state) => state.signOut);
+  const isMockTestClient = useMockTestClientStore((state) => state.isMockTestClient);
   const isSmallScreen = useSmallScreen();
 
   // Load collapsed state from localStorage, default to false
@@ -213,6 +215,16 @@ const DashboardSidebar = ({ onNavigate }) => {
           onNavigate={onNavigate}
           isCollapsed={effectiveIsCollapsed}
         />
+        {isMockTestClient === true && (
+          <SidebarItem
+            icon={IoDocumentAttachOutline}
+            label="Mock Tests History"
+            link="/mock-test/history-regular"
+            isActive={pathname === "/mock-test/history-regular" || pathname === "/mock-test/history"}
+            onNavigate={onNavigate}
+            isCollapsed={effectiveIsCollapsed}
+          />
+        )}
 
         {!effectiveIsCollapsed && (
           <div className="mt-2 xl:mt-4 px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px]">

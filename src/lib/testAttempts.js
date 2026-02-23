@@ -22,7 +22,15 @@ const getUserIdFromLocalStorage = () => {
   }
 };
 
-export const submitTestAttempt = async (testId, answers, currentTest, timeTaken = null, type) => {
+/**
+ * @param {string} testId - Test ID (listening_id or reading_id)
+ * @param {object} answers - User answers
+ * @param {object} currentTest - Test data
+ * @param {number|null} timeTaken - Time taken in seconds
+ * @param {string} type - 'listening' | 'reading'
+ * @param {object|null} mockTestContext - If in mock test: { mockTestId, mockClientId, section }. mockTestId is stored in user_attempts.mock_id
+ */
+export const submitTestAttempt = async (testId, answers, currentTest, timeTaken = null, type, mockTestContext = null) => {
   try {
     // Get user id from localStorage
     const authenticatedUserId = getUserIdFromLocalStorage();
@@ -59,17 +67,22 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
       : 1;
 
     // 1. Create user_attempt record
+    const attemptPayload = {
+      user_id: authenticatedUserId,
+      test_id: testId,
+      score: bandScore,
+      total_questions: totalQuestions,
+      correct_answers: correctCount,
+      time_taken: timeTakenSeconds, // Store in seconds
+      completed_at: new Date().toISOString(),
+    };
+    // Add mock_id when in mock test mode (links attempt to mock_test.id)
+    if (mockTestContext?.mockTestId) {
+      attemptPayload.mock_id = mockTestContext.mockTestId;
+    }
     const { data: attemptData, error: attemptError } = await supabase
       .from('user_attempts')
-      .insert({
-        user_id: authenticatedUserId,
-        test_id: testId,
-        score: bandScore,
-        total_questions: totalQuestions,
-        correct_answers: correctCount,
-        time_taken: timeTakenSeconds, // Store in seconds
-        completed_at: new Date().toISOString(),
-      })
+      .insert(attemptPayload)
       .select()
       .single();
 

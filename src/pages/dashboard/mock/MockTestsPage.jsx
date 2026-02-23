@@ -12,7 +12,8 @@ const MockTestsPage = () => {
   const { 
     fetchClientById, 
     fetchClientAttempts, 
-    loading 
+    loading,
+    isMockTestClient,
   } = useMockTestClientStore();
   const { userProfile } = useAuthStore();
   
@@ -156,17 +157,15 @@ const MockTestsPage = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* History Link */}
-          <Link
-            to="/mock-test/history"
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-semibold"
-          >
-            <MdHistory className="text-lg" />
-            History
-          </Link>
-          
-          {/* View Toggle */}
-          
+          {isMockTestClient === true && (
+            <Link
+              to="/mock-test/history"
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-semibold"
+            >
+              <MdHistory className="text-lg" />
+              History
+            </Link>
+          )}
         </div>
       </div>
 

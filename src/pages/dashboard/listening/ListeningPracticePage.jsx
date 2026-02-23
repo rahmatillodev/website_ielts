@@ -788,10 +788,10 @@ const ListeningPracticePageContent = () => {
         ? Math.floor((Date.now() - startTime) / 1000)
         : null;
 
-      // Prepare mock test context if in mock test mode
-      const mockTestContext = isMockTest && mockClientId ? {
+      // Prepare mock test context if in mock test mode (mockTestId is stored as user_attempts.mock_id)
+      const mockTestContext = isMockTest && mockTestId ? {
         mockTestId: mockTestId,
-        mockClientId: mockClientId,
+        mockClientId: mockClientId || null,
         section: 'listening'
       } : null;
 

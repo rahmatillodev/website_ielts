@@ -18,10 +18,10 @@ export const useTestListStore = create((set, get) => ({
 
   fetchTests: async (forceRefresh = false) => {
     const currentState = get();
-    
+
     // Allow refetch if data is empty even if loaded is true
     const hasData = (currentState.test_reading?.length > 0 || currentState.test_listening?.length > 0 || currentState.test_speaking?.length > 0);
-    
+
     // Return early only if already loaded with data AND not currently loading AND not forcing refresh
     if (currentState.loaded && hasData && !currentState.loading && !forceRefresh) {
       return {
@@ -55,7 +55,7 @@ export const useTestListStore = create((set, get) => ({
         .from("test")
         .select("id, title, type, difficulty, duration, question_quantity, is_premium, is_active, created_at, is_mock")
         .eq("is_active", true)
-        // .eq("is_mock", false)
+        .or("is_mock.eq.false,is_mock.is.null")
         .order("created_at", { ascending: false });
       const { data, error } = await Promise.race([
         testsQueryPromise,
@@ -72,20 +72,20 @@ export const useTestListStore = create((set, get) => ({
           details: error.details,
           hint: error.hint
         });
-        
+
         // Check for RLS policy denial
         if (error.code === 'PGRST116' || error.message?.includes('permission') || error.message?.includes('policy')) {
           const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'test' table. Error: ${error.message}`;
           console.error('[fetchTests] RLS Policy Issue:', rlsError);
           throw new Error(rlsError);
         }
-        
+
         throw error;
       }
 
       // Ensure data is an array before filtering
       const tests = Array.isArray(data) ? data : [];
-      
+
       // Handle case where query returns null/undefined (no data found)
       if (!tests || tests.length === 0) {
         console.warn('[fetchTests] No active tests found. This may be normal if no tests are marked as active, or check RLS policies.');
@@ -104,7 +104,7 @@ export const useTestListStore = create((set, get) => ({
       // Fetch question types for all tests
       const allTestIds = tests.map(test => test.id);
       let questionTypesMap = {};
-      
+
       try {
         questionTypesMap = await useQuestionTypeStore.getState().fetchQuestionTypesForTests(allTestIds);
       } catch (error) {
@@ -174,12 +174,12 @@ export const useTestListStore = create((set, get) => ({
       }
 
       // Reset loaded flag on error to allow retry
-      set({ 
+      set({
         error: error.message || 'Failed to fetch tests. Please check your connection and try again.',
         loaded: false,
         loading: false, // Ensure loading is false on error
       });
-      
+
       throw error;
     } finally {
       // CRUCIAL: Always set loading to false to prevent infinite loading states

@@ -182,7 +182,6 @@ export const useMockTestHistory = () => {
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
-  console.log(['history', history]);
 
   return {
     history,

@@ -7,7 +7,9 @@ import {
   LuChevronRight,
 } from "react-icons/lu";
 import { IoDocumentAttachOutline } from "react-icons/io5";
+import { MdHistory } from "react-icons/md";
 import { useAuthStore } from "@/store/authStore";
+import { useMockTestClientStore } from "@/store/mockTestClientStore";
 import LogoutModal from "../modal/LogoutModal";
 import { toast } from "react-toastify";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
@@ -54,6 +56,7 @@ const MockTestSidebar = ({ onNavigate }) => {
   const navigate = useNavigate();
   const authUser = useAuthStore((state) => state.authUser);
   const signOut = useAuthStore((state) => state.signOut);
+  const isMockTestClient = useMockTestClientStore((state) => state.isMockTestClient);
   const isSmallScreen = useSmallScreen();
 
   // Load collapsed state from localStorage, default to false
@@ -144,6 +147,16 @@ const MockTestSidebar = ({ onNavigate }) => {
           onNavigate={onNavigate}
           isCollapsed={effectiveIsCollapsed}
         />
+        {isMockTestClient === true && (
+          <SidebarItem
+            icon={MdHistory}
+            label="Mock Test History"
+            link="/mock-test/history"
+            isActive={pathname === "/mock-test/history"}
+            onNavigate={onNavigate}
+            isCollapsed={effectiveIsCollapsed}
+          />
+        )}
 
         {!effectiveIsCollapsed && (
           <div className="mt-2 xl:mt-4 px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px]">

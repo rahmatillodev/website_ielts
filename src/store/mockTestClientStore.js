@@ -6,6 +6,38 @@ export const useMockTestClientStore = create((set) => ({
     mockTest: null,
     loading: false,
     error: null,
+    /** True if current user has at least one row in mock_test_clients; false if not; null before checked */
+    isMockTestClient: null,
+
+    /**
+     * Check if the given user ID exists in mock_test_clients table.
+     * Sets isMockTestClient and returns the result.
+     * @param {string} userId - The user ID to check
+     * @returns {Promise<boolean>}
+     */
+    checkUserIsMockTestClient: async (userId) => {
+        if (!userId) {
+            set({ isMockTestClient: false });
+            return false;
+        }
+        try {
+            const { data, error } = await supabase
+                .from("mock_test_clients")
+                .select("id")
+                .eq("user_id", userId)
+                .limit(1)
+                .maybeSingle();
+
+            if (error) throw error;
+            const isClient = !!data;
+            set({ isMockTestClient: isClient });
+            return isClient;
+        } catch (err) {
+            console.error("Error checking mock test client:", err);
+            set({ isMockTestClient: false });
+            return false;
+        }
+    },
 
     fetchClientById: async (clientId) => {
         set({ loading: true, error: null });
