@@ -142,6 +142,14 @@ export const useWritingCompletedStore = create((set) => ({
 
       const attemptId = attemptData.id;
 
+      // Map task_name to question_number (Task 1 -> 1, Task 2 -> 2) for result page ordering
+      const taskNameToQuestionNumber = {};
+      [...writingTasks]
+        .sort((a, b) => (a.task_name || '').localeCompare(b.task_name || ''))
+        .forEach((task, index) => {
+          taskNameToQuestionNumber[task.task_name] = index + 1;
+        });
+
       // Insert individual answers into user_answers table
       const answersToInsert = Object.entries(answers)
         .filter(([taskName, answer]) => answer && answer.trim() && taskNameToIdMap[taskName])
@@ -152,6 +160,7 @@ export const useWritingCompletedStore = create((set) => ({
           is_correct: false, // Always false for writing
           correct_answer: '', // Empty for writing
           question_type: 'speaking', // As specified by user
+          question_number: taskNameToQuestionNumber[taskName] ?? null,
         }));
 
       if (answersToInsert.length > 0) {

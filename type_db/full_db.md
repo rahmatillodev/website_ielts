@@ -112,6 +112,24 @@ Stores answer options. Structure varies by question type.
 }
 ```
 
+#### `user_answers` Table
+Stores per-question answers for each attempt (reading, listening, writing, mock_test).
+
+```sql
+{
+  id: UUID (primary key)
+  attempt_id: UUID (foreign key → user_attempts.id, on delete CASCADE)
+  question_id: UUID (nullable) - references question or writing_task
+  user_answer: TEXT (nullable)
+  is_correct: BOOLEAN (nullable)
+  correct_answer: TEXT (nullable)
+  created_at: TIMESTAMPTZ
+  updated_at: TIMESTAMPTZ
+  question_type: question_type enum (default 'multiple_choice')
+  question_number: BIGINT (nullable) - sequential question number for result page display and ordering
+}
+```
+
 ---
 
 ## Fetching Test Data
