@@ -66,6 +66,9 @@ const ReadingResultPage = () => {
       return;
     }
 
+    // Clear previous result data immediately so we never show stale results for a different test
+    setResultData(null);
+    setAttemptData(null);
     // Mark as loading and update last loaded id
     isLoadingRef.current = true;
     lastLoadedIdRef.current = id;
@@ -165,14 +168,14 @@ const ReadingResultPage = () => {
           }
 
           // Convert answers to the format expected by the component
-          // Use question_number as key for display, but keep question_id mapping for review data
+          // Use question_number as key for display (prefer stored question_number from user_answers)
           const answersObj = {};
           const reviewDataObj = {};
           Object.keys(attemptResult.answers).forEach((questionId) => {
-            // questionId is now questions.id (UUID), map it to question_number
-            const questionNumber = questionIdToNumberMap[questionId] || questionId;
-            answersObj[questionNumber] = attemptResult.answers[questionId].userAnswer;
-            reviewDataObj[questionNumber] = attemptResult.answers[questionId];
+            const answerItem = attemptResult.answers[questionId];
+            const questionNumber = (answerItem.questionNumber ?? questionIdToNumberMap[questionId]) || questionId;
+            answersObj[questionNumber] = answerItem.userAnswer;
+            reviewDataObj[questionNumber] = answerItem;
           });
 
           setResultData({
@@ -570,7 +573,13 @@ const ReadingResultPage = () => {
     );
   }
 
-  if (!resultData || !currentTest) {
+  // Don't show result content if data is for a different test (prevents stale results flash when navigating)
+  const isDataForCurrentTest =
+    resultData &&
+    attemptData &&
+    (String(attemptData.test_id) === String(id));
+
+  if (!resultData || !currentTest || !isDataForCurrentTest) {
     return (
       <div className="min-h-screen bg-gray-50/50 p-8 font-sans flex items-center justify-center">
         <div className="text-center">

@@ -98,6 +98,7 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
       is_correct: result.isCorrect,
       correct_answer: result.correctAnswer || '',
       question_type: result.questionType || 'multiple_choice', // Include question type
+      question_number: result.questionNumber ?? null,
     }));
 
     if (answersToInsert.length > 0) {
@@ -135,17 +136,18 @@ export const fetchAttemptAnswers = async (attemptId) => {
       .from('user_answers')
       .select('*')
       .eq('attempt_id', attemptId)
-      .order('question_id', { ascending: true });
+      .order('question_number', { ascending: true });
 
     if (error) throw error;
 
-    // Convert to object format: { [questionId]: { userAnswer, isCorrect, correctAnswer } }
+    // Convert to object format: { [questionId]: { userAnswer, isCorrect, correctAnswer, questionNumber } }
     const answersObject = {};
     data.forEach((item) => {
       answersObject[item.question_id] = {
         userAnswer: item.user_answer,
         isCorrect: item.is_correct,
         correctAnswer: item.correct_answer,
+        questionNumber: item.question_number,
       };
     });
 
@@ -386,6 +388,7 @@ const calculateTestScore = (answers, currentTest) => {
 
             answerResults.push({
               questionId,
+              questionNumber: question.question_number,
               userAnswer: userAnswerForQuestion,
               correctAnswer: correctAnswerKey,
               isCorrect,
@@ -424,6 +427,7 @@ const calculateTestScore = (answers, currentTest) => {
             // Use questions.id as questionId for database storage, fallback to question_number
             answerResults.push({
               questionId: questionId || questionNumber, // Use questions.id if available, otherwise question_number
+              questionNumber,
               userAnswer,
               correctAnswer,
               isCorrect,
