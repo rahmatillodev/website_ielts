@@ -705,13 +705,13 @@ const ReadingPracticePageContent = () => {
                 completionSet: localStorage.getItem(completionKey) === 'true'
               });
               navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
-            } else if (!currentIsMockTest && effectiveTestId) {
+            } else if (!currentIsMockTest && result.attemptId) {
               console.log('[ReadingPracticePage] Navigating to result page (non-mock test)', {
-                effectiveTestId,
+                attemptId: result.attemptId,
                 result: result.success,
                 isMockTest: currentIsMockTest
               });
-              navigate(`/reading-result/${effectiveTestId}`);
+              navigate(`/reading-result/${result.attemptId}`);
             } else {
               console.log('[ReadingPracticePage] Auto-submit successful but skipping navigation', {
                 isMockTest: currentIsMockTest,
@@ -1831,7 +1831,7 @@ const ReadingPracticePageContent = () => {
         isOpen={isModalOpen}
         loading={isSubmitting}
         onClose={() => setIsModalOpen(false)}
-        link={`/reading-result/${effectiveTestId || id}`}
+        resultPath="/reading-result"
         testId={effectiveTestId || id}
         onSubmit={handleSubmitTest}
         isMockTest={isMockTest}

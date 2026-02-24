@@ -11,30 +11,26 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { clearReadingPracticeData, loadReadingPracticeData, saveReadingResultData } from "@/store/LocalStorage/readingStorage";
 
-export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, loading = false, isMockTest = false }) {
+export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, loading = false, isMockTest = false, resultPath }) {
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
     try {
       if (onSubmit) {
         const result = await onSubmit();
-        // Only navigate if submission was explicitly successful
         if (result && result.success === true) {
           onClose();
-          
-          // For mock test, show "Saved" toast and don't navigate
           if (isMockTest) {
             toast.success('Saved');
-            // Don't navigate - let the parent component handle the transition
           } else {
-            navigate(link);
+            const target = resultPath && result.attemptId
+              ? `${resultPath}/${result.attemptId}`
+              : link;
+            if (target) navigate(target);
           }
         } else if (result && result.success === false) {
-          // Don't navigate on failure, let the user see the error
           console.error('Submission failed:', result.error);
-          // The error is already handled in the submit function, just don't navigate
         }
-        // If result is undefined or doesn't have success property, don't navigate
       } else {
         if (testId) {
           const practiceData = loadReadingPracticeData(testId);
@@ -51,18 +47,14 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
           clearReadingPracticeData(testId);
         }
         onClose();
-        
-        // For mock test, show "Saved" toast and don't navigate
         if (isMockTest) {
           toast.success('Saved');
-        } else {
+        } else if (link) {
           navigate(link);
         }
       }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
-      // Don't navigate on error, let the user see what happened
-      // The error is already logged, and the modal will stay open
     }
   };
 

@@ -8,9 +8,8 @@ import { FaCheckCircle, FaSpinner, FaTimesCircle } from "react-icons/fa";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { HiOutlineHome, HiOutlineRefresh } from "react-icons/hi";
 import { useTestStore } from "@/store/testStore";
-import { fetchLatestAttempt, fetchAttemptAnswers } from "@/lib/testAttempts";
+import { fetchAttemptById, fetchAttemptAnswers } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
-import { useDashboardStore } from "@/store/dashboardStore";
 import { generateTestResultsPDF } from "@/utils/pdfExport";
 import ResultBanner from "@/components/badges/ResultBanner";
 import { useSettingsStore } from "@/store/systemStore";
@@ -23,10 +22,11 @@ const ReadingResultPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentTest, fetchTestById } = useTestStore();
-  const { authUser, userProfile } = useAuthStore();
-  const attempts = useDashboardStore((state) => state.attempts);
+  useAuthStore();
   const [resultData, setResultData] = useState(null);
   const [attemptData, setAttemptData] = useState(null);
+  /** Test data fetched for this result page. Used for answer display so we don't depend on store timing. */
+  const [pageTest, setPageTest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -36,21 +36,11 @@ const ReadingResultPage = () => {
   const lastLoadedIdRef = useRef(null);
   const isLoadingRef = useRef(false);
   const fetchTestByIdRef = useRef(fetchTestById);
-  const authUserRef = useRef(authUser);
-  const userProfileRef = useRef(userProfile);
   const settings = useSettingsStore((state) => state.settings);
-  // Update refs when values change (but don't trigger re-fetch)
+  // Update ref when value changes
   useEffect(() => {
     fetchTestByIdRef.current = fetchTestById;
   }, [fetchTestById]);
-
-  useEffect(() => {
-    authUserRef.current = authUser;
-  }, [authUser]);
-
-  useEffect(() => {
-    userProfileRef.current = userProfile;
-  }, [userProfile]);
 
   // Load data only when id changes, not on re-renders or tab focus
   useEffect(() => {
@@ -69,83 +59,59 @@ const ReadingResultPage = () => {
     // Clear previous result data immediately so we never show stale results for a different test
     setResultData(null);
     setAttemptData(null);
+    setPageTest(null);
     // Mark as loading and update last loaded id
     isLoadingRef.current = true;
     lastLoadedIdRef.current = id;
     setLoading(true);
 
-    // Parallel loading with Promise.all
+    // id in URL is user_attempts.id (attempt ID)
     const loadData = async () => {
       try {
-        const currentAuthUser = authUserRef.current;
+        const attemptId = id;
         const currentFetchTestById = fetchTestByIdRef.current;
 
-        // Check if the latest attempt is already in dashboardStore
-        const testId = id ? String(id) : null;
-        const attemptsForTest = attempts.filter((a) => String(a.test_id) === testId);
-        const latestAttemptFromStore = attemptsForTest.length > 0
-          ? attemptsForTest.sort((a, b) => {
-            const aDate = new Date(a.completed_at || a.created_at || 0).getTime();
-            const bDate = new Date(b.completed_at || b.created_at || 0).getTime();
-            return bDate - aDate; // Descending order
-          })[0]
-          : null;
-
-        // On result pages, we should always bypass premium check since results are only shown after completion
-        // First, try to get attempt from store or fetch it
-        let attemptResult;
-        let testResult = null; // Declare testResult outside if/else blocks
-        const currentUserProfile = userProfileRef.current;
-
-        if (latestAttemptFromStore && currentAuthUser) {
-          // Use attempt from store and only fetch answers
-          // Fetch test data and answers in parallel
-          // Always bypass premium check on result pages
-          // Include correct answers so we can display them for unanswered questions
-          const [fetchedTestResult, answersResult] = await Promise.all([
-            currentFetchTestById(id, false, true),
-            fetchAttemptAnswers(latestAttemptFromStore.id)
-          ]);
-          testResult = fetchedTestResult; // Store testResult for later use
-
-          if (answersResult.success) {
-            attemptResult = {
-              success: true,
-              attempt: {
-                id: latestAttemptFromStore.id,
-                user_id: latestAttemptFromStore.user_id,
-                test_id: latestAttemptFromStore.test_id,
-                score: latestAttemptFromStore.score,
-                total_questions: latestAttemptFromStore.total_questions,
-                correct_answers: latestAttemptFromStore.correct_answers,
-                time_taken: latestAttemptFromStore.time_taken,
-                completed_at: latestAttemptFromStore.completed_at,
-                created_at: latestAttemptFromStore.created_at,
-              },
-              answers: answersResult.answers || {}, // Keep original answers with question_id keys, will map later
-            };
-          } else {
-            // Fallback to fetchLatestAttempt if fetching answers fails
-            attemptResult = await fetchLatestAttempt(currentAuthUser.id, id);
-          }
-        } else {
-          // Fetch test and attempt in parallel
-          // Always bypass premium check on result pages (user can only reach here if they completed the test)
-          // Include correct answers so we can display them for unanswered questions
-          const [fetchedTestResult, fetchedAttemptResult] = await Promise.all([
-            currentFetchTestById(id, false, true),
-            currentAuthUser
-              ? fetchLatestAttempt(currentAuthUser.id, id)
-              : Promise.resolve({ success: true, attempt: null, answers: {} })
-          ]);
-          testResult = fetchedTestResult; // Store testResult for later use
-          attemptResult = fetchedAttemptResult;
+        const attemptResponse = await fetchAttemptById(attemptId);
+        if (!attemptResponse.success || !attemptResponse.attempt) {
+          setResultData(null);
+          setAttemptData(null);
+          setPageTest(null);
+          return;
         }
+        const attempt = attemptResponse.attempt;
+        const testId = attempt.test_id;
+
+        const [testResult, answersResult] = await Promise.all([
+          currentFetchTestById(testId, false, true),
+          fetchAttemptAnswers(attemptId),
+        ]);
+
+        if (!answersResult.success) {
+          setResultData(null);
+          setAttemptData(null);
+          setPageTest(null);
+          return;
+        }
+
+        const attemptResult = {
+          success: true,
+          attempt: {
+            id: attempt.id,
+            user_id: attempt.user_id,
+            test_id: attempt.test_id,
+            score: attempt.score,
+            total_questions: attempt.total_questions,
+            correct_answers: attempt.correct_answers,
+            time_taken: attempt.time_taken,
+            completed_at: attempt.completed_at,
+            created_at: attempt.created_at,
+          },
+          answers: answersResult.answers || {},
+        };
 
         if (attemptResult.success && attemptResult.attempt && attemptResult.answers) {
           setAttemptData(attemptResult.attempt);
-
-          // Get test data - use testResult if available (from parallel fetch), otherwise use currentTest from store
+          if (testResult) setPageTest(testResult);
           const testDataForMapping = testResult || currentTest;
 
           // Map question_id (questions.id) back to question_number for display
@@ -198,8 +164,7 @@ const ReadingResultPage = () => {
     };
 
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]); // Only depend on id - attempts is read from store when effect runs
+  }, [id]);
 
   // Format time from seconds - ensure never negative
   const formatTime = useCallback((seconds) => {
@@ -320,10 +285,13 @@ const ReadingResultPage = () => {
     return '';
   }, []);
 
+  // Use page test (fetched with result) so display doesn't depend on store timing; fallback to currentTest
+  const testForDisplay = pageTest || currentTest;
+
   // Get answer display data - memoized for performance
   // Now includes ALL questions from the test, even if unanswered
   const answerDisplayData = useMemo(() => {
-    if (!currentTest) return [];
+    if (!testForDisplay) return [];
 
     const answers = resultData?.answers || {};
     const reviewData = resultData?.reviewData || {};
@@ -333,8 +301,8 @@ const ReadingResultPage = () => {
     // Build a map of all questions from the test
     const allQuestionsMap = new Map(); // question_number -> { question, questionId, questionGroup }
     
-    if (currentTest?.parts) {
-      currentTest.parts.forEach((part) => {
+    if (testForDisplay?.parts) {
+      testForDisplay.parts.forEach((part) => {
         if (part.questionGroups) {
           part.questionGroups.forEach((questionGroup) => {
             if (questionGroup.questions) {
@@ -516,7 +484,7 @@ const ReadingResultPage = () => {
       }
       return String(a.questionNumber).localeCompare(String(b.questionNumber));
     });
-  }, [resultData, currentTest, getCorrectAnswerFromTest, formatMultipleAnswersAnswer]);
+  }, [resultData, testForDisplay, getCorrectAnswerFromTest, formatMultipleAnswersAnswer]);
 
   // Memoized stats calculations
   const stats = useMemo(() => {
@@ -546,7 +514,7 @@ const ReadingResultPage = () => {
     }
     setPdfLoading(true);
     await generateTestResultsPDF({
-      test: currentTest,
+      test: testForDisplay,
       stats,
       answerDisplayData,
       completedDate: formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt),
@@ -556,14 +524,14 @@ const ReadingResultPage = () => {
     });
     setPdfLoading(false);
     toast.success('PDF is generated successfully');
-  }, [currentTest, resultData, answerDisplayData, stats, attemptData]);
+  }, [testForDisplay, resultData, answerDisplayData, stats, attemptData]);
 
   // Handle retake - delete previous attempts
-  const handleRetake = useCallback(async () => {
-    if (!authUser || !id) return;
-    clearReadingPracticeData(id);
-    navigate(`/reading-practice/${id}`);
-  }, [authUser, id, navigate]);
+  const handleRetake = useCallback(() => {
+    if (!attemptData?.test_id) return;
+    clearReadingPracticeData(attemptData.test_id);
+    navigate(`/reading-practice/${attemptData.test_id}`);
+  }, [attemptData?.test_id, navigate]);
 
   if (loading) {
     return (
@@ -573,13 +541,12 @@ const ReadingResultPage = () => {
     );
   }
 
-  // Don't show result content if data is for a different test (prevents stale results flash when navigating)
   const isDataForCurrentTest =
     resultData &&
     attemptData &&
-    (String(attemptData.test_id) === String(id));
+    (String(attemptData.id) === String(id));
 
-  if (!resultData || !currentTest || !isDataForCurrentTest) {
+  if (!resultData || !testForDisplay || !isDataForCurrentTest) {
     return (
       <div className="min-h-screen bg-gray-50/50 p-8 font-sans flex items-center justify-center">
         <div className="text-center">
@@ -611,7 +578,7 @@ const ReadingResultPage = () => {
               Exam Results
             </h1>
             <div className="flex flex-wrap items-center gap-2 text-slate-500 font-medium text-xs sm:text-sm">
-              <span>{currentTest?.title || "Academic Reading Practice Test"}</span>
+              <span>{testForDisplay?.title || "Academic Reading Practice Test"}</span>
               <span className="text-gray-400">•</span>
               <span>Completed on {formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt)}</span>
             </div>
@@ -824,7 +791,7 @@ const ReadingResultPage = () => {
             </Link>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <Link to={"/reading-practice/" + (id || '') + "?mode=review"} className="w-full sm:w-auto">
+              <Link to={"/reading-practice/" + (attemptData?.test_id ?? '') + "?mode=review"} className="w-full sm:w-auto">
                 <Button
                   variant="outline"
                   className="border-blue-600 text-blue-600 w-full sm:w-auto hover:bg-blue-50 font-semibold px-8 h-12 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95"
@@ -835,7 +802,7 @@ const ReadingResultPage = () => {
               <Button
                 className="bg-blue-600 w-full sm:w-auto hover:bg-blue-700 text-white font-semibold px-8 h-12 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                 onClick={handleRetake}
-                disabled={isDeleting || !authUser}
+                disabled={isDeleting}
               >
                 <HiOutlineRefresh className="text-xl" />
                 {isDeleting ? 'Clearing...' : 'Retake Exam'}

@@ -156,7 +156,7 @@ export const useAuthStore = create(
             console.log('[signIn] Checking ALL bookings with this email (for debugging)...');
             const { data: allBookings, error: allBookingsError } = await supabase
               .from('mock_test_clients')
-              .select('id, email, user_id, full_name, created_at')
+              .select('id, email, user_id, full_name, created_at, phone_number')
               .ilike('email', normalizedEmail);
 
             console.log('[signIn] All bookings query error:', allBookingsError);
@@ -202,7 +202,7 @@ export const useAuthStore = create(
                 })
                 .ilike('email', normalizedEmail)
                 .is('user_id', null)
-                .select('id, email, user_id');
+                .select('id, email, user_id, phone_number');
 
               console.log('[signIn] Update query error:', updateError);
               console.log('[signIn] Updated bookings:', updatedBookings);
@@ -213,6 +213,19 @@ export const useAuthStore = create(
                 console.error("[signIn] Update error details:", JSON.stringify(updateError, null, 2));
               } else if (updatedBookings && updatedBookings.length > 0) {
                 console.log(`[signIn] ✅ Successfully linked ${updatedBookings.length} mock test booking(s) to user`);
+                // Sync phone_number from mock_test_clients to users table
+                const phoneFromBooking = updatedBookings.map((b) => b?.phone_number).find(Boolean);
+                if (phoneFromBooking) {
+                  const { error: phoneUpdateError } = await supabase
+                    .from('users')
+                    .update({ phone_number: phoneFromBooking })
+                    .eq('id', data.user.id);
+                  if (phoneUpdateError) {
+                    console.error("[signIn] Error syncing phone_number to users:", phoneUpdateError);
+                  } else {
+                    console.log("[signIn] ✅ Synced phone_number from mock_test_clients to users");
+                  }
+                }
               } else {
                 console.warn("[signIn] ⚠️ Update query returned empty array - no bookings were updated");
               }
@@ -269,12 +282,25 @@ export const useAuthStore = create(
             })
             .eq('email', normalizedEmail) // Faqat shu emailga tegishli qatorlar
             .is('user_id', null)          // Faqat hali bog'lanmaganlar
-            .select();                    // Natijani qaytarish (tekshirish uchun)
+            .select();                    // Natijani qaytarish (phone_number bilan users jadvaliga yozish uchun)
       
           if (linkError) {
             console.error("Linking error:", linkError.message);
           } else if (updatedRecords?.length > 0) {
             console.log(`✅ ${updatedRecords.length} ta booking profilingizga biriktirildi.`);
+            // Sync phone_number from mock_test_clients to users table
+            const phoneFromBooking = updatedRecords.map((r) => r?.phone_number).find(Boolean);
+            if (phoneFromBooking) {
+              const { error: phoneUpdateError } = await supabase
+                .from('users')
+                .update({ phone_number: phoneFromBooking })
+                .eq('id', newUser.id);
+              if (phoneUpdateError) {
+                console.error("Error syncing phone_number to users:", phoneUpdateError.message);
+              } else {
+                console.log("✅ phone_number mock_test_clients dan users jadvaliga qo'shildi.");
+              }
+            }
           }
       
           // 3. Profil ma'lumotlarini yuklash

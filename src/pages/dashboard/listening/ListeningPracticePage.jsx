@@ -526,13 +526,13 @@ const ListeningPracticePageContent = () => {
                 completionSet: localStorage.getItem(completionKey) === 'true'
               });
               navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
-            } else if (!currentIsMockTest && id) {
+            } else if (!currentIsMockTest && result.attemptId) {
               console.log('[ListeningPracticePage] Navigating to result page (non-mock test)', {
-                effectiveTestId,
+                attemptId: result.attemptId,
                 result: result.success,
                 isMockTest: currentIsMockTest
               });
-              navigate(`/listening-result/${id}`);
+              navigate(`/listening-result/${result.attemptId}`);
             } else {
               console.log('[ListeningPracticePage] Auto-submit successful but skipping navigation', {
                 isMockTest: currentIsMockTest,
@@ -1552,8 +1552,8 @@ const ListeningPracticePageContent = () => {
                             }
                             if (timeRemaining > 0 && status === 'taking') {
                               handleSubmitTest().then((result) => {
-                                if (result.success) {
-                                  navigate(`/listening-result/${id}`);
+                                if (result?.success && result?.attemptId) {
+                                  navigate(`/listening-result/${result.attemptId}`);
                                 }
                               });
                             }
@@ -1774,7 +1774,7 @@ const ListeningPracticePageContent = () => {
         loading={isSubmitting}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        link={`/listening-result/${effectiveTestId || id}`}
+        resultPath="/listening-result"
         testId={effectiveTestId || id}
         onSubmit={handleSubmitTest}
         isMockTest={isMockTest}

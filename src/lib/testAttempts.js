@@ -164,6 +164,46 @@ export const fetchAttemptAnswers = async (attemptId) => {
   }
 };
 
+/**
+ * Fetch a single attempt by ID. Restricted to current user for security.
+ * @param {string|number} attemptId - The user_attempts.id
+ * @returns {Promise<{success: boolean, attempt?: object, error?: string}>}
+ */
+export const fetchAttemptById = async (attemptId) => {
+  try {
+    const userId = getUserIdFromLocalStorage();
+    if (!userId) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
+    }
+    const { data, error } = await supabase
+      .from('user_attempts')
+      .select('id, user_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
+      .eq('id', attemptId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      return {
+        success: true,
+        attempt: null,
+      };
+    }
+    return {
+      success: true,
+      attempt: data,
+    };
+  } catch (error) {
+    console.error('Error fetching attempt by ID:', error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
 
 export const fetchLatestAttempt = async (userId, testId) => {
   try {

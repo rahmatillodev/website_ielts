@@ -8,7 +8,7 @@ import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { HiOutlineHome, HiOutlineRefresh } from "react-icons/hi";
 import { useTestStore } from "@/store/testStore";
-import { fetchLatestAttempt } from "@/lib/testAttempts";
+import { fetchAttemptById, fetchAttemptAnswers } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
 import { generateTestResultsPDF } from "@/utils/pdfExport";
 import ResultBanner from "@/components/badges/ResultBanner";
@@ -20,9 +20,11 @@ const ListeningResultPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentTest, fetchTestById } = useTestStore();
-  const { authUser, userProfile } = useAuthStore();
+  useAuthStore();
   const [resultData, setResultData] = useState(null);
   const [attemptData, setAttemptData] = useState(null);
+  /** Test data fetched for this result page. Used for answer display so we don't depend on store timing. */
+  const [pageTest, setPageTest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -31,21 +33,10 @@ const ListeningResultPage = () => {
   const lastLoadedIdRef = useRef(null);
   const isLoadingRef = useRef(false);
   const fetchTestByIdRef = useRef(fetchTestById);
-  const authUserRef = useRef(authUser);
-  const userProfileRef = useRef(userProfile);
 
-  // Update refs when values change (but don't trigger re-fetch)
   useEffect(() => {
     fetchTestByIdRef.current = fetchTestById;
   }, [fetchTestById]);
-
-  useEffect(() => {
-    authUserRef.current = authUser;
-  }, [authUser]);
-
-  useEffect(() => {
-    userProfileRef.current = userProfile;
-  }, [userProfile]);
 
   // Load data only when id changes, not on re-renders or tab focus
   useEffect(() => {
@@ -64,34 +55,59 @@ const ListeningResultPage = () => {
     // Clear previous result data immediately so we never show stale results for a different test
     setResultData(null);
     setAttemptData(null);
+    setPageTest(null);
     // Mark as loading and update last loaded id
     isLoadingRef.current = true;
     lastLoadedIdRef.current = id;
     setLoading(true);
 
-    // Parallel loading with Promise.all
+    // id in URL is user_attempts.id (attempt ID)
     const loadData = async () => {
       try {
-        const currentAuthUser = authUserRef.current;
+        const attemptId = id;
         const currentFetchTestById = fetchTestByIdRef.current;
 
-        // On result pages, we should always bypass premium check since results are only shown after completion
-        const currentUserProfile = userProfileRef.current;
-        
-        // Fetch test and attempt in parallel
-        // Always bypass premium check on result pages (user can only reach here if they completed the test)
-        // Include correct answers so we can display them for unanswered questions
-        const [testResult, attemptResult] = await Promise.all([
-          currentFetchTestById(id, false, true),
-          currentAuthUser 
-            ? fetchLatestAttempt(currentAuthUser.id, id) 
-            : Promise.resolve({ success: true, attempt: null, answers: {} })
+        const attemptResponse = await fetchAttemptById(attemptId);
+        if (!attemptResponse.success || !attemptResponse.attempt) {
+          setResultData(null);
+          setAttemptData(null);
+          setPageTest(null);
+          return;
+        }
+        const attempt = attemptResponse.attempt;
+        const testId = attempt.test_id;
+
+        const [testResult, answersResult] = await Promise.all([
+          currentFetchTestById(testId, false, true),
+          fetchAttemptAnswers(attemptId),
         ]);
+
+        if (!answersResult.success) {
+          setResultData(null);
+          setAttemptData(null);
+          setPageTest(null);
+          return;
+        }
+
+        const attemptResult = {
+          success: true,
+          attempt: {
+            id: attempt.id,
+            user_id: attempt.user_id,
+            test_id: attempt.test_id,
+            score: attempt.score,
+            total_questions: attempt.total_questions,
+            correct_answers: attempt.correct_answers,
+            time_taken: attempt.time_taken,
+            completed_at: attempt.completed_at,
+            created_at: attempt.created_at,
+          },
+          answers: answersResult.answers || {},
+        };
 
         if (attemptResult.success && attemptResult.attempt && attemptResult.answers) {
           setAttemptData(attemptResult.attempt);
-          
-          // Get test data - use testResult from parallel fetch
+          if (testResult) setPageTest(testResult);
           const testDataForMapping = testResult || currentTest;
           
           // Map question_id (questions.id) back to question_number for display
@@ -266,10 +282,13 @@ const ListeningResultPage = () => {
     return '';
   }, []);
 
+  // Use page test (fetched with result) so display doesn't depend on store timing; fallback to currentTest
+  const testForDisplay = pageTest || currentTest;
+
   // Get answer display data - memoized for performance
   // Include ALL questions from the test, not just answered ones
   const answerDisplayData = useMemo(() => {
-    if (!currentTest) return [];
+    if (!testForDisplay) return [];
 
     const answers = resultData?.answers || {};
     const reviewData = resultData?.reviewData || {};
@@ -279,8 +298,8 @@ const ListeningResultPage = () => {
     // Build a map of all questions from the test
     const allQuestionsMap = new Map(); // question_number -> { question, questionId, questionGroup }
     
-    if (currentTest?.parts) {
-      currentTest.parts.forEach((part) => {
+    if (testForDisplay?.parts) {
+      testForDisplay.parts.forEach((part) => {
         if (part.questionGroups) {
           part.questionGroups.forEach((questionGroup) => {
             if (questionGroup.questions) {
@@ -461,7 +480,7 @@ const ListeningResultPage = () => {
       }
       return String(a.questionNumber).localeCompare(String(b.questionNumber));
     });
-  }, [resultData, currentTest, getCorrectAnswerFromTest, formatMultipleAnswersAnswer]);
+  }, [resultData, testForDisplay, getCorrectAnswerFromTest, formatMultipleAnswersAnswer]);
 
   // Memoized stats calculations
   const stats = useMemo(() => {
@@ -486,7 +505,7 @@ const ListeningResultPage = () => {
   // PDF Export function
   const downloadPDF = useCallback(async () => {
     await generateTestResultsPDF({
-      test: currentTest,
+      test: testForDisplay,
       stats,
       answerDisplayData,
       showCorrectAnswers,
@@ -495,14 +514,13 @@ const ListeningResultPage = () => {
       defaultTestTitle: 'Academic Listening Practice Test',
       settings
     });
-  }, [currentTest, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDateToDayMonth]);
+  }, [testForDisplay, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDateToDayMonth]);
 
-  // Handle retake - delete previous attempts
-  const handleRetake = useCallback(async () => {
-    if (!id) return;
-    clearListeningPracticeData(id);
-    navigate(`/listening-practice/${id}`);
-  }, [id, navigate]);
+  const handleRetake = useCallback(() => {
+    if (!attemptData?.test_id) return;
+    clearListeningPracticeData(attemptData.test_id);
+    navigate(`/listening-practice/${attemptData.test_id}`);
+  }, [attemptData?.test_id, navigate]);
 
   if (loading) {
     return (
@@ -512,13 +530,12 @@ const ListeningResultPage = () => {
     );
   }
 
-  // Don't show result content if data is for a different test (prevents stale results flash when navigating)
   const isDataForCurrentTest =
     resultData &&
     attemptData &&
-    (String(attemptData.test_id) === String(id));
+    (String(attemptData.id) === String(id));
 
-  if (!resultData || !currentTest || !isDataForCurrentTest) {
+  if (!resultData || !testForDisplay || !isDataForCurrentTest) {
     return (
       <div className="min-h-screen bg-gray-50/50 p-8 font-sans flex items-center justify-center">
         <div className="text-center">
@@ -550,7 +567,7 @@ const ListeningResultPage = () => {
               Exam Results
             </h1>
             <div className="flex flex-wrap items-center gap-2 text-slate-500 font-medium text-xs sm:text-sm">
-              <span>{currentTest?.title || "Academic Listening Practice Test"}</span>
+              <span>{testForDisplay?.title || "Academic Listening Practice Test"}</span>
               <span className="text-gray-400">•</span>
               <span>Completed on {formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt)}</span>
             </div>
@@ -753,7 +770,7 @@ const ListeningResultPage = () => {
             </Link>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <Link to={"/listening-practice/" + (id || '') + "?mode=review"} className="w-full sm:w-auto">
+              <Link to={"/listening-practice/" + (attemptData?.test_id ?? '') + "?mode=review"} className="w-full sm:w-auto">
                 <Button 
                   variant="outline"
                   className="border-blue-600 text-blue-600 w-full sm:w-auto hover:bg-blue-50 font-semibold px-8 h-12 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95"
@@ -764,7 +781,7 @@ const ListeningResultPage = () => {
               <Button 
                 className="bg-blue-600 w-full sm:w-auto hover:bg-blue-700 text-white font-semibold px-8 h-12 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                 onClick={handleRetake}
-                disabled={isDeleting || !authUser}
+                disabled={isDeleting}
               >
                 <HiOutlineRefresh className="text-xl" />
                 {isDeleting ? 'Clearing...' : 'Retake Exam'}
