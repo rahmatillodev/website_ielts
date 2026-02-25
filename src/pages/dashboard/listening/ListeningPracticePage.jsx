@@ -502,9 +502,9 @@ const ListeningPracticePageContent = () => {
             
             // Only navigate if handleSubmitTest didn't already navigate (for non-mock tests)
             // For mock tests, handleSubmitTest already navigates, so this is just a safety check
-            if (currentIsMockTest && mockTestId) {
-              // In mock test mode, handleSubmitTest should have already navigated
-              // But if it didn't (edge case), navigate here as fallback
+            if (currentIsMockTest && mockTestId && result.attemptId != null) {
+              // In mock test mode, handleSubmitTest should have already set completion
+              // Fallback: set completion only when we have a valid saved attempt
               const completionKey = `mock_test_${mockTestId}_listening_completed`;
               const isCompleted = localStorage.getItem(completionKey) === 'true';
               if (!isCompleted) {
@@ -798,7 +798,8 @@ const ListeningPracticePageContent = () => {
       // Submit test attempt to backend
       const result = await submitTestAttempt(effectiveTestId, answers, currentTest, timeTaken, 'listening', mockTestContext);
 
-      if (result.success) {
+      // Only set completion / navigate when submit truly succeeded and we have attemptId (data saved to Supabase)
+      if (result.success && result.attemptId != null) {
         // Clear audio position and practice data on successful submission
         if (effectiveTestId) {
           clearAudioPosition(effectiveTestId);
@@ -808,7 +809,7 @@ const ListeningPracticePageContent = () => {
           }
         }
 
-        // If mock test, trigger completion callback via localStorage
+        // If mock test, trigger completion callback via localStorage (only when data is saved)
         if (isMockTest && mockTestId) {
           const completionKey = `mock_test_${mockTestId}_listening_completed`;
           const resultKey = `mock_test_${mockTestId}_listening_result`;
@@ -821,9 +822,8 @@ const ListeningPracticePageContent = () => {
           };
           localStorage.setItem(completionKey, 'true');
           localStorage.setItem(resultKey, JSON.stringify(resultData));
-          
+
           // Navigate back to MockTestFlow so it can detect completion and move to next section
-          // This ensures the flow continues even after refresh
           navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
         }
 

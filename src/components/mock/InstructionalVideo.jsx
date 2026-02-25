@@ -151,8 +151,28 @@ const InstructionalVideo = ({
     setIsPlaying(false);
   };
 
+  const isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development'
+
+
+  const handleDevSkip = () => {
+    if (window.__mockTestAllowExit) window.__mockTestAllowExit();
+    document.exitFullscreen?.().catch(() => {});
+    if (onComplete) onComplete();
+  };
+
   return (
     <div ref={containerRef} className="fixed inset-0 z-[9999] flex items-center justify-center bg-black">
+      {/* Developer skip button */}
+      {isDevelopment && (
+      <button
+        type="button"
+        onClick={handleDevSkip}
+        className="absolute top-4 right-4 z-[10000] px-3 py-1.5 rounded bg-white/10 hover:bg-white/25 text-gray-300 hover:text-white text-sm font-medium transition border border-white/20"
+        title="Skip instruction (dev)"
+      >
+        Skip (dev)
+      </button>
+      )}
       <div className="w-full h-full flex flex-col items-center justify-center p-4">
         <div className="max-w-4xl w-full">
           <h2 className="text-3xl font-bold text-white mb-2 text-center">{title}</h2>

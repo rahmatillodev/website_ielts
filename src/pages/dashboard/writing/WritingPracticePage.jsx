@@ -515,8 +515,8 @@ const WritingPracticePageContent = () => {
           // Save to database
           const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockTestId : null);
 
-          if (result.success) {
-            // Signal completion via localStorage
+          if (result.success && result.attemptId != null) {
+            // Signal completion only when data was saved to Supabase
             const completionKey = `mock_test_${mockTestId}_writing_completed`;
             const resultKey = `mock_test_${mockTestId}_writing_result`;
             const resultData = {
@@ -526,7 +526,6 @@ const WritingPracticePageContent = () => {
             localStorage.setItem(completionKey, 'true');
             localStorage.setItem(resultKey, JSON.stringify(resultData));
 
-            // Update mock_test_clients status to 'completed'
             if (mockClientId) {
               updateClientStatus(mockClientId, 'completed').catch(err => {
                 console.error('Error updating mock test client status to completed:', err);
@@ -864,8 +863,7 @@ const WritingPracticePageContent = () => {
       // Pass mockTestId if in mock test mode (will be stored in mock_id field)
       const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockTestId : null);
 
-      if (result.success) {
-        // If mock test, signal completion via localStorage
+      if (result.success && result.attemptId != null) {
         if (isMockTest && mockTestId) {
           const completionKey = `mock_test_${mockTestId}_writing_completed`;
           const resultKey = `mock_test_${mockTestId}_writing_result`;
@@ -875,20 +873,15 @@ const WritingPracticePageContent = () => {
           };
           localStorage.setItem(completionKey, 'true');
           localStorage.setItem(resultKey, JSON.stringify(resultData));
-          
-          // Navigate back to MockTestFlow so it can detect completion and move to results
-          // This ensures the flow continues even after refresh
           navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
         }
 
-        // Update mock_test_clients status to 'completed' if in mock test mode
         if (isMockTest && mockClientId) {
           updateClientStatus(mockClientId, 'completed').catch(err => {
             console.error('Error updating mock test client status to completed:', err);
           });
         }
 
-        // Save result data (only if not mock test, as mock test doesn't use localStorage for results)
         if (!isMockTest) {
           saveWritingResultData(id, {
             answers,
@@ -973,8 +966,7 @@ const WritingPracticePageContent = () => {
       // Pass mockTestId if in mock test mode (will be stored in mock_id field)
       const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockTestId : null);
 
-      if (result.success) {
-        // If mock test, signal completion via localStorage
+      if (result.success && result.attemptId != null) {
         if (isMockTest && mockTestId) {
           const completionKey = `mock_test_${mockTestId}_writing_completed`;
           const resultKey = `mock_test_${mockTestId}_writing_result`;
@@ -984,20 +976,15 @@ const WritingPracticePageContent = () => {
           };
           localStorage.setItem(completionKey, 'true');
           localStorage.setItem(resultKey, JSON.stringify(resultData));
-          
-          // Navigate back to MockTestFlow so it can detect completion and move to results
-          // This ensures the flow continues even after refresh
           navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
         }
 
-        // Update mock_test_clients status to 'completed' if in mock test mode
         if (isMockTest && mockClientId) {
           updateClientStatus(mockClientId, 'completed').catch(err => {
             console.error('Error updating mock test client status to completed:', err);
           });
         }
 
-        // Save result data (only if not mock test, as mock test doesn't use localStorage for results)
         if (!isMockTest) {
           saveWritingResultData(id, {
             answers,

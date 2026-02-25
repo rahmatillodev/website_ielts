@@ -57,12 +57,13 @@ sectionResults: { listening, reading, writing }
 6. **results** → Shows `MockTestResults`
 
 **Key Handlers**:
-- `handleAudioCheckComplete()`: Sets `audioCheckComplete = true`, `showIntroVideo = true`, `currentSection = 'intro'`
-- `handleIntroVideoStart()`: Updates `mock_test_clients` status to `'started'` and sets `mock_test_id` to link client to the test
-- `handleIntroVideoComplete()`: Sets `currentSection = 'listening'`
+- `handleAudioCheckComplete()`: Sets `audioCheckComplete = true`, moves to `currentSection = 'listening'`
+- **When does status become `'started'`?** When the user **starts the listening instructions video** (first time the video plays). `MockTestListening` renders `InstructionalVideo` with `onStart={onVideoStart}`; when the video fires `onPlay`, `onStart()` runs → `handleListeningVideoStart()` → `updateClientStatus(clientId, 'started', mockTestId)`.
+- If there is no `mock_test_clients` row for this user + mock test (e.g. password-based access), the flow **creates one** when loading the test or when the video starts, so status can be updated.
 - `handleListeningComplete(result)`: Saves result, sets `currentSection = 'reading'`
 - `handleReadingComplete(result)`: Saves result, sets `currentSection = 'writing'`
-- `handleWritingComplete(result)`: Saves result, clears storage, sets `currentSection = 'results'`
+- `handleWritingComplete(result)`: Saves result, updates client status to `'completed'`, clears storage, sets `currentSection = 'results'`
+- `handleEarlyExit(result, section)`: Called when user confirms "I Want to Finish". Saves current section result (already submitted by practice page), updates `mock_test_clients.status` to `'completed'`, clears storage, sets `currentSection = 'results'`. Remaining sections are not written.
 
 **LocalStorage Persistence**:
 - Saves progress after each section completion
@@ -449,6 +450,38 @@ MockTestFlow (currentSection: 'results')
 
 ---
 
+## Data Integrity (Never Save Error State to Supabase)
+
+The mock test flow is written so that **data is never persisted to Supabase in an error or partial state**.
+
+### Validation before writes
+
+- **testAttempts.submitTestAttempt**: Validates `testId`, `type` (listening/reading), `currentTest`, and when `mockTestContext` is present requires `mockTestId`. On failure returns `{ success: false }`; no insert is made.
+- **writingCompletedStore.submitWritingAttempt**: Validates `userId`, `writingId`, `answers`, and optional `mockTestId` (must be non-empty string if provided). On failure returns `{ success: false }`; no insert is made.
+- **mockTestClientStore.updateClientStatus**: Validates `clientId` (non-empty), `status` (must be one of `booked`, `started`, `completed`, `checked`, `notified`), and when `status === 'started'` requires valid `mockTestId`. Returns `{ success: false }` without updating if invalid.
+
+### Rollback on partial failure
+
+- **Listening/Reading**: If `user_attempts` insert succeeds but `user_answers` insert fails, the newly created attempt row is deleted so no orphan attempt remains.
+- **Writing**: Same rollback: if `user_answers` insert fails after `user_attempts` insert, the attempt row is deleted.
+
+### Completion signals and client status
+
+- **Completion signals** (e.g. `mock_test_${id}_listening_completed`) are set in localStorage **only** when the corresponding submit returns `result.success === true` and `result.attemptId != null` (i.e. data was saved).
+- **mock_test_clients.status** is set to `'completed'` in two cases:
+  1. **Normal completion**: When the writing section has finished and the flow has a valid result (success + attemptId). `handleWritingComplete` only updates status when `isValidResult` is true.
+  2. **Early exit ("I Want to Finish")**: When the user confirms finish in the exit modal, the **current section only** is submitted (via `mockTestForceSubmit`). Remaining sections are **not** written. `handleEarlyExit` then sets `mock_test_clients.status` to `'completed'`, clears all mock test localStorage data, and navigates to the results page. The results page shows whatever sections were completed (e.g. listening + reading if they finished during reading).
+
+### Full test before production
+
+Run the full mock test flow (password → device check → listening video → listening → reading → writing → results) and confirm in Supabase that:
+
+- `user_attempts` rows have correct `mock_id` (mock test id) and no orphan rows.
+- `user_answers` exist for each attempt.
+- `mock_test_clients.status` moves from `booked` → `started` (when video starts) → `completed` (after writing is saved, or immediately on early exit).
+
+---
+
 ## Testing Checklist
 
 - [ ] Audio check completes and shows video
@@ -465,6 +498,9 @@ MockTestFlow (currentSection: 'results')
 - [ ] Reading section shows video first
 - [ ] Writing section shows video first
 - [ ] Results page displays all section results
+- [ ] No data saved to Supabase when submit fails (no completion signal, no status → completed)
+- [ ] No orphan `user_attempts` when `user_answers` insert fails (rollback applied)
+- [ ] "I Want to Finish": current section is submitted, `mock_test_clients.status` → `completed`, results page shows; remaining sections are not written
 
 ---
 
@@ -477,4 +513,5 @@ MockTestFlow (currentSection: 'results')
 - LocalStorage is used for completion signaling between components
 - Security restrictions apply throughout mock test flow
 - **Client-to-Test Relationship**: The `mock_test_clients.mock_test_id` field directly links clients to mock tests, simplifying queries. This field is set when the status is updated to `'started'` (when intro video starts). All client lookups now use `mock_test_id` instead of matching via `user_attempts`.
+- **Row Level Security (RLS)**: For `mock_test_clients`, the app updates `status` and `mock_test_id` via PATCH. Supabase must have an UPDATE policy that allows the authenticated user to update rows where `user_id = auth.uid()`. If the policy is missing, the API returns 204 but 0 rows are updated. See `mock_test_clients_rls_update_policy.sql` to add the policy.
 

@@ -193,15 +193,30 @@ export const useMockTestClientStore = create((set) => ({
         }
     },
 
+    /** Valid status values for mock_test_clients */
+    VALID_CLIENT_STATUSES: ['booked', 'started', 'completed', 'checked', 'notified'],
+
     /**
-     * Update mock_test_clients status
+     * Update mock_test_clients status. Never persists invalid state.
      * @param {string} clientId - The mock test client ID
-     * @param {string} status - New status: 'booked' | 'started' | 'completed'
+     * @param {string} status - New status: 'booked' | 'started' | 'completed' | 'checked' | 'notified'
      * @param {string} mockTestId - Optional mock test ID to set when status is 'started'
      * @returns {Promise<{success: boolean, error?: string}>}
      */
     updateClientStatus: async (clientId, status, mockTestId = null) => {
         try {
+            // Validation: never update with invalid data
+            const validStatuses = useMockTestClientStore.getState().VALID_CLIENT_STATUSES;
+            if (!clientId || typeof clientId !== 'string' || !clientId.trim()) {
+                return { success: false, error: 'Client ID is required' };
+            }
+            if (!status || !validStatuses.includes(status)) {
+                return { success: false, error: `Invalid status: ${status}` };
+            }
+            if (status === 'started' && mockTestId != null && (typeof mockTestId !== 'string' || !mockTestId.trim())) {
+                return { success: false, error: 'Mock test ID must be non-empty when status is started' };
+            }
+
             const updateData = {
                 status: status,
                 updated_at: new Date().toISOString()
@@ -212,12 +227,24 @@ export const useMockTestClientStore = create((set) => ({
                 updateData.mock_test_id = mockTestId;
             }
 
-            const { error } = await supabase
+            const { data: updatedRows, error } = await supabase
                 .from("mock_test_clients")
                 .update(updateData)
-                .eq("id", clientId);
+                .eq("id", clientId)
+                .select("id, status, mock_test_id, updated_at");
 
             if (error) throw error;
+
+            // If 0 rows updated, verify whether row exists (RLS may block update but allow select, or id may be wrong)
+            if (!updatedRows || updatedRows.length === 0) {
+                const { data: rowAfter } = await supabase.from("mock_test_clients").select("id, status, mock_test_id, user_id").eq("id", clientId).maybeSingle();
+                return {
+                    success: false,
+                    error: rowAfter
+                        ? "Update was not applied (likely Row Level Security). Ensure mock_test_clients has an UPDATE policy allowing user_id = auth.uid()."
+                        : "No mock test client row found for this id.",
+                };
+            }
 
             // Update local client state if it matches
             const currentState = useMockTestClientStore.getState();
@@ -467,6 +494,45 @@ export const useMockTestClientStore = create((set) => ({
                 loading: false 
             });
             return [];
+        }
+    },
+
+    /**
+     * Create a mock_test_clients row for a user + mock test (e.g. when they enter via password and no row exists).
+     * Call this so status can be updated to 'started' when they start the listening video.
+     * @param {string} userId - auth.users id
+     * @param {string} mockTestId - mock_test id
+     * @param {{ full_name: string, email: string, phone_number?: string|null }} profile - required full_name, email
+     * @returns {Promise<object|null>} Created client or null on error
+     */
+    createClientForMockTest: async (userId, mockTestId, profile) => {
+        if (!userId || !mockTestId) return null;
+        const fullName = profile?.full_name ?? 'User';
+        const email = (profile?.email && String(profile.email).trim()) || null;
+        if (!email) {
+            console.error('[mockTestClientStore] createClientForMockTest: email is required');
+            return null;
+        }
+        try {
+            const { data, error } = await supabase
+                .from("mock_test_clients")
+                .insert({
+                    user_id: userId,
+                    mock_test_id: mockTestId,
+                    full_name: fullName,
+                    email: email,
+                    phone_number: profile?.phone_number ?? null,
+                    status: 'booked',
+                    updated_at: new Date().toISOString(),
+                })
+                .select("id, status, created_at, mock_test_id")
+                .single();
+            if (error) throw error;
+            set({ client: data });
+            return data;
+        } catch (err) {
+            console.error('Error creating mock test client:', err);
+            return null;
         }
     },
 

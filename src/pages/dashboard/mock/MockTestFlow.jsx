@@ -19,7 +19,7 @@ const MockTestFlow = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userProfile } = useAuthStore();
-  const { fetchMockTestByUserId, fetchMockTestById, mockTest, client, loading, error, updateClientStatus, hasUserCompletedMockTest, findClientForMockTest, fetchClientById } = useMockTestClientStore();
+  const { fetchMockTestByUserId, fetchMockTestById, mockTest, client, loading, error, updateClientStatus, hasUserCompletedMockTest, findClientForMockTest, fetchClientById, createClientForMockTest } = useMockTestClientStore();
   const appliedAudioCheckDoneRef = useRef(false);
   const restorationAttemptedRef = useRef(false);
 
@@ -47,36 +47,51 @@ const MockTestFlow = () => {
     }
   }, [paramMockTestId, userProfile?.id, fetchMockTestById, fetchMockTestByUserId]);
 
-  // Fetch client when mock test is loaded (for password-based access)
+  // Fetch or create client when mock test is loaded (so status can be updated to 'started' when video starts)
   useEffect(() => {
     const loadClient = async () => {
       if (!mockTest?.id || !userProfile?.id) return;
-      
-      // If client is already loaded, skip
+
       const currentState = useMockTestClientStore.getState();
-      if (currentState.client) return;
-      
+      if (currentState.client?.mock_test_id === mockTest.id) return;
+
       try {
-        // Try to find client for this mock test
         const { client: foundClient } = await findClientForMockTest(userProfile.id, mockTest.id);
-        
+
         if (foundClient) {
-          // Client found, update store
           useMockTestClientStore.setState({ client: foundClient });
-        } else {
-          // No client found - try fetching by user_id (for backward compatibility)
-          const clientByUserId = await fetchClientById(userProfile.id);
-          if (clientByUserId) {
-            useMockTestClientStore.setState({ client: clientByUserId });
-          }
+          return;
+        }
+
+        // Use existing client for this user (e.g. booking row with mock_test_id null) — we'll set mock_test_id when updating to 'started'
+        const clientByUserId = await fetchClientById(userProfile.id);
+        if (clientByUserId) {
+          useMockTestClientStore.setState({ client: clientByUserId });
+          return;
+        }
+
+        // No client at all: create one so we can set status to 'started' when they start the video
+        const fullName = userProfile.full_name ?? userProfile.username ?? 'User';
+        const email = (userProfile.email && String(userProfile.email).trim()) || null;
+        if (!email) {
+          console.warn('[MockTestFlow] Cannot create client: user profile has no email');
+          return;
+        }
+        const newClient = await createClientForMockTest(userProfile.id, mockTest.id, {
+          full_name: fullName,
+          email,
+          phone_number: userProfile.phone_number ?? null,
+        });
+        if (newClient) {
+          useMockTestClientStore.setState({ client: newClient });
         }
       } catch (err) {
         console.error('[MockTestFlow] Error loading client:', err);
       }
     };
-    
+
     loadClient();
-  }, [mockTest?.id, userProfile?.id, findClientForMockTest, fetchClientById]);
+  }, [mockTest?.id, userProfile?.id, userProfile?.email, userProfile?.full_name, userProfile?.phone_number, findClientForMockTest, fetchClientById, createClientForMockTest]);
 
   // Check if user has already completed the mock test after it's loaded
   useEffect(() => {
@@ -137,7 +152,6 @@ const MockTestFlow = () => {
     // First, check completion signals to determine the correct next section
     // This ensures we advance past completed sections even if saved data is stale
     if (writingCompleted === 'true') {
-      console.log('[MockTestFlow] Writing section completed, advancing to results');
       setAudioCheckComplete(true);
       setCurrentSection('results');
       if (savedData?.sectionResults) {
@@ -146,7 +160,6 @@ const MockTestFlow = () => {
       return;
     }
     if (readingCompleted === 'true') {
-      console.log('[MockTestFlow] Reading section completed, advancing to writing');
       setAudioCheckComplete(true);
       setCurrentSection('writing');
       if (savedData?.sectionResults) {
@@ -155,7 +168,6 @@ const MockTestFlow = () => {
       return;
     }
     if (listeningCompleted === 'true') {
-      console.log('[MockTestFlow] Listening section completed, advancing to reading');
       setAudioCheckComplete(true);
       setCurrentSection('reading');
       if (savedData?.sectionResults) {
@@ -234,7 +246,6 @@ const MockTestFlow = () => {
 
       // Check completion signals and advance to next section
       if (writingCompleted === 'true' && currentSection !== 'results') {
-        console.log('[MockTestFlow] Writing section completed (polling), advancing to results');
         setAudioCheckComplete(true);
         setCurrentSection('results');
         if (savedData?.sectionResults) {
@@ -243,7 +254,6 @@ const MockTestFlow = () => {
         return true; // Signal that we handled it
       }
       if (readingCompleted === 'true' && currentSection !== 'writing' && currentSection !== 'results') {
-        console.log('[MockTestFlow] Reading section completed (polling), advancing to writing');
         setAudioCheckComplete(true);
         setCurrentSection('writing');
         if (savedData?.sectionResults) {
@@ -252,7 +262,6 @@ const MockTestFlow = () => {
         return true;
       }
       if (listeningCompleted === 'true' && currentSection !== 'reading' && currentSection !== 'writing' && currentSection !== 'results') {
-        console.log('[MockTestFlow] Listening section completed (polling), advancing to reading');
         setAudioCheckComplete(true);
         setCurrentSection('reading');
         if (savedData?.sectionResults) {
@@ -300,33 +309,46 @@ const MockTestFlow = () => {
   }, [currentSection, sectionResults, effectiveMockTestId]);
 
   // Handler for when listening video starts - update status to 'started'
-  // The listening video serves as the intro video for the entire mock test
+  // Status should become 'started' at this point (when user starts the listening instructions video).
   const handleListeningVideoStart = useCallback(async () => {
-    // Update mock_test_clients status to 'started' when user starts viewing the listening video
-    // Try to get client ID from component state, or from store if not available
     const storeState = useMockTestClientStore.getState();
     let clientIdToUpdate = client?.id || storeState.client?.id;
     const mockTestIdToSet = effectiveMockTestId || storeState.mockTest?.id;
-    
+
+    // If no client yet (e.g. loadClient still in progress or create failed), try to create one now
+    if (!clientIdToUpdate && mockTestIdToSet && userProfile?.id) {
+      const fullName = userProfile.full_name ?? userProfile.username ?? 'User';
+      const email = (userProfile.email && String(userProfile.email).trim()) || null;
+      if (email) {
+        try {
+          const newClient = await createClientForMockTest(userProfile.id, mockTestIdToSet, {
+            full_name: fullName,
+            email,
+            phone_number: userProfile.phone_number ?? null,
+          });
+          if (newClient?.id) clientIdToUpdate = newClient.id;
+        } catch (e) {
+          console.warn('[MockTestFlow] createClientForMockTest in onVideoStart failed:', e);
+        }
+      }
+    }
+
     if (clientIdToUpdate && mockTestIdToSet) {
       try {
         const updateResult = await updateClientStatus(clientIdToUpdate, 'started', mockTestIdToSet);
-        if (updateResult.success) {
-          console.log('[MockTestFlow] Mock test client status updated to started (listening video started) with mock_test_id:', mockTestIdToSet);
-        } else {
+        if (!updateResult.success) {
           console.error('[MockTestFlow] Failed to update status to started:', updateResult.error);
         }
       } catch (err) {
         console.error('[MockTestFlow] Error updating mock test client status to started:', err);
-        // Don't block video if status update fails
       }
     } else {
       console.warn('[MockTestFlow] Cannot update status to started: client.id or mockTest.id is not available', {
         clientId: clientIdToUpdate,
-        mockTestId: mockTestIdToSet
+        mockTestId: mockTestIdToSet,
       });
     }
-  }, [client?.id, effectiveMockTestId, updateClientStatus]);
+  }, [client?.id, effectiveMockTestId, updateClientStatus, userProfile?.id, userProfile?.email, userProfile?.full_name, userProfile?.phone_number, createClientForMockTest]);
 
   const handleListeningComplete = useCallback((result) => {
     setSectionResults((prevResults) => ({
@@ -345,70 +367,79 @@ const MockTestFlow = () => {
   }, []);
 
   const handleWritingComplete = useCallback(async (result) => {
-    console.log('[MockTestFlow] Writing completed, result:', result);
+    // Only treat as successful completion if we have a valid result (data was saved to Supabase)
+    const isValidResult = result && (result.success !== false) && (result.attemptId != null || result.success === true);
     setSectionResults((prevResults) => ({
       ...prevResults,
-      writing: result,
+      writing: result ?? prevResults.writing,
     }));
-    
-    // Update mock_test_clients status to 'completed' when writing section is finished
-    // Try to get client ID from component state, or from store if not available
+
+    // Update mock_test_clients status to 'completed' only when we have confirmed successful save
+    // (completion signal is only set by WritingPracticePage when submitWritingAttempt succeeds)
     const storeState = useMockTestClientStore.getState();
     let clientIdToUpdate = client?.id || storeState.client?.id;
-    
-    if (clientIdToUpdate) {
+
+    if (isValidResult && clientIdToUpdate) {
       try {
         const updateResult = await updateClientStatus(clientIdToUpdate, 'completed');
-        if (updateResult.success) {
-          console.log('[MockTestFlow] Mock test client status updated to completed');
-        } else {
+        if (!updateResult.success) {
           console.error('[MockTestFlow] Failed to update status to completed:', updateResult.error);
         }
       } catch (err) {
         console.error('[MockTestFlow] Error updating mock test client status to completed:', err);
-        // Don't block navigation if status update fails
       }
-    } else {
-      console.warn('[MockTestFlow] Cannot update status to completed: client.id is not available in state or store');
+    } else if (!isValidResult) {
+      console.warn('[MockTestFlow] Writing result invalid or missing attemptId; not updating client status to completed');
+    } else if (!clientIdToUpdate) {
+      console.warn('[MockTestFlow] Cannot update status to completed: client.id is not available');
     }
-    
-    // Clear all mock test data from localStorage after all sections are completed
-    // This includes main progress data and all completion signals
+
+    // Clear mock test data and go to results only after writing flow has finished
+    // (Storage clear is safe here; completion signals were already consumed by the wrapper)
     const currentMockTestId = paramMockTestId || storeState.mockTest?.id;
     if (currentMockTestId) {
       clearAllMockTestDataForId(currentMockTestId);
     }
-    
-    // Navigate to results page
-    setCurrentSection('results');
-    console.log('[MockTestFlow] Navigating to results page');
-  }, [paramMockTestId, updateClientStatus]);
 
-  // Handler for early exit - navigates to results with only completed sections
-  // Only the completed section's result is saved; skipped sections remain null
-  const handleEarlyExit = useCallback((result, section) => {
-    
-    // Save the result for the current section if provided
-    // This ensures only completed sections have results; skipped sections will be null
+    setCurrentSection('results');
+  }, [client?.id, paramMockTestId, updateClientStatus]);
+
+  // Handler for early exit ("I Want to Finish"): finish test immediately.
+  // - Saves only the current section result (already submitted by practice page); remaining sections are not written.
+  // - Sets mock_test_clients status to 'completed' so the test is fully finished.
+  // - Clears storage and navigates to results page.
+  const handleEarlyExit = useCallback(async (result, section) => {
+    // Save the result for the current section if provided (only completed sections have results; skipped remain null)
     if (result && section) {
       setSectionResults((prevResults) => ({
         ...prevResults,
         [section]: result,
       }));
     }
-    
-    // Clear all mock test data from localStorage (including any partial progress for skipped sections)
-    // This ensures no data is saved for sections that were skipped
+
     const storeState = useMockTestClientStore.getState();
+    const clientIdToUpdate = client?.id || storeState.client?.id;
     const currentMockTestId = paramMockTestId || storeState.mockTest?.id;
+
+    // Mark mock test as completed so user cannot re-enter and so results page shows completed state
+    if (clientIdToUpdate) {
+      try {
+        const updateResult = await updateClientStatus(clientIdToUpdate, 'completed');
+        if (!updateResult.success) {
+          console.error('[MockTestFlow] Early exit: failed to update status to completed:', updateResult.error);
+        }
+      } catch (err) {
+        console.error('[MockTestFlow] Early exit: error updating mock test client status to completed:', err);
+      }
+    }
+
+    // Clear all mock test data from localStorage (no partial progress for skipped sections)
     if (currentMockTestId) {
       clearAllMockTestDataForId(currentMockTestId);
     }
-    
-    // Navigate to results page with current section results
-    // Only completed sections will have results; skipped sections (reading/writing) will be null
+
     setCurrentSection('results');
-  }, [paramMockTestId]);
+  }, [paramMockTestId, client?.id, updateClientStatus]);
 
   const handleAudioCheckComplete = () => {
     // Save audio check completion state

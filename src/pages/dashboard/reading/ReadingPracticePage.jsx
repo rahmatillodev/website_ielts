@@ -988,13 +988,14 @@ const ReadingPracticePageContent = () => {
       // Submit test attempt to backend
       const result = await submitTestAttempt(effectiveTestId, answers, currentTest, timeTaken, 'reading', mockTestContext);
 
-      if (result.success) {
+      // Only set completion / navigate when submit truly succeeded and we have attemptId (data saved to Supabase)
+      if (result.success && result.attemptId != null) {
         // Clear practice data on successful submission
         if (effectiveTestId && !isMockTest) {
           clearReadingPracticeData(effectiveTestId);
         }
-        
-        // If mock test, trigger completion callback via localStorage
+
+        // If mock test, trigger completion callback via localStorage (only when data is saved)
         if (isMockTest && mockTestId) {
           const completionKey = `mock_test_${mockTestId}_reading_completed`;
           const resultKey = `mock_test_${mockTestId}_reading_result`;
@@ -1007,9 +1008,8 @@ const ReadingPracticePageContent = () => {
           };
           localStorage.setItem(completionKey, 'true');
           localStorage.setItem(resultKey, JSON.stringify(resultData));
-          
+
           // Navigate back to MockTestFlow so it can detect completion and move to next section
-          // This ensures the flow continues even after refresh
           navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
         }
         
