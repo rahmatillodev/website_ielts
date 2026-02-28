@@ -188,7 +188,7 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
       mockTest: 'true',
       mockTestId: mockTestId || '',
       mockClientId: mockClientId || '',
-      duration: '2400'
+      duration: '2400' // 40 minutes
     });
     
     navigate(`/listening-practice/${testId}?${searchParams.toString()}`, { replace: true });

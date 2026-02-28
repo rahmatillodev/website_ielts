@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { FaArrowLeft, FaExpand, FaBars, FaEdit, FaCompress } from 'react-icons/fa'
+import { LuWifi, LuWifiHigh, LuWifiLow, LuWifiOff } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import useNetworkStatus from '@/hooks/use_network_status'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import AppearanceSettingsModal from '@/components/modal/AppearanceSettingsModal'
@@ -47,6 +49,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const { isOnline, speed } = useNetworkStatus();
 
   const toggleFullscreen = async () => {
     try {
@@ -216,6 +219,22 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
 
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
+          {/* Network status: no internet / slow / normal / fast */}
+          <span
+            className="flex items-center p-2 rounded"
+            style={{ color: themeColors.text, opacity: isOnline ? 1 : 0.6 }}
+            title={isOnline ? `Internet: ${speed}` : 'No internet'}
+          >
+            {!isOnline ? (
+              <LuWifiOff className="w-5 h-5" />
+            ) : speed === 'fast' ? (
+              <LuWifiHigh className="w-5 h-5" />
+            ) : speed === 'slow' ? (
+              <LuWifiLow className="w-5 h-5" />
+            ) :  (
+              <LuWifi className="w-5 h-5" />
+            )}
+          </span>
           {!isMockTest && (
             <button
               onClick={toggleFullscreen}

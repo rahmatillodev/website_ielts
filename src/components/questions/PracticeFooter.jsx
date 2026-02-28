@@ -1,19 +1,92 @@
-import React, { useState } from 'react'
-import { FaCheck, FaChevronLeft, FaChevronRight, FaBookmark, FaRedo } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react'
+import { FaCheck, FaChevronLeft, FaChevronRight, FaBookmark, FaRedo, FaVolumeUp, FaBatteryFull } from 'react-icons/fa';
+import { LuWifi, LuWifiHigh, LuWifiLow, LuWifiOff } from 'react-icons/lu';
 import { useSearchParams } from 'react-router-dom';
 import { useAppearance } from '@/contexts/AppearanceContext';
+import useNetworkStatus from '@/hooks/use_network_status';
 import ConfirmModal from '@/components/modal/ConfirmModal';
 import { toast } from 'react-toastify';
 
-const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false, isMockTest = false, mockTestId = null }) => {
+/** Format current time as HH:mm for footer clock */
+const formatCurrentTime = () => {
+  const d = new Date();
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+};
+
+/**
+ * Prev/Next question arrows for the upper content area (not in footer).
+ * Uses same nav logic as footer; place in practice page content area.
+ */
+
+
+const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false, isMockTest = false, mockTestId = null, timeRemaining, isListening = false, volume, onVolumeChange, assessmentLabel = 'IELTSCORE.UZ' }) => {
   // Immediately check URL for review mode to prevent flickering
   const [searchParams] = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';
   const [isRetakeModalOpen, setIsRetakeModalOpen] = useState(false);
+
+  // --- Volume icon popup state and click-outside detection ---
+  const [isVolumeOpen, setIsVolumeOpen] = useState(false);
+  const volumeButtonRef = useRef(null);
+  const volumeSliderRef = useRef(null);
+
+  // When listening ends, close volume menu if open
+  useEffect(() => {
+    if (!isListening && isVolumeOpen) {
+      setIsVolumeOpen(false);
+    }
+  }, [isListening, isVolumeOpen]);
   
+  // Click outside closes the slider popup only when open
+  useEffect(() => {
+    if (!isVolumeOpen) return;
+
+    function handleClickOutside(event) {
+      // If the click is NOT on the button nor the slider popup
+      if (
+        volumeButtonRef.current &&
+        !volumeButtonRef.current.contains(event.target) &&
+        volumeSliderRef.current &&
+        !volumeSliderRef.current.contains(event.target)
+      ) {
+        setIsVolumeOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside, true);
+    return () => document.removeEventListener('mousedown', handleClickOutside, true);
+  }, [isVolumeOpen]);
+
   // Try to use appearance context, but don't fail if not available
   const appearance = useAppearance();
   const themeColors = appearance.themeColors;
+  const themeName = appearance.theme;
+  const { isOnline, speed } = useNetworkStatus();
+  const showVolumeIcon = isListening && typeof volume === 'number' && typeof onVolumeChange === 'function'; // icon only
+  const showVolumeSlider = isVolumeOpen && showVolumeIcon;
+  const [currentClock, setCurrentClock] = useState(formatCurrentTime);
+  const [batteryLevel, setBatteryLevel] = useState(null);
+  const [isBatteryHovered, setIsBatteryHovered] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => setCurrentClock(formatCurrentTime()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.getBattery) return;
+    let battery = null;
+    const updateLevel = () => battery && setBatteryLevel(Math.round(battery.level * 100));
+    navigator.getBattery()
+      .then((b) => {
+        battery = b;
+        updateLevel();
+        battery.addEventListener('levelchange', updateLevel);
+      })
+      .catch(() => setBatteryLevel(null));
+    return () => {
+      if (battery) battery.removeEventListener('levelchange', updateLevel);
+    };
+  }, []);
 
   const currentPartData = currentTest?.parts?.find(p => p.part_number === currentPart) || currentTest?.parts?.[0];
 
@@ -26,118 +99,29 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
     });
   };
 
-  // Get all questions once
-  const allQuestions = getAllQuestions ? getAllQuestions() : [];
-
-  // Find current question index - ensure type consistency for comparison
-  const currentQuestionIndex = activeQuestion != null
-    ? allQuestions.findIndex(q => Number(q.questionNumber) === Number(activeQuestion))
-    : -1;
-
-  // Check if we're at the first or last question
-  // If currentQuestionIndex is -1 (not found), we can't determine if we're at first/last
-  const isFirstQuestion = currentQuestionIndex === -1 ? false : currentQuestionIndex <= 0;
-  const isLastQuestion = currentQuestionIndex === -1 ? false : currentQuestionIndex >= allQuestions.length - 1;
-
-  // Debug logging for disabled state (can be removed in production)
-  // if (activeQuestion != null) {
-  //   console.log('Footer state:', {
-  //     activeQuestion,
-  //     currentQuestionIndex,
-  //     totalQuestions: allQuestions.length,
-  //     isFirstQuestion,
-  //     isLastQuestion,
-  //     shouldDisableNext: isLastQuestion
-  //   });
-  // }
-
-  // Handle previous/next question navigation
-  const handlePreviousQuestion = () => {
-    if (!getAllQuestions || allQuestions.length === 0) return;
-    if (activeQuestion == null) return;
-
-    // Find current question index - ensure type consistency for comparison
-    const currentIdx = allQuestions.findIndex(q => Number(q.questionNumber) === Number(activeQuestion));
-
-    if (currentIdx === -1) {
-      console.log('handlePreviousQuestion: Could not find current question in allQuestions array');
-      return;
-    }
-
-    if (currentIdx > 0) {
-      const prevQuestion = allQuestions[currentIdx - 1];
-
-      // Safety check: ensure prevQuestion exists and has required properties
-      if (!prevQuestion || prevQuestion.questionNumber == null) {
-        console.log('Previous question missing or invalid:', prevQuestion);
-        return;
-      }
-
-      // Convert both to numbers for consistent comparison
-      const prevPartNumber = Number(prevQuestion.partNumber);
-      const currentPartNumber = Number(currentPart);
-
-      // Switch to the part containing the previous question if needed
-      if (prevPartNumber !== currentPartNumber) {
-        handlePartChange(prevQuestion.partNumber);
-        // Use setTimeout to ensure part change completes before scrolling
-        setTimeout(() => {
-          scrollToQuestion(prevQuestion.questionNumber);
-        }, 100);
-      } else {
-        scrollToQuestion(prevQuestion.questionNumber);
-      }
-    }
-  };
-
-  const handleNextQuestion = () => {
-    if (!getAllQuestions || allQuestions.length === 0) return;
-    if (activeQuestion == null) return;
-
-
-    // Find current question index - ensure type consistency for comparison
-    const currentIdx = allQuestions.findIndex(q => Number(q.questionNumber) === Number(activeQuestion));
-
-    if (currentIdx === -1) return;
-
-
-    if (currentIdx < allQuestions.length - 1 && currentIdx >= 0) {
-      const nextQuestion = allQuestions[currentIdx + 1];
-
-      // Safety check: ensure nextQuestion exists and has required properties
-      if (!nextQuestion || nextQuestion.questionNumber == null) {
-        return;
-      }
-
-      // Convert both to numbers for consistent comparison
-      const nextPartNumber = Number(nextQuestion.partNumber);
-      const currentPartNumber = Number(currentPart);
-
-      // Switch to the part containing the next question if needed
-      if (nextPartNumber !== currentPartNumber) {
-        handlePartChange(nextQuestion.partNumber);
-        // Use setTimeout to ensure part change completes before scrolling
-        setTimeout(() => {
-          scrollToQuestion(nextQuestion.questionNumber);
-        }, 100);
-      } else {
-        scrollToQuestion(nextQuestion.questionNumber);
-      }
-    }
-  };
-
-
   return (
     <footer
-      className="border-t border-gray-300 px-6 h-20 z-50"
+      className="z-50 flex flex-col relative"
       style={{
         backgroundColor: themeColors.backgroundColor }}
     >
-      <div className="flex items-center justify-between h-20 ">
-
-
+        <div className="flex justify-end absolute right-10 -top-16 items-center py-2 shrink-0" style={{ borderColor: themeColors.border }}>
+            <PracticeNavArrows
+              getAllQuestions={getAllQuestions}
+              activeQuestion={activeQuestion}
+              currentPart={currentPart}
+              handlePartChange={handlePartChange}
+              scrollToQuestion={scrollToQuestion}
+            />
+          </div>
+      {/* Row 1: Assessment label (left) + Part navigation and question numbers (center) */}
+      <div
+        className="flex items-center justify-between h-12 shrink-0"
+        style={{ backgroundColor: themeColors.background }}
+      >
+        
         {/* Center: All Parts with Progress */}
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center min-w-0">
           {currentTest?.parts && currentTest.parts.length > 0 ? (
             getSortedParts().map((part) => {
               const partNumber = part.part_number ?? part.id;
@@ -150,8 +134,8 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                 <div key={part.id} className="flex flex-col flex-1 items-center h-full shrink-0">
                   {isActive ? (
                     // Active part: Part label and question numbers in same row
-                    <div className='w-full h-20' style={{ backgroundColor: themeColors.backgroundColor !== '#000000' ? '#E0E0E0' : themeColors.backgroundColor }}>
-                      <div className="flex items-center justify-start w-full h-full min-w-0 px-2">
+                      <div className='w-full p-2 pt-4 '>
+                        <div className="flex items-center justify-start w-full h-full min-w-0 px-2">
                         {/* LEFT: Part X + question numbers in one row */}
                         <div className="flex items-center justify-center flex-1 min-w-0">
                           <div
@@ -196,16 +180,14 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                   answered = true;
                                 }
 
-                                // Determine line color: only answered questions are green, default is gray
-                                let lineColor = "bg-gray-300 dark:bg-gray-600";
-                                if (answered) {
-                                  lineColor = "bg-green-500";
-                                }
+                                // Theme-aware progress line: answered = green, unanswered = muted border
+                                const lineBg = answered ? '#22c55e' : themeColors.border;
 
                                 return (
                                   <div
                                     key={`line-${questionNumber}`}
-                                    className={`h-0.5 w-8 ${lineColor}`}
+                                    className="h-0.5 w-8"
+                                    style={{ backgroundColor: lineBg, opacity: answered ? 1 : 0.7 }}
                                   />
                                 );
                               })}
@@ -267,12 +249,12 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                       className={`
                                         w-8 h-8 rounded text-sm font-semibold transition-all flex items-center justify-center shrink-0
                                         border
-                                        ${active ? "ring-2 ring-blue-500 ring-offset-1" : ""}
                                       `}
                                       style={{
                                         backgroundColor: themeColors.background,
                                         color: themeColors.text,
-                                        borderColor: themeColors.border
+                                        borderColor: themeColors.border,
+                                        ...(active ? { boxShadow: `0 0 0 2px ${themeColors.border}` } : {})
                                       }}
                                       onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)';
@@ -296,20 +278,14 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                   ) : (
                     // Inactive part: Show Part label and progress
                     <div
-                      className='w-full h-20 flex items-center justify-center gap-2 cursor-pointer rounded transition-colors'
-                      style={{
-                        backgroundColor: 'transparent'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
+                      className='w-full flex items-center justify-center gap-2 cursor-pointer rounded transition-colors'
+                     
+                     
+                    
                       onClick={() => handlePartChange(partNumber)}
                     >
                       <div
-                        className="font-semibold text-md transition-colors"
+                        className="font-semibold text-md transition-colors "
                         style={{ color: themeColors.text }}
                       >
                         Part {partNumber}
@@ -329,59 +305,140 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
             })
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePreviousQuestion}
-            disabled={isFirstQuestion}
-            className="p-4 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      </div>
+
+      {/* Row 2 (bottom): Current clock, battery, wifi, volume (listening only), Exit/Submit */}
+      <div
+        className="flex items-center justify-between shrink-0 p-2 px-4"
+        style={{
+          backgroundColor:
+            themeName === 'light'
+              ? '#E0E0E0'
+              : themeName === 'dark'
+                ? '#0d1520'
+                : 'rgba(0,0,0,0.4)'
+        }}
+      >
+        <span className="text-sm font-bold shrink-0" style={{ color: themeColors.text, opacity: 0.9 }}>
+          {assessmentLabel}
+        </span>
+       
+        <div className="flex items-center gap-4">
+        <span className="text-sm font-medium shrink-0" style={{ color: themeColors.text }}>
+          {currentClock}
+        </span>
+          <span
+            className="relative flex items-center p-1 rounded shrink-0 cursor-default"
             style={{ color: themeColors.text }}
-            title="Previous question"
+            title="Battery"
+            onMouseEnter={() => setIsBatteryHovered(true)}
+            onMouseLeave={() => setIsBatteryHovered(false)}
           >
-            <FaChevronLeft className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={handleNextQuestion}
-            disabled={isLastQuestion}
-            className="p-4 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{ color: themeColors.text }}
-            title="Next question"
+            <FaBatteryFull className="w-4 h-4" />
+            {isBatteryHovered && batteryLevel != null && (
+              <span
+                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded text-xs font-medium whitespace-nowrap shadow-md z-50"
+                style={{
+                  backgroundColor: themeColors.background,
+                  color: themeColors.text,
+                  border: `1px solid ${themeColors.border}`
+                }}
+              >
+                {batteryLevel}%
+              </span>
+            )}
+          </span>
+          <span
+            className="flex items-center p-1 rounded shrink-0"
+            style={{ color: themeColors.text, opacity: isOnline ? 1 : 0.6 }}
+            title={isOnline ? `Internet: ${speed}` : 'No internet'}
           >
-            <FaChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-
-
-
-        {/* Right: Finish Button */}
-        <div className="flex items-center gap-1 shrink-0">
-          {!isReviewMode && (
-            <button
-              disabled={isSubmitting}
-              className="flex items-center gap-1 transition-colors hover:opacity-80 p-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={(e) => {
-                e.preventDefault();
-                if (isSubmitting) return;
-                if (onFinish) {
-                  onFinish();
-                }
-              }}
-              title={isSubmitting ? 'Submitting...' : 'Finish'}
-            >
-              <div className="rounded-sm flex items-center justify-center text-sm bg-black text-white gap-2 p-2" >
-                <FaCheck className="w-4 h-4"  /> {isSubmitting ? 'Submitting...' : 'Submit'}
-              </div>
-            </button>
+            {!isOnline ? (
+              <LuWifiOff className="w-4 h-4" />
+            ) : speed === 'fast' ? (
+              <LuWifiHigh className="w-4 h-4" />
+            ) : speed === 'slow' ? (
+              <LuWifiLow className="w-4 h-4" />
+            ) : (
+              <LuWifi className="w-4 h-4" />
+            )}
+          </span>
+          {/* Volume Icon appears when listening starts, clicking toggles slider, closes on outside click, disappears when listening ends */}
+          {showVolumeIcon && (
+            <div className="relative flex items-center shrink-0" ref={volumeButtonRef}>
+              <button
+                className="flex items-center transition-opacity hover:opacity-90 p-1"
+                aria-label="Show volume slider"
+                style={{ color: themeColors.text, background: 'none', border: 'none' }}
+                onClick={() => setIsVolumeOpen(v => !v)}
+                type="button"
+                tabIndex={0}
+              >
+                <FaVolumeUp className="w-5 h-5" aria-hidden="true" />
+              </button>
+              {/* Slider only when open */}
+              {showVolumeSlider && (
+                <div
+                  ref={volumeSliderRef}
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 shadow-lg px-4 py-3 rounded z-50 min-w-[130px] flex flex-col items-center"
+                  style={{
+                    border: `1px solid ${themeColors.border}`,
+                    backgroundColor: themeColors.background,
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.15), 0 2px 4px -2px rgba(0,0,0,0.1)',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="mb-2 text-xs font-medium" style={{ color: themeColors.text, opacity: 0.9 }}>
+                    Volume
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={volume}
+                    onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+                    className="w-24 h-2 cursor-pointer"
+                    title="Volume"
+                    style={{ accentColor: themeColors.text }}
+                  />
+                </div>
+              )}
+            </div>
           )}
+          <div className="flex items-center gap-1 shrink-0">
+            {!isReviewMode && (
+              <button
+                disabled={isSubmitting}
+                className="flex items-center gap-1 transition-colors hover:opacity-80 p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (isSubmitting) return;
+                  if (onFinish) onFinish();
+                }}
+                title={isSubmitting ? 'Submitting...' : 'Submit'}
+                style={{ color: themeColors.background, backgroundColor: themeColors.text }}
+              >
+                <div className="rounded-sm flex items-center justify-center text-sm gap-2 px-2">
+                  <FaCheck className="w-4 h-4" /> {isSubmitting ? 'Submitting...' : 'Submit'}
+                </div>
+              </button>
+            )}
+            {isReviewMode && onRetake && (
+              <button
+                onClick={() => setIsRetakeModalOpen(true)}
+                className="px-4 py-2 rounded transition-colors font-medium border"
+                style={{
+                  color: themeColors.text,
+                  backgroundColor: themeColors.background,
+                  borderColor: themeColors.border
+                }}
+              >
+                Redo Test
+              </button>
+            )}
+          </div>
         </div>
-        {isReviewMode && onRetake && (
-          <button
-            onClick={() => setIsRetakeModalOpen(true)}
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium"
-          >
-            Redo Test
-          </button>
-        )}
       </div>
 
       {/* Retake Confirmation Modal */}
@@ -406,5 +463,71 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
     </footer>
   )
 }
+
+const PracticeNavArrows = ({ getAllQuestions, activeQuestion, currentPart, handlePartChange, scrollToQuestion }) => {
+  const appearance = useAppearance();
+  const themeColors = appearance.themeColors;
+  const allQuestions = getAllQuestions ? getAllQuestions() : [];
+  const currentQuestionIndex = activeQuestion != null
+    ? allQuestions.findIndex(q => Number(q.questionNumber) === Number(activeQuestion))
+    : -1;
+  const isFirstQuestion = currentQuestionIndex === -1 ? false : currentQuestionIndex <= 0;
+  const isLastQuestion = currentQuestionIndex === -1 ? false : currentQuestionIndex >= allQuestions.length - 1;
+
+  const handlePreviousQuestion = () => {
+    if (!getAllQuestions || allQuestions.length === 0 || activeQuestion == null) return;
+    const currentIdx = allQuestions.findIndex(q => Number(q.questionNumber) === Number(activeQuestion));
+    if (currentIdx <= 0) return;
+    const prevQuestion = allQuestions[currentIdx - 1];
+    if (!prevQuestion || prevQuestion.questionNumber == null) return;
+    const prevPartNumber = Number(prevQuestion.partNumber);
+    const currentPartNumber = Number(currentPart);
+    if (prevPartNumber !== currentPartNumber) {
+      handlePartChange(prevQuestion.partNumber);
+      setTimeout(() => scrollToQuestion(prevQuestion.questionNumber), 100);
+    } else {
+      scrollToQuestion(prevQuestion.questionNumber);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (!getAllQuestions || allQuestions.length === 0 || activeQuestion == null) return;
+    const currentIdx = allQuestions.findIndex(q => Number(q.questionNumber) === Number(activeQuestion));
+    if (currentIdx === -1 || currentIdx >= allQuestions.length - 1) return;
+    const nextQuestion = allQuestions[currentIdx + 1];
+    if (!nextQuestion || nextQuestion.questionNumber == null) return;
+    const nextPartNumber = Number(nextQuestion.partNumber);
+    const currentPartNumber = Number(currentPart);
+    if (nextPartNumber !== currentPartNumber) {
+      handlePartChange(nextQuestion.partNumber);
+      setTimeout(() => scrollToQuestion(nextQuestion.questionNumber), 100);
+    } else {
+      scrollToQuestion(nextQuestion.questionNumber);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      <button
+        onClick={handlePreviousQuestion}
+        disabled={isFirstQuestion}
+        className="p-2 rounded border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        style={{ color: themeColors.background, borderColor: themeColors.border, backgroundColor: themeColors.text }}
+        title="Previous question"
+      >
+        <FaChevronLeft className="w-5 h-5" />
+      </button>
+      <button
+        onClick={handleNextQuestion}
+        disabled={isLastQuestion}
+        className="p-2 rounded border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        style={{ color: themeColors.background, borderColor: themeColors.border, backgroundColor: themeColors.text }}
+        title="Next question"
+      >
+        <FaChevronRight className="w-5 h-5" />
+      </button>
+    </div>
+  );
+};
 
 export default PracticeFooter

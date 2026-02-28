@@ -314,6 +314,23 @@ export const useAuthStore = create(
         }
       },
 
+      resetPasswordForEmail: async (email) => {
+        set({ loading: true, error: null });
+        try {
+          const normalizedEmail = email.trim().toLowerCase();
+          const redirectTo = `${typeof window !== 'undefined' ? window.location.origin : ''}/reset-password`;
+          const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+            redirectTo,
+          });
+          if (error) throw error;
+          set({ loading: false });
+          return { success: true };
+        } catch (error) {
+          set({ error: error.message, loading: false });
+          return { success: false, error: error.message };
+        }
+      },
+
       fetchUserProfile: async (userId, shouldLogoutOnMissing = true) => {
         try {
           const { data, error } = await supabase

@@ -1359,13 +1359,14 @@ const ListeningPracticePageContent = () => {
 
       {!isSubmitting ? (
         <div
-          className="flex flex-1 overflow-hidden p-3 transition-all duration-300"
+          className="flex flex-1 overflow-hidden p-3 transition-all duration-300 flex-col"
           ref={containerRef}
           style={{
             maxWidth: '100%',
           }}
         >
-          <div ref={universalContentRef} className="flex flex-1 overflow-hidden w-full">
+        
+          <div ref={universalContentRef} className="flex flex-1 overflow-hidden w-full min-h-0">
             {/* ===== Error Panel ===== */}
             {fetchError ? (
               <div
@@ -1513,14 +1514,14 @@ const ListeningPracticePageContent = () => {
                 {questionGroups && questionGroups.length > 0 ? (
                   <div
                     ref={questionsContainerRef}
-                    className="space-y-8 overflow-y-auto border rounded-2xl"
+                    className="space-y-8 overflow-y-auto"
                     data-part-id={currentPart}
                     data-section="questions"
                     data-section-type="questions"
                     style={{
                       width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%',
                       backgroundColor: themeColors.background,
-                      borderColor: themeColors.border,
+                      // borderColor: themeColors.border,
                       transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
                     }}
                   >
@@ -1768,6 +1769,10 @@ const ListeningPracticePageContent = () => {
         getAllQuestions={getAllQuestions}
         bookmarks={bookmarks}
         isSubmitting={isSubmitting}
+        timeRemaining={timeRemaining}
+        isListening={true}
+        volume={volume}
+        onVolumeChange={setVolume}
       />
 
       <FinishModal

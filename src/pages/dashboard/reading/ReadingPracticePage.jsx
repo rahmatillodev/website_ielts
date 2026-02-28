@@ -35,22 +35,22 @@ const ReadingPracticePageContent = () => {
   const { theme, themeColors, fontSizeValue } = useAppearance();
   const { isSidebarOpen } = useAnnotation();
   const timerInitializedRef = useRef(false);
-  
+
   // Check if this is a mock test (check both searchParams and window.location.search)
   const urlSearchParams = React.useMemo(() => new URLSearchParams(window.location.search), []);
-  const isMockTest = React.useMemo(() => 
+  const isMockTest = React.useMemo(() =>
     searchParams.get('mockTest') === 'true' || urlSearchParams.get('mockTest') === 'true',
     [searchParams, urlSearchParams]
   );
-  const mockTestId = React.useMemo(() => 
+  const mockTestId = React.useMemo(() =>
     searchParams.get('mockTestId') || urlSearchParams.get('mockTestId'),
     [searchParams, urlSearchParams]
   );
-  const mockClientId = React.useMemo(() => 
+  const mockClientId = React.useMemo(() =>
     searchParams.get('mockClientId') || urlSearchParams.get('mockClientId'),
     [searchParams, urlSearchParams]
   );
-  
+
   // Get effective test ID from URL (handles history.replaceState case)
   const getEffectiveTestId = () => {
     if (id) return id;
@@ -60,7 +60,7 @@ const ReadingPracticePageContent = () => {
     }
     return null;
   };
-  
+
   const effectiveTestId = getEffectiveTestId();
 
   // Status: 'taking', 'completed', 'reviewing'
@@ -151,16 +151,16 @@ const ReadingPracticePageContent = () => {
   // Don't redirect if currentSection is 'reading' or undefined (allows reading to load)
   useEffect(() => {
     if (!isMockTest || !mockTestId) return;
-    
+
     const savedFlowData = loadMockTestData(mockTestId);
     const currentSection = savedFlowData?.currentSection;
-    
+
     // Only redirect if we're in a section that's definitely not reading
     // Allow reading, audioCheck, intro, and undefined (fresh start)
-    if (currentSection && 
-        currentSection !== 'reading' && 
-        currentSection !== 'audioCheck' && 
-        currentSection !== 'intro') {
+    if (currentSection &&
+      currentSection !== 'reading' &&
+      currentSection !== 'audioCheck' &&
+      currentSection !== 'intro') {
       console.log('[ReadingPracticePage] Redirecting to MockTestFlow - currentSection is:', currentSection);
       navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
     }
@@ -168,15 +168,15 @@ const ReadingPracticePageContent = () => {
 
   useEffect(() => {
     const testIdToUse = effectiveTestId;
-    
+
     // Prevent duplicate fetches - use ref to track if fetch is in progress
     const fetchKey = `${testIdToUse}-${isMockTest}-${status}`;
-    
+
     if (lastFetchKeyRef.current === fetchKey) {
       console.log('[ReadingPracticePage] Skipping duplicate fetch:', fetchKey);
       return;
     }
-    
+
     if (!testIdToUse || (typeof testIdToUse !== 'string' && typeof testIdToUse !== 'number')) {
       if (isMockTest) {
         const retryTimeout = setTimeout(() => {
@@ -213,7 +213,7 @@ const ReadingPracticePageContent = () => {
       try {
         // Mark this fetch as in progress
         lastFetchKeyRef.current = fetchKey;
-        
+
         const isReviewMode = status === 'reviewing';
         const includeCorrectAnswers = isReviewMode;
 
@@ -250,7 +250,7 @@ const ReadingPracticePageContent = () => {
             // For mock test, restore time remaining and let auto-start resume the timer
             if (savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
               setTimeRemaining(savedData.timeRemaining);
-              
+
               // If time is already expired (<= 0), trigger auto-submit immediately
               if (savedData.timeRemaining <= 0) {
                 setHasInteracted(true);
@@ -315,7 +315,7 @@ const ReadingPracticePageContent = () => {
   // For mock test: use duration from URL param (3600 seconds = 60 minutes) or test duration
   useEffect(() => {
     if (!currentTest) return;
-    
+
     // Only initialize once per test load - use ref to prevent reset loops
     if (timerInitializedRef.current) return;
 
@@ -353,7 +353,7 @@ const ReadingPracticePageContent = () => {
     setTimeRemaining(durationInSeconds);
     timerInitializedRef.current = true;
   }, [currentTest, isMockTest, searchParams, urlSearchParams, mockTestId, id]);
-  
+
   // Reset initialization flag when test ID changes (new test loaded)
   useEffect(() => {
     timerInitializedRef.current = false;
@@ -497,23 +497,23 @@ const ReadingPracticePageContent = () => {
       const questionId = q.id;
       const questionNumber = q.question_number;
       const groupQuestionId = q.question_id; // For multiple_answers, answer is stored at group level
-      
+
       // First check by question.id (UUID) - this is what most components use
       if (questionId && answers[questionId] && answers[questionId].toString().trim() !== '') {
         return true;
       }
-      
+
       // Then check by question_number - for backward compatibility and matching_information type
       if (questionNumber && answers[questionNumber] && answers[questionNumber].toString().trim() !== '') {
         return true;
       }
-      
+
       // For multiple_answers and other group-based types, check group-level question_id
       // The answer is stored using the group-level question.id (not individual question.id)
       if (groupQuestionId && answers[groupQuestionId] && answers[groupQuestionId].toString().trim() !== '') {
         return true;
       }
-      
+
       return false;
     }).length;
   };
@@ -585,7 +585,7 @@ const ReadingPracticePageContent = () => {
     if (isSubmitting || isSubmittingRef.current) {
       return;
     }
-    
+
     // Don't auto-start if completion signal exists (submission was successful)
     if (isMockTest && mockTestId) {
       const completionKey = `mock_test_${mockTestId}_reading_completed`;
@@ -594,7 +594,7 @@ const ReadingPracticePageContent = () => {
         return;
       }
     }
-    
+
     // In mock test mode, ensure timer starts automatically when timeRemaining is set
     if (isMockTest && currentTest && timeRemaining !== null && timeRemaining > 0 && !isStarted) {
       setIsStarted(true);
@@ -629,7 +629,7 @@ const ReadingPracticePageContent = () => {
         clearInterval(interval);
         return;
       }
-      
+
       setTimeRemaining((prev) => {
         if (prev === null || prev <= 1) {
           setIsStarted(false);
@@ -664,21 +664,21 @@ const ReadingPracticePageContent = () => {
       // Stop the timer immediately before auto-submitting
       setIsStarted(false);
       setIsPaused(true);
-      
+
       // Auto-submit the test when timer reaches zero
       hasAutoSubmittedRef.current = true;
       const autoSubmit = async () => {
         try {
           const result = await handleSubmitTest();
           console.log('[ReadingPracticePage] Auto-submit result:', result);
-          
+
           // Navigate if submission was successful (navigation is safe even if component is unmounting)
           // Note: handleSubmitTest already navigates for mock tests, but we check here as a fallback
           if (result && result.success) {
             // Double-check isMockTest to ensure we navigate correctly
-            const currentIsMockTest = searchParams.get('mockTest') === 'true' || 
-                                     new URLSearchParams(window.location.search).get('mockTest') === 'true';
-            
+            const currentIsMockTest = searchParams.get('mockTest') === 'true' ||
+              new URLSearchParams(window.location.search).get('mockTest') === 'true';
+
             // Only navigate if handleSubmitTest didn't already navigate (for non-mock tests)
             // For mock tests, handleSubmitTest already navigates, so this is just a safety check
             if (currentIsMockTest && mockTestId) {
@@ -744,7 +744,7 @@ const ReadingPracticePageContent = () => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest, isMockTest, mockTestId, searchParams, navigate, ]);
+  }, [timeRemaining, status, isStarted, hasInteracted, authUser, effectiveTestId, currentTest, isMockTest, mockTestId, searchParams, navigate,]);
 
   // Set mounted ref to false when component unmounts
   // Reset submission refs on mount to ensure clean state after refresh
@@ -761,7 +761,7 @@ const ReadingPracticePageContent = () => {
   // persist data on change
   useEffect(() => {
     if (!hasInteracted) return;
-    
+
     if (isMockTest && mockTestId) {
       // For mock test, use mock test storage
       saveSectionData(mockTestId, 'reading', {
@@ -961,7 +961,7 @@ const ReadingPracticePageContent = () => {
     if (isSubmittingRef.current || isSubmitting) {
       return { success: false, error: 'Submission already in progress' };
     }
-    
+
     if (!authUser || !effectiveTestId || !currentTest) {
       return { success: false, error: 'Missing required information' };
     }
@@ -1012,12 +1012,12 @@ const ReadingPracticePageContent = () => {
           // Navigate back to MockTestFlow so it can detect completion and move to next section
           navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
         }
-        
+
         // Reset submission state after successful submission
         // This prevents the component from being stuck in loading state
         isSubmittingRef.current = false;
         setIsSubmitting(false);
-        
+
         return { success: true, attemptId: result.attemptId, score: result.score };
       } else {
         // Reset submission state on failure
@@ -1045,7 +1045,7 @@ const ReadingPracticePageContent = () => {
 
     const handleForceSubmit = async (event) => {
       const { section, mockTestId: eventMockTestId } = event.detail || {};
-      
+
       // Only handle if it's for reading section and matches our mockTestId
       if (section === 'reading' && eventMockTestId === mockTestId) {
         // Prevent duplicate submissions - only check ref to avoid stale closure issues
@@ -1073,7 +1073,7 @@ const ReadingPracticePageContent = () => {
           // Call handleSubmitTest which handles all the submission logic
           // handleSubmitTest will set both isSubmittingRef and isSubmitting state
           const result = await handleSubmitTest();
-          
+
           if (!result || !result.success) {
             console.error('[ReadingPracticePage] Force submit failed:', result?.error);
             toast.error(result?.error || 'Failed to submit test attempt');
@@ -1424,379 +1424,383 @@ const ReadingPracticePageContent = () => {
       />
 
       {/* Main Content - Universal Container for all selectable content */}
-      {!isSubmitting ?(
-      <div
-        className="flex flex-1 overflow-hidden p-3"
-        ref={containerRef}
-      >
-        <div ref={universalContentRef} className="flex flex-1 overflow-hidden w-full">
-          {/* Left Panel - Reading Passage */}
-          {LoadingTest ? (
-            <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700  dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%`, backgroundColor: themeColors.background, color: themeColors.text }}>
-              <div className="text-gray-500">LoadingTest...</div>
-            </div>
-          ) : error ? (
+      {!isSubmitting ? (
+        <div
+          className="flex flex-1 overflow-hidden p-3 w-full"
+          ref={containerRef}
+        >
+          <div className="flex flex-col w-full">
             <div
-              className="w-1/2 border rounded-2xl overflow-y-auto flex items-center justify-center"
+              className="border px-6 py-3 mb-2 rounded-md flex items-center justify-between gap-4"
               style={{
-                width: `${leftWidth}%`,
-                backgroundColor: themeColors.background,
-                borderColor: themeColors.border,
-                color: themeColors.text
+                backgroundColor: theme === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
+                borderColor: themeColors.border
               }}
             >
-              <div className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
-                style={{
-                  borderColor: themeColors.border,
-                  backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
-                }}
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: themeColors.text }}
               >
-                <p className="text-sm font-semibold text-red-500 mb-2">
-                  ⚠️ Reading loading error
-                </p>
+                Part {currentPart}: Read the text and answer questions {getPartQuestionRange()}.
+              </h2>
+              
+            </div>
+            <div ref={universalContentRef} className="flex flex-1 overflow-hidden w-full">
 
-                <p className="text-base text-gray-500 mb-4 break-words">
-                  {typeof error === 'string' ? error : 'Unknown error'}
-                </p>
-
-                <button
-                  onClick={() => navigate(`/reading`)}
-                  className="px-4 py-2 text-sm rounded-md border transition-all"
+              {/* Left Panel - Reading Passage */}
+              {LoadingTest ? (
+                <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700  dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%`, backgroundColor: themeColors.background, color: themeColors.text }}>
+                  <div className="text-gray-500">LoadingTest...</div>
+                </div>
+              ) : error ? (
+                <div
+                  className="w-1/2 border rounded-2xl overflow-y-auto flex items-center justify-center"
                   style={{
-                    borderColor: themeColors.border,
+                    width: `${leftWidth}%`,
                     backgroundColor: themeColors.background,
+                    borderColor: themeColors.border,
                     color: themeColors.text
                   }}
                 >
-                  ⬅ Back to Reading
-                </button>
-              </div>
-            </div>
-          ) : !currentTest ? (
-            <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
-              <div className="text-gray-500">Waiting for test data...</div>
-            </div>
-          ) : !currentTest.parts || currentTest.parts.length === 0 ? (
-            <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
-              <div className="text-gray-500">
-                <p>Test data loaded but no parts found.</p>
-                <p className="text-xs mt-2">Test ID: {currentTest.id}</p>
-                <p className="text-xs">Parts: {currentTest.parts?.length || 0}</p>
-              </div>
-            </div>
-          ) : !currentPartData ? (
-            <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
-              <div className="text-gray-500">
-                <p>Part {currentPart} not found in test data.</p>
-                <p className="text-xs mt-2">Available parts: {currentTest.parts?.map(p => p.part_number || p.id).join(', ')}</p>
-              </div>
-            </div>
-          ) : currentPartData ? (
-            <div
-              key={`passage-${currentPart}`}
-              className="w-1/2 border rounded-2xl overflow-y-auto"
-              data-part-id={currentPart}
-              data-section="passage"
-              data-section-type="passage"
-              style={{
-                width: `${leftWidth}%`,
-                backgroundColor: themeColors.background,
-                borderColor: themeColors.border,
-                transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
-              }}
-            >
-              {/* Sub-Header Bar */}
-              <div
-                className="border px-6 py-3 m-4 rounded-md"
-                style={{
-                  backgroundColor: theme === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
-                  borderColor: themeColors.border
-                }}
-              >
-                <h2
-                  className="text-lg font-semibold"
-                  style={{ color: themeColors.text }}
-                >
-                  Part {currentPart}: Read the text and answer questions {getPartQuestionRange()}.
-                </h2>
-                {/* {description} */}
-              </div>
-
-              <div className="p-6">
-                <h2
-                  className="text-2xl font-semibold mb-6"
-                  style={{ color: themeColors.text }}
-                >
-                  {currentPartData?.title}
-                </h2>
-
-                {/* Display part image if available with click to expand */}
-                {currentPartData?.image_url && (
-                  <div className="mb-6 relative">
-                    <img
-                      src={currentPartData.image_url}
-                      alt={currentPartData.title || `Part ${currentPart} image`}
-                      className="w-full max-w-full object-contain max-h-[500px] rounded-lg border"
-                      style={{ borderColor: themeColors.border }}
-                    />
-
-                  </div>
-                )}
-
-                <div className="prose prose-sm max-w-none relative">
-                  <div
-                    ref={selectableContentRef}
-                    data-selectable="true"
-                    className="leading-relaxed whitespace-pre-line space-y-4 relative"
-                    style={{ color: themeColors.text }}
+                  <div className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
+                    style={{
+                      borderColor: themeColors.border,
+                      backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                    }}
                   >
-                    {currentPartData?.content ? (
-                      currentPartData.content.split('<br/>').map((paragraph, idx) =>
-                        paragraph.trim() ? (
-                          <p key={idx} className="mb-4 whitespace-pre-wrap" data-selectable="true">{paragraph}</p>
-                        ) : null
-                      )
-                    ) : null}
+                    <p className="text-sm font-semibold text-red-500 mb-2">
+                      ⚠️ Reading loading error
+                    </p>
+
+                    <p className="text-base text-gray-500 mb-4 break-words">
+                      {typeof error === 'string' ? error : 'Unknown error'}
+                    </p>
+
+                    <button
+                      onClick={() => navigate(`/reading`)}
+                      className="px-4 py-2 text-sm rounded-md border transition-all"
+                      style={{
+                        borderColor: themeColors.border,
+                        backgroundColor: themeColors.background,
+                        color: themeColors.text
+                      }}
+                    >
+                      ⬅ Back to Reading
+                    </button>
+                  </div>
+                </div>
+              ) : !currentTest ? (
+                <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
+                  <div className="text-gray-500">Waiting for test data...</div>
+                </div>
+              ) : !currentTest.parts || currentTest.parts.length === 0 ? (
+                <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
+                  <div className="text-gray-500">
+                    <p>Test data loaded but no parts found.</p>
+                    <p className="text-xs mt-2">Test ID: {currentTest.id}</p>
+                    <p className="text-xs">Parts: {currentTest.parts?.length || 0}</p>
+                  </div>
+                </div>
+              ) : !currentPartData ? (
+                <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
+                  <div className="text-gray-500">
+                    <p>Part {currentPart} not found in test data.</p>
+                    <p className="text-xs mt-2">Available parts: {currentTest.parts?.map(p => p.part_number || p.id).join(', ')}</p>
+                  </div>
+                </div>
+              ) : currentPartData ? (
+                <div
+                  key={`passage-${currentPart}`}
+                  className="w-1/2 overflow-y-auto"
+                  data-part-id={currentPart}
+                  data-section="passage"
+                  data-section-type="passage"
+                  style={{
+                    width: `${leftWidth}%`,
+                    // backgroundColor: themeColors.background,
+                    // borderColor: themeColors.border,
+                    transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
+                  }}
+                >
+                  {/* Sub-Header Bar */}
+
+
+                  <div className="p-6">
+                    <h2
+                      className="text-2xl font-semibold mb-6"
+                      style={{ color: themeColors.text }}
+                    >
+                      {currentPartData?.title}
+                    </h2>
+
+                    {/* Display part image if available with click to expand */}
+                    {currentPartData?.image_url && (
+                      <div className="mb-6 relative">
+                        <img
+                          src={currentPartData.image_url}
+                          alt={currentPartData.title || `Part ${currentPart} image`}
+                          className="w-full max-w-full object-contain max-h-[500px] rounded-lg border"
+                          style={{ borderColor: themeColors.border }}
+                        />
+
+                      </div>
+                    )}
+
+                    <div className="prose prose-sm max-w-none relative">
+                      <div
+                        ref={selectableContentRef}
+                        data-selectable="true"
+                        className="leading-relaxed whitespace-pre-line space-y-4 relative"
+                        style={{ color: themeColors.text }}
+                      >
+                        {currentPartData?.content ? (
+                          currentPartData.content.split('<br/>').map((paragraph, idx) =>
+                            paragraph.trim() ? (
+                              <p key={idx} className="mb-4 whitespace-pre-wrap" data-selectable="true">{paragraph}</p>
+                            ) : null
+                          )
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
+                  <div className="text-gray-500">No data available</div>
+                </div>
+              )}
+              <div className="px-4">
+                <div
+                  onMouseDown={startResize}
+                  className="w-0.5 cursor-col-resize  dark:bg-gray-600 h-full flex justify-center items-center relative"
+                  title="Drag to resize"
+                  style={{ backgroundColor: themeColors.border }}
+                >
+                  <div className="w-6 h-6 rounded-2xl bg-white flex items-center justify-center absolute border-2" style={{ borderColor: themeColors.border, backgroundColor: themeColors.background }}>
+                    <LuChevronsLeftRight style={{ color: themeColors.text }} />
                   </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="w-1/2 border rounded-2xl border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto flex items-center justify-center" style={{ width: `${leftWidth}%` }}>
-              <div className="text-gray-500">No data available</div>
-            </div>
-          )}
-          <div className="px-4">
-            <div
-              onMouseDown={startResize}
-              className="w-0.5 cursor-col-resize  dark:bg-gray-600 h-full flex justify-center items-center relative"
-              title="Drag to resize"
-              style={{ backgroundColor: themeColors.border }}
-            >
-              <div className="w-6 h-6 rounded-2xl bg-white flex items-center justify-center absolute border-2" style={{ borderColor: themeColors.border, backgroundColor: themeColors.background }}>
-                <LuChevronsLeftRight style={{ color: themeColors.text }} />
-              </div>
+
+              {/* Right Panel - Questions */}
+              {questionGroups && questionGroups.length > 0 ? (
+                <div
+                  ref={questionsContainerRef}
+                  className="w-1/2 space-y-8 overflow-y-auto p-6"
+                  data-part-id={currentPart}
+                  data-section="questions"
+                  data-section-type="questions"
+                  style={{
+                    width: `${100 - leftWidth}%`,
+                    // backgroundColor: themeColors.background,
+                    // borderColor: themeColors.border,
+                    transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
+                  }}
+                >
+                  {questionGroups.map((questionGroup, groupIdx) => {
+                    const questionRange = getQuestionRange(questionGroup);
+                    const groupQuestions = questionGroup.questions || [];
+                    const groupType = (questionGroup.type || '').toLowerCase();
+                    const isFillInTheBlanks = groupType === 'fill_in_blanks';
+                    const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
+                    const isTableCompletion = groupType === 'table_completion';
+                    const isTable = groupType.includes('table') && !isTableCompletion;
+                    const isMap = groupType.includes('map');
+                    const isMatchingInformation = groupType.includes('matching_information');
+                    const isMultipleAnswers = groupType === 'multiple_answers';
+                    let sortedOptions = questionGroup.options || [];
+
+                    if (isMultipleAnswers) {
+                      // Agar optionlar object bo'lsa, DB da saqlangan 'order' yoki 'id' bo'yicha sort qilamiz
+                      sortedOptions = [...sortedOptions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                    }
+
+
+                    return (
+                      <div key={questionGroup.id || groupIdx} className="space-y-6">
+                        {/* Group Header with Instruction and Range */}
+                        <div className="space-y-3">
+
+                          <h3
+                            className="text-lg font-semibold"
+                            style={{ color: themeColors.text }}
+                          >
+                            Questions {questionRange}
+                          </h3>
+                          {/* {questionGroup.instruction && questionGroup.type !== 'matching_information' && ( */}
+                          <p
+                            className="text-sm leading-relaxed"
+                            data-selectable="true"
+                            data-part-id={currentPart}
+                            data-section-type="questions"
+                            style={{ color: themeColors.text }}
+                          >
+                            {parse(questionGroup.instruction, { allowDangerousHtml: true })}
+                          </p>
+                          {/* )} */}
+                        </div>
+                        {questionGroup.type === 'matching_information' && (
+                          <div className="space-y-3">
+                            <h3 className="text-lg font-semibold" style={{ color: themeColors.text }}>
+                              Matching Information
+                            </h3>
+                          </div>
+                        )}
+
+                        {/* For Fill-in-the-Blanks, Drag-and-Drop, Table Completion, Table, Map, Matching Information, and Multiple Answers: Render as a single group with group-level options */}
+                        {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation || isMultipleAnswers) ? (
+                          <div
+                            ref={(el) => {
+                              // Set ref for all questions in the group for scrolling
+                              if (el && groupQuestions.length > 0) {
+                                groupQuestions
+                                  .filter(q => q.question_number != null)
+                                  .forEach(q => {
+                                    if (q.question_number) {
+                                      questionRefs.current[q.question_number] = el;
+                                    }
+                                  });
+                              }
+                            }}
+                            data-question-number={groupQuestions
+                              .filter(q => q.question_number != null)
+                              .sort((a, b) => {
+                                const aNum = a.question_number ?? 0;
+                                const bNum = b.question_number ?? 0;
+                                return aNum - bNum;
+                              })[0]?.question_number}
+                            className="p-4 rounded-lg border transition-all"
+                            style={{
+                              borderColor: themeColors.border,
+                              backgroundColor: themeColors.background
+                            }}
+                          >
+                            <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
+                              <QuestionRenderer
+                                question={{
+                                  ...questionGroup,
+                                  type: questionGroup.type,
+                                  instruction: questionGroup.instruction,
+                                  question_text: questionGroup.question_text,
+                                  options: sortedOptions
+                                }}
+                                groupQuestions={groupQuestions}
+                                answers={answers}
+                                onAnswerChange={handleAnswerChange}
+                                onInteraction={handleInputInteraction}
+                                mode={status === 'reviewing' ? 'review' : 'test'}
+                                reviewData={status === 'reviewing' ? reviewData : {}}
+                                showCorrectAnswers={showCorrectAnswers}
+                                bookmarks={bookmarks}
+                                toggleBookmark={toggleBookmark}
+                              />
+
+                            </div>
+                          </div>
+                        ) : (
+                          /* For other question types: Render individual questions */
+                          [...groupQuestions]
+                            .sort((a, b) => {
+                              const aNum = a.question_number ?? 0;
+                              const bNum = b.question_number ?? 0;
+                              return aNum - bNum;
+                            })
+                            .map((question) => {
+                              const questionNumber = question.question_number;
+                              if (!questionNumber) return null;
+
+                              const questionText = question.question_text || question.text || '';
+
+                              return (
+                                <div
+                                  key={question.id || questionNumber}
+                                  ref={(el) => {
+                                    if (el) questionRefs.current[questionNumber] = el;
+                                  }}
+                                  data-question-number={questionNumber}
+                                  className="p-4 rounded-lg border transition-all"
+                                  style={{
+                                    borderColor: themeColors.border,
+                                    backgroundColor: themeColors.background
+                                  }}
+                                >
+                                  {/* Question Image if available */}
+                                  {question.image_url && (
+                                    <div className="mb-4">
+                                      <img
+                                        src={question.image_url}
+                                        alt={`Question ${questionNumber} image`}
+                                        className="w-full max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-700 cursor-pointer transition-transform hover:scale-105"
+
+                                      />
+                                    </div>
+                                  )}
+
+                                  {/* Show question number and text */}
+                                  <p
+                                    className="font-medium mb-3 w-11/12"
+                                    data-selectable="true"
+                                    data-part-id={currentPart}
+                                    data-section-type="questions"
+                                    style={{ color: themeColors.text }}
+                                  >
+                                    {questionNumber}. {questionText}
+                                  </p>
+
+                                  <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
+                                    <QuestionRenderer
+                                      question={{
+                                        ...question,
+                                        type: questionGroup.type,
+                                        instruction: questionGroup.instruction,
+                                        // For drag-drop, summary, table, and map, use group-level options; otherwise use question-specific options
+                                        options: (groupType.includes('drag') || groupType.includes('summary') || groupType.includes('table')
+                                          || groupType.includes('map'))
+                                          ? (questionGroup.options || [])
+                                          : (question.options || questionGroup.options || [])
+                                      }}
+                                      groupQuestions={
+                                        // Pass group questions for drag-drop, summary, table, and map
+                                        (groupType.includes('drag') ||
+                                          groupType.includes('summary') ||
+                                          groupType.includes('table') ||
+                                          groupType.includes('map'))
+                                          ? groupQuestions
+                                          : undefined
+                                      }
+                                      answer={answers[question.id] || answers[questionNumber]}
+                                      answers={answers}
+                                      onAnswerChange={handleAnswerChange}
+                                      onInteraction={handleInputInteraction}
+                                      mode={status === 'reviewing' ? 'review' : 'test'}
+                                      reviewData={status === 'reviewing' ? reviewData : {}}
+                                      showCorrectAnswers={showCorrectAnswers}
+                                      bookmarks={bookmarks}
+                                      toggleBookmark={toggleBookmark}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div
+                  className="w-1/2 space-y-8 overflow-y-auto p-6 border rounded-2xl border-gray-300 bg-white dark:bg-gray-800 flex items-center justify-center"
+                  style={{ width: `${100 - leftWidth}%`, backgroundColor: themeColors.background, color: themeColors.text }}
+                >
+                  <div className="text-gray-500">
+                    {LoadingTest ? "LoadingTest questions..." : "No questions available"}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Right Panel - Questions */}
-          {questionGroups && questionGroups.length > 0 ? (
-            <div
-              ref={questionsContainerRef}
-              className="w-1/2 space-y-8 overflow-y-auto p-6 border rounded-2xl"
-              data-part-id={currentPart}
-              data-section="questions"
-              data-section-type="questions"
-              style={{
-                width: `${100 - leftWidth}%`,
-                backgroundColor: themeColors.background,
-                borderColor: themeColors.border,
-                transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
-              }}
-            >
-              {questionGroups.map((questionGroup, groupIdx) => {
-                const questionRange = getQuestionRange(questionGroup);
-                const groupQuestions = questionGroup.questions || [];
-                const groupType = (questionGroup.type || '').toLowerCase();
-                const isFillInTheBlanks = groupType === 'fill_in_blanks';
-                const isDragAndDrop = groupType.includes('drag') || groupType.includes('drop') || groupType.includes('summary_completion');
-                const isTableCompletion = groupType === 'table_completion';
-                const isTable = groupType.includes('table') && !isTableCompletion;
-                const isMap = groupType.includes('map');
-                const isMatchingInformation = groupType.includes('matching_information');
-                const isMultipleAnswers = groupType === 'multiple_answers';
-                let sortedOptions = questionGroup.options || [];
-
-                if (isMultipleAnswers) {
-                  // Agar optionlar object bo'lsa, DB da saqlangan 'order' yoki 'id' bo'yicha sort qilamiz
-                  sortedOptions = [...sortedOptions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-                }
-
-
-                return (
-                  <div key={questionGroup.id || groupIdx} className="space-y-6">
-                    {/* Group Header with Instruction and Range */}
-                    <div className="space-y-3">
-
-                      <h3
-                        className="text-lg font-semibold"
-                        style={{ color: themeColors.text }}
-                      >
-                        Questions {questionRange}
-                      </h3>
-                      {/* {questionGroup.instruction && questionGroup.type !== 'matching_information' && ( */}
-                        <p
-                          className="text-sm leading-relaxed"
-                          data-selectable="true"
-                          data-part-id={currentPart}
-                          data-section-type="questions"
-                          style={{ color: themeColors.text }}
-                        >
-                          {parse(questionGroup.instruction, { allowDangerousHtml: true })}
-                        </p>
-                      {/* )} */}
-                    </div>
-                    {questionGroup.type === 'matching_information' && (
-                      <div className="space-y-3">
-                        <h3 className="text-lg font-semibold" style={{ color: themeColors.text }}>
-                          Matching Information
-                        </h3>
-                      </div>
-                    )}
-
-                    {/* For Fill-in-the-Blanks, Drag-and-Drop, Table Completion, Table, Map, Matching Information, and Multiple Answers: Render as a single group with group-level options */}
-                    {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation || isMultipleAnswers) ? (
-                      <div
-                        ref={(el) => {
-                          // Set ref for all questions in the group for scrolling
-                          if (el && groupQuestions.length > 0) {
-                            groupQuestions
-                              .filter(q => q.question_number != null)
-                              .forEach(q => {
-                                if (q.question_number) {
-                                  questionRefs.current[q.question_number] = el;
-                                }
-                              });
-                          }
-                        }}
-                        data-question-number={groupQuestions
-                          .filter(q => q.question_number != null)
-                          .sort((a, b) => {
-                            const aNum = a.question_number ?? 0;
-                            const bNum = b.question_number ?? 0;
-                            return aNum - bNum;
-                          })[0]?.question_number}
-                        className="p-4 rounded-lg border transition-all"
-                        style={{
-                          borderColor: themeColors.border,
-                          backgroundColor: themeColors.background
-                        }}
-                      >
-                        <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
-                          <QuestionRenderer
-                            question={{
-                              ...questionGroup,
-                              type: questionGroup.type,
-                              instruction: questionGroup.instruction,
-                              question_text: questionGroup.question_text,
-                              options: sortedOptions
-                            }}
-                            groupQuestions={groupQuestions}
-                            answers={answers}
-                            onAnswerChange={handleAnswerChange}
-                            onInteraction={handleInputInteraction}
-                            mode={status === 'reviewing' ? 'review' : 'test'}
-                            reviewData={status === 'reviewing' ? reviewData : {}}
-                            showCorrectAnswers={showCorrectAnswers}
-                            bookmarks={bookmarks}
-                            toggleBookmark={toggleBookmark}
-                          />
-
-                        </div>
-                      </div>
-                    ) : (
-                      /* For other question types: Render individual questions */
-                      [...groupQuestions]
-                        .sort((a, b) => {
-                          const aNum = a.question_number ?? 0;
-                          const bNum = b.question_number ?? 0;
-                          return aNum - bNum;
-                        })
-                        .map((question) => {
-                          const questionNumber = question.question_number;
-                          if (!questionNumber) return null;
-
-                          const questionText = question.question_text || question.text || '';
-
-                          return (
-                            <div
-                              key={question.id || questionNumber}
-                              ref={(el) => {
-                                if (el) questionRefs.current[questionNumber] = el;
-                              }}
-                              data-question-number={questionNumber}
-                              className="p-4 rounded-lg border transition-all"
-                              style={{
-                                borderColor: themeColors.border,
-                                backgroundColor: themeColors.background
-                              }}
-                            >
-                              {/* Question Image if available */}
-                              {question.image_url && (
-                                <div className="mb-4">
-                                  <img
-                                    src={question.image_url}
-                                    alt={`Question ${questionNumber} image`}
-                                    className="w-full max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-700 cursor-pointer transition-transform hover:scale-105"
-
-                                  />
-                                </div>
-                              )}
-
-                              {/* Show question number and text */}
-                              <p
-                                className="font-medium mb-3 w-11/12"
-                                data-selectable="true"
-                                data-part-id={currentPart}
-                                data-section-type="questions"
-                                style={{ color: themeColors.text }}
-                              >
-                                {questionNumber}. {questionText}
-                              </p>
-
-                              <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
-                                <QuestionRenderer
-                                  question={{
-                                    ...question,
-                                    type: questionGroup.type,
-                                    instruction: questionGroup.instruction,
-                                    // For drag-drop, summary, table, and map, use group-level options; otherwise use question-specific options
-                                    options: (groupType.includes('drag') || groupType.includes('summary') || groupType.includes('table')
-                                      || groupType.includes('map'))
-                                      ? (questionGroup.options || [])
-                                      : (question.options || questionGroup.options || [])
-                                  }}
-                                  groupQuestions={
-                                    // Pass group questions for drag-drop, summary, table, and map
-                                    (groupType.includes('drag') ||
-                                      groupType.includes('summary') ||
-                                      groupType.includes('table') ||
-                                      groupType.includes('map'))
-                                      ? groupQuestions
-                                      : undefined
-                                  }
-                                  answer={answers[question.id] || answers[questionNumber]}
-                                  answers={answers}
-                                  onAnswerChange={handleAnswerChange}
-                                  onInteraction={handleInputInteraction}
-                                  mode={status === 'reviewing' ? 'review' : 'test'}
-                                  reviewData={status === 'reviewing' ? reviewData : {}}
-                                  showCorrectAnswers={showCorrectAnswers}
-                                  bookmarks={bookmarks}
-                                  toggleBookmark={toggleBookmark}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div
-              className="w-1/2 space-y-8 overflow-y-auto p-6 border rounded-2xl border-gray-300 bg-white dark:bg-gray-800 flex items-center justify-center"
-              style={{ width: `${100 - leftWidth}%`, backgroundColor: themeColors.background, color: themeColors.text }}
-            >
-              <div className="text-gray-500">
-                {LoadingTest ? "LoadingTest questions..." : "No questions available"}
-              </div>
-            </div>
-          )}
         </div>
-      </div>
-      ): (
+      ) : (
         <div className="text-gray-500 flex items-center justify-center h-full">
           {LoadingTest ? "Loading test..." : "No questions available"}
         </div>
@@ -1824,6 +1828,8 @@ const ReadingPracticePageContent = () => {
         isSubmitting={isSubmitting}
         isMockTest={isMockTest}
         mockTestId={mockTestId}
+        timeRemaining={timeRemaining}
+        isListening={false}
       />
 
       {/* Finish Modal */}

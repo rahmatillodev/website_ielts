@@ -20,6 +20,11 @@ export default function DashboardRoute({ children }) {
     return children
   }
 
+  // Allow password reset flow even when user has a session (e.g. recovery link)
+  if (location.pathname === '/forgot-password' || location.pathname === '/reset-password') {
+    return children
+  }
+
   // Check access mode - don't redirect mock test users to dashboard
   const accessMode = sessionStorage.getItem('accessMode');
   if (authUser && accessMode === 'mockTest') {

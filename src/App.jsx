@@ -5,11 +5,12 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import PublicLayout from "./layouts/LandingLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
 import MockTestLayout from "./layouts/MockTestLayout";
-// import Settings from './pages/Settings'
 import PricingPage from "./pages/landing/PricingPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import LoginPage from "./pages/landing/LoginPage";
 import SignUpPage from "./pages/landing/SignUpPage";
+import ForgotPasswordPage from "./pages/landing/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/landing/ResetPasswordPage";
 import LandingPage from "./pages/landing/LandingPage";
 import ReadingPage from "./pages/dashboard/reading/ReadingPage";
 import ReadingPracticePage from "./pages/dashboard/reading/ReadingPracticePage";
@@ -305,15 +306,18 @@ function App() {
   return (
     <DndProvider backend={HTML5Backend}>
       <Routes>
-       
-        {!user ?
+        {/* Forgot/reset password: available even when user has a session (e.g. recovery link) */}
+        <Route element={<PublicLayout />}>
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+        </Route>
+        {!user ? (
           <Route element={<PublicLayout />}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/login" element={<LoginPage />} />
           </Route>
-            
-          :
+        ) : (
           <>
             {/* Mock Test Routes - Separate Layout with Route Guard */}
             <Route element={<MockTestRoute><MockTestLayout /></MockTestRoute>}>
@@ -359,7 +363,7 @@ function App() {
               <Route path="/mock-test/results-regular/:clientId" element={<MockTestClientResultsPage />} />
             </Route>
           </>
-        }
+        )}
         <Route
           path="*"
           element={user ? (() => {

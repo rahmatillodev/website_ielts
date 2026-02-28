@@ -106,6 +106,11 @@ function LoginPage() {
       
       toast.success("Welcome back!");
       navigate(targetPath, { replace: true });
+    } else {
+      const message = result?.error?.toLowerCase().includes('invalid login credentials')
+        ? "Invalid email or password"
+        : (result?.error || "Sign in failed");
+      toast.error(message);
     }
   };
 
@@ -195,9 +200,17 @@ function LoginPage() {
 
               {/* Password */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Password
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-[#136dec] hover:text-[#136dec]/90 font-medium"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
