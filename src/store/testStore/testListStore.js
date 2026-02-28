@@ -53,7 +53,7 @@ export const useTestListStore = create((set, get) => ({
     try {
       const testsQueryPromise = supabase
         .from("test")
-        .select("id, title, type, difficulty, duration, question_quantity, is_premium, is_active, created_at, is_mock")
+        .select("*, part(part_number)")
         .eq("is_active", true)
         .or("is_mock.eq.false,is_mock.is.null")
         .order("created_at", { ascending: false });
@@ -84,12 +84,28 @@ export const useTestListStore = create((set, get) => ({
       }
 
       // Ensure data is an array before filtering
-      const tests = Array.isArray(data) ? data : [];
+      const rawTests = Array.isArray(data) ? data : [];
 
       // Handle case where query returns null/undefined (no data found)
-      if (!tests || tests.length === 0) {
+      if (!rawTests || rawTests.length === 0) {
         console.warn('[fetchTests] No active tests found. This may be normal if no tests are marked as active, or check RLS policies.');
       }
+
+      // Derive partLabel from joined part(part_number): 1 part → "Part X", more than 1 → "Full Test"
+      const tests = rawTests.map((test) => {
+        const rawPart = test.part;
+        const parts = Array.isArray(rawPart) ? rawPart : rawPart != null ? [rawPart] : [];
+        const partNumbers = parts.map((p) => p?.part_number).filter((n) => typeof n === "number" && n >= 1 && n <= 5);
+        const partCount = partNumbers.length;
+        let partLabel = null;
+        if (partCount === 1) {
+          partLabel = `Part ${partNumbers[0]}`;
+        } else if (partCount > 1) {
+          partLabel = "Full Test";
+        }
+        const { part: _part, ...rest } = test;
+        return { ...rest, partLabel };
+      });
 
       const filtered_data_reading = tests.filter(
         (test) => test.type === "reading"

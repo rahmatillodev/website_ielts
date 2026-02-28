@@ -22,6 +22,7 @@ const CardLocked = ({
   duration,
   question_quantity,
   isCompleted,
+  partLabel,
   created_at,
   date,
   difficulty,
@@ -95,43 +96,27 @@ const CardLocked = ({
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <h6 className="text-sm md:text-base font-semibold text-gray-900 line-clamp-2 overflow-hidden text-ellipsis mb-1">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 line-clamp-1 overflow-hidden text-ellipsis mb-1">
               {title}
-            </h6>
+            </h3>
 
-            {isCompleted && (
-              <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
-                Completed on {completedDate}
-              </p>
-            )}
-
-            {createdDate && !isCompleted && (
-              <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
-                Created on {createdDate}
-              </p>
-            )}
-
-            <div className="flex gap-2 md:gap-3 text-gray-500 mt-2 md:mt-3 flex-wrap items-center">
-              <span className="flex items-baseline gap-1.5 text-[9px] md:text-[10px] font-medium leading-none">
-                <SignalBars level={difficulty?.toLowerCase() === "hard" ? 3 : difficulty?.toLowerCase() === "medium" ? 2 : 1} />
-                <span className="text-gray-600">{difficulty || "—"}</span>
-              </span>
-              <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                <MdTimer className="text-[10px] md:text-xs" /> {duration} min
-              </span>
-              {isCompleted ? (
-                <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                  <MdQuiz className="text-[10px] md:text-xs" /> {correct_answers || 0}/{total_questions || question_quantity || 0} Correct
-                </span>
-              ) : (
-                question_quantity != null && (
-                  <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                    <MdQuiz className="text-[10px] md:text-xs" /> {question_quantity} {question_quantity === 1 ? "question" : "questions"}
-                  </span>
-                )
+            {(partLabel || difficulty || createdDate || completedDate) && (
+            <div className="flex flex-wrap items-center gap-2 mt-1 mb-2">
+              {(partLabel || difficulty) && (
+                <p className="text-[10px] md:text-xs text-gray-500 font-medium">
+                  {partLabel}{partLabel && difficulty ? " " : ""}
+                  
+                </p>
               )}
+              {(partLabel || difficulty) && (createdDate || completedDate) && ( 
+                <span className="text-gray-300 text-[10px]"></span>
+              )}
+                <p className="text-[10px] md:text-xs text-gray-400">
+                  {completedDate ? "Completed on " + completedDate : "Created on " + createdDate}
+                </p>
             </div>
-          </div>
+          )}
+
 
           {/* Unlock Button - Always show for locked tests, even if completed */}
           <UpgradeModal>
@@ -143,6 +128,7 @@ const CardLocked = ({
               Unlock Test
             </button>
           </UpgradeModal>
+        </div>
         </div>
       </motion.div>
     );
@@ -184,7 +170,25 @@ const CardLocked = ({
             )}
           </div>
 
-          {isCompleted && (
+          
+          {(partLabel || difficulty || createdDate || completedDate) && (
+            <div className="flex flex-wrap items-center gap-2 mt-1 mb-2">
+              {(partLabel || difficulty) && (
+                <p className="text-[10px] md:text-xs text-gray-500 font-medium">
+                  {partLabel}{partLabel && difficulty ? " " : ""}
+                  
+                </p>
+              )}
+              {(partLabel || difficulty) && (createdDate || completedDate) && (
+                <span className="text-gray-300 text-[10px]"></span>
+              )}
+                <p className="text-[10px] md:text-xs text-gray-400">
+                  {completedDate ? "Completed on " + completedDate : "Created on " + createdDate}
+                </p>
+            </div>
+          )}
+
+          {/* {isCompleted && (
             <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
               Completed on {completedDate}
             </p>
@@ -194,7 +198,7 @@ const CardLocked = ({
             <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
               Created on {createdDate}
             </p>
-          )}
+          )} */}
 
           <div className="flex gap-2 md:gap-3 text-gray-500 mt-2 md:mt-3 flex-wrap items-center">
             <span className="flex items-baseline gap-1.5 text-[9px] md:text-[10px] font-medium leading-none">

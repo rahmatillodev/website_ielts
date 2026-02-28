@@ -30,7 +30,8 @@ const CardOpen = ({
   isGridView,
   link,
   is_premium,
-  testType = 'reading', // 'reading' or 'listening'
+  testType = "reading",
+  partLabel,
 }) => {
   const navigate = useNavigate();
 
@@ -192,17 +193,30 @@ const CardOpen = ({
               {title}
             </h3>
 
+            {(partLabel || difficulty || createdDate || completedDate) && (
+              <div className="flex flex-wrap items-center gap-2 mt-1 mb-2">
+                {(partLabel || difficulty) && (
+                  <p className="text-[10px] md:text-xs text-gray-500 font-medium">
+                    {partLabel}{partLabel && difficulty ? " " : " "}
+                  
+                  </p>
+                )}
+                {(partLabel || difficulty) && (createdDate || completedDate) && (
+                  <span className="text-gray-300 text-[10px]"></span>
+                )}
+                {(createdDate || completedDate) && (
+                  <p className="text-[10px] md:text-xs text-gray-400">
+                    {completedDate ? "Completed on " + completedDate : "Created on " + createdDate}
+                  </p>
+                )}
+              </div>
+            )}
+{/* 
             {hasCompleted && (
-              <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
+              <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-0.5">
                 Completed on {completedDate}
               </p>
-            )}
-
-            {createdDate && !hasCompleted && (
-              <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
-                Created on {createdDate}
-              </p>
-            )}
+            )} */}
 
             <div className="flex gap-2 md:gap-3 text-gray-500 mt-2 md:mt-3 items-center">
               <span className="flex items-baseline gap-1.5 text-[9px] md:text-[10px] font-medium leading-none">
@@ -295,17 +309,28 @@ const CardOpen = ({
 
           </div>
 
-          {hasCompleted && (
-            <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
-              Completed on {completedDate}
-            </p>
+          {(partLabel || difficulty || createdDate || completedDate) && (
+            <div className="flex flex-wrap items-center gap-2 mt-1 mb-2">
+              {(partLabel || difficulty) && (
+                <p className="text-[10px] md:text-xs text-gray-500 font-medium">
+                  {partLabel}{partLabel && difficulty ? " " : ""}
+                  
+                </p>
+              )}
+              {(partLabel || difficulty) && (createdDate || completedDate) && (
+                <span className="text-gray-300 text-[10px]"></span>
+              )}
+                <p className="text-[10px] md:text-xs text-gray-400">
+                  {completedDate ? "Completed on " + completedDate : "Created on " + createdDate}
+                </p>
+            </div>
           )}
 
-          {createdDate && !hasCompleted && (
-            <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-1">
-              Created on {createdDate}
+          {/* {hasCompleted && (
+            <p className="text-[10px] md:text-xs text-gray-400 font-normal mt-0.5">
+              Completed on {completedDate}
             </p>
-          )}
+          )} */}
 
           <div className="flex gap-2 md:gap-3 text-gray-500 mt-2 md:mt-3 flex-wrap items-center">
             <span className="flex items-baseline gap-1.5 text-[9px] md:text-[10px] font-medium leading-none">
