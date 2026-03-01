@@ -254,7 +254,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                         backgroundColor: themeColors.background,
                                         color: themeColors.text,
                                         borderColor: themeColors.border,
-                                        ...(active ? { boxShadow: `0 0 0 2px ${themeColors.border}` } : {})
+                                        ...(active ? { boxShadow: `0 0 0 2px ${"dodgerblue"}` } : {})
                                       }}
                                       onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)';

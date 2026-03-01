@@ -19,11 +19,12 @@ export const useWritingStore = create((set, get) => ({
         .from("writings")
         .select("*")
         .eq("is_active", true)
+        .or("is_mock.eq.false,is_mock.is.null")
         .order("created_at", { ascending: false });
 
 
       /// writings table
-      /// columns: id, title, duration, difficulty , created_at, updated_at, feedback, is_active, is_premium
+      /// columns: id, title, duration, difficulty , created_at, updated_at, feedback, is_active, is_mock
 
       if (error) throw error;
 
