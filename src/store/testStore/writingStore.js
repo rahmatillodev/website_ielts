@@ -19,6 +19,7 @@ export const useWritingStore = create((set, get) => ({
         .from("writings")
         .select("*, writing_tasks(task_name)")
         .eq("is_active", true)
+        .or("is_mock.eq.false,is_mock.is.null")
         .order("created_at", { ascending: false });
 
       if (error) throw error;

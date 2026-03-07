@@ -18,23 +18,29 @@ const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const authUser = useAuthStore((state) => state.authUser)
 
-  // Set access mode to regular when accessing dashboard routes
+  // Set access mode to regular only when actually on a regular dashboard route
+  // (This layout only mounts for dashboard routes; we only set regular here to avoid overwriting mockTest)
   useEffect(() => {
-    // Profile page is accessible from both platforms - preserve current accessMode
-    // if (pathname === '/profile') {
-    //   return;
-    // }
-    
-    // Only set to regular if not accessing practice pages (practice pages can be from either mode)
-    const isPracticePage = pathname.includes('/reading-practice') || 
-                          pathname.includes('/listening-practice') || 
+    if (pathname === '/profile') return;
+
+    const isPracticePage = pathname.includes('/reading-practice') ||
+                          pathname.includes('/listening-practice') ||
                           pathname.includes('/writing-practice') ||
                           pathname.includes('/speaking-practice') ||
                           pathname.includes('/reading-result') ||
                           pathname.includes('/listening-result') ||
                           pathname.includes('/speaking-result');
-    
-    if (!isPracticePage) {
+
+    const isDashboardRoute = pathname === '/dashboard' ||
+                             pathname === '/reading' ||
+                             pathname === '/listening' ||
+                             pathname === '/writing' ||
+                             pathname === '/speaking' ||
+                             pathname === '/analytics' ||
+                             pathname === '/own-writing' ||
+                             pathname.startsWith('/writing/writing-history');
+
+    if (!isPracticePage && isDashboardRoute) {
       sessionStorage.setItem('accessMode', 'regular');
     }
   }, [pathname])

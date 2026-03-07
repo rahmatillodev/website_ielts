@@ -17,18 +17,6 @@ const isMockTestRoute = (path) => {
          path === "/mock";
 }
 
-// Practice/result/flow URLs: redirect to dashboard or mock-tests home instead of exact URL
-const isRedirectToHome = (pathname) => {
-  return pathname.includes("/reading-practice") ||
-    pathname.includes("/listening-practice") ||
-    pathname.includes("/writing-practice") ||
-    pathname.includes("/speaking-practice") ||
-    pathname.includes("/reading-result") ||
-    pathname.includes("/listening-result") ||
-    pathname.includes("/speaking-result") ||
-    pathname.startsWith("/mock-test/flow");
-};
-
 // Public Login page
 function LoginPage() {
   const navigate = useNavigate();
@@ -97,20 +85,27 @@ function LoginPage() {
     const result = await signIn(email, password);
 
     if (result?.success) {
-      const accessMode = sessionStorage.getItem('accessMode');
+      const accessMode = sessionStorage.getItem("accessMode") || "regular";
+      sessionStorage.setItem("accessMode", accessMode);
+
       const redirectParam = searchParams.get("redirect");
       const isValidRedirect =
         typeof redirectParam === "string" &&
         redirectParam.startsWith("/") &&
         !redirectParam.startsWith("//");
-      const defaultPath = accessMode === "mockTest" ? "/mock-tests" : "/dashboard";
-      const pathnameOnly = redirectParam ? redirectParam.split("?")[0] : "";
-      const useRedirectAsIs = isValidRedirect && !isRedirectToHome(pathnameOnly);
-      const targetPath = useRedirectAsIs ? redirectParam : defaultPath;
+      const defaultPath =
+        accessMode === "mockTest" ? "/mock-tests" : "/dashboard";
+      let targetPath = (redirectParam && isValidRedirect)
+        ? redirectParam
+        : defaultPath;
+      // Normalize /mock-test to /mock-tests (no exact route for /mock-test)
+      const redirectPathname = targetPath.split("?")[0];
+      if (redirectPathname === "/mock-test") {
+        targetPath = targetPath === "/mock-test" ? "/mock-tests" : "/mock-tests" + (targetPath.slice("/mock-test".length) || "");
+      }
 
-      sessionStorage.setItem("accessMode", accessMode || "regular");
-      toast.success("Welcome back!");
       navigate(targetPath, { replace: true });
+      toast.success("Welcome back!");
     } else {
       const message = result?.error?.toLowerCase().includes('invalid login credentials')
         ? "Invalid email or password"
