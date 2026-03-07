@@ -127,6 +127,15 @@ export const useWritingStore = create((set, get) => ({
         data.writing_tasks = [];
       }
 
+      // Sort so Task 1 always comes before Task 2 (prevents Task 1 being "left out" when tasks[0] is used)
+      data.writing_tasks.sort((a, b) => {
+        const nameA = (a?.task_name || "").toLowerCase();
+        const nameB = (b?.task_name || "").toLowerCase();
+        if (nameA.includes("task 1") && nameB.includes("task 2")) return -1;
+        if (nameA.includes("task 2") && nameB.includes("task 1")) return 1;
+        return (nameA || "").localeCompare(nameB || "");
+      });
+
       console.log('[useWritingStore] Successfully fetched writing:', {
         id: data.id,
         title: data.title,

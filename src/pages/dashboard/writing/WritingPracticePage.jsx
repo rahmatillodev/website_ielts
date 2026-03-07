@@ -212,9 +212,10 @@ const WritingPracticePageContent = () => {
         // Set currentTaskType to the first task that has an answer, or first task
         const tasks = writing.writing_tasks || [];
         if (tasks.length > 0) {
-          // Find first task with an answer, or default to first task
+          // Find first task with an answer, or default to Task 1 when both exist
           const taskWithAnswer = tasks.find(t => result.answers[t.task_name]);
-          const taskToSet = taskWithAnswer ? taskWithAnswer.task_name : tasks[0].task_name;
+          const defaultTask = tasks.find((t) => t.task_name === "Task 1") || tasks[0];
+          const taskToSet = taskWithAnswer ? taskWithAnswer.task_name : defaultTask.task_name;
           console.log('[WritingPracticePage] Setting currentTaskType to:', taskToSet, 'Available answers keys:', Object.keys(result.answers));
           setCurrentTaskType(taskToSet);
         }
@@ -301,14 +302,16 @@ const WritingPracticePageContent = () => {
     if (!currentWriting?.writing_tasks?.length) return;
 
     const tasks = currentWriting.writing_tasks;
-    
+    // Prefer Task 1 as default when both exist (tasks may be unsorted from other code paths)
+    const firstTask = tasks.find((t) => t.task_name === "Task 1") || tasks[0];
+
     // Check URL parameter for review mode
     const isReviewMode = searchParams.get('mode') === 'review';
     const urlPracticeMode = searchParams.get('mode') === 'practice';
 
-    // Always set currentTaskType to first task if not set (needed for initial render)
+    // Always set currentTaskType to first task if not set (Task 1 when both exist)
     if (!currentTaskType && tasks.length > 0) {
-      setCurrentTaskType(tasks[0].task_name);
+      setCurrentTaskType(firstTask?.task_name ?? tasks[0].task_name);
     }
 
     // If review mode, load attempt data (it will update currentTaskType if needed)
@@ -393,7 +396,7 @@ const WritingPracticePageContent = () => {
                 setAnswers(filtered);
                 setStatus('reviewing');
                 const firstWithAnswer = tasks.find((t) => result.answers[t.task_name]);
-                setCurrentTaskType(firstWithAnswer ? firstWithAnswer.task_name : tasks[0].task_name);
+                setCurrentTaskType(firstWithAnswer ? firstWithAnswer.task_name : (tasks.find((t) => t.task_name === "Task 1") || tasks[0]).task_name);
                 setIsPracticeMode(false);
                 setIsStarted(false);
               } else {
@@ -835,7 +838,8 @@ const WritingPracticePageContent = () => {
       currentWriting.writing_tasks.forEach(t => {
         init[t.task_name] = "";
       });
-      setCurrentTaskType(currentWriting.writing_tasks[0].task_name);
+      const firstTask = currentWriting.writing_tasks.find((t) => t.task_name === "Task 1") || currentWriting.writing_tasks[0];
+      setCurrentTaskType(firstTask.task_name);
     }
     setAnswers(init);
   
@@ -1236,14 +1240,15 @@ const WritingPracticePageContent = () => {
 
   const displayWriting = currentWriting;
 
-  // Ensure currentTaskType is set (use first task as fallback)
-  const effectiveTaskType = currentTaskType || currentWriting?.writing_tasks?.[0]?.task_name;
+  // Ensure currentTaskType is set (prefer Task 1 when both exist)
+  const tasksForDisplay = displayWriting?.writing_tasks ?? [];
+  const defaultTaskType = tasksForDisplay.find((t) => t.task_name === "Task 1") || tasksForDisplay[0];
+  const effectiveTaskType = currentTaskType || defaultTaskType?.task_name;
   const currentTask = displayWriting?.writing_tasks?.find(
     (t) => t.task_name === effectiveTaskType
   );
-  
-  // If we have a currentTaskType but no matching task, try to use the first task
-  const taskToDisplay = currentTask || currentWriting?.writing_tasks?.find(t => t.task_name === effectiveTaskType) || currentWriting?.writing_tasks?.[0];
+
+  const taskToDisplay = currentTask || displayWriting?.writing_tasks?.find(t => t.task_name === effectiveTaskType) || defaultTaskType;
   
   // Calculate font size in rem (base 16px = 1rem) for consistent scaling
   const baseFontSize = fontSizeValue.base / 16;
