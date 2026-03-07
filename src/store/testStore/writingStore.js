@@ -17,33 +17,40 @@ export const useWritingStore = create((set, get) => ({
     try {
       const { data, error } = await supabase
         .from("writings")
-        .select("*")
+        .select("*, writing_tasks(task_name)")
         .eq("is_active", true)
-        .or("is_mock.eq.false,is_mock.is.null")
         .order("created_at", { ascending: false });
-
-
-      /// writings table
-      /// columns: id, title, duration, difficulty , created_at, updated_at, feedback, is_active, is_mock
 
       if (error) throw error;
 
-      // Ensure data is an array
-      const writings = Array.isArray(data) ? data : [];
+      const rawWritings = Array.isArray(data) ? data : [];
+
+      // Derive taskLabel from writing_tasks: "Task 1", "Task 2", or "Both"
+      const writingsWithLabel = rawWritings.map((writing) => {
+        const rawTasks = writing.writing_tasks;
+        const tasks = Array.isArray(rawTasks) ? rawTasks : rawTasks != null ? [rawTasks] : [];
+        const names = tasks.map((t) => t?.task_name).filter(Boolean);
+        const hasTask1 = names.some((n) => n === "Task 1" || String(n).toLowerCase().includes("task 1"));
+        const hasTask2 = names.some((n) => n === "Task 2" || String(n).toLowerCase().includes("task 2"));
+        let taskLabel = null;
+        if (hasTask1 && hasTask2) taskLabel = "Both";
+        else if (hasTask1) taskLabel = "Task 1";
+        else if (hasTask2) taskLabel = "Task 2";
+        const { writing_tasks: _wt, ...rest } = writing;
+        return { ...rest, taskLabel };
+      });
 
       // Fetch task types for all writings
-      const allWritingIds = writings.map(writing => writing.id);
+      const allWritingIds = writingsWithLabel.map((w) => w.id);
       let taskTypesMap = {};
-      
+
       try {
         taskTypesMap = await useWritingTaskTypeStore.getState().fetchTaskTypesForWritings(allWritingIds);
-      } catch (error) {
-        console.warn('[WritingStore] Error fetching task types, continuing without them:', error);
-        // Continue without task types - writings will still work
+      } catch (err) {
+        console.warn("[WritingStore] Error fetching task types, continuing without them:", err);
       }
 
-      // Enrich writings with task types
-      const enrichedWritings = writings.map(writing => ({
+      const enrichedWritings = writingsWithLabel.map((writing) => ({
         ...writing,
         task_types: taskTypesMap[writing.id] || new Set(),
       }));

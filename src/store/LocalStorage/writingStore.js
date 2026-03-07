@@ -96,12 +96,12 @@ export const getAllWritingPracticeKeys = () => {
 };
 
 /**
-    * Save writing result data (used after finishing test)
+ * Save writing result data (used after finishing test)
  * This is separate from practice data and persists for display
  */
 const RESULT_KEY_PREFIX = 'writing_result_';
 
-const getResultStorageKey = (testId) => `${RESULT_KEY_PREFIX}${testId} `;
+const getResultStorageKey = (testId) => `${RESULT_KEY_PREFIX}${testId}`;
 
 export const saveWritingResultData = (testId, data) => {
   try {
@@ -109,9 +109,9 @@ export const saveWritingResultData = (testId, data) => {
     const storageData = {
       testId,
       answers: data.answers || {},
-      timeRemaining: data.timeRemaining || 0,
-      elapsedTime: data.elapsedTime || 0,
-      startTime: data.startTime || null,
+      timeRemaining: data.timeRemaining ?? 0,
+      elapsedTime: data.elapsedTime ?? 0,
+      startTime: data.startTime ?? null,
       completedAt: Date.now(),
     };
     localStorage.setItem(key, JSON.stringify(storageData));

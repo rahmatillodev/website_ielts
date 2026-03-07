@@ -7,6 +7,39 @@ import supabase from "@/lib/supabase";
 import { useQuestionTypeStore } from "./questionTypeStore";
 
 const DEFAULT_TIMEOUT_MS = 15000;
+const MIN_PART_NUMBER = 1;
+const MAX_PART_NUMBER = 5;
+
+/** Max parts that count as "full" per test type: reading = 3, listening = 4. */
+const FULL_PART_COUNT_BY_TYPE = {
+  reading: 3,
+  listening: 4,
+  speaking: 4,
+};
+
+/**
+ * Derives a display label from a test's part relation (from Supabase select "*, part(part_number)").
+ * Full is type-dependent: reading = 3 parts, listening = 4 parts.
+ * @param {Array|object|null} rawPart - part relation (array or single object)
+ * @param {string} [testType] - "reading" | "listening" | "speaking"
+ * @returns {string|null} "Part 1", "Parts 1, 2", "Full reading", "Full listening", etc., or null
+ */
+export function getPartLabelFromPartRelation(rawPart, testType = "reading") {
+  const parts = Array.isArray(rawPart) ? rawPart : rawPart != null ? [rawPart] : [];
+  const partNumbers = parts
+    .map((p) => p?.part_number)
+    .filter((n) => typeof n === "number" && n >= MIN_PART_NUMBER && n <= MAX_PART_NUMBER)
+    .sort((a, b) => a - b);
+  const count = partNumbers.length;
+  if (count === 0) return null;
+  if (count === 1) return `Part ${partNumbers[0]}`;
+  const maxForFull = FULL_PART_COUNT_BY_TYPE[testType] ?? 4;
+  if (count === maxForFull) {
+    const fullLabels = { reading: "Full reading", listening: "Full listening", speaking: "Full speaking" };
+    return fullLabels[testType] ?? "Full Test";
+  }
+  return "Parts " + partNumbers.join(", ");
+}
 
 export const useTestListStore = create((set, get) => ({
   test_reading: [],
@@ -53,7 +86,7 @@ export const useTestListStore = create((set, get) => ({
     try {
       const testsQueryPromise = supabase
         .from("test")
-        .select("id, title, type, difficulty, duration, question_quantity, is_premium, is_active, created_at, is_mock")
+        .select("*, part(part_number)")
         .eq("is_active", true)
         .or("is_mock.eq.false,is_mock.is.null")
         .order("created_at", { ascending: false });
@@ -84,12 +117,18 @@ export const useTestListStore = create((set, get) => ({
       }
 
       // Ensure data is an array before filtering
-      const tests = Array.isArray(data) ? data : [];
+      const rawTests = Array.isArray(data) ? data : [];
 
       // Handle case where query returns null/undefined (no data found)
-      if (!tests || tests.length === 0) {
+      if (!rawTests || rawTests.length === 0) {
         console.warn('[fetchTests] No active tests found. This may be normal if no tests are marked as active, or check RLS policies.');
       }
+
+      const tests = rawTests.map((test) => {
+        const partLabel = getPartLabelFromPartRelation(test.part, test.type);
+        const { part: _part, ...rest } = test;
+        return { ...rest, partLabel };
+      });
 
       const filtered_data_reading = tests.filter(
         (test) => test.type === "reading"

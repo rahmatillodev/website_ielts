@@ -23,12 +23,13 @@ import {
   saveWritingPracticeData,
   loadWritingPracticeData,
   clearWritingPracticeData,
-  saveWritingResultData,
   loadWritingResultData,
-  clearAllWritingPracticeData
+  clearWritingResultData,
+  clearAllWritingPracticeData,
+  clearAllWritingData,
 } from "@/store/LocalStorage/writingStore";
 
-import { saveSectionData, loadSectionData, loadMockTestData } from "@/store/LocalStorage/mockTestStorage";
+import { saveSectionData, loadSectionData, loadMockTestData, clearAllMockTestData } from "@/store/LocalStorage/mockTestStorage";
 import { convertDurationToSeconds } from "@/utils/testDuration";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
@@ -167,6 +168,8 @@ const WritingPracticePageContent = () => {
   const passageRef = useRef(null);
   const previousIdRef = useRef(null);
   const mockTestInitializedRef = useRef(false);
+  /** After saving to DB we clear localStorage; keep last submitted answers here so success modal PDF still works */
+  const lastSubmittedAnswersRef = useRef(null);
 
   /* ================= HANDLERS ================= */
   const handleReviewWriting = useCallback(async () => {
@@ -286,6 +289,14 @@ const WritingPracticePageContent = () => {
     }
   }, [id, fetchWritingById, currentWriting, isMockTest, idFromParams]);
 
+  // Simple (non-mock) writing: mock test data must never be saved to localStorage.
+  // Clear any mock_test_* keys when user is solving normal writing (not mock).
+  useEffect(() => {
+    if (!isMockTest) {
+      clearAllMockTestData();
+    }
+  }, [isMockTest]);
+
   useEffect(() => {
     if (!currentWriting?.writing_tasks?.length) return;
 
@@ -322,12 +333,15 @@ const WritingPracticePageContent = () => {
        
         
         if (savedData && savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
-          // Restore from saved data (refresh case)
-          // Restore answers if available
+          // Restore from saved data (refresh case) - only for tasks this writing has
+          const taskNames = tasks.map((t) => t.task_name);
           if (savedData.answers && Object.keys(savedData.answers).length > 0) {
-            setAnswers(savedData.answers);
+            const filtered = {};
+            taskNames.forEach((name) => {
+              filtered[name] = (savedData.answers || {})[name] ?? "";
+            });
+            setAnswers(filtered);
           } else {
-            // Initialize answers if not set
             const init = {};
             tasks.forEach((t) => (init[t.task_name] = ""));
             setAnswers(init);
@@ -362,28 +376,45 @@ const WritingPracticePageContent = () => {
           // Reset submission state when loading saved data to ensure clean state
           setIsAutoSubmitting(false);
           setIsSaving(false);
+          mockTestInitializedRef.current = true;
         } else {
-          // First time initialization - no saved data
-          // Initialize answers if not set
-          if (Object.keys(answers).length === 0) {
-            const init = {};
-            tasks.forEach((t) => (init[t.task_name] = ""));
-            setAnswers(init);
-          }
-          
-          // Auto-start timer
-          setIsPracticeMode(true);
-          setIsStarted(true);
-          setIsPaused(false);
-          setTimeRemaining(durationInSeconds);
-          setElapsedTime(0);
-          setStartTime(Date.now());
+          // First time entering this writing in mock test: show Try practice and load from DB if user has a previous attempt
+          const init = {};
+          tasks.forEach((t) => (init[t.task_name] = ""));
+          (async () => {
+            try {
+              const result = await getLatestWritingAttempt(id);
+              if (result?.success && result?.attempt && result?.answers && Object.keys(result.answers).length > 0) {
+                const taskNames = tasks.map((t) => t.task_name);
+                const filtered = {};
+                taskNames.forEach((name) => {
+                  filtered[name] = result.answers[name] ?? "";
+                });
+                setAnswers(filtered);
+                setStatus('reviewing');
+                const firstWithAnswer = tasks.find((t) => result.answers[t.task_name]);
+                setCurrentTaskType(firstWithAnswer ? firstWithAnswer.task_name : tasks[0].task_name);
+                setIsPracticeMode(false);
+                setIsStarted(false);
+              } else {
+                setAnswers(init);
+                setIsPracticeMode(true);
+                setIsStarted(true);
+                setTimeRemaining(durationInSeconds);
+                setElapsedTime(0);
+                setStartTime(Date.now());
+              }
+            } catch {
+              setAnswers(init);
+              setIsPracticeMode(true);
+              setIsStarted(true);
+              setTimeRemaining(durationInSeconds);
+              setElapsedTime(0);
+              setStartTime(Date.now());
+            }
+            mockTestInitializedRef.current = true;
+          })();
         }
-        
-        // Note: Status is set to 'started' when listening section begins (first section)
-        // No need to set it again here when writing starts
-        
-        mockTestInitializedRef.current = true;
       }
 
       return; // Skip normal localStorage loading for mock test
@@ -407,7 +438,7 @@ const WritingPracticePageContent = () => {
       // If result is newer, practice data is stale (from before submission)
       if (resultCompletedAt > practiceLastSaved) {
         clearWritingPracticeData(id);
-        // Don't use savedData, initialize fresh instead
+        clearWritingResultData(id);
         const init = {};
         tasks.forEach((t) => (init[t.task_name] = ""));
         setAnswers(init);
@@ -430,7 +461,13 @@ const WritingPracticePageContent = () => {
 
     // Continue with normal loading if data is not stale
     if (savedData) {
-      setAnswers(savedData.answers || {});
+      // Only restore answers for tasks that this writing actually has (Task 1 only, Task 2 only, or both)
+      const taskNames = tasks.map((t) => t.task_name);
+      const filteredAnswers = {};
+      taskNames.forEach((name) => {
+        filteredAnswers[name] = (savedData.answers || {})[name] ?? "";
+      });
+      setAnswers(filteredAnswers);
 
       // Restore time remaining - if startTime exists and practice was active (not paused), calculate remaining time
       if (savedData.startTime && savedData.isPracticeMode && savedData.isStarted && !savedData.isPaused && savedData.lastSaved) {
@@ -461,20 +498,24 @@ const WritingPracticePageContent = () => {
         setIsStarted(true);
       }
     } else {
-      // Initialize fresh
+      // No practice data: show cleared state (re-entry after saving to DB). Do not restore from resultData.
+      clearWritingResultData(id);
       const init = {};
       tasks.forEach((t) => (init[t.task_name] = ""));
       setAnswers(init);
       setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
+      setElapsedTime(0);
+      setStartTime(null);
+      setIsPracticeMode(false);
+      setIsStarted(false);
 
-      // Check if URL has practice mode parameter
       if (urlPracticeMode) {
         setIsPracticeMode(true);
         setIsStarted(true);
         setStartTime(Date.now());
       }
     }
-  }, [currentWriting, id, searchParams, authUser, handleReviewWriting, isMockTest, mockClientId, urlSearchParams, updateClientStatus]);
+  }, [currentWriting, id, searchParams, authUser, handleReviewWriting, isMockTest, mockClientId, urlSearchParams, updateClientStatus, getLatestWritingAttempt]);
 
   // Check URL params for mode (review) - after writing is loaded
   // This is handled in the useEffect above when currentWriting is available
@@ -515,7 +556,7 @@ const WritingPracticePageContent = () => {
           // Save to database
           const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockTestId : null);
 
-          if (result.success && result.attemptId != null) {
+          if (result.success && result.attemptId != null && isMockTest) {
             // Signal completion only when data was saved to Supabase
             const completionKey = `mock_test_${mockTestId}_writing_completed`;
             const resultKey = `mock_test_${mockTestId}_writing_result`;
@@ -598,27 +639,32 @@ const WritingPracticePageContent = () => {
   }, [isPracticeMode, isStarted, isPaused, startTime, savingAttempt, isAutoSubmitting]);
 
   /* ================= LOCALSTORAGE PERSISTENCE ================= */
+  // Only save answers for tasks that this writing actually has (Task 1 only, Task 2 only, or both)
   useEffect(() => {
     if (!id || !isPracticeMode) return;
 
-    // Calculate current elapsed time for accurate saving
     const currentElapsedTime = startTime && isStarted && !isPaused
       ? Math.floor((Date.now() - startTime) / 1000)
       : elapsedTime;
 
-    // For mock test, save to mock test storage
+    const taskNames = currentWriting?.writing_tasks?.map((t) => t.task_name) ?? [];
+    const answersToSave = taskNames.length > 0
+      ? Object.fromEntries(taskNames.map((name) => [name, answers[name] ?? ""]))
+      : answers;
+
     if (isMockTest && mockTestId) {
       saveSectionData(mockTestId, 'writing', {
-        answers,
+        answers: answersToSave,
         timeRemaining,
         elapsedTime: currentElapsedTime,
         startTime: startTime || Date.now(),
         completed: false,
       });
     } else {
-      // For normal practice, save to writing practice storage
+      // Simple writing only: never touch mock storage; ensure no mock data persists
+      clearAllMockTestData();
       saveWritingPracticeData(id, {
-        answers,
+        answers: answersToSave,
         timeRemaining,
         elapsedTime: currentElapsedTime,
         startTime: startTime || Date.now(),
@@ -627,29 +673,35 @@ const WritingPracticePageContent = () => {
         isPaused,
       });
     }
-  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused, isMockTest, mockTestId]);
+  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused, isMockTest, mockTestId, currentWriting?.writing_tasks]);
 
   // Also save periodically to ensure time updates are captured
   useEffect(() => {
     if (!id || !isPracticeMode) return;
 
+    const taskNames = currentWriting?.writing_tasks?.map((t) => t.task_name) ?? [];
+    const answersToSave = taskNames.length > 0
+      ? Object.fromEntries(taskNames.map((name) => [name, answers[name] ?? ""]))
+      : answers;
+
     const interval = setInterval(() => {
-      // Calculate current elapsed time for accurate saving
       const currentElapsedTime = startTime && isStarted && !isPaused
         ? Math.floor((Date.now() - startTime) / 1000)
         : elapsedTime;
 
       if (isMockTest && mockTestId) {
         saveSectionData(mockTestId, 'writing', {
-          answers,
+          answers: answersToSave,
           timeRemaining,
           elapsedTime: currentElapsedTime,
           startTime: startTime || Date.now(),
           completed: false,
         });
       } else {
+        // Simple writing only: never touch mock storage; ensure no mock data persists
+        clearAllMockTestData();
         saveWritingPracticeData(id, {
-          answers,
+          answers: answersToSave,
           timeRemaining,
           elapsedTime: currentElapsedTime,
           startTime: startTime || Date.now(),
@@ -661,7 +713,7 @@ const WritingPracticePageContent = () => {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused, isMockTest, mockTestId]);
+  }, [id, answers, timeRemaining, elapsedTime, startTime, isPracticeMode, isStarted, isPaused, isMockTest, mockTestId, currentWriting?.writing_tasks]);
 
   const handleTryPractice = () => {
     // Clear all old writing practice data when starting practice
@@ -702,11 +754,14 @@ const WritingPracticePageContent = () => {
     // Use functional update to get the latest state
     setAnswers((p) => {
       const updatedAnswers = { ...p, [currentTaskType]: e.target.value };
-      
-      // Save immediately on text change with the updated answers
+      const taskNames = currentWriting?.writing_tasks?.map((t) => t.task_name) ?? [];
+      const answersToSave = taskNames.length > 0
+        ? Object.fromEntries(taskNames.map((name) => [name, updatedAnswers[name] ?? ""]))
+        : updatedAnswers;
+
       if (id) {
         saveWritingPracticeData(id, {
-          answers: updatedAnswers,
+          answers: answersToSave,
           timeRemaining,
           elapsedTime,
           startTime: startTime || Date.now(),
@@ -715,7 +770,7 @@ const WritingPracticePageContent = () => {
           isPaused: false,
         });
       }
-      
+
       return updatedAnswers;
     });
   };
@@ -883,12 +938,7 @@ const WritingPracticePageContent = () => {
         }
 
         if (!isMockTest) {
-          saveWritingResultData(id, {
-            answers,
-            timeRemaining: 0,
-            elapsedTime: timeTaken,
-            startTime,
-          });
+         
 
           // Clear practice data
           clearWritingPracticeData(id);
@@ -986,15 +1036,9 @@ const WritingPracticePageContent = () => {
         }
 
         if (!isMockTest) {
-          saveWritingResultData(id, {
-            answers,
-            timeRemaining,
-            elapsedTime: timeTaken,
-            startTime,
-          });
-
-          // Clear practice data
-          clearWritingPracticeData(id);
+          // Clear all writing data from localStorage so re-entry shows cleared state
+          clearAllWritingData();
+          lastSubmittedAnswersRef.current = { answers: { ...answers }, elapsedTime: timeTaken };
 
           // Reset to initial state (sample preview mode)
           setIsPracticeMode(false);
@@ -1042,6 +1086,21 @@ const WritingPracticePageContent = () => {
 
     setIsPdfLoading(true);
     try {
+      // Use state; if empty (e.g. after submit we cleared localStorage), use ref from last submit so PDF works
+      let answersForPdf = answers;
+      let timeForPdf = elapsedTime;
+      if (!answersForPdf || Object.keys(answersForPdf).length === 0) {
+        const last = lastSubmittedAnswersRef.current;
+        if (last?.answers) {
+          answersForPdf = last.answers;
+          if (last.elapsedTime != null) timeForPdf = last.elapsedTime;
+        } else {
+          const resultData = loadWritingResultData(id);
+          if (resultData?.answers) answersForPdf = resultData.answers;
+          if (resultData?.elapsedTime != null) timeForPdf = resultData.elapsedTime;
+        }
+      }
+
       // Prepare tasks data for PDF
       const tasks = {};
 
@@ -1075,12 +1134,12 @@ const WritingPracticePageContent = () => {
 
         tasks[taskKey] = {
           question: task.content || "",
-          answer: answers[task.task_name] || "",
+          answer: answersForPdf[task.task_name] || "",
           image: imageData,
         };
       }
 
-      const totalTime = formatTime(elapsedTime);
+      const totalTime = formatTime(timeForPdf);
       await generateWritingPDF(tasks, totalTime, settings);
       toast.success('PDF downloaded successfully');
     } catch (error) {
@@ -1228,7 +1287,7 @@ const WritingPracticePageContent = () => {
         onBack={handleBack}
         type="Writing"
         status={status}
-        showTryPractice={!isMockTest && !isPracticeMode && !isStarted && status === 'taking'}
+        showTryPractice={!isPracticeMode && !isStarted && status === 'taking'}
         showCorrectAnswers={false}
         onToggleShowCorrect={() => {}}
         handleRedoTask={status === 'reviewing' ? handleRetakeTask : undefined}

@@ -18,6 +18,18 @@ const isMockTestRoute = (path) => {
          path === "/mock";
 }
 
+// Practice/result/flow URLs: redirect to dashboard or mock-tests home instead of exact URL
+const isRedirectToHome = (pathname) => {
+  return pathname.includes("/reading-practice") ||
+    pathname.includes("/listening-practice") ||
+    pathname.includes("/writing-practice") ||
+    pathname.includes("/speaking-practice") ||
+    pathname.includes("/reading-result") ||
+    pathname.includes("/listening-result") ||
+    pathname.includes("/speaking-result") ||
+    pathname.startsWith("/mock-test/flow");
+};
+
 // Public Sign Up page
 function SignUpPage() {
   const navigate = useNavigate();
@@ -79,25 +91,18 @@ function SignUpPage() {
     const result = await signUp(email, password, fullName);
 
     if (result?.success) {
-      // Get the access mode that was set in useEffect (based on redirect parameter)
-      const accessMode = sessionStorage.getItem('accessMode');
-      const redirectPath = searchParams.get("redirect");
-      const redirectPathname = redirectPath ? redirectPath.split('?')[0] : null;
-  
-      let targetPath = "/dashboard";
-  
-      // Determine target path based on access mode
-      if (accessMode === 'mockTest') {
-        // User is in mock test mode - redirect to mock test platform
-        targetPath = redirectPathname || "/mock-tests";
-      } else {
-        // User is in regular mode - redirect to regular dashboard
-        targetPath = redirectPathname || "/dashboard";
-      }
-  
-      // Ensure accessMode is set (should already be set from useEffect, but double-check)
-      sessionStorage.setItem('accessMode', accessMode || 'regular');
-      
+      const accessMode = sessionStorage.getItem("accessMode");
+      const redirectParam = searchParams.get("redirect");
+      const isValidRedirect =
+        typeof redirectParam === "string" &&
+        redirectParam.startsWith("/") &&
+        !redirectParam.startsWith("//");
+      const defaultPath = accessMode === "mockTest" ? "/mock-tests" : "/dashboard";
+      const pathnameOnly = redirectParam ? redirectParam.split("?")[0] : "";
+      const useRedirectAsIs = isValidRedirect && !isRedirectToHome(pathnameOnly);
+      const targetPath = useRedirectAsIs ? redirectParam : defaultPath;
+
+      sessionStorage.setItem("accessMode", accessMode || "regular");
       toast.success("Account created successfully!");
       navigate(targetPath, { replace: true });
     } else {

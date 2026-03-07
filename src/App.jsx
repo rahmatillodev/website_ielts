@@ -373,9 +373,15 @@ function App() {
               return <Navigate to="/mock-tests" replace />;
             }
             return <Navigate to="/dashboard" replace />;
-          })() : (
-            <Navigate to="/login" replace />
-          )}
+          })() : (() => {
+            const redirectPath = location.pathname + location.search;
+            if (isMockTestRoute(location.pathname)) {
+              sessionStorage.setItem('accessMode', 'mockTest');
+            } else {
+              sessionStorage.setItem('accessMode', 'regular');
+            }
+            return <Navigate to={`/login?redirect=${encodeURIComponent(redirectPath)}`} replace />;
+          })()}
         />
 
       </Routes>

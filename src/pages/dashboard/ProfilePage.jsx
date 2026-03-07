@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HiOutlinePencil } from "react-icons/hi2";
 import { LuUserRound } from "react-icons/lu";
@@ -8,8 +9,8 @@ import { LiaExternalLinkAltSolid } from "react-icons/lia";
 import { Crown, Send, Zap, Paperclip } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useSettingsStore } from "@/store/systemStore";
-import { Link } from "react-router-dom";
 import ProfileModal from "@/components/modal/ProfileModal";
+import ChangePasswordModal from "@/components/modal/ChangePasswordModal";
 import { format, differenceInCalendarDays } from "date-fns";
 // Animation imports
 import { motion } from "framer-motion";
@@ -76,6 +77,7 @@ const inputVariants = {
 
 const ProfilePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [attachment, setAttachment] = useState(null); // Attachment state
@@ -397,10 +399,10 @@ const ProfilePage = () => {
             >
               <motion.div className="space-y-2" variants={inputVariants}>
                 <Label className="text-sm font-black text-gray-400 uppercase tracking-tighter">
-                  First Name
+                  Full Name
                 </Label>
                 <Input
-                  value={firstName}
+                  value={fullName}
                   placeholder="No name"
                   className="bg-gray-50/50 border-gray-100 cursor-default rounded-xl h-12 focus-visible:ring-blue-100"
                   readOnly
@@ -446,15 +448,16 @@ const ProfilePage = () => {
                 </Label>
                 <Input
                   type="number"
-                  min="0"
-                  max="9"
-                  step="0.5"
-                  disabled={true}
+                  // min="0"
+                  // max="9"
+                  // step="0.5"
+                  // disabled={true}
                   value={targetBandScore}
                   onChange={(e) => setTargetBandScore(e.target.value)}
-                  onBlur={(e) => handleTargetScoreChange(e.target.value)}
+                  // onBlur={(e) => handleTargetScoreChange(e.target.value)}
                   placeholder="7.5"
-                  className="bg-white border-gray-200 rounded-xl h-12 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                  readOnly
+                  className="bg-white border-gray-200 rounded-xl h-12 focus-visible:ring-blue-100"
                 />
                 <p className="text-xs text-gray-500">
                   Set your target IELTS band score (0-9)
@@ -462,6 +465,36 @@ const ProfilePage = () => {
               </motion.div>
             </motion.div>
           </div>
+        </motion.div>
+
+        {/* Security / Change Password Card */}
+        <motion.div
+          className="bg-white border border-gray-100 rounded-[24px] p-8 shadow-sm"
+          variants={cardVariants}
+          whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
+        >
+          <h2 className="text-xl font-black text-gray-900 mb-6">
+            Security
+          </h2>
+          <motion.div
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+            variants={itemVariants}
+          >
+            <div>
+              <p className="text-sm font-black text-gray-900">Password</p>
+              <p className="text-sm text-gray-500 font-medium">
+                Change your account password.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsChangePasswordModalOpen(true)}
+              className="rounded-xl border-gray-200 font-semibold shrink-0"
+            >
+              Change Password
+            </Button>
+          </motion.div>
         </motion.div>
 
         {/* Contact Support Card */}
@@ -592,6 +625,7 @@ const ProfilePage = () => {
       </motion.div>
 
       <ProfileModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <ChangePasswordModal open={isChangePasswordModalOpen} onOpenChange={setIsChangePasswordModalOpen} />
     </motion.div>
   );
 };

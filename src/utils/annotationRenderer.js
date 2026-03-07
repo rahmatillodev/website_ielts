@@ -2,37 +2,98 @@
  * Utility functions for rendering highlights and notes in text content
  */
 
+const HIGHLIGHT_COLOR = 'rgb(253, 224, 71)';
+
 /**
- * Apply highlight to a range
- * @param {Range} range - The text range to highlight
+ * Collect all text node segments that intersect the range (without modifying DOM).
+ * @param {Range} range - The selection range
+ * @returns {Array<{ node: Text, startInNode: number, endInNode: number }>}
+ */
+function getTextSegmentsInRange(range) {
+  const segments = [];
+  const startContainer = range.startContainer;
+  const endContainer = range.endContainer;
+  const startOffset = range.startOffset;
+  const endOffset = range.endOffset;
+
+  const root = range.commonAncestorContainer;
+  const walkerRoot = root.nodeType === Node.TEXT_NODE ? root.parentNode : root;
+  const walker = document.createTreeWalker(
+    walkerRoot,
+    NodeFilter.SHOW_TEXT,
+    null
+  );
+
+  let node;
+  while ((node = walker.nextNode())) {
+    if (!range.intersectsNode(node)) continue;
+    const text = node.textContent;
+    const len = text.length;
+    if (len === 0) continue;
+
+    const startInNode = node === startContainer ? startOffset : 0;
+    const endInNode = node === endContainer ? endOffset : len;
+    if (startInNode >= endInNode) continue;
+
+    segments.push({ node, startInNode, endInNode });
+  }
+
+  return segments;
+}
+
+/**
+ * Wrap a single text segment in a <mark> (splitting the text node if needed).
+ * @param {Text} node - Text node (may be split in place)
+ * @param {number} startInNode - Start offset within the node
+ * @param {number} endInNode - End offset within the node
  * @param {string} highlightId - Unique ID for the highlight
  * @returns {HTMLElement} The created mark element
  */
+function wrapTextSegmentInMark(node, startInNode, endInNode, highlightId) {
+  let toWrap = node;
+  if (startInNode > 0) {
+    toWrap = node.splitText(startInNode);
+  }
+  const segmentLength = endInNode - startInNode;
+  if (toWrap.length > segmentLength) {
+    toWrap.splitText(segmentLength);
+  }
+
+  const mark = document.createElement('mark');
+  mark.className = 'annotation-highlight';
+  mark.style.backgroundColor = HIGHLIGHT_COLOR;
+  mark.style.cursor = 'pointer';
+  mark.style.userSelect = 'none';
+  mark.style.webkitUserSelect = 'none';
+  mark.setAttribute('data-highlight-id', highlightId);
+  mark.setAttribute('data-highlight', 'true');
+  mark.setAttribute('draggable', 'false');
+
+  const parent = toWrap.parentNode;
+  parent.insertBefore(mark, toWrap);
+  mark.appendChild(toWrap);
+  return mark;
+}
+
+/**
+ * Apply highlight to a range by wrapping each intersecting text segment in <mark>.
+ * Supports selections spanning multiple DOM nodes and block elements.
+ * @param {Range} range - The text range to highlight
+ * @param {string} highlightId - Unique ID for the highlight
+ * @returns {HTMLElement|null} The first created mark element, or null
+ */
 export const applyHighlight = (range, highlightId) => {
+  if (!range || range.collapsed) return null;
   try {
-    const mark = document.createElement('mark');
-    mark.className = 'bg-yellow-300';
-    mark.setAttribute('data-highlight-id', highlightId);
-    mark.setAttribute('data-highlight', 'true');
-    mark.setAttribute('draggable', 'false');
-    mark.style.cursor = 'pointer';
-    mark.style.userSelect = 'none';
-    mark.style.webkitUserSelect = 'none';
-    
-    // Clone the range to avoid issues
-    const clonedRange = range.cloneRange();
-    
-    try {
-      clonedRange.surroundContents(mark);
-    } catch (e) {
-      // If surroundContents fails (e.g., range spans multiple elements),
-      // use extractContents and append
-      const contents = clonedRange.extractContents();
-      mark.appendChild(contents);
-      clonedRange.insertNode(mark);
+    const segments = getTextSegmentsInRange(range);
+    if (segments.length === 0) return null;
+
+    let firstMark = null;
+    for (const { node, startInNode, endInNode } of segments) {
+      const mark = wrapTextSegmentInMark(node, startInNode, endInNode, highlightId);
+      if (!firstMark) firstMark = mark;
     }
-    
-    return mark;
+    return firstMark;
   } catch (error) {
     console.error('Error applying highlight:', error);
     return null;
@@ -40,32 +101,54 @@ export const applyHighlight = (range, highlightId) => {
 };
 
 /**
- * Apply note to a range
- * @param {Range} range - The text range to note
+ * Wrap a single text segment in a note <span> (splitting the text node if needed).
+ * @param {Text} node - Text node (may be split in place)
+ * @param {number} startInNode - Start offset within the node
+ * @param {number} endInNode - End offset within the node
  * @param {string} noteId - Unique ID for the note
  * @returns {HTMLElement} The created span element
  */
+function wrapTextSegmentInNoteSpan(node, startInNode, endInNode, noteId) {
+  let toWrap = node;
+  if (startInNode > 0) {
+    toWrap = node.splitText(startInNode);
+  }
+  const segmentLength = endInNode - startInNode;
+  if (toWrap.length > segmentLength) {
+    toWrap.splitText(segmentLength);
+  }
+
+  const span = document.createElement('span');
+  span.setAttribute('data-note-id', noteId);
+  span.className = 'annotation-note border-b-2 border-blue-500';
+  span.style.cursor = 'pointer';
+  span.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
+
+  const parent = toWrap.parentNode;
+  parent.insertBefore(span, toWrap);
+  span.appendChild(toWrap);
+  return span;
+}
+
+/**
+ * Apply note to a range by wrapping each intersecting text segment in a <span>.
+ * Supports selections spanning multiple DOM nodes and block elements.
+ * @param {Range} range - The text range to note
+ * @param {string} noteId - Unique ID for the note
+ * @returns {HTMLElement|null} The first created span element, or null
+ */
 export const applyNote = (range, noteId) => {
+  if (!range || range.collapsed) return null;
   try {
-    const span = document.createElement('span');
-    span.setAttribute('data-note-id', noteId);
-    span.className = 'border-b-2 border-blue-500';
-    span.style.cursor = 'pointer';
-    span.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
-    
-    // Clone the range to avoid issues
-    const clonedRange = range.cloneRange();
-    
-    try {
-      clonedRange.surroundContents(span);
-    } catch (e) {
-      // If surroundContents fails, use extractContents and append
-      const contents = clonedRange.extractContents();
-      span.appendChild(contents);
-      clonedRange.insertNode(span);
+    const segments = getTextSegmentsInRange(range);
+    if (segments.length === 0) return null;
+
+    let firstSpan = null;
+    for (const { node, startInNode, endInNode } of segments) {
+      const span = wrapTextSegmentInNoteSpan(node, startInNode, endInNode, noteId);
+      if (!firstSpan) firstSpan = span;
     }
-    
-    return span;
+    return firstSpan;
   } catch (error) {
     console.error('Error applying note:', error);
     return null;
@@ -89,37 +172,39 @@ export const applyVisualAnnotation = (range, id, type) => {
 };
 
 /**
- * Remove highlight by ID
+ * Remove highlight by ID. Unwraps all <mark> elements with this data-highlight-id
+ * (one highlight can span multiple marks when it crosses block boundaries).
  * @param {string} highlightId - The highlight ID to remove
  */
 export const removeHighlight = (highlightId) => {
-  const mark = document.querySelector(`[data-highlight-id="${highlightId}"]`);
-  if (mark) {
+  const marks = document.querySelectorAll(`[data-highlight-id="${highlightId}"]`);
+  marks.forEach((mark) => {
     const parent = mark.parentNode;
+    if (!parent) return;
     while (mark.firstChild) {
       parent.insertBefore(mark.firstChild, mark);
     }
     parent.removeChild(mark);
-    // Normalize to merge adjacent text nodes
     parent.normalize();
-  }
+  });
 };
 
 /**
- * Remove note by ID
+ * Remove note by ID. Unwraps all elements with this data-note-id
+ * (one note can span multiple spans when it crosses block boundaries).
  * @param {string} noteId - The note ID to remove
  */
 export const removeNote = (noteId) => {
-  const span = document.querySelector(`[data-note-id="${noteId}"]`);
-  if (span) {
+  const spans = document.querySelectorAll(`[data-note-id="${noteId}"]`);
+  spans.forEach((span) => {
     const parent = span.parentNode;
+    if (!parent) return;
     while (span.firstChild) {
       parent.insertBefore(span.firstChild, span);
     }
     parent.removeChild(span);
-    // Normalize to merge adjacent text nodes
     parent.normalize();
-  }
+  });
 };
 
 /**
