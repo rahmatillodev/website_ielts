@@ -120,6 +120,12 @@ function App() {
       return;
     }
 
+    // Mock test routes: always set mockTest first so nothing can overwrite it
+    if (isMockTestRoute(location.pathname)) {
+      sessionStorage.setItem('accessMode', 'mockTest');
+      return;
+    }
+
     // Landing page (/) - always set to regular
     if (location.pathname === '/' ||  location.pathname === '/dashboard') {
       if (!user) {
@@ -367,7 +373,27 @@ function App() {
         <Route
           path="*"
           element={user ? (() => {
-            // Check access mode to determine where to redirect
+            const pathname = location.pathname;
+            const searchParams = new URLSearchParams(location.search);
+
+            // Just logged in: we're still on /login or /signup with redirect param — use it so we don't rely on sessionStorage timing
+            if (pathname === '/login' || pathname === '/signup') {
+              const redirectParam = searchParams.get('redirect');
+              const isValidRedirect =
+                typeof redirectParam === 'string' &&
+                redirectParam.startsWith('/') &&
+                !redirectParam.startsWith('//');
+              if (redirectParam && isValidRedirect) {
+                const redirectPathname = redirectParam.split('?')[0];
+                const mode = isMockTestRoute(redirectPathname) ? 'mockTest' : 'regular';
+                sessionStorage.setItem('accessMode', mode);
+                // Normalize /mock-test to /mock-tests (no exact route for /mock-test)
+                const target = redirectPathname === '/mock-test' ? '/mock-tests' : redirectParam;
+                return <Navigate to={target} replace />;
+              }
+            }
+
+            // Unmatched path while logged in: use access mode (e.g. /mock-test → /mock-tests)
             const accessMode = sessionStorage.getItem('accessMode');
             if (accessMode === 'mockTest') {
               return <Navigate to="/mock-tests" replace />;

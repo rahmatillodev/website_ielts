@@ -22,15 +22,9 @@ export const useAuthStore = create(
         // 1. Joriy sessiyani tekshirish
         const { data: { session } } = await supabase.auth.getSession();
 
-
-        // 2. Sessiyani yangilash (kickstart)
-        const { data: refreshData } = await supabase.auth.refreshSession();
-
-        const activeSession = refreshData?.session || session;
-
-        if (activeSession?.user) {
-          set({ authUser: activeSession.user });
-          await get().fetchUserProfile(activeSession.user.id, false);
+        if (session?.user) {
+          set({ authUser: session.user });
+          await get().fetchUserProfile(session.user.id, false);
         } else {
           await supabase.auth.signOut();
           get().clearUserLocalData();
