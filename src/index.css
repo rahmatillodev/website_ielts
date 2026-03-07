@@ -308,6 +308,11 @@ textarea {
   will-change: transform;
 }
 
+/* Highlight annotation: inline text background only (multi-node safe) */
+mark.annotation-highlight {
+  background-color: rgb(253, 224, 71);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -3,6 +3,7 @@ import { FaTrash, FaStickyNote } from 'react-icons/fa';
 import { X } from "lucide-react";
 import { useAnnotation } from '@/contexts/AnnotationContext';
 import { useAppearance } from '@/contexts/AppearanceContext';
+import { removeNote as removeNoteFromDOM } from '@/utils/annotationRenderer';
 
 import {
   Sheet,
@@ -32,16 +33,7 @@ const NoteSidebar = () => {
 
   const handleDeleteNote = (noteId) => {
     deleteNote(noteId);
-    // Remove the note marker from DOM
-    const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
-    if (noteElement) {
-      const parent = noteElement.parentNode;
-      while (noteElement.firstChild) {
-        parent.insertBefore(noteElement.firstChild, noteElement);
-      }
-      parent.removeChild(noteElement);
-      parent.normalize();
-    }
+    removeNoteFromDOM(noteId);
   };
 
   return (

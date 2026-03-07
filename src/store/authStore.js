@@ -132,7 +132,7 @@ export const useAuthStore = create(
         set({ loading: true, error: null });
         try {
           // Normalize email to lowercase for consistent matching
-          const normalizedEmail = email.trim().toLowerCase();
+          const normalizedEmail = email;
 
           const { data, error } = await supabase.auth.signInWithPassword({
             email: normalizedEmail,
@@ -156,7 +156,7 @@ export const useAuthStore = create(
             console.log('[signIn] Checking ALL bookings with this email (for debugging)...');
             const { data: allBookings, error: allBookingsError } = await supabase
               .from('mock_test_clients')
-              .select('id, email, user_id, full_name, created_at')
+              .select('id, email, user_id, full_name, created_at, phone_number')
               .ilike('email', normalizedEmail);
 
             console.log('[signIn] All bookings query error:', allBookingsError);
@@ -202,7 +202,7 @@ export const useAuthStore = create(
                 })
                 .ilike('email', normalizedEmail)
                 .is('user_id', null)
-                .select('id, email, user_id');
+                .select('id, email, user_id, phone_number');
 
               console.log('[signIn] Update query error:', updateError);
               console.log('[signIn] Updated bookings:', updatedBookings);
@@ -213,6 +213,19 @@ export const useAuthStore = create(
                 console.error("[signIn] Update error details:", JSON.stringify(updateError, null, 2));
               } else if (updatedBookings && updatedBookings.length > 0) {
                 console.log(`[signIn] ✅ Successfully linked ${updatedBookings.length} mock test booking(s) to user`);
+                // Sync phone_number from mock_test_clients to users table
+                const phoneFromBooking = updatedBookings.map((b) => b?.phone_number).find(Boolean);
+                if (phoneFromBooking) {
+                  const { error: phoneUpdateError } = await supabase
+                    .from('users')
+                    .update({ phone_number: phoneFromBooking })
+                    .eq('id', data.user.id);
+                  if (phoneUpdateError) {
+                    console.error("[signIn] Error syncing phone_number to users:", phoneUpdateError);
+                  } else {
+                    console.log("[signIn] ✅ Synced phone_number from mock_test_clients to users");
+                  }
+                }
               } else {
                 console.warn("[signIn] ⚠️ Update query returned empty array - no bookings were updated");
               }
@@ -244,7 +257,7 @@ export const useAuthStore = create(
       signUp: async (email, password, username) => {
         set({ loading: true, error: null });
         try {
-          const normalizedEmail = email.trim().toLowerCase();
+          const normalizedEmail = email;
           
           // 1. Foydalanuvchini yaratish
           const { data, error } = await supabase.auth.signUp({ 
@@ -269,17 +282,72 @@ export const useAuthStore = create(
             })
             .eq('email', normalizedEmail) // Faqat shu emailga tegishli qatorlar
             .is('user_id', null)          // Faqat hali bog'lanmaganlar
-            .select();                    // Natijani qaytarish (tekshirish uchun)
+            .select();                    // Natijani qaytarish (phone_number bilan users jadvaliga yozish uchun)
       
           if (linkError) {
             console.error("Linking error:", linkError.message);
           } else if (updatedRecords?.length > 0) {
             console.log(`✅ ${updatedRecords.length} ta booking profilingizga biriktirildi.`);
+            // Sync phone_number from mock_test_clients to users table
+            const phoneFromBooking = updatedRecords.map((r) => r?.phone_number).find(Boolean) || null;
+            const telegramChatId = updatedRecords.map((r) => r?.telegram_chat_id).find(Boolean) || null;
+            const telegramUsername = updatedRecords.map((r) => r?.telegram_username).find(Boolean) || null;
+              const { error: updateError } = await supabase
+                .from('users')
+                .update({ phone_number: phoneFromBooking , telegram_chat_id: telegramChatId , telegram_username: telegramUsername })
+                .eq('id', newUser.id);
+              if (updateError) {
+                console.error("Error syncing data to users:", updateError.message);
+              } else {
+                console.log("✅ ma'lumotlar mock_test_clients dan users jadvaliga qo'shildi."); 
+            }
           }
       
           // 3. Profil ma'lumotlarini yuklash
           await get().fetchUserProfile(newUser.id, false);
           
+          set({ loading: false });
+          return { success: true };
+        } catch (error) {
+          set({ error: error.message, loading: false });
+          return { success: false, error: error.message };
+        }
+      },
+
+      resetPasswordForEmail: async (email) => {
+        set({ loading: true, error: null });
+        try {
+          const normalizedEmail = email;
+          const redirectTo = `${typeof window !== 'undefined' ? window.location.origin : ''}/reset-password`;
+          const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+            redirectTo,
+          });
+          if (error) throw error;
+          set({ loading: false });
+          return { success: true };
+        } catch (error) {
+          set({ error: error.message, loading: false });
+          return { success: false, error: error.message };
+        }
+      },
+
+      changePassword: async (currentPassword, newPassword) => {
+        const email = get().authUser?.email;
+        if (!email) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        set({ loading: true, error: null });
+        try {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: currentPassword,
+          });
+          if (signInError) {
+            set({ loading: false });
+            return { success: false, error: signInError.message };
+          }
+          const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+          if (updateError) throw updateError;
           set({ loading: false });
           return { success: true };
         } catch (error) {
@@ -337,7 +405,7 @@ export const useAuthStore = create(
           const keysToRemove = [];
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && (key.startsWith('reading_') || key.startsWith('listening_') || key.includes('practice_'))) {
+            if (key && (key.startsWith('reading_') || key.startsWith('listening_') || key.includes('practice_') || key.includes('mock_test_'))) {
               keysToRemove.push(key);
             }
           }

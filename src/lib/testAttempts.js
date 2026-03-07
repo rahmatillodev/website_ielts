@@ -30,12 +30,26 @@ const getUserIdFromLocalStorage = () => {
  * @param {string} type - 'listening' | 'reading'
  * @param {object|null} mockTestContext - If in mock test: { mockTestId, mockClientId, section }. mockTestId is stored in user_attempts.mock_id
  */
+const VALID_ATTEMPT_TYPES = ['listening', 'reading'];
+
 export const submitTestAttempt = async (testId, answers, currentTest, timeTaken = null, type, mockTestContext = null) => {
   try {
-    // Get user id from localStorage
+    // --- Validation: never persist invalid state to Supabase ---
     const authenticatedUserId = getUserIdFromLocalStorage();
     if (!authenticatedUserId) {
       throw new Error('User not authenticated');
+    }
+    if (!testId || typeof testId !== 'string') {
+      throw new Error('Test ID is required');
+    }
+    if (!VALID_ATTEMPT_TYPES.includes(type)) {
+      throw new Error(`Invalid attempt type: ${type}`);
+    }
+    if (!currentTest || typeof currentTest !== 'object') {
+      throw new Error('Test data is required');
+    }
+    if (mockTestContext != null && (typeof mockTestContext !== 'object' || !mockTestContext.mockTestId)) {
+      throw new Error('Mock test context requires mockTestId');
     }
 
     // Fetch test with correct answers to ensure we have correct_answer data for scoring
@@ -106,7 +120,11 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
         .from('user_answers')
         .insert(answersToInsert);
 
-      if (answersError) throw answersError;
+      if (answersError) {
+        // Rollback: remove the attempt so we never persist partial data
+        await supabase.from('user_attempts').delete().eq('id', attemptId);
+        throw answersError;
+      }
     }
 
     return {
@@ -164,6 +182,46 @@ export const fetchAttemptAnswers = async (attemptId) => {
   }
 };
 
+/**
+ * Fetch a single attempt by ID. Restricted to current user for security.
+ * @param {string|number} attemptId - The user_attempts.id
+ * @returns {Promise<{success: boolean, attempt?: object, error?: string}>}
+ */
+export const fetchAttemptById = async (attemptId) => {
+  try {
+    const userId = getUserIdFromLocalStorage();
+    if (!userId) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
+    }
+    const { data, error } = await supabase
+      .from('user_attempts')
+      .select('id, user_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
+      .eq('id', attemptId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      return {
+        success: true,
+        attempt: null,
+      };
+    }
+    return {
+      success: true,
+      attempt: data,
+    };
+  } catch (error) {
+    console.error('Error fetching attempt by ID:', error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
 
 export const fetchLatestAttempt = async (userId, testId) => {
   try {

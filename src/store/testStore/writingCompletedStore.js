@@ -32,13 +32,19 @@ export const useWritingCompletedStore = create((set) => ({
     set({ loading: true, error: null });
 
     try {
+      // --- Validation: never persist invalid state to Supabase ---
       const userId = getUserIdFromLocalStorage();
       if (!userId) {
         throw new Error('User not authenticated');
       }
-
-      if (!writingId) {
+      if (!writingId || typeof writingId !== 'string') {
         throw new Error('Writing ID is required');
+      }
+      if (answers == null || typeof answers !== 'object') {
+        throw new Error('Answers are required');
+      }
+      if (mockTestId != null && (typeof mockTestId !== 'string' || !mockTestId.trim())) {
+        throw new Error('Mock test ID must be a non-empty string when provided');
       }
 
       // Store time_taken in seconds (minimum 1 second)
@@ -159,7 +165,7 @@ export const useWritingCompletedStore = create((set) => ({
           user_answer: answer.trim(),
           is_correct: false, // Always false for writing
           correct_answer: '', // Empty for writing
-          question_type: 'speaking', // As specified by user
+          question_type: 'writing', // As specified by user
           question_number: taskNameToQuestionNumber[taskName] ?? null,
         }));
 
@@ -169,6 +175,8 @@ export const useWritingCompletedStore = create((set) => ({
           .insert(answersToInsert);
 
         if (answersError) {
+          // Rollback: remove the attempt so we never persist partial data
+          await supabase.from('user_attempts').delete().eq('id', attemptId);
           throw new Error(`Failed to save user answers: ${answersError.message}`);
         }
       }

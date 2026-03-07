@@ -4,7 +4,7 @@ import { useWritingStore } from "@/store/testStore/writingStore";
 
 const WritingPage = () => {
 
-  const { writings, loading, fetchWritings } = useWritingStore();
+  const { writings, loadingWritings: loading, fetchWritings } = useWritingStore();
 
   useEffect(() => {
     fetchWritings();

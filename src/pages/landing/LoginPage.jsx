@@ -17,6 +17,18 @@ const isMockTestRoute = (path) => {
          path === "/mock";
 }
 
+// Practice/result/flow URLs: redirect to dashboard or mock-tests home instead of exact URL
+const isRedirectToHome = (pathname) => {
+  return pathname.includes("/reading-practice") ||
+    pathname.includes("/listening-practice") ||
+    pathname.includes("/writing-practice") ||
+    pathname.includes("/speaking-practice") ||
+    pathname.includes("/reading-result") ||
+    pathname.includes("/listening-result") ||
+    pathname.includes("/speaking-result") ||
+    pathname.startsWith("/mock-test/flow");
+};
+
 // Public Login page
 function LoginPage() {
   const navigate = useNavigate();
@@ -85,27 +97,25 @@ function LoginPage() {
     const result = await signIn(email, password);
 
     if (result?.success) {
-      // Get the access mode that was set in useEffect (based on redirect parameter)
       const accessMode = sessionStorage.getItem('accessMode');
-      const redirectPath = searchParams.get("redirect");
-      const redirectPathname = redirectPath ? redirectPath.split('?')[0] : null;
-    
-      let targetPath = "/dashboard";
-    
-      // Determine target path based on access mode
-      if (accessMode === 'mockTest') {
-        // User is in mock test mode - redirect to mock test platform
-        targetPath = redirectPathname || "/mock-tests";
-      } else {
-        // User is in regular mode - redirect to regular dashboard
-        targetPath = redirectPathname || "/dashboard";
-      }
-      
-      // Ensure accessMode is set (should already be set from useEffect, but double-check)
-      sessionStorage.setItem('accessMode', accessMode || 'regular');
-      
+      const redirectParam = searchParams.get("redirect");
+      const isValidRedirect =
+        typeof redirectParam === "string" &&
+        redirectParam.startsWith("/") &&
+        !redirectParam.startsWith("//");
+      const defaultPath = accessMode === "mockTest" ? "/mock-tests" : "/dashboard";
+      const pathnameOnly = redirectParam ? redirectParam.split("?")[0] : "";
+      const useRedirectAsIs = isValidRedirect && !isRedirectToHome(pathnameOnly);
+      const targetPath = useRedirectAsIs ? redirectParam : defaultPath;
+
+      sessionStorage.setItem("accessMode", accessMode || "regular");
       toast.success("Welcome back!");
       navigate(targetPath, { replace: true });
+    } else {
+      const message = result?.error?.toLowerCase().includes('invalid login credentials')
+        ? "Invalid email or password"
+        : (result?.error || "Sign in failed");
+      toast.error(message);
     }
   };
 
@@ -195,9 +205,17 @@ function LoginPage() {
 
               {/* Password */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Password
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-[#136dec] hover:text-[#136dec]/90 font-medium"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input

@@ -502,9 +502,9 @@ const ListeningPracticePageContent = () => {
             
             // Only navigate if handleSubmitTest didn't already navigate (for non-mock tests)
             // For mock tests, handleSubmitTest already navigates, so this is just a safety check
-            if (currentIsMockTest && mockTestId) {
-              // In mock test mode, handleSubmitTest should have already navigated
-              // But if it didn't (edge case), navigate here as fallback
+            if (currentIsMockTest && mockTestId && result.attemptId != null) {
+              // In mock test mode, handleSubmitTest should have already set completion
+              // Fallback: set completion only when we have a valid saved attempt
               const completionKey = `mock_test_${mockTestId}_listening_completed`;
               const isCompleted = localStorage.getItem(completionKey) === 'true';
               if (!isCompleted) {
@@ -526,13 +526,13 @@ const ListeningPracticePageContent = () => {
                 completionSet: localStorage.getItem(completionKey) === 'true'
               });
               navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
-            } else if (!currentIsMockTest && id) {
+            } else if (!currentIsMockTest && result.attemptId) {
               console.log('[ListeningPracticePage] Navigating to result page (non-mock test)', {
-                effectiveTestId,
+                attemptId: result.attemptId,
                 result: result.success,
                 isMockTest: currentIsMockTest
               });
-              navigate(`/listening-result/${id}`);
+              navigate(`/listening-result/${result.attemptId}`);
             } else {
               console.log('[ListeningPracticePage] Auto-submit successful but skipping navigation', {
                 isMockTest: currentIsMockTest,
@@ -798,7 +798,8 @@ const ListeningPracticePageContent = () => {
       // Submit test attempt to backend
       const result = await submitTestAttempt(effectiveTestId, answers, currentTest, timeTaken, 'listening', mockTestContext);
 
-      if (result.success) {
+      // Only set completion / navigate when submit truly succeeded and we have attemptId (data saved to Supabase)
+      if (result.success && result.attemptId != null) {
         // Clear audio position and practice data on successful submission
         if (effectiveTestId) {
           clearAudioPosition(effectiveTestId);
@@ -808,7 +809,7 @@ const ListeningPracticePageContent = () => {
           }
         }
 
-        // If mock test, trigger completion callback via localStorage
+        // If mock test, trigger completion callback via localStorage (only when data is saved)
         if (isMockTest && mockTestId) {
           const completionKey = `mock_test_${mockTestId}_listening_completed`;
           const resultKey = `mock_test_${mockTestId}_listening_result`;
@@ -821,9 +822,8 @@ const ListeningPracticePageContent = () => {
           };
           localStorage.setItem(completionKey, 'true');
           localStorage.setItem(resultKey, JSON.stringify(resultData));
-          
+
           // Navigate back to MockTestFlow so it can detect completion and move to next section
-          // This ensures the flow continues even after refresh
           navigate(`/mock-test/flow/${mockTestId}`, { replace: true });
         }
 
@@ -1359,13 +1359,14 @@ const ListeningPracticePageContent = () => {
 
       {!isSubmitting ? (
         <div
-          className="flex flex-1 overflow-hidden p-3 transition-all duration-300"
+          className="flex flex-1 overflow-hidden p-3 transition-all duration-300 flex-col"
           ref={containerRef}
           style={{
             maxWidth: '100%',
           }}
         >
-          <div ref={universalContentRef} className="flex flex-1 overflow-hidden w-full">
+        
+          <div ref={universalContentRef} className="flex flex-1 overflow-hidden w-full min-h-0">
             {/* ===== Error Panel ===== */}
             {fetchError ? (
               <div
@@ -1513,14 +1514,14 @@ const ListeningPracticePageContent = () => {
                 {questionGroups && questionGroups.length > 0 ? (
                   <div
                     ref={questionsContainerRef}
-                    className="space-y-8 overflow-y-auto border rounded-2xl"
+                    className="space-y-8 overflow-y-auto"
                     data-part-id={currentPart}
                     data-section="questions"
                     data-section-type="questions"
                     style={{
                       width: status === 'reviewing' ? `${100 - leftWidth}%` : '100%',
                       backgroundColor: themeColors.background,
-                      borderColor: themeColors.border,
+                      // borderColor: themeColors.border,
                       transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
                     }}
                   >
@@ -1552,8 +1553,8 @@ const ListeningPracticePageContent = () => {
                             }
                             if (timeRemaining > 0 && status === 'taking') {
                               handleSubmitTest().then((result) => {
-                                if (result.success) {
-                                  navigate(`/listening-result/${id}`);
+                                if (result?.success && result?.attemptId) {
+                                  navigate(`/listening-result/${result.attemptId}`);
                                 }
                               });
                             }
@@ -1768,13 +1769,17 @@ const ListeningPracticePageContent = () => {
         getAllQuestions={getAllQuestions}
         bookmarks={bookmarks}
         isSubmitting={isSubmitting}
+        timeRemaining={timeRemaining}
+        isListening={true}
+        volume={volume}
+        onVolumeChange={setVolume}
       />
 
       <FinishModal
         loading={isSubmitting}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        link={`/listening-result/${effectiveTestId || id}`}
+        resultPath="/listening-result"
         testId={effectiveTestId || id}
         onSubmit={handleSubmitTest}
         isMockTest={isMockTest}

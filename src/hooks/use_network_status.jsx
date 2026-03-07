@@ -1,70 +1,90 @@
 'use client';
-import { useSyncExternalStore, useEffect, useState } from "react";
+import { useSyncExternalStore, useEffect, useState, useCallback } from "react";
 
-/// custom hook that returns boolean by checking connection of user. I used useSyncExternalStore react hook for this
-function useNetworkStatus() {
-    // Start optimistically as online to avoid false positives on initial load
-    const [isOnline, setIsOnline] = useState(true);
-
-    // Use useSyncExternalStore for reactive updates from navigator
-    const navigatorOnline = useSyncExternalStore(
-
-        /// subscribing for changes
-        (cb) => {
-            // rendering when user is connected to internet
-            window.addEventListener('online', cb);
-
-            // rendering when user is disconnected from internet
-            window.addEventListener('offline', cb);
-
-            // disposing for fix memory-leak
-            return () => {
-                window.removeEventListener("online", cb);
-                window.removeEventListener("offline", cb);
-            };
-        },
-
-        // returns the result. true/false.
-        () => navigator.onLine,
-
-        // for SSR - default to online
-        () => true
-    );
-
-    // Update state when navigator status changes
-    useEffect(() => {
-        // If navigator says online, trust it immediately
-        if (navigatorOnline) {
-            setIsOnline(true);
-        } else {
-            // If navigator says offline, verify with actual network request
-            // This prevents false positives where navigator.onLine is incorrect
-            const verifyOffline = async () => {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 2000);
-                    
-                    await fetch('https://www.google.com/favicon.ico?' + Date.now(), {
-                        method: 'HEAD',
-                        mode: 'no-cors',
-                        signal: controller.signal,
-                        cache: 'no-cache'
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    // If fetch succeeds, we're actually online despite navigator saying offline
-                    setIsOnline(true);
-                } catch (error) {
-                    // If fetch fails, we're truly offline
-                    setIsOnline(false);
-                }
-            };
-            
-            verifyOffline();
-        }
-    }, [navigatorOnline]);
-
-    return isOnline;
+/**
+ * Derives speed tier from Network Information API when available.
+ * @returns {'slow' | 'normal' | 'fast'}
+ */
+function getSpeedFromConnection() {
+  if (typeof navigator === 'undefined' || !navigator.connection) {
+    return 'normal';
+  }
+  const conn = navigator.connection;
+  // effectiveType: '4g' | '3g' | '2g' | 'slow-2g'
+  const effectiveType = conn.effectiveType;
+  if (effectiveType === '4g') return 'fast';
+  if (effectiveType === '3g') return 'normal';
+  if (effectiveType === '2g' || effectiveType === 'slow-2g') return 'slow';
+  // Fallback: use downlink (Mbps) if available
+  const downlink = conn.downlink;
+  if (typeof downlink === 'number') {
+    if (downlink >= 5) return 'fast';
+    if (downlink >= 1) return 'normal';
+    return 'slow';
+  }
+  return 'normal';
 }
 
-export default useNetworkStatus
+/**
+ * Custom hook that returns online status and connection speed.
+ * - isOnline: true when there is internet, false when offline.
+ * - speed: 'slow' | 'normal' | 'fast' (only meaningful when isOnline; when offline can be ignored).
+ */
+function useNetworkStatus() {
+  const [isOnline, setIsOnline] = useState(true);
+  const [speed, setSpeed] = useState('normal');
+
+  const updateSpeed = useCallback(() => {
+    setSpeed(getSpeedFromConnection());
+  }, []);
+
+  const navigatorOnline = useSyncExternalStore(
+    (cb) => {
+      window.addEventListener('online', cb);
+      window.addEventListener('offline', cb);
+      const conn = typeof navigator !== 'undefined' && navigator.connection;
+      if (conn && typeof conn.addEventListener === 'function') {
+        conn.addEventListener('change', cb);
+      }
+      return () => {
+        window.removeEventListener("online", cb);
+        window.removeEventListener("offline", cb);
+        if (conn && typeof conn.removeEventListener === 'function') {
+          conn.removeEventListener('change', cb);
+        }
+      };
+    },
+    () => navigator.onLine,
+    () => true
+  );
+
+  useEffect(() => {
+    if (navigatorOnline) {
+      setIsOnline(true);
+      updateSpeed();
+    } else {
+      const verifyOffline = async () => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          await fetch('https://www.google.com/favicon.ico?' + Date.now(), {
+            method: 'HEAD',
+            mode: 'no-cors',
+            signal: controller.signal,
+            cache: 'no-cache'
+          });
+          clearTimeout(timeoutId);
+          setIsOnline(true);
+          updateSpeed();
+        } catch (error) {
+          setIsOnline(false);
+        }
+      };
+      verifyOffline();
+    }
+  }, [navigatorOnline, updateSpeed]);
+
+  return { isOnline, speed };
+}
+
+export default useNetworkStatus;
