@@ -161,6 +161,31 @@ localStorage.setItem(`mock_test_${mockTestId}_listening_result`, JSON.stringify(
 }));
 ```
 
+#### WritingPracticePage (Mock Test)
+**File**: `src/pages/dashboard/writing/WritingPracticePage.jsx`
+
+**Writing flow in mock test**:
+
+1. **Enter practice page → timer auto-starts**
+   - After the writing intro video, `MockTestWriting` navigates to `/writing-practice/${writingId}?mockTest=true&mockTestId=...&mockClientId=...&duration=3600`.
+   - On first entry (no saved section data), the page **does not** load any previous attempt. It initializes empty answers, sets `isPracticeMode = true`, `isStarted = true`, `timeRemaining = duration` (e.g. 3600s), and `startTime = Date.now()`, so the countdown starts immediately.
+   - On refresh, progress is restored from `loadSectionData(mockTestId, 'writing')` and the timer resumes.
+
+2. **Ready for the user: samples and feedback not released**
+   - In mock test mode the right panel always shows the **textarea** for writing (never the sample answer). Feedback and sample are not shown (`!isMockTest` guards feedback; `(isPracticeMode || isMockTest)` ensures the input area is shown).
+
+3. **Footer “Finish Writing” → save → mock result**
+   - The footer shows a **Finish Writing** button when `isPracticeMode && status === 'taking' && !isAutoSubmitting`.
+   - On click: `handleFinish` opens the finish modal; on confirm, `handleSubmitFinish` runs:
+     - Calls `submitWritingAttempt(writingId, answers, timeTaken, mockTestId)` to save to the DB.
+     - On success: sets `mock_test_${mockTestId}_writing_completed` and `mock_test_${mockTestId}_writing_result` in localStorage, then `navigate(\`/mock-test/flow/${mockTestId}\`, { replace: true })`.
+   - `MockTestWriting` (still in the flow) polls the completion signal, calls `onComplete(result)`, and `MockTestFlow.handleWritingComplete` updates `sectionResults.writing`, sets `currentSection = 'results'`, and clears mock test storage. The user sees **MockTestResults**.
+
+**Mock test restrictions (writing)**:
+- Back button triggers exit modal (no direct back).
+- Fullscreen and security hooks active.
+- No “Try practice” step: page enters in practice mode with timer running.
+
 ---
 
 ### 6. Data Submission

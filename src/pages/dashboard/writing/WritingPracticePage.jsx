@@ -381,42 +381,17 @@ const WritingPracticePageContent = () => {
           setIsSaving(false);
           mockTestInitializedRef.current = true;
         } else {
-          // First time entering this writing in mock test: show Try practice and load from DB if user has a previous attempt
+          // First time entering this writing in mock test: always start fresh (no samples, no feedback, timer auto-starts)
+          // Do NOT load previous attempt — mock test must be ready for the user with countdown only
           const init = {};
           tasks.forEach((t) => (init[t.task_name] = ""));
-          (async () => {
-            try {
-              const result = await getLatestWritingAttempt(id);
-              if (result?.success && result?.attempt && result?.answers && Object.keys(result.answers).length > 0) {
-                const taskNames = tasks.map((t) => t.task_name);
-                const filtered = {};
-                taskNames.forEach((name) => {
-                  filtered[name] = result.answers[name] ?? "";
-                });
-                setAnswers(filtered);
-                setStatus('reviewing');
-                const firstWithAnswer = tasks.find((t) => result.answers[t.task_name]);
-                setCurrentTaskType(firstWithAnswer ? firstWithAnswer.task_name : (tasks.find((t) => t.task_name === "Task 1") || tasks[0]).task_name);
-                setIsPracticeMode(false);
-                setIsStarted(false);
-              } else {
-                setAnswers(init);
-                setIsPracticeMode(true);
-                setIsStarted(true);
-                setTimeRemaining(durationInSeconds);
-                setElapsedTime(0);
-                setStartTime(Date.now());
-              }
-            } catch {
-              setAnswers(init);
-              setIsPracticeMode(true);
-              setIsStarted(true);
-              setTimeRemaining(durationInSeconds);
-              setElapsedTime(0);
-              setStartTime(Date.now());
-            }
-            mockTestInitializedRef.current = true;
-          })();
+          setAnswers(init);
+          setIsPracticeMode(true);
+          setIsStarted(true);
+          setTimeRemaining(durationInSeconds);
+          setElapsedTime(0);
+          setStartTime(Date.now());
+          mockTestInitializedRef.current = true;
         }
       }
 
@@ -1555,8 +1530,8 @@ const WritingPracticePageContent = () => {
               </div>
             ) : (
               <>
-                {isPracticeMode ? (
-                  // Practice mode: show textarea for user input
+                {(isPracticeMode || isMockTest) ? (
+                  // Practice mode (or mock test): show textarea; never show sample/feedback in mock test
                   <>
                     <textarea
                       spellCheck="false"
@@ -1573,7 +1548,7 @@ const WritingPracticePageContent = () => {
                     />
 
                   </>
-                ) : status === 'reviewing' ? (
+                ) : !isMockTest && status === 'reviewing' ? (
                   // Review mode: show user's saved answer from user_answers table
                   <div className="flex-1 p-8 overflow-y-auto">
                     {isLoadingReview ? (
@@ -1622,7 +1597,7 @@ const WritingPracticePageContent = () => {
                   }}
                 >
                   <span>WORD COUNT: {
-                    isPracticeMode
+                    (isPracticeMode || isMockTest)
                       ? countWords(answers[effectiveTaskType] || "")
                       : status === 'reviewing'
                         ? countWords(answers[effectiveTaskType] || "")
