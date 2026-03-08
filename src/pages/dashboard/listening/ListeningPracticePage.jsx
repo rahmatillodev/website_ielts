@@ -1545,12 +1545,14 @@ const ListeningPracticePageContent = () => {
                             }
                           } : undefined}
                           onAudioEnded={status === 'taking' ? () => {
-                            if (id) {
-                              clearAudioPosition(id);
+                            if (effectiveTestId || id) {
+                              clearAudioPosition(effectiveTestId || id);
                               if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
                                 audioPlayerRef.current.clearPosition();
                               }
                             }
+                            // Mock test: submit only when 40-min timer expires, not when audio ends
+                            if (isMockTest) return;
                             if (timeRemaining > 0 && status === 'taking') {
                               handleSubmitTest().then((result) => {
                                 if (result?.success && result?.attemptId) {

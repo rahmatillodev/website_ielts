@@ -266,17 +266,17 @@ export const useAuthStore = create(
       
           set({ authUser: newUser });
       
-          // 2. FAQAT ushbu foydalanuvchiga tegishli bookinglarni bog'lash
-          // RLS yuqoridagi qoidaga ko'ra begonalar emailini yangilashga yo'l qo'ymaydi
+          // 2. Link mock_test_clients rows for this email (same as signIn: case-insensitive match)
+          // RLS must allow UPDATE on rows where user_id is null and email matches auth user (see docs).
           const { data: updatedRecords, error: linkError } = await supabase
             .from('mock_test_clients')
-            .update({ 
+            .update({
               user_id: newUser.id,
               updated_at: new Date().toISOString()
             })
-            .eq('email', normalizedEmail) // Faqat shu emailga tegishli qatorlar
-            .is('user_id', null)          // Faqat hali bog'lanmaganlar
-            .select();                    // Natijani qaytarish (phone_number bilan users jadvaliga yozish uchun)
+            .ilike('email', normalizedEmail)  // Case-insensitive, same as signIn
+            .is('user_id', null)
+            .select();
       
           if (linkError) {
             console.error("Linking error:", linkError.message);

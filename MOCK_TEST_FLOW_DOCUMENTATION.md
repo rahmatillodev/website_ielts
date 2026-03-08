@@ -130,12 +130,13 @@ const mockClientId = searchParams.get('mockClientId') || urlSearchParams.get('mo
 2. Timer countdown interval:
    - Runs when: `isStarted === true && !isPaused && hasInteracted === true && timeRemaining !== null`
    - Decrements `timeRemaining` every 1000ms
-   - Auto-submits when `timeRemaining === 0`
+   - Auto-submits when `timeRemaining === 0` (after 40 minutes). In mock test, submission is **not** triggered when the audio ends—only when the timer reaches zero.
 
 **Mock Test Restrictions**:
 - Back button hidden: `onBack={isMockTest ? undefined : handleBack}`
 - Sidebar hidden: `{!isMockTest && <NoteSidebar />}`
 - Start/Pause buttons hidden in `QuestionHeader` when `isMockTest === true`
+- **Auto-submit on time only**: In mock test, `onAudioEnded` does not trigger submission; only the 40-minute timer expiry triggers auto-submit.
 
 **Submission (Mock Test)**:
 ```javascript
