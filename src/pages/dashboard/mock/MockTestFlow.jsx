@@ -94,24 +94,24 @@ const MockTestFlow = () => {
   }, [mockTest?.id, userProfile?.id, userProfile?.email, userProfile?.full_name, userProfile?.phone_number, findClientForMockTest, fetchClientById, createClientForMockTest]);
 
   // Check if user has already completed the mock test after it's loaded
-  useEffect(() => {
-    const checkCompletion = async () => {
-      if (!userProfile?.id || !mockTest?.id) return;
+  // useEffect(() => {
+  //   const checkCompletion = async () => {
+  //     if (!userProfile?.id || !mockTest?.id) return;
       
-      const hasCompleted = await hasUserCompletedMockTest(userProfile.id, mockTest.id);
-      if (hasCompleted) {
-        // User has already completed this test, redirect to mock tests page
-        navigate('/mock-tests', { 
-          replace: true,
-          state: { 
-            error: 'You have already completed this mock test. You cannot access it again.' 
-          }
-        });
-      }
-    };
+  //     const hasCompleted = await hasUserCompletedMockTest(userProfile.id, mockTest.id);
+  //     if (hasCompleted) {
+  //       // User has already completed this test, redirect to mock tests page
+  //       navigate('/mock-tests', { 
+  //         replace: true,
+  //         state: { 
+  //           error: 'You have already completed this mock test. You cannot access it again.' 
+  //         }
+  //       });
+  //     }
+  //   };
     
-    checkCompletion();
-  }, [userProfile?.id, mockTest?.id, hasUserCompletedMockTest, navigate]);
+  //   checkCompletion();
+  // }, [userProfile?.id, mockTest?.id, hasUserCompletedMockTest, navigate]);
 
   // Use param mockTestId if available, otherwise use fetched mockTest
   const effectiveMockTestId = paramMockTestId || mockTest?.id;
