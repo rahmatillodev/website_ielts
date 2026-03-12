@@ -196,7 +196,7 @@ const DashboardSidebar = ({ onNavigate }) => {
           icon={RiSpeakLine}
           label="Speaking"
           link="/speaking"
-          isActive={checkActive("/speaking")}
+          isActive={pathname.startsWith("/speaking")}
           onNavigate={onNavigate}
           isCollapsed={effectiveIsCollapsed}
         />

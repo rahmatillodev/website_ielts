@@ -12,6 +12,7 @@ import TableCompletion from "./TableCompletion";
 
 import TypeMap from "./TypeMap";
 import MultipleAnswers from "./MultipleAnswers";
+import UniversalQuestionView from "./UniversalQuestionView";
 
 /**
  * Smart QuestionRenderer - Routes to appropriate component based on question type
@@ -32,6 +33,22 @@ const QuestionRenderer = ({
 }) => {
   const questionType = question.type;
   const normalizedType = questionType.toLowerCase().trim();
+
+  // Universal - sanitized HTML content with numbered blank slots
+  if (normalizedType === "universal") {
+    console.log("question", question);
+    console.log("groupQuestions", groupQuestions);
+    return (
+      <UniversalQuestionView
+        html={question.question_text}
+        startQuestionNumber={
+          question._startQuestionNumber ??
+          question.start_question_number ??
+          1
+        }
+      />
+    );
+  }
 
   // Fill-in-the-Blanks - inline inputs with ___ placeholders from question_text  
   if (

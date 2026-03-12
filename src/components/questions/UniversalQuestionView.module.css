@@ -1,0 +1,103 @@
+/* Wrapper for universal question HTML content */
+.content {
+  color: inherit;
+  line-height: 1.6;
+}
+
+.content p {
+  margin-bottom: 0.75rem;
+}
+
+.content p:last-child {
+  margin-bottom: 0;
+}
+
+.content h1,
+.content h2,
+.content h3,
+.content h4,
+.content h5,
+.content h6 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.content ul,
+.content ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.content li {
+  margin-bottom: 0.25rem;
+}
+
+/* Question tables */
+.content :global(.question-table) {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 200px;
+  margin: 0.75rem 0;
+}
+
+.content :global(.question-table th),
+.content :global(.question-table td) {
+  border: 1px solid var(--border, #e5e7eb);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.content :global(.question-table th) {
+  font-weight: 600;
+  background: var(--muted, #f3f4f6);
+}
+
+/* Horizontal scroll wrapper for tables */
+.content :global(.table-scroll-wrapper) {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 0.75rem 0;
+}
+
+/* Numbered blank slots */
+.content :global(.blank-slot) {
+  display: inline;
+  font-weight: 600;
+  padding: 0 0.25rem;
+  border-bottom: 2px solid var(--primary, #3b82f6);
+  background: var(--muted, #f3f4f6);
+  border-radius: 2px;
+}
+
+/* Box callouts */
+.content :global(.info-box),
+.content :global(.tip-box),
+.content :global(.warning-box),
+.content :global(.note-box) {
+  display: block;
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border-left: 4px solid;
+}
+
+.content :global(.info-box) {
+  background: #eff6ff;
+  border-left-color: #3b82f6;
+}
+
+.content :global(.tip-box) {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+}
+
+.content :global(.warning-box) {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+
+.content :global(.note-box) {
+  background: #f5f3ff;
+  border-left-color: #8b5cf6;
+}

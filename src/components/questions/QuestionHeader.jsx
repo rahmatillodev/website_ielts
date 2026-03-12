@@ -181,8 +181,12 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             <>
               <div className="flex items-center gap-2">
                 <div 
-                  className="text-lg font-semibold"
-                  style={{ color: themeColors.text }}
+                  className="text-lg font-semibold transition-colors"
+                  style={{ 
+                    color: timeRemaining != null && timeRemaining < 60 
+                      ? '#dc2626' 
+                      : themeColors.text 
+                  }}
                 >
                   {formatTime(timeRemaining)}
                 </div>

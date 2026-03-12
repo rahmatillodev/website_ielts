@@ -1,4 +1,5 @@
-import SpeakingPage from "./speaking/SpeakingPage";
+import { Outlet } from "react-router-dom";
 
-export default SpeakingPage;
-
+export default function SpeakingPage() {
+  return <Outlet />;
+}
