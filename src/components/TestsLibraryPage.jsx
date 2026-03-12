@@ -524,16 +524,16 @@ const TestsLibraryPage = ({
                   <PopoverTrigger asChild>
                     <button
                       onClick={handleFilterOpen}
-                      className="relative rounded-2xl bg-white border-2 border-gray-300 shadow-md text-base focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-center hover:bg-gray-50 hover:border-blue-400 hover:shadow-lg"
-                      style={{
-                        width: "48px",
-                        height: "48px",
-                      }}
-                    >
-                      <CiFilter className="w-6 h-6" />
+                      className={cn(
+                        "relative flex items-center justify-center rounded-xl bg-white border border-gray-200 shadow-sm",
+                        "h-10 w-10 md:h-12 md:w-12",
+                        "hover:bg-gray-50 active:scale-95 transition-all focus:ring-2 focus:ring-blue-100"
+                      )}
+                    > 
+                      <CiFilter className="w-5 h-5 md:w-6 md:h-6" />
                       {((testType === "writing" && (selectedTaskTypes.length > 0 || selectedWritingTaskLabels.length > 0)) ||
                         (testType !== "writing" && (selectedQuestionTypes.length > 0 || selectedPartLabels.length > 0))) && (
-                        <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full min-w-[24px] h-6 px-1 flex items-center justify-center font-bold shadow-md">
+                        <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center font-bold shadow-sm">
                           {testType === "writing"
                             ? selectedTaskTypes.length + selectedWritingTaskLabels.length
                             : selectedQuestionTypes.length + selectedPartLabels.length}
