@@ -34,10 +34,8 @@ const QuestionRenderer = ({
   const questionType = question.type;
   const normalizedType = questionType.toLowerCase().trim();
 
-  // Universal - sanitized HTML content with numbered blank slots
+  // Universal - HTML content with optional image and inline blank inputs (same as fill_in_blanks)
   if (normalizedType === "universal") {
-    console.log("question", question);
-    console.log("groupQuestions", groupQuestions);
     return (
       <UniversalQuestionView
         html={question.question_text}
@@ -46,6 +44,16 @@ const QuestionRenderer = ({
           question.start_question_number ??
           1
         }
+        question={question}
+        groupQuestions={groupQuestions}
+        answers={answers}
+        onAnswerChange={onAnswerChange}
+        onInteraction={onInteraction}
+        mode={mode}
+        reviewData={reviewData}
+        showCorrectAnswers={showCorrectAnswers}
+        bookmarks={bookmarks}
+        toggleBookmark={toggleBookmark}
       />
     );
   }
