@@ -101,7 +101,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
 
   return (
     <footer
-      className="z-50 flex flex-col relative"
+      className="z-50 flex flex-col relative shrink-0"
       style={{
         backgroundColor: themeColors.backgroundColor }}
     >

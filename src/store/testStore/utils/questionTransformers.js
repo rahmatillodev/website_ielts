@@ -421,6 +421,25 @@ export const processNestedQuestionGroup = (questionGroup) => {
   const isDragAndDrop = groupType.includes("drag") || groupType.includes("drop") || groupType.includes("summary_completion");
   const isMap = groupType.includes("map");
   const isMatchingInformation = groupType.includes("matching_information");
+  const isUniversal = groupType === "universal";
+
+  // Universal: pass through content and start question number for student HTML rendering
+  if (isUniversal) {
+    return {
+      id: questionGroup.id,
+      test_id: questionGroup.test_id,
+      part_id: questionGroup.part_id,
+      type: questionGroup.type,
+      instruction: questionGroup.instruction || "",
+      question_text: questionGroup.question_text || "",
+      question_range: questionGroup.question_range,
+      image_url: questionGroup.image_url,
+      content: questionGroup.content || "",
+      _startQuestionNumber: questionGroup._startQuestionNumber ?? questionGroup.start_question_number ?? 1,
+      questions: processedQuestions,
+      options: [],
+    };
+  }
 
   // For multiple_choice: options are per question, so we return as-is
   if (isMultipleChoice) {

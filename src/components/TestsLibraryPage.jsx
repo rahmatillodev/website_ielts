@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { FaArrowRight, FaHistory, FaSearch } from "react-icons/fa";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { FaArrowRight, FaArrowLeft, FaHistory, FaSearch } from "react-icons/fa";
 import { IoGridOutline, IoListOutline } from "react-icons/io5";
 import { Input } from "@/components/ui/input";
 // import PremiumBanner from "@/components/badges/PremiumBanner";
@@ -89,6 +89,7 @@ const TestsLibraryPage = ({
 
   const userProfile = useAuthStore((state) => state.userProfile);
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Ensure allTests is always an array
   const allTests = Array.isArray(testData) ? testData : [];
@@ -461,6 +462,16 @@ const TestsLibraryPage = ({
       <div className="bg-gray-50 pt-4 pb-2 md:pb-4 shrink-0 sticky top-0 z-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 md:mt-4 gap-4">
           <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">
+            {testType === "speaking" && (
+              <button
+                type="button"
+                onClick={() => navigate("/speaking")}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-medium mb-1 -mt-1 w-fit"
+              >
+                <FaArrowLeft className="w-4 h-4" />
+                Back to Speaking
+              </button>
+            )}
             <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">{title}</h1>
             <p className="text-sm md:text-base text-gray-500 font-medium tracking-tight w-full md:w-8/12">
               {description}

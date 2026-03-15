@@ -26,6 +26,9 @@ import ListeningPracticePage from "./pages/dashboard/listening/ListeningPractice
 
 import WritingPage from "./pages/dashboard/writing/WritingPage";
 import SpeakingPage from "./pages/dashboard/SpeakingPage";
+import SpeakingHubPage from "./pages/dashboard/speaking/SpeakingHubPage";
+import SpeakingLibraryPage from "./pages/dashboard/speaking/SpeakingLibraryPage";
+import SpeakingPodcastsPage from "./pages/dashboard/speaking/SpeakingPodcastsPage";
 import SpeakingPracticePage from "./pages/dashboard/speaking/SpeakingPracticePage";
 import SpeakingTaskPage from "./pages/dashboard/speaking/speakingtypes/textToSpeach/SpeakingTaskPage";
 import SpeakingResultPage from "./pages/dashboard/speaking/SpeakingResultPage";
@@ -155,7 +158,7 @@ function App() {
                  location.pathname === '/reading' ||
                  location.pathname === '/listening' ||
                  location.pathname === '/writing' ||
-                 location.pathname === '/speaking' ||
+                 (location.pathname === '/speaking' || location.pathname.startsWith('/speaking/')) ||
                  location.pathname === '/analytics' ||
                  location.pathname === '/own-writing') {
         // Regular dashboard routes - set to regular
@@ -262,11 +265,11 @@ function App() {
     
     // If accessMode is mockTest, redirect away from regular dashboard routes
     if (accessMode === 'mockTest') {
-      const isRegularDashboardRoute = pathname === '/dashboard' || 
-                                      pathname === '/reading' || 
-                                      pathname === '/listening' || 
-                                      pathname === '/writing' || 
-                                      pathname === '/speaking' || 
+const isRegularDashboardRoute = pathname === '/dashboard' ||
+                                      pathname === '/reading' ||
+                                      pathname === '/listening' ||
+                                      pathname === '/writing' ||
+                                      (pathname === '/speaking' || pathname.startsWith('/speaking/')) ||
                                       pathname === '/analytics' ||
                                       pathname === '/own-writing' ||
                                       pathname.startsWith('/writing/writing-history');
@@ -352,7 +355,11 @@ function App() {
               <Route path="/listening" element={<ListeningPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/writing" element={<WritingPage />} />
-              <Route path="/speaking" element={<SpeakingPage />} />
+              <Route path="/speaking" element={<SpeakingPage />}>
+                <Route index element={<SpeakingHubPage />} />
+                <Route path="library" element={<SpeakingLibraryPage />} />
+                <Route path="podcasts" element={<SpeakingPodcastsPage />} />
+              </Route>
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/own-writing" element={<OwnWritingPage />} />
               <Route path="/writing/writing-history" element={<WritingHistoryPage />} />

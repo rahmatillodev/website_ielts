@@ -1579,7 +1579,7 @@ const ListeningPracticePageContent = () => {
                         const isMap = groupType.includes('map');
                         const isMatching = groupType.includes('matching_information');
                         const isMultipleAnswers = groupType === 'multiple_answers';
-
+                        const isUniversal = groupType === 'universal';
 
                         return (
                           <div key={questionGroup.id || groupIdx} className={`space-y-6 ${status === 'reviewing' ? 'w-full' : 'w-6/12'}`}>
@@ -1607,7 +1607,7 @@ const ListeningPracticePageContent = () => {
                             </div>
 
 
-                            {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatching || isMultipleAnswers) ? (
+                            {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatching || isMultipleAnswers || isUniversal) ? (
                               <div
                                 ref={(el) => {
                                   if (el && groupQuestions.length > 0) {

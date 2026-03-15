@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import parse from "html-react-parser";
 import { LuChevronsLeftRight } from "react-icons/lu";
 import { toast } from "react-toastify";
+import { FaBatteryFull } from 'react-icons/fa';
 
 import QuestionHeader from "@/components/questions/QuestionHeader";
 import TextSelectionTooltip from "@/components/annotations/TextSelectionTooltip";
@@ -12,7 +13,7 @@ import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
 import MockTestExitModal from "@/components/modal/MockTestExitModal";
 import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
 import { AnnotationProvider, useAnnotation } from "@/contexts/AnnotationContext";
-  import { useWritingStore } from "@/store/testStore/writingStore";
+import { useWritingStore } from "@/store/testStore/writingStore";
 import { useWritingCompletedStore } from "@/store/testStore/writingCompletedStore";
 import { useAuthStore } from "@/store/authStore";
 import { useMockTestClientStore } from "@/store/mockTestClientStore";
@@ -28,31 +29,47 @@ import {
   clearAllWritingPracticeData,
   clearAllWritingData,
 } from "@/store/LocalStorage/writingStore";
+import { LuWifi, LuWifiHigh, LuWifiLow, LuWifiOff } from 'react-icons/lu';
 
-import { saveSectionData, loadSectionData, loadMockTestData, clearAllMockTestData } from "@/store/LocalStorage/mockTestStorage";
+import { saveSectionData, loadSectionData, clearAllMockTestData } from "@/store/LocalStorage/mockTestStorage";
 import { convertDurationToSeconds } from "@/utils/testDuration";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
 import { PenSquare } from "lucide-react";
-
+import useNetworkStatus from "@/hooks/use_network_status";
+/** Format current time as HH:mm for footer clock */
+const formatCurrentTime = () => {
+  const d = new Date();
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+};
 const WritingPracticePageContent = () => {
   const { id: idFromParams } = useParams();
+
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { themeColors, fontSizeValue, settings, theme } = useAppearance();
+  const [currentClock, setCurrentClock] = useState(formatCurrentTime);
+  const [isBatteryHovered, setIsBatteryHovered] = useState(false);
+  const { isOnline, speed } = useNetworkStatus();
+  const [batteryLevel, setBatteryLevel] = useState(null);
+
+  useEffect(() => {
+    const t = setInterval(() => setCurrentClock(formatCurrentTime()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   // Extract ID from URL path as fallback when useParams() doesn't work (e.g., after window.history.replaceState)
   // This ensures we can fetch writing data even if React Router hasn't updated useParams() yet
-  const id = React.useMemo(() => {
+  const id = useMemo(() => {
     if (idFromParams) return idFromParams;
-    
+
     // Fallback: extract from URL path
     const pathMatch = window.location.pathname.match(/\/writing-practice\/([^\/\?]+)/);
     if (pathMatch && pathMatch[1]) {
       console.log('[WritingPracticePage] Extracted ID from URL path:', pathMatch[1]);
       return pathMatch[1];
     }
-    
+
     return idFromParams;
   }, [idFromParams]);
 
@@ -77,14 +94,15 @@ const WritingPracticePageContent = () => {
     const fromWindowLocation = new URLSearchParams(window.location.search).get('mockTest') === 'true';
     return fromSearchParams || fromUrlSearch || fromWindowLocation;
   }, [searchParams, urlSearchParams]);
-  const mockTestId = React.useMemo(() => 
+  const mockTestId = React.useMemo(() =>
     searchParams.get('mockTestId') || urlSearchParams.get('mockTestId'),
     [searchParams, urlSearchParams]
   );
-  const mockClientId = React.useMemo(() => 
+  const mockClientId = React.useMemo(() =>
     searchParams.get('mockClientId') || urlSearchParams.get('mockClientId'),
     [searchParams, urlSearchParams]
   );
+  const themeName = useAppearance().theme;
 
   const {
     addHighlight,
@@ -195,20 +213,20 @@ const WritingPracticePageContent = () => {
 
       // Get attemptId from URL if provided (for specific attempt review)
       const attemptId = searchParams.get('attemptId');
-      
+
       // Get the specific or latest writing attempt
       const result = await getLatestWritingAttempt(id, attemptId);
       console.log('[WritingPracticePage] getLatestWritingAttempt result:', result, 'attemptId:', attemptId);
-      
+
       if (result.success && result.attempt && result.answers) {
         console.log('[WritingPracticePage] Review mode - loaded answers:', result.answers);
         console.log('[WritingPracticePage] Available task names:', writing.writing_tasks.map(t => t.task_name));
-        
+
         // Set answers from attempt (these come from user_answers table)
         setAnswers(result.answers);
         setStatus('reviewing');
         setIsPracticeMode(false); // Don't show practice mode in review
-        
+
         // Set currentTaskType to the first task that has an answer, or first task
         const tasks = writing.writing_tasks || [];
         if (tasks.length > 0) {
@@ -243,7 +261,7 @@ const WritingPracticePageContent = () => {
         pathname: window.location.pathname,
         search: window.location.search
       });
-      
+
       // For mock test mode, retry after a short delay if ID is not available
       if (isMockTest) {
         const retryTimeout = setTimeout(() => {
@@ -269,7 +287,7 @@ const WritingPracticePageContent = () => {
       mockTestInitializedRef.current = false; // Reset mock test initialization for new test
     }
     previousIdRef.current = id;
-    
+
     // Always fetch writing data - needed for both normal and review modes
     // Only fetch if we don't already have the data or if it's a different ID
     if (!currentWriting || currentWriting.id !== id) {
@@ -326,15 +344,15 @@ const WritingPracticePageContent = () => {
       if (!mockTestInitializedRef.current && mockTestId) {
         // Load/restore progress from mock test storage on refresh
         const savedData = loadSectionData(mockTestId, 'writing');
-        
+
         // Get duration from URL param (in seconds) or use writing duration
         const durationParam = searchParams.get('duration') || urlSearchParams.get('duration');
-        const durationInSeconds = durationParam 
-          ? parseInt(durationParam, 10) 
+        const durationInSeconds = durationParam
+          ? parseInt(durationParam, 10)
           : convertDurationToSeconds(currentWriting.duration);
-        
-       
-        
+
+
+
         if (savedData && savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
           // Restore from saved data (refresh case) - only for tasks this writing has
           const taskNames = tasks.map((t) => t.task_name);
@@ -349,20 +367,20 @@ const WritingPracticePageContent = () => {
             tasks.forEach((t) => (init[t.task_name] = ""));
             setAnswers(init);
           }
-          
+
           // Calculate elapsed time since last save
           const now = Date.now();
           const savedStartTime = savedData.startTime || now;
           const timeSinceSave = Math.floor((now - savedStartTime) / 1000);
           const savedElapsedTime = savedData.elapsedTime || 0;
           const totalElapsed = savedElapsedTime + timeSinceSave;
-          
+
           // Calculate remaining time
           const remaining = Math.max(0, durationInSeconds - totalElapsed);
           setTimeRemaining(remaining);
           setElapsedTime(totalElapsed);
           setStartTime(savedStartTime);
-          
+
           // Auto-resume timer if time remaining > 0
           // If time is already expired (<= 0), trigger auto-submit immediately
           if (remaining <= 0) {
@@ -375,7 +393,7 @@ const WritingPracticePageContent = () => {
             setIsStarted(true);
             setIsPaused(false);
           }
-          
+
           // Reset submission state when loading saved data to ensure clean state
           setIsAutoSubmitting(false);
           setIsSaving(false);
@@ -397,12 +415,12 @@ const WritingPracticePageContent = () => {
 
       return; // Skip normal localStorage loading for mock test
     }
-    
+
     // Reset initialization flag when not in mock test mode
     if (!isMockTest) {
       mockTestInitializedRef.current = false;
     }
-    
+
     // Load saved data from localStorage (only if not in review mode and not mock test)
     const savedData = loadWritingPracticeData(id);
     const resultData = loadWritingResultData(id);
@@ -412,7 +430,7 @@ const WritingPracticePageContent = () => {
     if (resultData && savedData) {
       const resultCompletedAt = resultData.completedAt || 0;
       const practiceLastSaved = savedData.lastSaved || 0;
-      
+
       // If result is newer, practice data is stale (from before submission)
       if (resultCompletedAt > practiceLastSaved) {
         clearWritingPracticeData(id);
@@ -506,7 +524,7 @@ const WritingPracticePageContent = () => {
 
     const handleForceSubmit = async (event) => {
       const { section, mockTestId: eventMockTestId, writingId: eventWritingId } = event.detail || {};
-      
+
       // Only handle if it's for writing section and matches our mockTestId
       if (section === 'writing' && eventMockTestId === mockTestId) {
         // Prevent duplicate submissions
@@ -583,7 +601,7 @@ const WritingPracticePageContent = () => {
         clearInterval(interval);
         return;
       }
-      
+
       setTimeRemaining((t) => {
         if (t === null || t <= 1) {
           clearInterval(interval);
@@ -697,7 +715,7 @@ const WritingPracticePageContent = () => {
     // Clear all old writing practice data when starting practice
     // This ensures a clean start and removes old data from other tests
     clearAllWritingPracticeData();
-    
+
     setIsPracticeMode(true);
     setIsStarted(true);
     setStartTime(Date.now());
@@ -728,7 +746,7 @@ const WritingPracticePageContent = () => {
     }
 
     if (isPaused) setIsPaused(false);
-    
+
     // Use functional update to get the latest state
     setAnswers((p) => {
       const updatedAnswers = { ...p, [currentTaskType]: e.target.value };
@@ -765,7 +783,7 @@ const WritingPracticePageContent = () => {
     console.log("[WritingPracticePage] answers (state)", answers);
     console.log("[WritingPracticePage] latestAnswers (from localStorage)", latestAnswers);
     console.log("[WritingPracticePage] currentWriting", currentWriting);
-    
+
     const taskWordCounts = currentWriting.writing_tasks.map((task) => {
       const answer = latestAnswers[task.task_name] || "";
       const wordCount = countWords(answer);
@@ -792,21 +810,21 @@ const WritingPracticePageContent = () => {
 
   const handleRetakeTask = useCallback(() => {
     if (!id) return;
-  
+
     /* URL tozalash */
     const newSearchParams = new URLSearchParams(searchParams.toString());
     newSearchParams.delete('mode');
     setSearchParams(newSearchParams, { replace: true });
-  
+
     /* MUHIM: review flag */
     setStatus('taking');
-  
+
     /* Review flowni to'liq o'chirish */
     setIsLoadingReview(false);
     setIsPracticeMode(false);
     setIsStarted(false);
     setIsPaused(false);
-  
+
     /* Javoblarni reset */
     const init = {};
     if (currentWriting?.writing_tasks?.length) {
@@ -817,16 +835,16 @@ const WritingPracticePageContent = () => {
       setCurrentTaskType(firstTask.task_name);
     }
     setAnswers(init);
-  
+
     /* Timer reset */
     setStartTime(null);
     setElapsedTime(0);
     if (currentWriting) {
       setTimeRemaining(convertDurationToSeconds(currentWriting.duration));
     }
-  
+
     clearWritingPracticeData(id);
-  
+
   }, [id, searchParams, setSearchParams, currentWriting]);
 
   const handleBack = useCallback(() => {
@@ -862,8 +880,8 @@ const WritingPracticePageContent = () => {
 
   // Exit handlers are handled by MockTestWriting wrapper, not here
   // These functions are not used - exit modal is handled in MockTestWriting wrapper
-  
-  
+
+
 
   // Auto-submit function (no loading overlay, no modal)
   const handleAutoSubmit = useCallback(async () => {
@@ -873,7 +891,7 @@ const WritingPracticePageContent = () => {
     setIsAutoSubmitting(true);
     setIsStarted(false);
     setIsPaused(true);
-    
+
     toast.info("Time is up! Auto-submitting your writing...");
 
     try {
@@ -917,7 +935,7 @@ const WritingPracticePageContent = () => {
         }
 
         if (!isMockTest) {
-         
+
 
           // Clear practice data
           clearWritingPracticeData(id);
@@ -968,7 +986,7 @@ const WritingPracticePageContent = () => {
 
   const handleSubmitFinish = async () => {
     setIsFinishModalOpen(false);
-    
+
     // Stop timer immediately when submission starts (set state first to stop timer interval)
     setIsSaving(true);
     setIsStarted(false);
@@ -1224,15 +1242,15 @@ const WritingPracticePageContent = () => {
   );
 
   const taskToDisplay = currentTask || displayWriting?.writing_tasks?.find(t => t.task_name === effectiveTaskType) || defaultTaskType;
-  
+
   // Calculate font size in rem (base 16px = 1rem) for consistent scaling
   const baseFontSize = fontSizeValue.base / 16;
-  
+
   /* ================= RENDER ================= */
   return (
-    <div 
-      className="flex flex-col h-screen" 
-      style={{ 
+    <div
+      className="flex flex-col h-screen"
+      style={{
         background: themeColors.background,
         color: themeColors.text,
         fontSize: `${baseFontSize}rem`,
@@ -1269,7 +1287,7 @@ const WritingPracticePageContent = () => {
         status={status}
         showTryPractice={!isPracticeMode && !isStarted && status === 'taking'}
         showCorrectAnswers={false}
-        onToggleShowCorrect={() => {}}
+        onToggleShowCorrect={() => { }}
         handleRedoTask={status === 'reviewing' ? handleRetakeTask : undefined}
         isPracticeMode={isPracticeMode}
       />
@@ -1289,7 +1307,7 @@ const WritingPracticePageContent = () => {
               </div>
             ) : errorCurrentWriting ? (
               <div className="flex items-center justify-center h-full p-6">
-                <div 
+                <div
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
@@ -1312,7 +1330,7 @@ const WritingPracticePageContent = () => {
               </div>
             ) : !currentWriting.writing_tasks || currentWriting.writing_tasks.length === 0 ? (
               <div className="flex items-center justify-center h-full p-6">
-                <div 
+                <div
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
@@ -1353,7 +1371,7 @@ const WritingPracticePageContent = () => {
                       />
                       <span
                         className="text-base font-bold"
-                        style={{ 
+                        style={{
                           color: themeColors.text,
                           fontSize: `${fontSizeValue.base}px`
                         }}
@@ -1365,52 +1383,52 @@ const WritingPracticePageContent = () => {
                   </div>
                 </div>
                 <div className="border rounded-lg text-justify" ref={passageRef} style={{ borderColor: themeColors.border }}>
-                  <div className="p-6 m-5">
-                  <h1 
-                    className="text-2xl font-bold"
-                    style={{ 
-                      color: themeColors.text,
-                      fontSize: `${fontSizeValue.base * 1.5}px`
-                    }}
-                  >
-                    {taskToDisplay.title}
-                  </h1>
-                  <div 
-                    className="text-sm my-4"
-                    style={{ 
-                      color: themeColors.text,
-                      opacity: 0.7,
-                      fontSize: `${fontSizeValue.base}px`
-                    }}
-                  >
-                    {parse(taskToDisplay.content || "")}
-                  </div>
-                  {/* IMAGE */}
-                  {taskToDisplay.image_url && (
-                    <div 
-                      className="p-6 border-t w-full"
-                      style={{ borderColor: themeColors.border }}
+                  <div className="p-5">
+                    <h1
+                      className="text-2xl font-bold"
+                      style={{
+                        color: themeColors.text,
+                        fontSize: `${fontSizeValue.base * 1.5}px`
+                      }}
                     >
-                      <img
-                        src={taskToDisplay.image_url}
-                        alt={taskToDisplay.title}
-                        className="w-full max-h-[500px] object-contain rounded-2xl"
-                        />
+                      {taskToDisplay.title}
+                    </h1>
+                    <div
+                      className="text-sm my-4"
+                      style={{
+                        color: themeColors.text,
+                        opacity: 0.7,
+                        fontSize: `${fontSizeValue.base}px`
+                      }}
+                    >
+                      {parse(taskToDisplay.content || "")}
                     </div>
-                  )}
+                    {/* IMAGE */}
+                    {taskToDisplay.image_url && (
+                      <div
+                        className="p-6 border-t w-full"
+                        style={{ borderColor: themeColors.border }}
+                      >
+                        <img
+                          src={taskToDisplay.image_url}
+                          alt={taskToDisplay.title}
+                          className="w-full max-h-[500px] object-contain rounded-2xl"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* feedback */}
                   {/* Hide feedback in mock test mode */}
                   {!isMockTest && !isPracticeMode ? (
                     taskToDisplay.feedback && (
-                      <div 
+                      <div
                         className="p-6 border-t w-full"
                         style={{ borderColor: themeColors.border }}
                       >
-                        <h3 
+                        <h3
                           className="text-xl font-semibold mb-4"
-                          style={{ 
+                          style={{
                             color: themeColors.text,
                             fontSize: `${fontSizeValue.base * 1.25}px`
                           }}
@@ -1418,7 +1436,7 @@ const WritingPracticePageContent = () => {
                           Feedback
                         </h3>
                         <div
-                          style={{ 
+                          style={{
                             color: themeColors.text,
                             fontSize: `${fontSizeValue.base}px`
                           }}
@@ -1427,21 +1445,21 @@ const WritingPracticePageContent = () => {
                         </div>
                       </div>
                     )
-                  ) : !isMockTest && isPracticeMode ? (
-                    <div 
+                  ) : !isMockTest && !isPracticeMode ? (
+                    <div
                       className="p-6 border-t w-full"
                       style={{ borderColor: themeColors.border }}
                     >
-                    <p 
-                      style={{ 
-                        color: themeColors.text,
-                        opacity: 0.7,
-                        fontSize: `${fontSizeValue.base}px`
-                      }}
-                    >
-                      Feedback is not available yet. In the future, you will receive personalized feedback for every piece of writing you submit.
-                    </p>
-                  </div>
+                      <p
+                        style={{
+                          color: themeColors.text,
+                          opacity: 0.7,
+                          fontSize: `${fontSizeValue.base}px`
+                        }}
+                      >
+                        Feedback is not available yet. In the future, you will receive personalized feedback for every piece of writing you submit.
+                      </p>
+                    </div>
                   ) : null}
                 </div>
               </>
@@ -1481,7 +1499,7 @@ const WritingPracticePageContent = () => {
               </div>
             ) : errorCurrentWriting ? (
               <div className="flex items-center justify-center h-full p-6">
-                <div 
+                <div
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
@@ -1504,7 +1522,7 @@ const WritingPracticePageContent = () => {
               </div>
             ) : !currentWriting.writing_tasks || currentWriting.writing_tasks.length === 0 ? (
               <div className="flex items-center justify-center h-full p-6">
-                <div 
+                <div
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
@@ -1553,8 +1571,8 @@ const WritingPracticePageContent = () => {
                   <div className="flex-1 p-8 overflow-y-auto">
                     {isLoadingReview ? (
                       <div className="flex items-center justify-center h-full">
-                        <div 
-                          style={{ 
+                        <div
+                          style={{
                             color: themeColors.text,
                             fontSize: `${fontSizeValue.base}px`
                           }}
@@ -1588,9 +1606,9 @@ const WritingPracticePageContent = () => {
                     </div>
                   </div>
                 )}
-                <div 
+                <div
                   className="px-6 py-4 border-t flex justify-between text-sm font-semibold"
-                  style={{ 
+                  style={{
                     borderColor: themeColors.border,
                     color: themeColors.text,
                     fontSize: `${fontSizeValue.base}px`
@@ -1615,86 +1633,155 @@ const WritingPracticePageContent = () => {
 
       {/* WRITING FOOTER */}
       <footer
-        className="relative h-14 border-t flex items-center shrink-0"
+        className="relative border-t shrink-0"
         style={{
           borderColor: themeColors.border,
           backgroundColor: themeColors.background,
         }}
       >
-        {/* TASK SWITCHER */}
-        <div className="flex justify-center items-center w-full h-full">
-          {displayWriting?.writing_tasks && displayWriting.writing_tasks.length > 1 ? (
-            displayWriting.writing_tasks.map((task) => {
-              const isActive = effectiveTaskType === task.task_name;
-              
-              // Theme-aware active background color
-              const getActiveBackground = () => {
-                if (theme === 'light') return '#e5e7eb'; // gray-200
-                if (theme === 'dark') return 'rgba(255,255,255,0.15)';
-                return 'rgba(255, 215, 0, 0.15)'; // yellow overlay for high-contrast
-              };
+        <div className="h-10 flex items-center">
+          {/* TASK SWITCHER */}
+          <div className="flex justify-center items-center w-full h-full">
+            {displayWriting?.writing_tasks && displayWriting.writing_tasks.length > 1 ? (
+              displayWriting.writing_tasks.map((task) => {
+                const isActive = effectiveTaskType === task.task_name;
 
-              return (
-                <div
-                  key={task.id}
-                  onClick={() => setCurrentTaskType(task.task_name)}
-                  className={`relative flex flex-col items-center justify-center gap-1 h-full transition-all transform w-full cursor-pointer`}
-                  style={{
-                    backgroundColor: isActive ? getActiveBackground() : themeColors.background,
-                    color: themeColors.text,
-                  }}
-                >
-                  <span
-                    className="text-base font-semibold transition-all whitespace-nowrap"
+                // Theme-aware active background color
+                const getActiveBackground = () => {
+                  if (theme === 'light') return '#e5e7eb'; // gray-200
+                  if (theme === 'dark') return 'rgba(255,255,255,0.15)';
+                  return 'rgba(255, 215, 0, 0.15)'; // yellow overlay for high-contrast
+                };
+
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => setCurrentTaskType(task.task_name)}
+                    className={`relative flex flex-col items-center justify-center gap-1 h-full transition-all transform w-full cursor-pointer`}
                     style={{
-                      opacity: isActive ? 1 : 0.5,
+                      backgroundColor: isActive ? getActiveBackground() : themeColors.background,
                       color: themeColors.text,
-                      fontSize: `${fontSizeValue.base}px`
                     }}
                   >
-                    {task.task_name}
-                  </span>
-                </div>
-              );
-            })
-          ) : (
-            <div
-              className="px-4 py-2 text-xs font-bold uppercase tracking-widest"
-              style={{ 
-                color: themeColors.text, 
-                opacity: 0.5,
-                fontSize: `${fontSizeValue.base * 0.75}px`
-              }}
-            >
-              {effectiveTaskType}
-            </div>
-          )}
+                    <span
+                      className="text-base font-semibold transition-all whitespace-nowrap"
+                      style={{
+                        opacity: isActive ? 1 : 0.5,
+                        color: themeColors.text,
+                        fontSize: `${fontSizeValue.base}px`
+                      }}
+                    >
+                      {task.task_name}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div
+                className="px-4 py-2 text-xs font-bold uppercase tracking-widest"
+                style={{
+                  color: themeColors.text,
+                  opacity: 0.5,
+                  fontSize: `${fontSizeValue.base * 0.75}px`
+                }}
+              >
+                {effectiveTaskType}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* FINISH BUTTON - Only show in practice mode and not in review */}
-        {isPracticeMode && status === 'taking' && !isAutoSubmitting && (
-          <div className="flex justify-end ml-auto fixed right-5 bottom-1">
+        {/* Bottom bar: brand + status icons (minimal width) on the left, action button on the right */}
+        <div
+          className="flex items-center justify-between shrink-0 p-4 h-12"
+        style={{
+          backgroundColor:
+            themeName === 'light'
+              ? '#E0E0E0'
+              : themeName === 'dark'
+                ? '#0d1520'
+                : 'rgba(0,0,0,0.4)'
+        }}
+        >
+          <span className="text-sm font-bold shrink-0" style={{ color: themeColors.text, opacity: 0.9 }}>
+            IELTSCORE.UZ
+          </span>
+          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium shrink-0" style={{ color: themeColors.text }}>
+              {currentClock}
+            </span>
+            <span
+              className="relative flex items-center p-1 rounded shrink-0 cursor-default"
+              style={{ color: themeColors.text }}
+              title="Battery"
+              onMouseEnter={() => setIsBatteryHovered(true)}
+              onMouseLeave={() => setIsBatteryHovered(false)}
+            >
+              <FaBatteryFull className="w-4 h-4" />
+              {isBatteryHovered && batteryLevel != null && (
+                <span
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded text-xs font-medium whitespace-nowrap shadow-md z-50"
+                  style={{
+                    backgroundColor: themeColors.background,
+                    color: themeColors.text,
+                    border: `1px solid ${themeColors.border}`
+                  }}
+                >
+                  {batteryLevel}%
+                </span>
+              )}
+            </span>
+            <span
+              className="flex items-center p-1 rounded shrink-0"
+              style={{ color: themeColors.text, opacity: isOnline ? 1 : 0.6 }}
+              title={isOnline ? `Internet: ${speed}` : 'No internet'}
+            >
+              {!isOnline ? (
+                <LuWifiOff className="w-4 h-4" />
+              ) : speed === 'fast' ? (
+                <LuWifiHigh className="w-4 h-4" />
+              ) : speed === 'slow' ? (
+                <LuWifiLow className="w-4 h-4" />
+              ) : (
+                <LuWifi className="w-4 h-4" />
+              )}
+            </span>
+          </div>
+
+          {/* Right: Finish or Retake button */}
+          {isPracticeMode && status === 'taking' && !isAutoSubmitting && (
             <button
               onClick={handleFinish}
               disabled={savingAttempt || isSaving || isAutoSubmitting}
-              className="bg-black p-2 text-white rounded-lg font-bold hover:bg-black/80 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-black p-1 px-2 text-white flex items-center gap-2 rounded-lg font-bold hover:bg-black/80 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                // backgroundColor: theme === 'dark' ? '#059669' : '#0d9488',
+                color: '#fff',
+                border: '2px solid transparent',
+              }}
+             
             >
+              <PenSquare className="w-4 h-4" aria-hidden />
               Finish Writing
             </button>
-          </div>
-        )}
-
-        {/* RETAKE BUTTON - Show in review mode */}
-        {status === 'reviewing' && (
-          <div className="flex justify-end ml-auto fixed right-5 bottom-1">
+          )}
+          {status === 'reviewing' && (
             <button
               onClick={handleRetakeTask}
-              className="bg-blue-600 p-2 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-lg"
+              className="bg-blue-600 p-2 px-4 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-lg"
+              style={{
+                border: `2px solid ${themeColors.border}`,
+              }}
+             
             >
               Retake Task
             </button>
-          </div>
-        )}
+          )}
+        </div>
+        </div>
+
       </footer>
 
       {/* LOADING OVERLAY - Exclude auto-submit */}

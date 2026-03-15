@@ -1608,6 +1608,7 @@ const ReadingPracticePageContent = () => {
                     const isMap = groupType.includes('map');
                     const isMatchingInformation = groupType.includes('matching_information');
                     const isMultipleAnswers = groupType === 'multiple_answers';
+                    const isUniversal = groupType === 'universal';
                     let sortedOptions = questionGroup.options || [];
 
                     if (isMultipleAnswers) {
@@ -1648,7 +1649,7 @@ const ReadingPracticePageContent = () => {
                         )}
 
                         {/* For Fill-in-the-Blanks, Drag-and-Drop, Table Completion, Table, Map, Matching Information, and Multiple Answers: Render as a single group with group-level options */}
-                        {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation || isMultipleAnswers) ? (
+                        {(isFillInTheBlanks || isDragAndDrop || isTableCompletion || isTable || isMap || isMatchingInformation || isMultipleAnswers || isUniversal) ? (
                           <div
                             ref={(el) => {
                               // Set ref for all questions in the group for scrolling
