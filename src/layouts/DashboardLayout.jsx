@@ -27,6 +27,7 @@ const DashboardLayout = () => {
                           pathname.includes('/listening-practice') ||
                           pathname.includes('/writing-practice') ||
                           pathname.includes('/speaking-practice') ||
+                          pathname.includes('/equipment-check') ||
                           pathname.includes('/reading-result') ||
                           pathname.includes('/listening-result') ||
                           pathname.includes('/speaking-result');
@@ -104,6 +105,8 @@ const DashboardLayout = () => {
     "/reading-result",
     "/listening-practice",
     "/listening-result",
+    "/equipment-check",
+    "/speaking-practice/shadowing",
     "/speaking-practice",
     "/speaking-result",
     "/pricing",

@@ -32,6 +32,7 @@ const CardOpen = ({
   is_premium,
   testType = "reading",
   partLabel,
+  video_id,
 }) => {
   const navigate = useNavigate();
 
@@ -66,11 +67,11 @@ const CardOpen = ({
       : (testType === 'reading'
         ? `/reading-practice/${id}`
         : testType === 'speaking'
-          ? `/speaking-practice/${id}`
+          ? `/equipment-check/${id}`
           : testType === 'shadowing'
-            ? `/speaking-practice/${id}`
+            ? `/speaking-practice/shadowing-player/${video_id}`
             : testType === 'human'
-              ? `/speaking-practice/${id}`
+              ? `/equipment-check/${id}`
               : `/writing-practice/${id}`);
     navigate(practiceLink);
   };
@@ -88,11 +89,11 @@ const CardOpen = ({
     } else if (testType === 'reading') {
       navigate(`/reading-practice/${id}`);
     } else if (testType === 'speaking') {
-      navigate(`/speaking-practice/${id}`);
+      navigate(`/equipment-check/${id}`);
     } else if (testType === 'shadowing') {
-      navigate(`/speaking-practice/${id}`);
+      navigate(`/equipment-check/${id}`);
     } else if (testType === 'human') {
-      navigate(`/speaking-practice/${id}`);
+      navigate(`/equipment-check/${id}`);
     }
   };
 
@@ -102,11 +103,11 @@ const CardOpen = ({
     } else if (testType === 'reading') {
       navigate(`/reading-practice/${id}?mode=review`);
     } else if (testType === 'speaking') {
-      navigate(`/speaking-practice/${id}?mode=review`);
+      navigate(`/speaking-practice/${id}/session?mode=review`);
     } else if (testType === 'shadowing') {
-      navigate(`/speaking-practice/${id}/shadowing?mode=review`);
+      navigate(`/speaking-practice/shadowing?mode=review`);
     } else if (testType === 'human') {
-      navigate(`/speaking-practice/${id}/human?mode=review`);
+      navigate(`/speaking-practice/${id}/session?mode=review`);
     }
   };
 
@@ -260,7 +261,7 @@ const CardOpen = ({
             onClick={handleStartTest}
             className="mt-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-black rounded-lg flex items-center justify-center gap-2 w-full transition-all"
           >
-            {testType === 'writing' ? "View Sample" : "Start Practice"} <HiOutlinePlay className="text-sm" />
+            {testType === 'writing' ? "View Sample" : testType === 'shadowing' ? "Watch Now" : "Start Practice"} <HiOutlinePlay className="text-sm" />
           </button>
         )}
       </motion.div>
@@ -379,7 +380,7 @@ const CardOpen = ({
               onClick={handleStartTest}
               className="py-2 md:py-3 px-4 md:px-6 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
             >
-              {testType === 'writing' ? "View Sample" : "Start Practice"} <HiOutlinePlay className="text-sm md:text-base" />
+              {testType === 'writing' ? "View Sample" : testType === 'shadowing' ? "Watch Now" : "Start Practice"} <HiOutlinePlay className="text-sm md:text-base" />
             </button>
           )}
         </div>
