@@ -138,7 +138,7 @@ const ProfilePage = () => {
       if (nameParts.length >= 2) {
         return (
           nameParts[0][0] + nameParts[nameParts.length - 1][0]
-        ).toUpperCase();
+        );
       }
       return fullName.substring(0, 2).toUpperCase();
     }
