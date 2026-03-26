@@ -135,11 +135,6 @@ const ProfilePage = () => {
   // Memoize initials calculation
   const initials = useMemo(() => {
     if (fullName) {
-      if (nameParts.length >= 2) {
-        return (
-          nameParts[0][0] + nameParts[nameParts.length - 1][0]
-        );
-      }
       return fullName.substring(0, 2).toUpperCase();
     }
    
