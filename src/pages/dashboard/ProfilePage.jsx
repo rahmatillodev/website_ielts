@@ -142,9 +142,7 @@ const ProfilePage = () => {
       }
       return fullName.substring(0, 2).toUpperCase();
     }
-    if (email) {
-      return email.substring(0, 2).toUpperCase();
-    }
+   
     return "U";
   }, [fullName, nameParts, email]);
 
