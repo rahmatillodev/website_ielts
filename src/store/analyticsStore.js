@@ -138,7 +138,7 @@ export const useAnalyticsStore = create((set, get) => ({
         return analytics;
       }
 
-      // Fetch all attempts with test metadata
+      // Fetch recent attempts with test metadata (limit to reduce cached egress)
       const { data: attemptsData, error: attemptsError } = await supabase
       .from('user_attempts')
       .select(`
@@ -159,7 +159,7 @@ export const useAnalyticsStore = create((set, get) => ({
         )
       `)
       .eq('user_id', userId)
-      .not('test_id', 'is', null) 
+      .not('test_id', 'is', null)
       .order('completed_at', { ascending: false });
     
 

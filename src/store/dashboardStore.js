@@ -60,12 +60,12 @@ export const useDashboardStore = create((set, get) => ({
     try {
       set({ loading: true, error: null });
 
-      // Fetch attempts first (join syntax requires FK relationships which may not be configured)
+      // Fetch attempts first (limit to reduce cached egress; dashboard shows recent activity)
       const { data: attemptsData, error: attemptsError } = await supabase
         .from('user_attempts')
         .select('id, test_id, score, time_taken, total_questions, correct_answers, created_at, completed_at')
         .eq('user_id', userId)
-        .order('completed_at', { ascending: false });
+        .order('completed_at', { ascending: false })
 
       if (attemptsError) {
         console.error('[dashboardStore] Error fetching attempts:', attemptsError);

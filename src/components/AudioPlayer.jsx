@@ -4,7 +4,7 @@ import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { saveAudioPosition, loadAudioPosition, clearAudioPosition } from "@/store/LocalStorage/listeningStorage";
 
-const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded, onPlay, autoPlay = false, testId = null }, ref) => {
+const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded, onPlay, autoPlay = false, testId = null, disableReplay = false }, ref) => {
     const { themeColors } = useAppearance();
     const audioRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -144,7 +144,7 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
     
     // Handle autoPlay prop - trigger playback when requested (after user interaction)
     useEffect(() => {
-        if (autoPlay && isTestMode && audioUrl && !isPlaying && audioRef.current) {
+        if (autoPlay && isTestMode && audioUrl && !isPlaying && !disableReplay && audioRef.current) {
             const audio = audioRef.current;
             
             const attemptPlay = () => {
@@ -185,7 +185,7 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
                 };
             }
         }
-    }, [autoPlay, isTestMode, audioUrl, isPlaying]);
+    }, [autoPlay, isTestMode, audioUrl, isPlaying, disableReplay]);
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -259,7 +259,8 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
 
     const play = () => {
         if (!audioRef.current) return;
-        
+        if (disableReplay) return;
+
         setPlayError(null);
         const audio = audioRef.current;
         
@@ -292,8 +293,9 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
                 play();
             }
         } else {
-            // In test mode, allow play and pause
+            // In test mode, allow play and pause until the track has finished (no replay)
             if (!isPlaying) {
+                if (disableReplay) return;
                 play();
             } else {
                 pause();
@@ -304,7 +306,10 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
     // Expose pause, play, and clearPosition methods via ref
     useImperativeHandle(ref, () => ({
         pause,
-        play,
+        play: () => {
+            if (disableReplay) return;
+            play();
+        },
         isPlaying: () => isPlaying,
         clearPosition: () => {
             if (testId) {
@@ -312,7 +317,7 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
                 hasRestoredPositionRef.current = false;
             }
         },
-    }), [isPlaying, testId]);
+    }), [isPlaying, testId, disableReplay]);
 
     const handleSeek = (e) => {
         if (!isTestMode && audioRef.current) {

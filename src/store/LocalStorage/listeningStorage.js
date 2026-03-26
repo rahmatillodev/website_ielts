@@ -201,6 +201,40 @@ export const clearAudioPosition = (testId) => {
 };
 
 /**
+ * Single-play completion (IELTS-style: one listen; no replay after finish, including mock test)
+ */
+const AUDIO_COMPLETED_KEY_PREFIX = 'listening_audio_completed_';
+
+const getAudioCompletedKey = (testId) => `${AUDIO_COMPLETED_KEY_PREFIX}${testId}`;
+
+export const setAudioPlaybackCompleted = (testId) => {
+  try {
+    localStorage.setItem(getAudioCompletedKey(testId), 'true');
+  } catch (error) {
+    console.error('Error saving audio completion flag:', error);
+  }
+};
+
+export const isAudioPlaybackCompleted = (testId) => {
+  if (testId == null || testId === '') return false;
+  try {
+    return localStorage.getItem(getAudioCompletedKey(testId)) === 'true';
+  } catch (error) {
+    console.error('Error reading audio completion flag:', error);
+    return false;
+  }
+};
+
+export const clearAudioPlaybackCompleted = (testId) => {
+  if (testId == null || testId === '') return;
+  try {
+    localStorage.removeItem(getAudioCompletedKey(testId));
+  } catch (error) {
+    console.error('Error clearing audio completion flag:', error);
+  }
+};
+
+/**
  * Clear all listening-related data from localStorage
  * This includes all practice data, result data, and audio positions
  */
@@ -212,7 +246,8 @@ export const clearAllListeningData = () => {
       if (key && (
         key.startsWith(STORAGE_KEY_PREFIX) ||
         key.startsWith(RESULT_KEY_PREFIX) ||
-        key.startsWith(AUDIO_POSITION_KEY_PREFIX)
+        key.startsWith(AUDIO_POSITION_KEY_PREFIX) ||
+        key.startsWith(AUDIO_COMPLETED_KEY_PREFIX)
       )) {
         keysToRemove.push(key);
       }
