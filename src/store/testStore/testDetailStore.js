@@ -5,6 +5,95 @@
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
 import { processNestedQuestionGroup } from "./utils/questionTransformers";
+
+const TEST_DETAIL_CACHE_PREFIX = "test_detail_";
+const TEST_DETAIL_CACHE_TTL_MS = 48 * 60 * 60 * 1000; // after 48 hours
+
+const getTestDetailCacheKey = (testId, includeCorrectAnswers) =>
+  `${TEST_DETAIL_CACHE_PREFIX}${testId}_${includeCorrectAnswers ? "with_answers" : "no_answers"}`;
+
+const readCachedTestDetail = (testId, includeCorrectAnswers) => {
+  try {
+    if (!testId) return null;
+    const key = getTestDetailCacheKey(testId, includeCorrectAnswers);
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const { data, cachedAt, sourceUpdatedAt } = parsed;
+    if (!data || !cachedAt || typeof cachedAt !== "number") return null;
+
+    const isExpired = Date.now() - cachedAt > TEST_DETAIL_CACHE_TTL_MS;
+    if (isExpired) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
+    return {
+      data,
+      sourceUpdatedAt: sourceUpdatedAt || data.updated_at || null,
+    };
+  } catch (error) {
+    console.warn("[testDetailStore] Failed to read test detail cache:", error);
+    return null;
+  }
+};
+
+const writeCachedTestDetail = (testId, includeCorrectAnswers, data) => {
+  try {
+    if (!testId || !data) return;
+    const key = getTestDetailCacheKey(testId, includeCorrectAnswers);
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        data,
+        sourceUpdatedAt: data.updated_at || null,
+        cachedAt: Date.now(),
+      })
+    );
+  } catch (error) {
+    console.warn("[testDetailStore] Failed to write test detail cache:", error);
+  }
+};
+
+const clearTestDetailCacheForId = (testId) => {
+  try {
+    if (!testId) return;
+    localStorage.removeItem(getTestDetailCacheKey(testId, false));
+    localStorage.removeItem(getTestDetailCacheKey(testId, true));
+  } catch (error) {
+    console.warn("[testDetailStore] Failed to clear test detail cache:", error);
+  }
+};
+
+const clearAllTestDetailCache = () => {
+  try {
+    const keys = Object.keys(localStorage);
+    keys.forEach((key) => {
+      if (key.startsWith(TEST_DETAIL_CACHE_PREFIX)) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (error) {
+    console.warn("[testDetailStore] Failed to clear all test detail cache:", error);
+  }
+};
+
+const fetchLatestTestUpdatedAt = async (testId) => {
+  const { data, error } = await supabase
+    .from("test")
+    .select("updated_at")
+    .eq("id", testId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to validate test freshness: ${error.message}`);
+  }
+
+  return data?.updated_at || null;
+};
 /**
  * Zustand store
  */
@@ -29,6 +118,26 @@ export const useTestDetailStore = create((set, get) => {
       // Cancel any previous request
       if (currentAbortController) {
         currentAbortController.abort();
+      }
+
+      if (!forceRefresh) {
+        const cachedPayload = readCachedTestDetail(testId, includeCorrectAnswers);
+        if (cachedPayload) {
+          try {
+            const latestUpdatedAt = await fetchLatestTestUpdatedAt(testId);
+            const cachedUpdatedAt = cachedPayload.sourceUpdatedAt;
+
+            if (cachedUpdatedAt && latestUpdatedAt && cachedUpdatedAt === latestUpdatedAt) {
+              set({ currentTest: cachedPayload.data, loadingTest: false, error: null });
+              return cachedPayload.data;
+            }
+          } catch (freshnessError) {
+            // If freshness check fails, keep UX resilient and use valid local cache.
+            console.warn("[testDetailStore] Freshness check failed, using cached test data:", freshnessError);
+            set({ currentTest: cachedPayload.data, loadingTest: false, error: null });
+            return cachedPayload.data;
+          }
+        }
       }
 
       // Create new abort controller for this request
@@ -174,7 +283,7 @@ export const useTestDetailStore = create((set, get) => {
         // Step 1: Fetch test metadata
         const metadataQuery = supabase
           .from("test")
-          .select("id, title, duration, difficulty, type, is_premium, is_active, question_quantity, created_at")
+          .select("id, title, duration, difficulty, type, is_premium, is_active, question_quantity, created_at, updated_at")
           .eq("id", testId)
           .eq("is_active", true)
           .maybeSingle();
@@ -413,11 +522,13 @@ export const useTestDetailStore = create((set, get) => {
         is_premium: testData.is_premium,
         is_active: testData.is_active,
         created_at: testData.created_at,
+        updated_at: testData.updated_at || null,
         parts: processedParts,
       };
 
       // Clear abort controller on success
       currentAbortController = null;
+      writeCachedTestDetail(testId, includeCorrectAnswers, completeTest);
       set({ currentTest: completeTest, loadingTest: false, error: null });
 
       return completeTest;
@@ -447,6 +558,14 @@ export const useTestDetailStore = create((set, get) => {
       currentAbortController = null;
     }
     set({ currentTest: null, loadingTest: false, error: null });
+  },
+
+  clearTestDetailCache: (testId) => {
+    clearTestDetailCacheForId(testId);
+  },
+
+  clearAllTestDetailCache: () => {
+    clearAllTestDetailCache();
   },
   };
 });

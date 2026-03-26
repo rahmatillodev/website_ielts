@@ -347,7 +347,7 @@ export const useMockTestClientStore = create((set) => ({
             // This handles cases where attempts might not have mock_id set
             if (!attempts || attempts.length === 0) {
                 
-                // Get all attempts for user and filter by test IDs in memory
+                // Get recent attempts for user and filter by test IDs in memory (limit to reduce egress)
                 const { data: allAttempts, error: allAttemptsError } = await supabase
                     .from('user_attempts')
                     .select(`
@@ -363,7 +363,8 @@ export const useMockTestClientStore = create((set) => ({
                         mock_id
                     `)
                     .eq('user_id', userId)
-                    .order('completed_at', { ascending: false });
+                    .order('completed_at', { ascending: false })
+                    .limit(100);
 
                 if (allAttemptsError) {
                     console.warn('Error fetching fallback attempts:', allAttemptsError);

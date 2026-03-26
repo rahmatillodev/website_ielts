@@ -4,7 +4,7 @@ import { LuChevronsLeftRight } from "react-icons/lu";
 import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import PracticeFooter from "@/components/questions/PracticeFooter";
-import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData, clearAudioPosition } from "@/store/LocalStorage/listeningStorage";
+import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData, clearAudioPosition, setAudioPlaybackCompleted, isAudioPlaybackCompleted, clearAudioPlaybackCompleted } from "@/store/LocalStorage/listeningStorage";
 import { saveSectionData, loadSectionData, loadMockTestData } from "@/store/LocalStorage/mockTestStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
 import { useDashboardStore } from "@/store/dashboardStore";
@@ -99,6 +99,8 @@ const ListeningPracticePageContent = () => {
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [volume, setVolume] = useState(0.7);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(true);
+  /** After the track finishes once, no replay (timer may still run — e.g. mock test). Persisted per testId. */
+  const [audioPlaybackComplete, setAudioPlaybackComplete] = useState(false);
   const audioPlayerRef = useRef(null);
 
   const questionRefs = useRef({});
@@ -392,6 +394,12 @@ const ListeningPracticePageContent = () => {
     timerInitializedRef.current = false;
   }, [effectiveTestId]);
 
+  // Restore "audio already played through" after refresh (single listen, no second play in mock or practice)
+  useEffect(() => {
+    if (!effectiveTestId) return;
+    setAudioPlaybackComplete(isAudioPlaybackCompleted(effectiveTestId));
+  }, [effectiveTestId]);
+
   // ========== TIMER AUTO-START LOGIC (Mock Test) ==========
   // For mock test, timer should auto-start immediately when timeRemaining is set
   useEffect(() => {
@@ -486,6 +494,7 @@ const ListeningPracticePageContent = () => {
         try {
           if (effectiveTestId) {
             clearAudioPosition(effectiveTestId);
+            clearAudioPlaybackCompleted(effectiveTestId);
             if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
               audioPlayerRef.current.clearPosition();
             }
@@ -714,7 +723,7 @@ const ListeningPracticePageContent = () => {
       setIsPaused(false);
       setIsStarted(true);
       // Resume audio if it exists
-      if (audioPlayerRef.current) {
+      if (audioPlayerRef.current && !audioPlaybackComplete) {
         audioPlayerRef.current.play();
       }
     } else {
@@ -736,6 +745,7 @@ const ListeningPracticePageContent = () => {
     if (id) {
       clearListeningPracticeData(id);
       clearAudioPosition(id);
+      clearAudioPlaybackCompleted(id);
     }
     // Navigate based on accessMode to prevent redirect loops
     const accessMode = sessionStorage.getItem('accessMode');
@@ -803,6 +813,7 @@ const ListeningPracticePageContent = () => {
         // Clear audio position and practice data on successful submission
         if (effectiveTestId) {
           clearAudioPosition(effectiveTestId);
+          clearAudioPlaybackCompleted(effectiveTestId);
           clearListeningPracticeData(effectiveTestId);
           if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
             audioPlayerRef.current.clearPosition();
@@ -1013,12 +1024,14 @@ const ListeningPracticePageContent = () => {
     setCurrentPart(1);
     setLatestAttemptId(null);
     setShouldAutoPlay(true);
+    setAudioPlaybackComplete(false);
     setIsSubmitting(false); // Reset submitting state
     hasAutoSubmittedRef.current = false; // Reset auto-submit flag
     isSubmittingRef.current = false; // Reset submission ref
 
     clearListeningPracticeData(id);
     clearAudioPosition(id);
+    clearAudioPlaybackCompleted(id);
     if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
       audioPlayerRef.current.clearPosition();
     }
@@ -1525,6 +1538,7 @@ const ListeningPracticePageContent = () => {
                       transition: 'background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out'
                     }}
                   >
+                    {/* During taking, player is visually hidden but still controls the single listening playback (same as IELTS: one play, then answers only). */}
                     {audioUrl && (
                       <div className={status === 'taking' ? 'hidden' : ''}>
                         <AudioPlayer
@@ -1535,7 +1549,8 @@ const ListeningPracticePageContent = () => {
                           onPlaybackRateChange={setPlaybackRate}
                           volume={volume}
                           onVolumeChange={setVolume}
-                          autoPlay={shouldAutoPlay && status === 'taking' && !isPaused}
+                          autoPlay={shouldAutoPlay && status === 'taking' && !isPaused && !audioPlaybackComplete}
+                          disableReplay={audioPlaybackComplete}
                           testId={effectiveTestId || id}
                           onPlay={status === 'taking' && !isMockTest ? () => {
                             // Start the timer when audio begins playing (if not already started)
@@ -1545,8 +1560,11 @@ const ListeningPracticePageContent = () => {
                             }
                           } : undefined}
                           onAudioEnded={status === 'taking' ? () => {
-                            if (effectiveTestId || id) {
-                              clearAudioPosition(effectiveTestId || id);
+                            const tid = effectiveTestId || id;
+                            if (tid) {
+                              setAudioPlaybackCompleted(tid);
+                              setAudioPlaybackComplete(true);
+                              clearAudioPosition(tid);
                               if (audioPlayerRef.current && audioPlayerRef.current.clearPosition) {
                                 audioPlayerRef.current.clearPosition();
                               }

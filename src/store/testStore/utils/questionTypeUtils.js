@@ -24,7 +24,7 @@ export function mapQuestionTypeToGroup(type) {
   
   // Map combined types
   if (type === 'table' || type === 'matching_information') return 'matching';
-  if (type === 'fill_in_blanks' || type === 'drag_drop') return 'summary';
+  if (type === 'fill_in_blanks' || type === 'drag_drop' || type === 'universal') return 'summary';
   if (type === 'multiple_answers') return 'multiple_choice';
   
   // Direct 1:1 mapping for other types

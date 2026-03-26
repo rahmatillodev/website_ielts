@@ -86,7 +86,7 @@ export const useTestListStore = create((set, get) => ({
     try {
       const testsQueryPromise = supabase
         .from("test")
-        .select("*, part(part_number)")
+        .select("id, title, type, difficulty, duration, is_active, is_mock, created_at, question_quantity, is_premium, part(part_number)")
         .eq("is_active", true)
         .or("is_mock.eq.false,is_mock.is.null")
         .order("created_at", { ascending: false });

@@ -80,6 +80,14 @@ export const useTestStore = create((set, get) => {
       set(syncState());
     },
 
+    clearTestDetailCache: (testId) => {
+      useTestDetailStore.getState().clearTestDetailCache(testId);
+    },
+
+    clearAllTestDetailCache: () => {
+      useTestDetailStore.getState().clearAllTestDetailCache();
+    },
+
     // Actions from completion store
     setTestCompleted: (testId, completionData) => {
       useTestCompletionStore.getState().setTestCompleted(testId, completionData);
