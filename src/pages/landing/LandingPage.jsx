@@ -184,7 +184,7 @@ const LandingPage = () => {
               <Button
                 size="lg"
                 className="bg-[#4A90E2] hover:bg-[#3a7ac8d3] text-white px-6 sm:px-8 py-3 sm:py-4 md:py-6 rounded-full font-semibold text-sm 
-                sm:text-base w-4/12 lg:w-auto group transition-all shadow-[0px_20px_25px_-5px_#2D9CDB4D]"
+                sm:text-base w-full sm:w-auto group transition-all shadow-[0px_20px_25px_-5px_#2D9CDB4D]"
                 >
                 Start Free Practice <LuArrowRight className="ml-0 inline transition-transform group-hover:translate-x-2" />
               </Button>
@@ -593,7 +593,7 @@ const LandingPage = () => {
             Join 1,000+ students who turned IELTS stress into confidence with IELTSCORE
           </motion.p>
           <motion.div variants={fadeInUp} className="w-full md:w-full lg:w-auto">
-            <Link to="/signup" className="block w-4/12 lg:w-auto md:block lg:inline-block mx-auto">
+            <Link to="/signup" className="block w-full sm:w-auto md:block lg:inline-block mx-auto">
                 <Button
               size="lg"
               className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white px-6 sm:px-8 py-2.5 sm:py-3 md:py-3 rounded-full font-semibold transition-all text-sm sm:text-base w-full md:w-full lg:w-auto group shadow-[0_4px_20px_rgba(74,144,226,0.4)]"
