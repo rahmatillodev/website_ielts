@@ -36,20 +36,17 @@ const ReadingPracticePageContent = () => {
   const { isSidebarOpen } = useAnnotation();
   const timerInitializedRef = useRef(false);
 
-  // Check if this is a mock test (check both searchParams and window.location.search)
-  const urlSearchParams = React.useMemo(() => new URLSearchParams(window.location.search), []);
-  const isMockTest = React.useMemo(() =>
-    searchParams.get('mockTest') === 'true' || urlSearchParams.get('mockTest') === 'true',
-    [searchParams, urlSearchParams]
-  );
-  const mockTestId = React.useMemo(() =>
-    searchParams.get('mockTestId') || urlSearchParams.get('mockTestId'),
-    [searchParams, urlSearchParams]
-  );
-  const mockClientId = React.useMemo(() =>
-    searchParams.get('mockClientId') || urlSearchParams.get('mockClientId'),
-    [searchParams, urlSearchParams]
-  );
+  // Mock test flags: re-read window on each render so we never stick to stale params (e.g. after replaceState / hydration).
+  const isMockTest =
+    searchParams.get('mockTest') === 'true' ||
+    (typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('mockTest') === 'true');
+  const mockTestId =
+    searchParams.get('mockTestId') ||
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mockTestId'));
+  const mockClientId =
+    searchParams.get('mockClientId') ||
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mockClientId'));
 
   // Get effective test ID from URL (handles history.replaceState case)
   const getEffectiveTestId = () => {
@@ -93,7 +90,6 @@ const ReadingPracticePageContent = () => {
   const hasAutoSubmittedRef = useRef(false); // Prevent multiple auto-submissions
   const isSubmittingRef = useRef(false); // Track submission state to prevent race conditions
   const isMountedRef = useRef(true); // Track if component is mounted
-  const lastFetchKeyRef = useRef(null); // Track last fetch to prevent duplicates
 
   const [leftWidth, setLeftWidth] = useState(50);
   const containerRef = useRef(null);
@@ -169,14 +165,6 @@ const ReadingPracticePageContent = () => {
   useEffect(() => {
     const testIdToUse = effectiveTestId;
 
-    // Prevent duplicate fetches - use ref to track if fetch is in progress
-    const fetchKey = `${testIdToUse}-${isMockTest}-${status}`;
-
-    if (lastFetchKeyRef.current === fetchKey) {
-      console.log('[ReadingPracticePage] Skipping duplicate fetch:', fetchKey);
-      return;
-    }
-
     if (!testIdToUse || (typeof testIdToUse !== 'string' && typeof testIdToUse !== 'number')) {
       if (isMockTest) {
         const retryTimeout = setTimeout(() => {
@@ -202,7 +190,7 @@ const ReadingPracticePageContent = () => {
       return;
     }
 
-    let isMounted = true;
+    let cancelled = false;
 
     // Cancel any previous request and clear current test
     const { cancelFetch, clearCurrentTest } = useTestStore.getState();
@@ -211,9 +199,6 @@ const ReadingPracticePageContent = () => {
 
     const loadTestData = async () => {
       try {
-        // Mark this fetch as in progress
-        lastFetchKeyRef.current = fetchKey;
-
         const isReviewMode = status === 'reviewing';
         const includeCorrectAnswers = isReviewMode;
 
@@ -227,7 +212,7 @@ const ReadingPracticePageContent = () => {
 
         await fetchTestById(testIdToUse, false, includeCorrectAnswers);
 
-        if (!isMounted) return;
+        if (cancelled) return;
 
         // Verify test data was loaded
         const state = useTestStore.getState();
@@ -242,7 +227,7 @@ const ReadingPracticePageContent = () => {
         if (isMockTest && mockTestId) {
           // For mock test, use mock test storage
           const savedData = loadSectionData(mockTestId, 'reading');
-          if (savedData && isMounted) {
+          if (savedData && !cancelled) {
             if (savedData.answers && Object.keys(savedData.answers).length > 0) {
               setAnswers(savedData.answers);
               setHasInteracted(true);
@@ -301,14 +286,14 @@ const ReadingPracticePageContent = () => {
     loadTestData();
 
     return () => {
-      isMounted = false;
+      cancelled = true;
       // Cleanup: cancel any active fetch requests
       const { cancelFetch, clearCurrentTest } = useTestStore.getState();
       cancelFetch();
       clearCurrentTest(false);
     };
     // eslint-disable-next-line
-  }, [effectiveTestId, fetchTestById, isMockTest, status]);
+  }, [effectiveTestId, fetchTestById, isMockTest, status, mockTestId]);
 
 
   // Initialize timeRemaining from test duration when currentTest loads (if not loaded from storage)
@@ -335,7 +320,9 @@ const ReadingPracticePageContent = () => {
     // For mock test, check URL for duration param (in seconds)
     let durationInSeconds;
     if (isMockTest) {
-      const durationParam = searchParams.get('duration') || urlSearchParams.get('duration');
+      const durationParam =
+        searchParams.get('duration') ||
+        (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('duration'));
       durationInSeconds = durationParam ? parseInt(durationParam, 10) : convertDurationToSeconds(currentTest.duration);
     } else {
       // Check if we have saved data first
@@ -352,7 +339,7 @@ const ReadingPracticePageContent = () => {
     // Set time remaining only if not already set
     setTimeRemaining(durationInSeconds);
     timerInitializedRef.current = true;
-  }, [currentTest, isMockTest, searchParams, urlSearchParams, mockTestId, id]);
+  }, [currentTest, isMockTest, searchParams, mockTestId, id]);
 
   // Reset initialization flag when test ID changes (new test loaded)
   useEffect(() => {

@@ -153,11 +153,24 @@ export const clearAllMockTestDataForId = (mockTestId) => {
  */
 export const saveSectionData = (mockTestId, section, sectionData) => {
   const currentData = loadMockTestData(mockTestId) || {};
-  // Always use sectionData.answers if provided, even if it's an empty object
-  // This ensures answers are saved correctly and not lost
-  const answersToSave = sectionData.answers !== undefined 
-    ? sectionData.answers 
-    : (currentData[`${section}Answers`] || {});
+  const existingAnswers = currentData[`${section}Answers`] || {};
+  const incoming = sectionData.answers;
+  // Use incoming as full snapshot when provided. If React briefly has {} (race/hydration)
+  // while storage already has answers, do not wipe — timer/other fields still save.
+  let answersToSave;
+  if (incoming !== undefined) {
+    const incomingKeys =
+      incoming && typeof incoming === 'object' && !Array.isArray(incoming)
+        ? Object.keys(incoming)
+        : [];
+    if (incomingKeys.length === 0 && Object.keys(existingAnswers).length > 0) {
+      answersToSave = existingAnswers;
+    } else {
+      answersToSave = incoming;
+    }
+  } else {
+    answersToSave = existingAnswers;
+  }
   
   const updatedData = {
     ...currentData,
