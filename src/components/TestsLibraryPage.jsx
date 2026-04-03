@@ -613,14 +613,14 @@ const TestsLibraryPage = ({
                                   return (
                                     <label
                                       key={label}
-                                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                                      className="flex items-center p-1 gap-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                                     >
                                       <Checkbox
                                         checked={isChecked}
                                         onCheckedChange={() => togglePartLabelTemp(label)}
                                         className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer accent-blue-600"
                                       />
-                                      <span className="text-sm text-gray-700 font-medium">{label}</span>
+                                      <span className="text-[11px] text-gray-700 font-medium">{label}</span>
                                     </label>
                                   );
                                 })}
@@ -691,11 +691,8 @@ const TestsLibraryPage = ({
                             </label>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Fixed Action Buttons */}
-                      <div
-                        className="flex gap-2 pt-2 border-t border-gray-200 bg-white sticky bottom-0 left-0 p-4"
+                        <div
+                        className="flex gap-2 pt-2 border-t border-gray-200 bg-white p-4"
                         style={{
                           zIndex: 2,
                           boxShadow: "0 -2px 6px 0 rgba(0,0,0,0.01)",
@@ -716,6 +713,10 @@ const TestsLibraryPage = ({
                           Search
                         </Button>
                       </div>
+                      </div>
+
+                      {/* Fixed Action Buttons */}
+                     
                     </div>
                   </PopoverContent>
                 </Popover>
