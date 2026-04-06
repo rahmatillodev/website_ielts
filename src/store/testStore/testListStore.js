@@ -18,18 +18,29 @@ const FULL_PART_COUNT_BY_TYPE = {
 };
 
 /**
- * Derives a display label from a test's part relation (from Supabase select "*, part(part_number)").
- * Full is type-dependent: reading = 3 parts, listening = 4 parts.
+ * Sorted unique part numbers from a test's part relation (Supabase: part(part_number)).
  * @param {Array|object|null} rawPart - part relation (array or single object)
- * @param {string} [testType] - "reading" | "listening" | "speaking"
- * @returns {string|null} "Part 1", "Parts 1, 2", "Full reading", "Full listening", etc., or null
+ * @returns {number[]}
  */
-export function getPartLabelFromPartRelation(rawPart, testType = "reading") {
+export function getPartNumbersFromPartRelation(rawPart) {
   const parts = Array.isArray(rawPart) ? rawPart : rawPart != null ? [rawPart] : [];
   const partNumbers = parts
     .map((p) => p?.part_number)
     .filter((n) => typeof n === "number" && n >= MIN_PART_NUMBER && n <= MAX_PART_NUMBER)
     .sort((a, b) => a - b);
+  return [...new Set(partNumbers)];
+}
+
+/**
+ * Derives a display label from a test's part relation (from Supabase select "*, part(part_number)").
+ * Full is type-dependent: reading = 3 parts, listening = 4 parts.
+ * Multi-part (non-full) tests use a middle dot between labels — not "Parts 1, 2".
+ * @param {Array|object|null} rawPart - part relation (array or single object)
+ * @param {string} [testType] - "reading" | "listening" | "speaking"
+ * @returns {string|null} "Part 1", "Part 1 · Part 2", "Full reading", "Full listening", etc., or null
+ */
+export function getPartLabelFromPartRelation(rawPart, testType = "reading") {
+  const partNumbers = getPartNumbersFromPartRelation(rawPart);
   const count = partNumbers.length;
   if (count === 0) return null;
   if (count === 1) return `Part ${partNumbers[0]}`;
@@ -38,7 +49,7 @@ export function getPartLabelFromPartRelation(rawPart, testType = "reading") {
     const fullLabels = { reading: "Full reading", listening: "Full listening", speaking: "Full speaking" };
     return fullLabels[testType] ?? "Full Test";
   }
-  return "Parts " + partNumbers.join(", ");
+  return partNumbers.map((n) => `Part ${n}`).join(" · ");
 }
 
 export const useTestListStore = create((set, get) => ({
@@ -125,9 +136,10 @@ export const useTestListStore = create((set, get) => ({
       }
 
       const tests = rawTests.map((test) => {
+        const partNumbers = getPartNumbersFromPartRelation(test.part);
         const partLabel = getPartLabelFromPartRelation(test.part, test.type);
         const { part: _part, ...rest } = test;
-        return { ...rest, partLabel };
+        return { ...rest, partLabel, partNumbers };
       });
 
       const filtered_data_reading = tests.filter(
