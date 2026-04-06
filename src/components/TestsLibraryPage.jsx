@@ -132,10 +132,27 @@ const TestsLibraryPage = ({
         (activeTab === "premium" && test.is_premium === true) ||
         (activeTab === "free" && test.is_premium === false);
 
-      // Filter by part label (reading/listening/speaking)
+      // Filter by part: individual Part N + Full reading/listening/speaking (no combined "Parts 1, 2" row)
+      const fullPartLabel =
+        testType === "reading"
+          ? "Full reading"
+          : testType === "listening"
+            ? "Full listening"
+            : "Full speaking";
       const matchesPart =
         selectedPartLabels.length === 0 ||
-        (test.partLabel && selectedPartLabels.includes(test.partLabel));
+        selectedPartLabels.some((sel) => {
+          if (sel === fullPartLabel) return test.partLabel === fullPartLabel;
+          if (sel.startsWith("Part ")) {
+            const n = parseInt(sel.slice(5), 10);
+            if (!Number.isFinite(n)) return false;
+            if (Array.isArray(test.partNumbers) && test.partNumbers.length > 0) {
+              return test.partNumbers.includes(n);
+            }
+            return test.partLabel === sel;
+          }
+          return test.partLabel === sel;
+        });
 
       // Filter by writing task label (Task 1, Task 2, Both)
       const matchesWritingTask =
@@ -401,25 +418,31 @@ const TestsLibraryPage = ({
 
   const cols = useResponsiveGridCols();
 
-  // Unique part labels from current test data (for reading/listening/speaking)
+  // Part filter options: each Part N separately, plus Full reading/listening/speaking only (no "Parts 1, 2")
   const availablePartLabels = useMemo(() => {
     if (testType === "writing" || !Array.isArray(allTests)) return [];
-    const labels = allTests
-      .map((t) => t.partLabel)
-      .filter(Boolean);
-    return [...new Set(labels)].sort((a, b) => {
-      // Sort: Part 1, Part 2, ... then "Parts 1, 2", then Full reading/listening/speaking
-      if (a.startsWith("Part ") && !a.startsWith("Parts ")) {
-        if (b.startsWith("Part ") && !b.startsWith("Parts ")) return a.localeCompare(b, undefined, { numeric: true });
-        return -1;
+    const fullPartLabel =
+      testType === "reading"
+        ? "Full reading"
+        : testType === "listening"
+          ? "Full listening"
+          : "Full speaking";
+    const labels = new Set();
+    for (const t of allTests) {
+      if (t.partLabel === fullPartLabel) labels.add(fullPartLabel);
+      const nums = t.partNumbers;
+      if (Array.isArray(nums)) {
+        for (const n of nums) {
+          labels.add(`Part ${n}`);
+        }
       }
-      if (b.startsWith("Part ") && !b.startsWith("Parts ")) return 1;
-      if (a.startsWith("Parts ")) {
-        if (b.startsWith("Parts ")) return a.localeCompare(b);
-        return -1;
-      }
-      if (b.startsWith("Parts ")) return 1;
-      return a.localeCompare(b);
+    }
+    return [...labels].sort((a, b) => {
+      if (a === fullPartLabel) return 1;
+      if (b === fullPartLabel) return -1;
+      const na = parseInt(a.slice(5), 10);
+      const nb = parseInt(b.slice(5), 10);
+      return na - nb;
     });
   }, [allTests, testType]);
 
