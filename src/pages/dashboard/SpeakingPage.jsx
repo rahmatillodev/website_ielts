@@ -37,7 +37,7 @@ const CARDS = [
     id: "tips",
     title: "Tips",
     description: "Learn effective speaking strategies.",
-    to: "/speaking/tips",
+    to: "/dashboard/speaking/tips",
     icon: LuSparkles,
     color: "bg-blue-50 border-blue-100 text-blue-700",
     iconColor: "text-blue-600",
@@ -79,6 +79,18 @@ const SpeakingPage = () => {
 
             if (card.disabled || !card.to) {
               return <div key={card.id}>{content}</div>;
+            }
+            if (card.id === "tips") {
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => navigate("/dashboard/speaking/tips")}
+                  className="text-left w-full focus:outline-none"
+                >
+                  {content}
+                </button>
+              );
             }
             if (card.to.startsWith("/speaking/")) {
               return (

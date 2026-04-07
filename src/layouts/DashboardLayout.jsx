@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, matchPath } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import DashboardNavbar from '@/components/navbar/DashboardNavbar';
 import DashboardSidebar from '@/components/sidebar/DashboardSidebar';
@@ -112,10 +112,16 @@ const DashboardLayout = () => {
     "/pricing",
     "/writing-practice",
     "/own-writing",
-    "/mock-test/results"
+    "/mock-test/results",
+    "/dashboard/speaking/tips/:tipId",
   ]
 
-  const isHideByPath = hideNavOn.some((p) => pathname.startsWith(p))
+  const isHideByPath = hideNavOn.some((pattern) => {
+    if (pattern.includes(":")) {
+      return matchPath({ path: pattern, end: true }, pathname) != null
+    }
+    return pathname.startsWith(pattern)
+  })
 
   // 🔥 final logic - hide nav/sidebar if it's a practice page OR mock test
   const isHide = isHideByPath || isMockTest

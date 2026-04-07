@@ -30,8 +30,9 @@
   import EquipmentCheck from "./pages/dashboard/speaking/EquipmentCheck";
   import SpeakingLibraryPage from "./pages/dashboard/speaking/SpeakingLibraryPage";
   import SpeakingShadowing from "./pages/dashboard/speaking/SpeakingShadowing";
-  import ShadowingLibraryPage from "./pages/dashboard/speaking/ShadowingLibrarypaeg"; 
+  import ShadowingLibrary from "./pages/dashboard/speaking/ShadowingLibrary"; 
   import SpeakingResultPage from "./pages/dashboard/speaking/SpeakingResultPage";
+  import SpeakingTipsPage from "./pages/dashboard/speaking/SpeakingTips";
   import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
   import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
   import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
@@ -49,6 +50,8 @@
   import MockTestClientResultsPage from "./pages/dashboard/mock/MockTestClientResultsPage";
   import MockTestRoute from "./components/MockTestRoute";
   import RegularDashboardRoute from "./components/RegularDashboardRoute";
+  import SpeakingPodcast from "./pages/dashboard/speaking/SpeakingPodcast";
+  import PodcastPlayer from "./pages/dashboard/speaking/PodcastPlayer";
   // Main App component with routing
   function App() {
     const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -358,7 +361,7 @@ if (accessMode === 'mockTest') {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/writing" element={<WritingPage />} />
                 <Route path="/speaking" element={<SpeakingPage />} />
-                <Route path="/shadowing-library" element={<ShadowingLibraryPage />} />
+                <Route path="/shadowing-library" element={<ShadowingLibrary />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/own-writing" element={<OwnWritingPage />} />
                 <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
@@ -367,7 +370,16 @@ if (accessMode === 'mockTest') {
                 <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
                 <Route path="/speaking-library" element={<SpeakingLibraryPage />} />  
                 <Route path="/speaking-practice/shadowing" element={<SpeakingShadowing />} />
+                <Route path="/speaking-practice/shadowing-player" element={<SpeakingShadowing />} />
                 <Route path="/speaking-practice/shadowing-player/:videoId" element={<SpeakingShadowing />} />
+                <Route path="/speaking/podcasts" element={<SpeakingPodcast />} />
+                <Route path="/dashboard/speaking/tips" element={<SpeakingTipsPage />} />
+                <Route path="/dashboard/speaking/tips/:tipId" element={<SpeakingTipsPage />} />
+                <Route path="/speaking/tips" element={<SpeakingTipsPage />} />
+                <Route path="/speaking/tips/:tipId" element={<SpeakingTipsPage />} />
+                <Route path="/speaking/podcast-player" element={<PodcastPlayer />} />
+                <Route path="/speaking/podcast-player/:videoId" element={<PodcastPlayer />} />  
+                <Route path="/podcast/player/:videoId" element={<PodcastPlayer />} />
                 <Route path="/equipment-check/:id" element={<EquipmentCheck />} />
                 <Route path="/writing-practice/:id" element={<WritingPracticePage />} />
                 <Route path="/reading-result/:id" element={<ReadingResultPage />} />

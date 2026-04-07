@@ -1,17 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Search, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import supabase from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { formatDateToDayMonth } from "@/utils/formatDate";
-import SpeakingPodcastCard from "./SpeakingPodcastCard";
+import ShadowingCard from "./ShadowingCard";
 
 /**
- * Maps `test` row + nested `part[]` where `type` = podcast.
- * `duration` is passed through unchanged from `test.duration` for overlay display.
+ * Maps `test` row + nested `part[]` (SQL schema).
+ * - duration: `test.duration` (minutes from DB, passed through unchanged)
+ * - image: `test.image_url`
+ * - video: `part[0].video_url` (empty `part` → no video)
  */
-function mapPodcastRow(item) {
+function mapItemForCard(item) {
   const parts = Array.isArray(item.part) ? item.part : item.part ? [item.part] : [];
   const part0 = parts[0];
   const videoUrl = part0?.video_url?.trim?.() || "";
@@ -26,7 +28,7 @@ function mapPodcastRow(item) {
   };
 }
 
-const SpeakingPodcast = () => {
+const ShadowingLibrary = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [rows, setRows] = useState([]);
@@ -36,37 +38,53 @@ const SpeakingPodcast = () => {
   const authUser = useAuthStore((state) => state.authUser);
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
 
-  const loadPodcasts = useCallback(async () => {
-    setLoading(true);
-    setFetchError("");
-    const { data, error } = await supabase
-      .from("test")
-      .select("*, part(*)")
-      .eq("type", "podcast")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      setFetchError(error.message || "Could not load podcasts.");
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-
-    const list = Array.isArray(data) ? data : [];
-    setRows(list.map(mapPodcastRow).filter((x) => x.videoUrl));
-    setLoading(false);
-  }, []);
-
+  /** Narrow columns + defer dashboard fetch so this page is not blocked by user_attempts + test metadata. */
   useEffect(() => {
-    if (authUser?.id) {
-      fetchDashboardData(authUser.id, false);
-    }
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      setFetchError("");
+      const { data, error } = await supabase
+        .from("test")
+        .select(
+          `
+          id,
+          title,
+          duration,
+          image_url,
+          created_at,
+          part (
+            video_url
+          )
+        `
+        )
+        .eq("type", "shadowing")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+
+      if (error) {
+        setFetchError(error.message || "Could not load shadowing library.");
+        setRows([]);
+        setLoading(false);
+      } else {
+        const list = Array.isArray(data) ? data : [];
+        const mapped = list.map(mapItemForCard).filter((x) => x.videoUrl);
+        setRows(mapped);
+        setLoading(false);
+      }
+
+      if (authUser?.id) {
+        fetchDashboardData(authUser.id, false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [authUser?.id, fetchDashboardData]);
-
-  useEffect(() => {
-    loadPodcasts();
-  }, [loadPodcasts]);
 
   const filteredData = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -89,25 +107,25 @@ const SpeakingPodcast = () => {
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-10">
           <div>
             <h1 className="text-4xl font-[900] text-slate-900 tracking-tight mb-2">
-              Speaking Podcast
+              Shadowing Library
             </h1>
             <p className="text-slate-500 text-lg font-medium">
-              Listen to expert advice and model answers to improve your skills.
+              Master your speaking by mimicking native speakers with our curated video library.
             </p>
           </div>
 
           <div className="relative w-full lg:w-96">
-            <label htmlFor="speaking-podcast-search" className="sr-only">
-              Search podcasts
+            <label htmlFor="shadowing-library-search" className="sr-only">
+              Search shadowing topics
             </label>
             <Search
               className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none"
               aria-hidden
             />
             <input
-              id="speaking-podcast-search"
+              id="shadowing-library-search"
               type="search"
-              placeholder="Search podcasts..."
+              placeholder="Search shadowing topics..."
               autoComplete="off"
               className="w-full pl-12 pr-4 py-4 bg-white border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all text-left"
               value={searchQuery}
@@ -123,12 +141,12 @@ const SpeakingPodcast = () => {
         )}
 
         {loading ? (
-          <p className="text-slate-500 text-center py-12">Loading podcasts…</p>
+          <p className="text-slate-500 text-center py-12">Loading shadowing library…</p>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
               {filteredData.map((item) => (
-                <SpeakingPodcastCard
+                <ShadowingCard
                   key={item.id}
                   title={item.title}
                   image={item.image}
@@ -142,8 +160,8 @@ const SpeakingPodcast = () => {
             {filteredData.length === 0 && (
               <p className="text-slate-500 text-center py-12">
                 {rows.length === 0
-                  ? "No podcasts yet. Add `test` rows with type “podcast”, `image_url`, `duration`, and `part.video_url`."
-                  : "No podcasts match your search."}
+                  ? "No shadowing content yet. Add `test` rows with type “shadowing”, `image_url`, `duration`, and `part.video_url`."
+                  : "No shadowing topics match your search."}
               </p>
             )}
           </>
@@ -153,4 +171,4 @@ const SpeakingPodcast = () => {
   );
 };
 
-export default SpeakingPodcast;
+export default ShadowingLibrary;

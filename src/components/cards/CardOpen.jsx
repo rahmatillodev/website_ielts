@@ -68,8 +68,10 @@ const CardOpen = ({
         ? `/reading-practice/${id}`
         : testType === 'speaking'
           ? `/equipment-check/${id}`
+          : testType === 'podcast'
+            ? `/podcast/player/${video_id}` 
           : testType === 'shadowing'
-            ? `/speaking-practice/shadowing-player/${video_id}`
+            ? `/speaking-practice/shadowing-player/${video_id || id}`
             : testType === 'human'
               ? `/equipment-check/${id}`
               : `/writing-practice/${id}`);
@@ -91,7 +93,7 @@ const CardOpen = ({
     } else if (testType === 'speaking') {
       navigate(`/equipment-check/${id}`);
     } else if (testType === 'shadowing') {
-      navigate(`/equipment-check/${id}`);
+      navigate(`/speaking-practice/shadowing-player/${video_id || id}`);
     } else if (testType === 'human') {
       navigate(`/equipment-check/${id}`);
     }
