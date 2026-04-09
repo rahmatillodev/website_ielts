@@ -32,6 +32,10 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
 
   const email = authUser?.email || 'user@example.com';
   const subscriptionStatus = userProfile?.subscription_status || 'Free';
+  const avatarVersion = userProfile?.avatar_version ?? 1;
+  const avatarUrl = userProfile?.avatar_image
+    ? `${userProfile.avatar_image}?v=${avatarVersion}`
+    : "";
 
   const handleLogout = async () => {
     const result = await signOut();
@@ -97,7 +101,7 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
               </div>
 
               <Avatar className="size-10 shadow-sm">
-                <AvatarImage src={userProfile?.avatar_image || ""} className="object-cover" />
+                <AvatarImage src={avatarUrl} className="object-cover" />
                 <AvatarFallback className="bg-[#00838f] text-white font-medium">
                   {getInitials()[0]}
                 </AvatarFallback>
@@ -112,8 +116,9 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
             <div className="p-4 text-center">
               {userProfile?.avatar_image ? (
                 <img
-                  src={`${userProfile.avatar_image}?t=${Date.now()}`}
+                  src={avatarUrl}
                   alt="avatar"
+                  loading="lazy"
                   className="size-16 mx-auto rounded-full object-cover"
                 />
               ) : (

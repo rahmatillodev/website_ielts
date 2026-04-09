@@ -145,6 +145,7 @@ const TypeMap = ({
       {imageUrl && (
         <div className="mb-6">
           <img 
+            loading="lazy"
             src={imageUrl} 
             alt="Map for labeling"
             className="w-full max-w-full h-auto object-contain rounded-lg border"

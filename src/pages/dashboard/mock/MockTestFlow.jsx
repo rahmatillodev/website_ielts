@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useMockTestClientStore } from '@/store/mockTestClientStore';
 import { useAuthStore } from '@/store/authStore';
-import { saveMockTestData, loadMockTestData, clearMockTestData, clearAllMockTestDataForId, loadAudioCheckState, saveAudioCheckState } from '@/store/LocalStorage/mockTestStorage';
+import { saveMockTestData, loadMockTestData, clearAllMockTestDataForId, loadAudioCheckState, saveAudioCheckState } from '@/store/LocalStorage/mockTestStorage';
 import MockTestListening from './MockTestListening';
 import MockTestReading from './MockTestReading';
 import MockTestWriting from './MockTestWriting';
@@ -19,7 +19,7 @@ const MockTestFlow = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userProfile } = useAuthStore();
-  const { fetchMockTestByUserId, fetchMockTestById, mockTest, client, loading, error, updateClientStatus, hasUserCompletedMockTest, findClientForMockTest, fetchClientById, createClientForMockTest } = useMockTestClientStore();
+  const { fetchMockTestByUserId, fetchMockTestById, mockTest, client, loading, error, updateClientStatus, findClientForMockTest, fetchClientById, createClientForMockTest } = useMockTestClientStore();
   const appliedAudioCheckDoneRef = useRef(false);
   const restorationAttemptedRef = useRef(false);
 
@@ -455,6 +455,31 @@ const MockTestFlow = () => {
     setCurrentSection('listening');
   };
 
+  // Keep section correction outside render to avoid setState during render.
+  useEffect(() => {
+    if (!effectiveMockTestId || !audioCheckComplete) return;
+
+    const validSections = new Set(['audioCheck', 'listening', 'reading', 'writing', 'results']);
+    if (validSections.has(currentSection)) return;
+
+    const writingCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_writing_completed`);
+    const readingCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_reading_completed`);
+    const listeningCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_listening_completed`);
+
+    const nextSection =
+      writingCompleted === 'true'
+        ? 'results'
+        : readingCompleted === 'true'
+          ? 'writing'
+          : listeningCompleted === 'true'
+            ? 'reading'
+            : 'listening';
+
+    setTimeout(() => {
+      setCurrentSection(nextSection);
+    }, 0);
+  }, [audioCheckComplete, currentSection, effectiveMockTestId]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -542,7 +567,7 @@ const MockTestFlow = () => {
         />
       );
 
-    default:
+    default: {
       // If we're in a section that should show audio check, show it
       // Otherwise, show audio check as default/fallback only if not already completed
       if (!audioCheckComplete) {
@@ -559,8 +584,6 @@ const MockTestFlow = () => {
       const listeningCompleted = localStorage.getItem(`mock_test_${effectiveMockTestId}_listening_completed`);
       
       if (writingCompleted === 'true') {
-        // Writing completed, go to results
-        setCurrentSection('results');
         return (
           <MockTestResults
             results={sectionResults}
@@ -569,8 +592,6 @@ const MockTestFlow = () => {
           />
         );
       } else if (readingCompleted === 'true') {
-        // Reading completed, go to writing
-        setCurrentSection('writing');
         return (
           <MockTestWriting
             writingId={mockTest.writing_id}
@@ -583,8 +604,6 @@ const MockTestFlow = () => {
           />
         );
       } else if (listeningCompleted === 'true') {
-        // Listening completed, go to reading
-        setCurrentSection('reading');
         return (
           <MockTestReading
             testId={mockTest.reading_id}
@@ -610,6 +629,7 @@ const MockTestFlow = () => {
           onVideoStart={handleListeningVideoStart}
         />
       );
+    }
   }
 };
 

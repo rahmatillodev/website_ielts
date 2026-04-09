@@ -11,11 +11,13 @@ import supabase from '@/lib/supabase';
 // TEMPORARY: Mock data flag for testing (set to false to disable)
 // TODO: Set USE_MOCK_DATA = false before production deployment
 const USE_MOCK_DATA = true;
+const DEFAULT_ATTEMPTS_PAGE_SIZE = 100;
+const ANSWERS_BATCH_SIZE = 100;
 
 /**
  * Mock ma'lumotlarni 10 barobar ko'paytirilgan varianti (100 ta attempt)
  */
-const generateMockData = (targetBandScore = 7.5) => {
+const generateMockData = () => {
   const allAttempts = [];
   const allAnswers = [];
   const questionTypes = [
@@ -81,8 +83,14 @@ export const useAnalyticsStore = create((set, get) => ({
   cacheDuration: 5 * 60 * 1000, // 5 minutes
 
   // Main function to fetch all analytics data
-  fetchAnalyticsData: async (userId, forceRefresh = false) => {
+  fetchAnalyticsData: async (userId, forceRefresh = false, options = {}) => {
     const state = get();
+    const attemptsPage = Number.isFinite(options.page) ? options.page : 0;
+    const attemptsPageSize = Number.isFinite(options.pageSize) ? options.pageSize : DEFAULT_ATTEMPTS_PAGE_SIZE;
+    const from = attemptsPage * attemptsPageSize;
+    const to = from + attemptsPageSize - 1;
+    const lookbackDays = Number.isFinite(options.lookbackDays) ? options.lookbackDays : 90;
+    const startDate = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
 
     if (!userId) {
       set({
@@ -160,7 +168,9 @@ export const useAnalyticsStore = create((set, get) => ({
       `)
       .eq('user_id', userId)
       .not('test_id', 'is', null)
-      .order('completed_at', { ascending: false });
+      .gte('completed_at', startDate)
+      .order('completed_at', { ascending: false })
+      .range(from, to);
     
 
 
@@ -173,15 +183,25 @@ export const useAnalyticsStore = create((set, get) => ({
       let userAnswersData = [];
 
       if (attemptIds.length > 0) {
-        const { data: answersData, error: answersError } = await supabase
-          .from('user_answers')
-          .select('attempt_id, question_id, is_correct, question_type')
-          .in('attempt_id', attemptIds);
+        const chunks = [];
+        for (let i = 0; i < attemptIds.length; i += ANSWERS_BATCH_SIZE) {
+          chunks.push(attemptIds.slice(i, i + ANSWERS_BATCH_SIZE));
+        }
 
-        if (answersError) {
-          console.warn('[analyticsStore] Error fetching user answers:', answersError);
-        } else {
-          userAnswersData = Array.isArray(answersData) ? answersData : [];
+        for (const chunk of chunks) {
+          const { data: answersData, error: answersError } = await supabase
+            .from('user_answers')
+            .select('attempt_id, question_id, is_correct, question_type')
+            .in('attempt_id', chunk);
+
+          if (answersError) {
+            console.warn('[analyticsStore] Error fetching user answers:', answersError);
+            continue;
+          }
+
+          if (Array.isArray(answersData)) {
+            userAnswersData.push(...answersData);
+          }
         }
       }
 

@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import supabase from '@/lib/supabase'
 import { clearAllReadingData } from '@/store/LocalStorage/readingStorage'
 import { clearAllListeningData } from '@/store/LocalStorage/listeningStorage'
+import { compressAvatarImage } from '@/utils/mediaCompression'
 
 export const useAuthStore = create(
   persist(
@@ -96,21 +97,31 @@ export const useAuthStore = create(
           return { success: false, error: 'User not authenticated' };
         }
         try {
-          const fileExt = file.name.split('.').pop();
+          const optimizedFile = await compressAvatarImage(file);
+          const extensionFromType = optimizedFile?.type?.split('/')[1];
+          const fileExt = (extensionFromType || optimizedFile.name.split('.').pop() || 'webp').toLowerCase();
           const filePath = `${userId}/avatar.${fileExt}`;
 
           const { error: uploadError } = await supabase.storage
             .from('avatar-image')
-            .upload(filePath, file, { upsert: true });
+            .upload(filePath, optimizedFile, {
+              upsert: true,
+              cacheControl: '31536000, immutable',
+            });
 
           if (uploadError) throw uploadError;
 
           const { data: urlData } = supabase.storage.from('avatar-image').getPublicUrl(filePath);
           const url = urlData?.publicUrl;
+          const currentVersion = Number(get().userProfile?.avatar_version) || 0;
+          const nextVersion = currentVersion + 1;
 
           const { error: updateError } = await supabase
             .from('users')
-            .update({ avatar_image: url })
+            .update({
+              avatar_image: url,
+              avatar_version: nextVersion,
+            })
             .eq('id', userId);
 
           if (updateError) throw updateError;

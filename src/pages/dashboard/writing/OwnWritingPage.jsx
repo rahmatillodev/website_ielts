@@ -349,6 +349,7 @@ const OwnWritingPageContent = () => {
                   </Button>
                 </div>
                 <img
+                  loading="lazy"
                   src={tasks.task1.image}
                   alt="Dropped preview"
                   className="block w-full max-w-full max-h-[260px] object-contain"

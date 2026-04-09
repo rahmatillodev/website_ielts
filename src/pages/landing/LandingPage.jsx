@@ -204,6 +204,7 @@ const LandingPage = () => {
                   "/images/humans/avatar/загрузка23.jpg",
                 ].map((avatar, i) => (
                   <img
+                    loading="lazy"
                     key={i}
                     src={avatar}
                     alt={`Student ${i + 1}`}
@@ -488,6 +489,7 @@ const LandingPage = () => {
                   >
                     <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                       <img
+                        loading="lazy"
                         src={t.avatar}
                         alt={t.name}
                         className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full shrink-0 object-cover"
@@ -523,6 +525,7 @@ const LandingPage = () => {
                   >
                     <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                       <img
+                        loading="lazy"
                         src={t.avatar}
                         alt={t.name}
                         className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full shrink-0 object-cover"

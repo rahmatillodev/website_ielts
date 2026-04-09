@@ -185,6 +185,7 @@ const InstructionalVideo = ({
             <video
               ref={videoRef}
               src={videoSrc}
+              preload="metadata"
               className="w-full h-full object-contain"
               onEnded={handleVideoEnd}
               onPlay={() => setIsPlaying(true)}
