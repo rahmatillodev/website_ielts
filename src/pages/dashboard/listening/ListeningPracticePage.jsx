@@ -1645,7 +1645,7 @@ const ListeningPracticePageContent = () => {
                                     const bNum = b.question_number ?? 0;
                                     return aNum - bNum;
                                   })[0]?.question_number}
-                                className="p-4"
+                                className="p-4 overflow-x-auto"
                               >
                                 <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
                                   <QuestionRenderer
@@ -1689,7 +1689,7 @@ const ListeningPracticePageContent = () => {
                                         if (el) questionRefs.current[questionNumber] = el;
                                       }}
                                       data-question-number={questionNumber}
-                                      className="p-4"
+                                      className="p-4 overflow-x-auto"
                                     >
                                       {question.image_url && (
                                         <div className="mb-4">

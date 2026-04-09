@@ -162,164 +162,196 @@ const TypeMap = ({
       )}
 
       {/* Question Table */}
-      <div className="overflow-x-auto">
-        <div 
-          className="rounded-lg shadow-sm border overflow-hidden" 
-          style={{ 
+      <div
+        className="overflow-x-auto"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          maxWidth: "100vw",
+        }}
+      >
+        <div
+          className="rounded-lg shadow-sm border overflow-x-auto"
+          style={{
             backgroundColor: themeColors.background,
-            borderColor: themeColors.border 
+            borderColor: themeColors.border,
+            maxWidth: "100%",
+            minWidth: 0,
           }}
         >
-          <table className="min-w-full border-collapse">
-            <thead>
-              <tr style={{ backgroundColor: themeColors.background }}>
-                {/* First column header: Question */}
-                <th 
-                  className="px-4 py-3 text-left font-semibold text-gray-700 border-r"
-                  style={{ color: themeColors.text, borderColor: themeColors.border }}
-                >
-                  Question
-                </th>
-                {/* Option columns */}
-                {columnOptions.map((colOpt) => {
-                  const letter = colOpt.letter || colOpt.option_key || colOpt.option_text;
-                  const optionText = colOpt.option_text || '';
-                  return (
-                    <th
-                      key={colOpt.id || letter}
-                      className="px-4 py-3 text-center font-semibold text-gray-700"
-                      title={optionText}
-                      style={{
-                        backgroundColor: themeColors.background,
-                        color: themeColors.text,
-                      }}
-                    >
-                      {letter}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {questions.map((q) => {
-                const qNumber = q.question_number || q.id;
-                const questionText = q.question_text || q.text || '';
-                const review = getQuestionReview(qNumber);
-                const isCorrect = review.isCorrect;
-                const correctAnswerFromReview = review.correctAnswer || '';
-                const correctAnswerFromQuestion = getCorrectAnswerForQuestion(q);
-                const correctAnswer = correctAnswerFromReview || correctAnswerFromQuestion;
-                const showWrong = isReviewMode && !isCorrect;
-                const showCorrect = isReviewMode && isCorrect;
-                const isBookmarked = bookmarks.has(qNumber);
-                return (
-                  <tr
-                    key={q.id || qNumber}
-                    className={`border-t transition-colors group ${
-                      showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : 'bg-white hover:bg-gray-50'
-                    }`}
-                    style={{ borderColor: themeColors.border }}
+          <div style={{ minWidth: "600px" /* set a min width to force table scroll when needed */ }}>
+            <table className="min-w-full border-collapse">
+              <thead>
+                <tr style={{ backgroundColor: themeColors.background }}>
+                  {/* First column header: Question */}
+                  <th
+                    className="px-4 py-3 text-left font-semibold text-gray-700 border-r"
+                    style={{ color: themeColors.text, borderColor: themeColors.border }}
                   >
-                    {/* Row Question */}
-                    <td 
-                      className={`px-4 py-3 text-gray-900 border-r ${
-                        showWrong ? 'bg-red-50' : showCorrect ? 'bg-green-50' : ''
-                      }`} 
-                      style={{ 
-                        backgroundColor: themeColors.background, 
-                        color: themeColors.text,
-                        borderColor: themeColors.border 
-                      }}
+                    Question
+                  </th>
+                  {/* Option columns */}
+                  {columnOptions.map((colOpt) => {
+                    const letter = colOpt.letter || colOpt.option_key || colOpt.option_text;
+                    const optionText = colOpt.option_text || '';
+                    return (
+                      <th
+                        key={colOpt.id || letter}
+                        className="px-4 py-3 text-center font-semibold text-gray-700"
+                        title={optionText}
+                        style={{
+                          backgroundColor: themeColors.background,
+                          color: themeColors.text,
+                        }}
+                      >
+                        {letter}
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {questions.map((q) => {
+                  const qNumber = q.question_number || q.id;
+                  const questionText = q.question_text || q.text || '';
+                  const review = getQuestionReview(qNumber);
+                  const isCorrect = review.isCorrect;
+                  const correctAnswerFromReview = review.correctAnswer || '';
+                  const correctAnswerFromQuestion = getCorrectAnswerForQuestion(q);
+                  const correctAnswer = correctAnswerFromReview || correctAnswerFromQuestion;
+                  const showWrong = isReviewMode && !isCorrect;
+                  const showCorrect = isReviewMode && isCorrect;
+                  const isBookmarked = bookmarks.has(qNumber);
+                  return (
+                    <tr
+                      key={q.id || qNumber}
+                      className={`border-t transition-colors group ${
+                        showWrong
+                          ? 'bg-red-50'
+                          : showCorrect
+                          ? 'bg-green-50'
+                          : 'bg-white hover:bg-gray-50'
+                      }`}
+                      style={{ borderColor: themeColors.border }}
                     >
-                      <div className="flex gap-2 items-center justify-between">
-                        <div className="flex gap-2">
-                          <span className="font-medium">{qNumber}.</span>
-                          <span data-selectable="true">{questionText}</span>
-                          {showCorrect && (
-                            <span className="text-xs text-green-700 font-medium ml-2">Correct</span>
-                          )}
-                          {showWrong && correctAnswer && showCorrectAnswers && (
-                            <span className="text-xs text-green-600 font-medium ml-2 flex whitespace-nowrap">
-                              Correct: {correctAnswer}
-                            </span>
-                          )}
+                      {/* Row Question */}
+                      <td
+                        className={`px-4 py-3 text-gray-900 border-r ${
+                          showWrong
+                            ? 'bg-red-50'
+                            : showCorrect
+                            ? 'bg-green-50'
+                            : ''
+                        }`}
+                        style={{
+                          backgroundColor: themeColors.background,
+                          color: themeColors.text,
+                          borderColor: themeColors.border,
+                        }}
+                      >
+                        <div className="flex gap-2 items-center justify-between">
+                          <div className="flex gap-2">
+                            <span className="font-medium">{qNumber}.</span>
+                            <span data-selectable="true">{questionText}</span>
+                            {showCorrect && (
+                              <span className="text-xs text-green-700 font-medium ml-2">Correct</span>
+                            )}
+                            {showWrong && correctAnswer && showCorrectAnswers && (
+                              <span className="text-xs text-green-600 font-medium ml-2 flex whitespace-nowrap">
+                                Correct: {correctAnswer}
+                              </span>
+                            )}
+                          </div>
+                          {/* Bookmark Icon */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleBookmark(qNumber);
+                            }}
+                            className={`ml-2 transition-all ${
+                              isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                            }`}
+                            title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
+                          >
+                            {isBookmarked ? (
+                              <FaBookmark className="w-5 h-5 text-red-500" />
+                            ) : (
+                              <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
+                            )}
+                          </button>
                         </div>
-                        {/* Bookmark Icon */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleBookmark(qNumber);
-                          }}
-                          className={`ml-2 transition-all ${
-                            isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                          }`}
-                          title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-                        >
-                          {isBookmarked ? (
-                            <FaBookmark className="w-5 h-5 text-red-500" />
-                          ) : (
-                            <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                    {/* Options */}
-                    {columnOptions.map((colOpt) => {
-                      // Value to store as answer: usually the letter/option_key.
-                      const colValue = colOpt.letter || colOpt.option_key || colOpt.option_text;
-                      // See if this row has an option for this column (lookup by question_id and letter/etc)
-                      const optInRow = getQuestionColumnOption(q, colOpt);
-                      // If missing, render empty for vertical alignment
-                      if (!optInRow) {
+                      </td>
+                      {/* Options */}
+                      {columnOptions.map((colOpt) => {
+                        // Value to store as answer: usually the letter/option_key.
+                        const colValue = colOpt.letter || colOpt.option_key || colOpt.option_text;
+                        // See if this row has an option for this column (lookup by question_id and letter/etc)
+                        const optInRow = getQuestionColumnOption(q, colOpt);
+                        // If missing, render empty for vertical alignment
+                        if (!optInRow) {
+                          return (
+                            <td
+                              key={`${q.id}-${colOpt.id || colValue}`}
+                              className="px-4 py-3 text-center"
+                              style={{
+                                backgroundColor: themeColors.background,
+                                color: themeColors.text,
+                              }}
+                            ></td>
+                          );
+                        }
+                        const isSelected = isOptionSelected(qNumber, colValue);
+                        const isCorrectOption = optInRow.is_correct === true;
+                        const isCorrectAnswerMatch =
+                          isReviewMode &&
+                          (colValue?.toLowerCase() === (correctAnswer || '').toLowerCase().trim() ||
+                            optInRow.correct_answer?.toLowerCase() === (correctAnswer || '').toLowerCase().trim());
                         return (
                           <td
-                            key={`${q.id}-${colOpt.id || colValue}`}
-                            className="px-4 py-3 text-center"
-                            style={{ backgroundColor: themeColors.background, color: themeColors.text }}
-                          ></td>
+                            key={`${q.id}-${optInRow.id || colValue}`}
+                            className={`px-4 py-3 text-center ${
+                              isSelected && showCorrect
+                                ? 'bg-green-100'
+                                : isSelected && showWrong
+                                ? 'bg-red-400'
+                                : (isCorrectOption || isCorrectAnswerMatch) && isReviewMode && !isSelected
+                                ? 'bg-green-50'
+                                : ''
+                            }`}
+                            style={{
+                              backgroundColor: themeColors.background,
+                              color: themeColors.text,
+                            }}
+                          >
+                            <label
+                              className={`flex items-center justify-center ${
+                                mode === 'review' ? 'cursor-default' : 'cursor-pointer'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={`map-q-${qNumber}`}
+                                value={colValue}
+                                checked={isSelected}
+                                onChange={() => handleOptionChange(qNumber, colValue)}
+                                disabled={mode === 'review'}
+                                className={`w-5 h-5 ${
+                                  isSelected && showCorrect
+                                    ? 'accent-green-600'
+                                    : isSelected && showWrong
+                                    ? 'accent-red-600'
+                                    : 'accent-blue-500'
+                                } ${mode === 'review' ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                              />
+                            </label>
+                          </td>
                         );
-                      }
-                      const isSelected = isOptionSelected(qNumber, colValue);
-                      const isCorrectOption = optInRow.is_correct === true;
-                      const isCorrectAnswerMatch = isReviewMode &&
-                        (colValue?.toLowerCase() === (correctAnswer || '').toLowerCase().trim() ||
-                        optInRow.correct_answer?.toLowerCase() === (correctAnswer || '').toLowerCase().trim());
-                      return (
-                        <td
-                          key={`${q.id}-${optInRow.id || colValue}`}
-                          className={`px-4 py-3 text-center ${
-                            isSelected && showCorrect ? 'bg-green-100' :
-                            isSelected && showWrong ? 'bg-red-400' :
-                            (isCorrectOption || isCorrectAnswerMatch) && isReviewMode && !isSelected ? 'bg-green-50' : ''
-                          }`}
-                          style={{
-                            backgroundColor: themeColors.background,
-                            color: themeColors.text,
-                          }}
-                        >
-                          <label className={`flex items-center justify-center ${mode === 'review' ? 'cursor-default' : 'cursor-pointer'}`}>
-                            <input
-                              type="radio"
-                              name={`map-q-${qNumber}`}
-                              value={colValue}
-                              checked={isSelected}
-                              onChange={() => handleOptionChange(qNumber, colValue)}
-                              disabled={mode === 'review'}
-                              className={`w-5 h-5 ${
-                                isSelected && showCorrect ? 'accent-green-600' :
-                                isSelected && showWrong ? 'accent-red-600' :
-                                'accent-blue-500'
-                              } ${mode === 'review' ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                            />
-                          </label>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
