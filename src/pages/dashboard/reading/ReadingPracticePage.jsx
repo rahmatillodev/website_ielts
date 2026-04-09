@@ -1524,6 +1524,7 @@ const ReadingPracticePageContent = () => {
                     {currentPartData?.image_url && (
                       <div className="mb-6 relative">
                         <img
+                          loading="lazy"
                           src={currentPartData.image_url}
                           alt={currentPartData.title || `Part ${currentPart} image`}
                           className="w-full max-w-full object-contain max-h-[500px] rounded-lg border"
@@ -1716,6 +1717,7 @@ const ReadingPracticePageContent = () => {
                                   {question.image_url && (
                                     <div className="mb-4">
                                       <img
+                                        loading="lazy"
                                         src={question.image_url}
                                         alt={`Question ${questionNumber} image`}
                                         className="w-full max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-700 cursor-pointer transition-transform hover:scale-105"

@@ -345,7 +345,7 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
 
     return (
         <div className="sticky top-2 z-10 border border-gray-200 p-4 shadow-sm w-7/12 mx-auto rounded-2xl" style={{ backgroundColor: themeColors.background, borderColor: themeColors.border }}>
-            <audio ref={audioRef} src={audioUrl} />
+            <audio ref={audioRef} src={audioUrl} preload="metadata" />
             <div className="space-y-3">
                 {playError && (
                     <div className="text-xs text-gray-600">

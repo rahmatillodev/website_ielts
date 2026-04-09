@@ -50,6 +50,7 @@ const UniversalQuestionView = ({
         {question?.image_url && (
           <div className="mb-4">
             <img
+              loading="lazy"
               src={question.image_url}
               alt="Question"
               className="w-full max-w-full h-auto object-contain rounded-lg border"
@@ -181,7 +182,8 @@ const UniversalQuestionView = ({
     <div className="w-full" style={{ backgroundColor: themeColors.background }}>
       {question?.image_url && (
         <div className="mb-4">
-          <img
+          <img 
+            loading="lazy"
             src={question.image_url}
             alt="Question"
             className="w-full max-w-full h-auto object-contain rounded-lg border"

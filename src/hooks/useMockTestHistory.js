@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { useMockTestClientStore } from '@/store/mockTestClientStore';
 import supabase from '@/lib/supabase';
 
 /**
@@ -9,7 +8,6 @@ import supabase from '@/lib/supabase';
  */
 export const useMockTestHistory = () => {
   const { userProfile } = useAuthStore();
-  const { fetchClientAttempts } = useMockTestClientStore();
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,150 +23,40 @@ export const useMockTestHistory = () => {
     setError(null);
 
     try {
-      // Fetch all completed client records for this user
-      // Show history for completed, checked, and notified statuses
-      const { data, error: clientError } = await supabase
-        .from("mock_test_clients")
-        .select(`
-          id,
-          status,
-          total_score,
-          created_at,
-          full_name,
-          email,
-          mock_test_id
-        `)
-        .eq("user_id", userProfile.id)
-        .in("status", ["completed", "checked", "notified"])
-        .not("mock_test_id", "is", null)
-        .order("created_at", { ascending: false })
+      const { data, error: rpcError } = await supabase.rpc('get_mock_history_compact', {
+        p_user_id: userProfile.id,
+        p_limit: 50,
+        p_offset: 0,
+      });
 
-      if (clientError) throw clientError;
+      if (rpcError) throw rpcError;
 
-      // For each completed client, fetch the associated results
-      // Fetch attempts specifically for each client using mock_id
-      const historyItems = await Promise.all(
-        (data || []).map(async (client) => {
-          try {
-            // Fetch attempts for this specific mock test
-            // mock_id references mock_test.id, not mock_test_clients.id
-            const { data: attempts, error: attemptsError } = await supabase
-              .from('user_attempts')
-              .select(`
-                id,
-                test_id,
-                writing_id,
-                score,
-                feedback,
-                correct_answers,
-                total_questions,
-                time_taken,
-                completed_at
-              `)
-              .eq('user_id', userProfile.id)
-              .eq('mock_id', client.mock_test_id)
-              .order('completed_at', { ascending: false });
-              
+      const historyItems = (data || []).map((row) => {
+        const client = {
+          id: row.client_id,
+          status: row.status,
+          total_score: row.total_score,
+          created_at: row.created_at,
+          full_name: row.full_name,
+          email: row.email,
+          mock_test_id: row.mock_test_id,
+        };
 
-            if (attemptsError) {
-              console.error(`Error fetching attempts for client ${client.id}:`, attemptsError);
-            }
+        const results = {
+          listening: row.listening_result,
+          reading: row.reading_result,
+          writing: row.writing_result,
+          speaking: row.speaking_result,
+        };
 
-            // Organize attempts by type (listening, reading, writing, speaking)
-            const results = {
-              listening: null,
-              reading: null,
-              writing: null,
-              speaking: null
-            };
+        const hasAnyResult = Object.values(results).some((value) => value !== null);
 
-            if (attempts && attempts.length > 0) {
-              const testIds = attempts
-                .filter(a => a.test_id)
-                .map(a => a.test_id);
-            
-              const writingIds = attempts
-                .filter(a => a.writing_id)
-                .map(a => a.writing_id);
-            
-              // Fetch test types
-              const testTypeMap = {};
-            
-              if (testIds.length > 0) {
-                const { data: testsData } = await supabase
-                  .from('test')
-                  .select('id, type')
-                  .in('id', testIds);
-            
-                if (testsData) {
-                  testsData.forEach(t => {
-                    testTypeMap[t.id] = t.type;
-                  });
-                }
-              }
-            
-              // Fetch writings types too if any
-              if (writingIds.length > 0) {
-                const { data: writingsData } = await supabase
-                  .from('writings')
-                  .select('id')
-                  .in('id', writingIds);
-            
-                if (writingsData) {
-                  writingsData.forEach(w => {
-                    testTypeMap[w.id] = 'writing';
-                  });
-                }
-              }
-            
-              // Get the mock test using client's mock_test_id
-              let matchingMockTest = null;
-              if (client.mock_test_id) {
-                const { data: mockTestData } = await supabase
-                  .from('mock_test')
-                  .select('id, listening_id, reading_id, writing_id')
-                  .eq('id', client.mock_test_id)
-                  .maybeSingle();
-                
-                matchingMockTest = mockTestData;
-              }
-            
-              if (matchingMockTest) {
-                // Assign results
-                attempts.forEach(attempt => {
-                  if (attempt.writing_id && attempt.writing_id === matchingMockTest.writing_id) {
-                    results.writing = attempt;
-                  } else if (attempt.test_id) {
-                    const type = testTypeMap[attempt.test_id];
-            
-                    if (attempt.test_id === matchingMockTest.listening_id) {
-                      results.listening = attempt;
-                    } else if (attempt.test_id === matchingMockTest.reading_id) {
-                      results.reading = attempt;
-                    } else if (type === 'speaking') {
-                      results.speaking = attempt;
-                    }
-                  }
-                });
-              }
-            }
-            
-
-            return {
-              client,
-              results: Object.keys(results).some(k => results[k] !== null) ? results : null,
-              completedAt: client.created_at,
-            };
-          } catch (err) {
-            console.error(`Error loading results for client ${client.id}:`, err);
-            return {
-              client,
-              results: null,
-              completedAt: client.created_at,
-            };
-          }
-        })
-      );
+        return {
+          client,
+          results: hasAnyResult ? results : null,
+          completedAt: row.created_at,
+        };
+      });
 
       setHistory(historyItems);
     } catch (err) {
@@ -177,7 +65,7 @@ export const useMockTestHistory = () => {
     } finally {
       setLoading(false);
     }
-  }, [userProfile?.id, fetchClientAttempts]);
+  }, [userProfile?.id]);
 
   useEffect(() => {
     loadHistory();

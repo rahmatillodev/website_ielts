@@ -1410,6 +1410,7 @@ const WritingPracticePageContent = () => {
                         style={{ borderColor: themeColors.border }}
                       >
                         <img
+                          loading="lazy"
                           src={taskToDisplay.image_url}
                           alt={taskToDisplay.title}
                           className="w-full max-h-[500px] object-contain rounded-2xl"

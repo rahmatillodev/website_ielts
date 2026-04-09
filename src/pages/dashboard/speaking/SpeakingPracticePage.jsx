@@ -728,6 +728,7 @@ const SpeakingPracticePage = () => {
                       <audio
                         controls
                         className="w-full"
+                        preload="none"
                         ref={(el) => {
                           if (!el) return;
                           // Best-effort output device selection (supported on some browsers only)

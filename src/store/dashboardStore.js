@@ -11,8 +11,12 @@ export const useDashboardStore = create((set, get) => ({
   lastFetched: null, // Timestamp of last successful fetch
 
   // Fetch all dashboard data in one optimized query with join
-  fetchDashboardData: async (userId, forceRefresh = false) => {
+  fetchDashboardData: async (userId, forceRefresh = false, options = {}) => {
     const state = get();
+    const page = Number.isFinite(options.page) ? options.page : 0;
+    const pageSize = Number.isFinite(options.pageSize) ? options.pageSize : 50;
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
 
     if (!userId) {
       set({
@@ -66,6 +70,7 @@ export const useDashboardStore = create((set, get) => ({
         .select('id, test_id, score, time_taken, total_questions, correct_answers, created_at, completed_at')
         .eq('user_id', userId)
         .order('completed_at', { ascending: false })
+        .range(from, to);
 
       if (attemptsError) {
         console.error('[dashboardStore] Error fetching attempts:', attemptsError);

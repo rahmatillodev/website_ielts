@@ -1694,6 +1694,7 @@ const ListeningPracticePageContent = () => {
                                       {question.image_url && (
                                         <div className="mb-4">
                                           <img
+                                            loading="lazy"
                                             src={question.image_url}
                                             alt={`Question ${questionNumber} image`}
                                             className="w-full max-w-full h-auto"
