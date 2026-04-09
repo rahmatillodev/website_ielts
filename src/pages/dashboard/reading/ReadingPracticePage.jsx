@@ -1658,7 +1658,7 @@ const ReadingPracticePageContent = () => {
                                 const bNum = b.question_number ?? 0;
                                 return aNum - bNum;
                               })[0]?.question_number}
-                            className="p-4 rounded-lg border transition-all"
+                            className="p-4 rounded-lg border transition-all overflow-x-auto"
                             style={{
                               borderColor: themeColors.border,
                               backgroundColor: themeColors.background

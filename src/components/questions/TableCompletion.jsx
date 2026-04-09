@@ -142,10 +142,10 @@ const TableCompletion = ({
   };
 
   return (
-    <div className="w-full overflow-x-auto" style={{ backgroundColor: themeColors.background }}>
+    <div className="w-full overflow-x-auto" style={{ backgroundColor: themeColors.background, WebkitOverflowScrolling: "touch" }}>
       <div
         className="prose prose-slate max-w-none 
-        [&_table]:min-w-full [&_table]:border-collapse [&_table]:border [&_table]:border-gray-300
+        [&_table]:w-max [&_table]:min-w-full [&_table]:border-collapse [&_table]:border [&_table]:border-gray-300
         [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:font-semibold [&_th]:bg-gray-50 [&_th]:border [&_th]:border-gray-300
         [&_td]:px-4 [&_td]:py-3 [&_td]:border [&_td]:border-gray-300
         [&_thead]:bg-gray-50
