@@ -17,11 +17,12 @@ const CenterMapCard = ({ mapUrl }) => {
               width="100%"
               height="260"
               style={{ border: 0, minHeight: "20rem", width: "100%" }}
-              allowFullScreen=""
+              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+              referrerPolicy="strict-origin-when-cross-origin"
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
               title="Mock Center Location Map"
-            ></iframe>
+              allowFullScreen>
+            </iframe>
           </div>
         </CardContent>
       </Card>

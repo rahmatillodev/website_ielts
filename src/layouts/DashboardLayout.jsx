@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, matchPath } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import DashboardNavbar from '@/components/navbar/DashboardNavbar';
 import DashboardSidebar from '@/components/sidebar/DashboardSidebar';
@@ -27,6 +27,7 @@ const DashboardLayout = () => {
                           pathname.includes('/listening-practice') ||
                           pathname.includes('/writing-practice') ||
                           pathname.includes('/speaking-practice') ||
+                          pathname.includes('/equipment-check') ||
                           pathname.includes('/reading-result') ||
                           pathname.includes('/listening-result') ||
                           pathname.includes('/speaking-result');
@@ -36,6 +37,10 @@ const DashboardLayout = () => {
                              pathname === '/listening' ||
                              pathname === '/writing' ||
                              pathname === '/speaking' ||
+                             pathname === '/speaking-library' ||
+                             pathname === '/shadowing-library' ||
+                             pathname.startsWith('/speaking/') ||
+                             pathname.startsWith('/dashboard/speaking/') ||
                              pathname === '/analytics' ||
                              pathname === '/own-writing' ||
                              pathname.startsWith('/writing/writing-history');
@@ -68,11 +73,15 @@ const DashboardLayout = () => {
       }
       
       // Only redirect if they're trying to access dashboard routes (not practice pages)
-      const isDashboardRoute = pathname === '/dashboard' || 
-                               pathname === '/reading' || 
-                               pathname === '/listening' || 
-                               pathname === '/writing' || 
-                               pathname === '/speaking' || 
+      const isDashboardRoute = pathname === '/dashboard' ||
+                               pathname === '/reading' ||
+                               pathname === '/listening' ||
+                               pathname === '/writing' ||
+                               pathname === '/speaking' ||
+                               pathname === '/speaking-library' ||
+                               pathname === '/shadowing-library' ||
+                               pathname.startsWith('/speaking/') ||
+                               pathname.startsWith('/dashboard/speaking/') ||
                                pathname === '/analytics';
       
       if (accessMode === 'mockTest' && isDashboardRoute) {
@@ -104,15 +113,23 @@ const DashboardLayout = () => {
     "/reading-result",
     "/listening-practice",
     "/listening-result",
+    "/equipment-check",
+    "/speaking-practice/shadowing",
     "/speaking-practice",
     "/speaking-result",
     "/pricing",
     "/writing-practice",
     "/own-writing",
-    "/mock-test/results"
+    "/mock-test/results",
+    "/dashboard/speaking/tips/:tipId",
   ]
 
-  const isHideByPath = hideNavOn.some((p) => pathname.startsWith(p))
+  const isHideByPath = hideNavOn.some((pattern) => {
+    if (pattern.includes(":")) {
+      return matchPath({ path: pattern, end: true }, pathname) != null
+    }
+    return pathname.startsWith(pattern)
+  })
 
   // 🔥 final logic - hide nav/sidebar if it's a practice page OR mock test
   const isHide = isHideByPath || isMockTest

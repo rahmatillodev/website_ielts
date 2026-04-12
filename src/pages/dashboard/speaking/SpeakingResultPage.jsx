@@ -1,148 +1,173 @@
-/**
- * Speaking practice result page: reads persisted result from sessionStorage and displays
- * list of questions with recorded audio playback.
- */
+import React, { useEffect, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
-import React, { useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { SPEAKING_RESULT_STORAGE_KEY } from "@/store/speakingSessionStore";
-import ConfirmModal from "@/components/modal/ConfirmModal";
+const COLOR = "#2D9CDB";
 
-export default function SpeakingResultPage() {
-  const { id: testId } = useParams();
+const SpeakingResultPage = () => {
   const navigate = useNavigate();
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [durations, setDurations] = useState({});
+  const location = useLocation();
 
-  const result = useMemo(() => {
-    try {
-      const raw = sessionStorage.getItem(SPEAKING_RESULT_STORAGE_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
-      return data;
-    } catch {
-      return null;
-    }
+  const recordings = location.state?.recordings ?? [];
+
+  const audioUrls = useMemo(() => {
+    return recordings.map((r) => ({
+      ...r,
+      url: r.blob ? URL.createObjectURL(r.blob) : "",
+    }));
   }, []);
 
-  const handleBack = () => {
-    setShowExitConfirm(true);
-  };
-
-  const handleExitConfirm = () => {
-    navigate("/speaking");
-    setShowExitConfirm(false);
-  };
-
-  if (!result) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-gray-600">
-        <p className="mb-4">No result found. Start a speaking session first.</p>
-        <button
-          type="button"
-          onClick={() => navigate("/speaking")}
-          className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600"
-        >
-          Back to Speaking
-        </button>
-      </div>
-    );
-  }
-
-  const { recordingResults = [], completedAt } = result;
-
-  const formatDuration = (seconds) => {
-    if (seconds == null || !Number.isFinite(seconds)) return "0:00";
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${String(s).padStart(2, "0")}`;
-  };
-
-  const handleLoadedMetadata = (index, e) => {
-    const el = e.target;
-    if (!el) return;
-    const raw = el.duration;
-    if (Number.isFinite(raw) && raw >= 0) {
-      setDurations((prev) => ({ ...prev, [index]: raw }));
-      return;
-    }
-    // Blob/MediaRecorder often reports Infinity until seek: set currentTime to large value, read duration on timeupdate, reset
-    const onTimeUpdate = () => {
-      const d = el.duration;
-      el.removeEventListener("timeupdate", onTimeUpdate);
-      el.currentTime = 0;
-      if (Number.isFinite(d) && d >= 0) {
-        setDurations((prev) => ({ ...prev, [index]: d }));
-      }
+  useEffect(() => {
+    return () => {
+      audioUrls.forEach((x) => { if (x.url) URL.revokeObjectURL(x.url); });
     };
-    el.addEventListener("timeupdate", onTimeUpdate);
-    el.currentTime = 1e101;
-  };
+  }, [audioUrls]);
+
+  const grouped = useMemo(() => {
+    const map = {};
+    audioUrls.forEach((item) => {
+      const key = item.partLabel || "Other";
+      if (!map[key]) map[key] = [];
+      map[key].push(item);
+    });
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  }, [audioUrls]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-gray-50 overflow-y-auto">
-      <ConfirmModal
-        isOpen={showExitConfirm}
-        onClose={() => setShowExitConfirm(false)}
-        onConfirm={handleExitConfirm}
-        title="Exit Test"
-        description="Are you sure you want to exit? Your progress may be lost."
-        cancelLabel="Stay"
-        confirmLabel="Yes, Leave"
-      />
-      <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 bg-white border-b border-gray-200">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="text-sm text-gray-600 hover:text-gray-900"
-        >
-          ← Back
-        </button>
-        <h1 className="text-lg font-semibold">Speaking Practice — Result</h1>
-        <span className="text-sm text-gray-500 w-24 text-right">
-          {completedAt
-            ? new Date(completedAt).toLocaleString(undefined, {
-                dateStyle: "short",
-                timeStyle: "short",
-              })
-            : ""}
-        </span>
+    <div style={{
+      minHeight: "100vh",
+      background: "#f8fafc",
+      fontFamily: "'Segoe UI', system-ui, sans-serif",
+    }}>
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <header style={{
+        background: "#fff",
+        borderBottom: "1px solid #f0f0f0",
+        padding: "16px 40px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
+          <button
+            onClick={() => navigate("/speaking-library")}
+            style={{
+              background: COLOR, color: "#fff", border: "none",
+              borderRadius: 8, padding: "7px 14px",
+              fontWeight: 600, fontSize: 13, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6,
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#1a7ab8"}
+            onMouseLeave={(e) => e.currentTarget.style.background = COLOR}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <div>
+
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0 }}>
+            Your Recordings
+          </h1>
+          <div style={{ fontSize: 12, color: "#9ca3af", display: "flex", gap: 6, alignItems: "center" }}>
+          <span>Speaking</span>
+          <span style={{ color: "#d1d5db" }}>/</span>
+          <span style={{ color: COLOR, fontWeight: 600 }}>Results</span>
+        </div>
+          </div>
+        </div>
+        
       </header>
 
-      <main className="flex-1 p-6 max-w-2xl mx-auto w-full">
-        <h2 className="text-xl font-bold mb-6">Your recordings</h2>
-        <ul className="space-y-6">
-          {recordingResults.map((item, index) => (
-            <li
-              key={item.questionId ?? index}
-              className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm"
+      {/* ── Main ───────────────────────────────────────────────────────── */}
+      <main style={{ maxWidth: 820, margin: "0 auto", padding: "40px 24px" }}>
+
+        {recordings.length === 0 ? (
+          <div style={{
+            background: "#fff", borderRadius: 16,
+            border: "1px solid #f0f0f0", padding: 48,
+            textAlign: "center", color: "#6b7280",
+          }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="#d1d5db" style={{ marginBottom: 16 }}>
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+            </svg>
+            <p style={{ fontSize: 16, marginBottom: 16 }}>No recordings found.</p>
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                color: COLOR, fontWeight: 600,
+                background: "none", border: "none",
+                cursor: "pointer", fontSize: 14,
+              }}
             >
-              <p className="text-sm text-gray-500 mb-1">Question {index + 1}</p>
-              <p className="font-medium text-gray-900 mb-3">{item.questionText}</p>
-              {item.audioUrl ? (
-                <div className="space-y-1">
-                  {durations[index] != null && Number.isFinite(durations[index]) && (
-                    <p className="text-xs text-gray-500">
-                      Duration: {formatDuration(durations[index])}
-                    </p>
-                  )}
-                  <audio
-                    controls
-                    src={item.audioUrl}
-                    className="w-full max-w-md"
-                    preload="metadata"
-                    onLoadedMetadata={(e) => handleLoadedMetadata(index, e)}
-                  >
-                    Your browser does not support the audio element.
-                  </audio>
+              ← Go back
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
+            {grouped.map(([partLabel, items]) => (
+              <div key={partLabel}>
+
+                {/* Part header */}
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 14, marginBottom: 16,
+                }}>
+                  <div style={{
+                    background: COLOR, color: "#fff",
+                    borderRadius: 8, padding: "5px 16px",
+                    fontWeight: 700, fontSize: 13, whiteSpace: "nowrap",
+                  }}>
+                    {partLabel}
+                  </div>
+                  <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
+                  <span style={{ fontSize: 12, color: "#9ca3af", whiteSpace: "nowrap" }}>
+                    {items.length} question{items.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500">No recording</p>
-              )}
-            </li>
-          ))}
-        </ul>
+
+                {/* Question cards */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {items.map((item, qi) => (
+                    <div key={`${item.questionId}-${qi}`} style={{
+                      background: "#fff",
+                      borderRadius: 14,
+                      border: "1px solid #f0f0f0",
+                      padding: "20px 24px",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                    }}>
+                      <p style={{
+                        fontSize: 11, fontWeight: 700, color: COLOR,
+                        textTransform: "uppercase", letterSpacing: 1,
+                        margin: "0 0 8px",
+                      }}>
+                        Question {qi + 1}
+                      </p>
+                      <p style={{
+                        color: "#111827", fontSize: 15,
+                        margin: "0 0 16px", lineHeight: 1.6,
+                      }}>
+                        {item.question}
+                      </p>
+                      {item.url ? (
+                        <audio
+                          controls
+                          src={item.url}
+                          style={{ width: "100%", maxWidth: 500 }}
+                        />
+                      ) : (
+                        <p style={{ color: "#9ca3af", fontSize: 13, margin: 0 }}>
+                          No audio recorded.
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );
-}
+};
+
+export default SpeakingResultPage;
