@@ -108,7 +108,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
 
   return (
     <div className="overflow-x-auto mb-6">
-      <div className="rounded-lg shadow-sm border border-gray-200 overflow-hidden" style={{ backgroundColor: themeColors.background }}>
+      <div className="rounded-lg shadow-sm border border-gray-200 overflow-x-auto" style={{ backgroundColor: themeColors.background, WebkitOverflowScrolling: "touch" }}>
         <table className="min-w-full border-collapse">
           <thead>
             <tr className="bg-gray-50" style={{ backgroundColor: themeColors.background }}>
