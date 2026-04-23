@@ -99,6 +99,20 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
     });
   };
 
+  // Some types (e.g. drag and drop) include distractors with null question_number.
+  // Footer totals and nav should only use real numbered questions.
+  const getDisplayQuestions = (partQuestions = []) => {
+    const seenNumbers = new Set();
+    return partQuestions
+      .filter((q) => q?.question_number != null)
+      .sort((a, b) => (a.question_number ?? 0) - (b.question_number ?? 0))
+      .filter((q) => {
+        if (seenNumbers.has(q.question_number)) return false;
+        seenNumbers.add(q.question_number);
+        return true;
+      });
+  };
+
   return (
     <footer
       className="z-50 flex flex-col relative shrink-0"
@@ -126,8 +140,9 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
             getSortedParts().map((part) => {
               const partNumber = part.part_number ?? part.id;
               const partQuestions = part.questions || [];
-              const answeredCount = getPartAnsweredCount(partQuestions);
-              const totalQuestions = partQuestions.length;
+              const displayQuestions = getDisplayQuestions(partQuestions);
+              const answeredCount = getPartAnsweredCount(displayQuestions);
+              const totalQuestions = displayQuestions.length;
               const isActive = currentPart === partNumber;
 
               return (
@@ -144,16 +159,11 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                           >
                             Part {partNumber}
                           </div>
-                          {partQuestions.length > 0 && (
+                          {displayQuestions.length > 0 && (
                             <div className="flex flex-col min-w-0 items-center">
                           {/* Progress bars above question buttons */}
                           <div className="flex items-center gap-x-1 overflow-x-auto max-w-full">
-                            {[...partQuestions]
-                              .sort((a, b) => {
-                                const aNum = a.question_number ?? 0;
-                                const bNum = b.question_number ?? 0;
-                                return aNum - bNum;
-                              })
+                            {displayQuestions
                               .map((q) => {
                                 const questionNumber = q.question_number;
                                 if (!questionNumber) return null;
@@ -195,12 +205,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
 
                           {/* Question number buttons */}
                           <div className="flex items-center gap-x-1 whitespace-nowrap p-2 rounded-md">
-                            {[...partQuestions]
-                              .sort((a, b) => {
-                                const aNum = a.question_number ?? 0;
-                                const bNum = b.question_number ?? 0;
-                                return aNum - bNum;
-                              })
+                            {displayQuestions
                               .map((q) => {
                                 const questionNumber = q.question_number;
                                 if (!questionNumber) return null;
