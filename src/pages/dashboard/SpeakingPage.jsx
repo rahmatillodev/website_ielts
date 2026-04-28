@@ -44,7 +44,7 @@ const SpeakingPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col mx-auto w-full bg-gray-50 h-[calc(100vh-64px)] overflow-y-auto px-3 md:px-8 pt-4 pb-8">
+    <div className="mx-auto flex h-[calc(100vh-64px)] w-full flex-col justify-center overflow-hidden bg-gray-50 px-3 py-3 md:px-8 md:py-4">
       <div className="max-w-6xl w-full mx-auto">
         <div className="mb-6 md:mb-8 text-center md:text-left">
           <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">Speaking</h1>
@@ -100,3 +100,4 @@ const SpeakingPage = () => {
 };
 
 export default SpeakingPage;
+

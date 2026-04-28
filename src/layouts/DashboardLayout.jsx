@@ -107,6 +107,7 @@ const DashboardLayout = () => {
   const params = new URLSearchParams(search)
   const urlParams = new URLSearchParams(window.location.search)
   const isMockTest = params.get("mockTest") === "true" || urlParams.get("mockTest") === "true"
+  const isDetailView = /^\/(dashboard\/)?speaking\/tips\/[^/]+$/.test(pathname)
 
   const hideNavOn = [
     "/reading-practice",
@@ -121,7 +122,6 @@ const DashboardLayout = () => {
     "/writing-practice",
     "/own-writing",
     "/mock-test/results",
-    "/dashboard/speaking/tips/:tipId",
   ]
 
   const isHideByPath = hideNavOn.some((pattern) => {
@@ -161,19 +161,19 @@ const DashboardLayout = () => {
   return (
     <ProtectedRoute>
       <div className="flex h-screen overflow-hidden bg-background-light">
-        {!isSmallScreen && (
+        {!isSmallScreen && !isDetailView && (
           <aside className="sticky top-0 h-screen z-50">
             <DashboardSidebar />
           </aside>
         )}
-        {isSmallScreen && (
+        {isSmallScreen && !isDetailView && (
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetContent side="left" className="w-[320px] p-0">
               <DashboardSidebar onNavigate={() => setSidebarOpen(false)} />
             </SheetContent>
           </Sheet>
         )}
-        <div className="flex flex-col flex-1 overflow-y-auto">
+        <div className="flex w-full flex-1 flex-col overflow-y-auto">
           <header className="sticky top-0 z-40 w-full">
             <DashboardNavbar onMenuClick={handleMenuClick} />
           </header>

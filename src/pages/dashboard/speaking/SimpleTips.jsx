@@ -33,7 +33,7 @@ const tipsData = [
     id: 2,
     type: "Part 2",
     category: "Parts",
-    title: "1-Minute Notes Framework",
+    title: "2-Minute Notes Framework",
     desc: "Use keyword notes, not full sentences, before your long turn.",
     content:
       "In Part 2, your preparation minute is for organizing ideas. Keyword notes keep you fluent for the full two minutes.",
