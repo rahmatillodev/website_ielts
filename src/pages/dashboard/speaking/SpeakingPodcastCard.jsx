@@ -1,13 +1,16 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Play, Clock, Calendar } from "lucide-react";
+import { FaCrown } from "react-icons/fa";
+import UpgradeModal from "@/components/modal/UpgradeModal";
 
 /**
  * Layout clone of ShadowingCard: white rounded-3xl, date row, title, solid blue CTA.
  * `test.duration` shown verbatim on the thumbnail capsule as "{duration} min" (no conversion).
  */
-const SpeakingPodcastCard = ({ title, image, duration, videoUrl, date }) => {
+const SpeakingPodcastCard = ({ title, image, duration, videoUrl, date, isPremium = false, isProUser = false }) => {
   const navigate = useNavigate();
+  const isLocked = isPremium && !isProUser;
 
   const hasDuration =
     duration != null &&
@@ -17,16 +20,18 @@ const SpeakingPodcastCard = ({ title, image, duration, videoUrl, date }) => {
   const overlayDurationLabel = hasDuration ? `${duration} min` : null;
 
   const goToPlayer = () => {
+    if (isLocked) return;
     if (!videoUrl) return;
     navigate("/speaking/podcast-player", { state: { videoUrl } });
   };
 
   const thumbSrc = image?.trim?.() || "";
 
-  const buttonClass =
-    "w-full py-3 bg-blue-600 text-white rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-blue-600 shadow-sm group-hover:bg-blue-700 group-hover:border-blue-700";
+  const buttonClass = isLocked
+    ? "w-full py-3 text-white bg-amber-500 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-amber-500 shadow-sm hover:bg-amber-600"
+    : "w-full py-3 bg-blue-600 text-white rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-blue-600 shadow-sm group-hover:bg-blue-700 group-hover:border-blue-700";
 
-  return (
+  const cardContent = (
     <article
       role="button"
       tabIndex={0}
@@ -56,6 +61,12 @@ const SpeakingPodcastCard = ({ title, image, duration, videoUrl, date }) => {
             <Play className="w-4 h-4 text-blue-600 fill-blue-600 ml-0.5" aria-hidden />
           </div>
         </div>
+        {isLocked ? (
+          <div className="absolute top-2.5 right-2.5 bg-amber-500 backdrop-blur-md text-white text-[9px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 border border-amber-500">
+            <FaCrown className="w-3 h-3 shrink-0 text-white" aria-hidden />
+            Premium
+          </div>
+        ) : null}
         {overlayDurationLabel ? (
           <div className="absolute bottom-2.5 right-2.5 bg-black/70 backdrop-blur-md text-white text-[9px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
             <Clock className="w-3 h-3 shrink-0" aria-hidden />
@@ -76,12 +87,25 @@ const SpeakingPodcastCard = ({ title, image, duration, videoUrl, date }) => {
         </h2>
         <div className="mt-auto pointer-events-none">
           <div className={buttonClass} aria-hidden>
-            Start Practice
+            {isLocked ? (
+              <>
+                <FaCrown className="w-4 h-4 text-white" aria-hidden />
+                Upgrade to Pro
+              </>
+            ) : (
+              "Start Practice"
+            )}
           </div>
         </div>
       </div>
     </article>
   );
+
+  if (isLocked) {
+    return <UpgradeModal>{cardContent}</UpgradeModal>;
+  }
+
+  return cardContent;
 };
 
 export default SpeakingPodcastCard;

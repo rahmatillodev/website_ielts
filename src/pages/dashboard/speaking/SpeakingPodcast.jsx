@@ -24,6 +24,7 @@ function mapPodcastRow(item) {
     image: item.image_url?.trim?.() || "",
     videoUrl,
     date: item.created_at ? formatDateToDayMonth(item.created_at) : "",
+    isPremium: item.is_premium,
   };
 }
 
@@ -36,13 +37,29 @@ const SpeakingPodcast = () => {
 
   const authUser = useAuthStore((state) => state.authUser);
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
+  const isProMember =
+    authUser?.subscription_status === "premium" ||
+    authUser?.user_metadata?.subscription_status === "premium" ||
+    authUser?.app_metadata?.plan === "pro";
 
   const loadPodcasts = useCallback(async () => {
     setLoading(true);
     setFetchError("");
     const { data, error } = await supabase
       .from("test")
-      .select("*, part(*)")
+      .select(
+        `
+        id,
+        title,
+        duration,
+        image_url,
+        created_at,
+        is_premium,
+        part (
+          video_url
+        )
+      `
+      )
       .eq("type", "podcast")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
@@ -133,6 +150,8 @@ const SpeakingPodcast = () => {
                   duration={item.duration}
                   videoUrl={item.videoUrl}
                   date={item.date}
+                  isPremium={item.isPremium}
+                  isProUser={isProMember}
                 />
               ))}
             </div>

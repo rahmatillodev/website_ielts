@@ -26,6 +26,7 @@ function mapItemForCard(item) {
     image: item.image_url?.trim?.() || "",
     videoUrl,
     date: item.created_at ? formatDateToDayMonth(item.created_at) : "",
+    is_premium: item.is_premium,
   };
 }
 
@@ -38,6 +39,10 @@ const ShadowingLibrary = () => {
 
   const authUser = useAuthStore((state) => state.authUser);
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
+  const isProMember =
+    authUser?.subscription_status === "premium" ||
+    authUser?.user_metadata?.subscription_status === "premium" ||
+    authUser?.app_metadata?.plan === "pro";
 
   /** Narrow columns + defer dashboard fetch so this page is not blocked by user_attempts + test metadata. */
   useEffect(() => {
@@ -55,6 +60,7 @@ const ShadowingLibrary = () => {
           duration,
           image_url,
           created_at,
+          is_premium,
           part (
             video_url
           )
@@ -151,6 +157,8 @@ const ShadowingLibrary = () => {
                   duration={item.duration}
                   videoUrl={item.videoUrl}
                   date={item.date}
+                  isPremium={item.is_premium}
+                  isProUser={isProMember}
                 />
               ))}
             </div>
