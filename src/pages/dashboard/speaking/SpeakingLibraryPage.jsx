@@ -23,7 +23,7 @@ const SpeakingLibraryPage = () => {
   return (
     <TestsLibraryPage
       title="Speaking Library"
-      description="Boost your band score with our extensive library of speaking tests."
+      description="Boost your band score with our extensive library of speaking tests. Each test is designed to mirror the real exam format with instant AI scoring and detailed feedback."
       testData={testSpeaking}
       testType="speaking"
       loading={loading}

@@ -485,7 +485,7 @@ const TestsLibraryPage = ({
       <div className="bg-gray-50 pt-4 pb-2 md:pb-4 shrink-0 sticky top-0 z-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 md:mt-4 gap-4">
           <div className="flex flex-col gap-2 md:gap-3 w-full md:w-auto">
-            {testType === "speaking" && (
+          {(testType === "speaking" || testType === "shadowing" || testType === "podcast") && ( 
               <button
                 type="button"
                 onClick={() => navigate("/speaking")}
@@ -883,6 +883,7 @@ const TestsLibraryPage = ({
                     {currentItems.map((test, index) => {
                       const subscriptionStatus = userProfile?.subscription_status ?? "free";
                       const canAccess = subscriptionStatus === "premium" || !test.is_premium;
+                      const idToPass = test.video_id || test.id;
 
                       return (
                         <motion.div
@@ -893,6 +894,7 @@ const TestsLibraryPage = ({
                           {canAccess ? (
                             <CardOpen
                               {...test}
+                              video_id={idToPass}
                               partLabel={test.partLabel ?? test.taskLabel}
                               isGridView={isGridView}
                               testType={testType}

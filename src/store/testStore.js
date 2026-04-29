@@ -4,3 +4,4 @@
  * This file maintains backward compatibility for existing imports
  */
 export { useTestStore } from "./testStore/index";
+export { useSpeakingDetailStore } from "./testStore/index";

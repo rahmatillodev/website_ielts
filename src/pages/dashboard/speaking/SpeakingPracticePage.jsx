@@ -1,816 +1,783 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { v4 as uuidv4 } from "uuid";
+import { useSpeakingDetailStore } from "@/store/testStore";
 
-/**
- 
- */
-const mockSpeakingQuestions = [
-  {
-    id: uuidv4(),
-    question: "What is your favorite hobby?",
-  },
-  {
-    id: uuidv4(),
-    question: "Do you like traveling? Why or why not?",
-  },
-  {
-    id: uuidv4(),
-    question: "Describe your hometown.",
-  },
-];
+const COLOR = "#2D9CDB";
+const COLOR_DARK = "#1a7ab8";
+const COLOR_LIGHT = "#e8f4fd";
 
-const SpeakingPracticePage = () => {
-  const { id } = useParams(); // speaking test id
+const QUESTION_DURATION = {
+  "Part 1": 30,
+  "Part 2": 120,
+  "Part 3": 60,
+};
+
+
+function buildSteps(sections) {
+  const steps = [];
+  sections.forEach((sec, si) => {
+    steps.push({ type: "part", label: sec.label, sectionIdx: si, questionIdx: -1 });
+    sec.questions.forEach((q, qi) => {
+      steps.push({
+        type: "question", label: String(qi + 1),
+        sectionIdx: si, questionIdx: qi,
+        question: q, partLabel: sec.label,
+      });
+    });
+  });
+  return steps;
+}
+
+function normalizeSpeakingSections(speakingTest) {
+  const parts = Array.isArray(speakingTest?.part) ? speakingTest.part : [];
+  const sortedParts = [...parts].sort((a, b) => (a?.part_number ?? 0) - (b?.part_number ?? 0));
+
+  return sortedParts.map((part, partIdx) => {
+    const partLabel = part?.title || `Part ${part?.part_number ?? partIdx + 1}`;
+    const groups = Array.isArray(part?.question) ? part.question : [];
+    const questions = [];
+
+    groups.forEach((group, groupIdx) => {
+      const groupQuestions = Array.isArray(group?.questions) ? group.questions : [];
+
+      if (groupQuestions.length > 0) {
+        const sortedQuestions = [...groupQuestions].sort(
+          (a, b) => (a?.question_number ?? 0) - (b?.question_number ?? 0)
+        );
+        sortedQuestions.forEach((q, qIdx) => {
+          questions.push({
+            id: String(q?.id ?? `${part?.id || partIdx}-${group?.id || groupIdx}-${qIdx}`),
+            question: q?.question_text || group?.question_text || "Question is not available.",
+            sampleAnswer: q?.correct_answer || q?.explanation || "",
+          });
+        });
+        return;
+      }
+
+      if (group?.question_text) {
+        questions.push({
+          id: String(group?.id ?? `${part?.id || partIdx}-${groupIdx}`),
+          question: group.question_text,
+          sampleAnswer: "",
+        });
+      }
+    });
+
+    return { label: partLabel, questions };
+  });
+}
+
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      background: "rgba(0,0,0,0.45)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 20, padding: "36px 40px",
+        maxWidth: 400, width: "90%", textAlign: "center",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+      }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: "50%",
+          background: "#fff7ed", margin: "0 auto 20px",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <svg width="28" height="28" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+              d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+        </div>
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: "0 0 8px" }}>
+          {message}
+        </h3>
+        <p style={{ fontSize: 14, color: "#6b7280", margin: "0 0 28px" }}>
+          Your current recording will be saved.
+        </p>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={onCancel} style={{
+            flex: 1, background: "#f3f4f6", color: "#374151",
+            border: "none", borderRadius: 10, padding: "12px 0",
+            fontWeight: 600, fontSize: 14, cursor: "pointer",
+          }}>Cancel</button>
+          <button onClick={onConfirm} style={{
+            flex: 1, background: COLOR, color: "#fff",
+            border: "none", borderRadius: 10, padding: "12px 0",
+            fontWeight: 600, fontSize: 14, cursor: "pointer",
+          }}>Yes, leave</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function SpeakingPracticePage() {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const getSpeakingTest = useSpeakingDetailStore((state) => state.get);
 
-  /* =========================================================
-   * EQUIPMENT CHECK OVERLAY (renders INSIDE this page)
-   * - Shows immediately when SpeakingPracticePage opens
-   * - Blocks interaction with the speaking UI behind it
-   * - Disables body scroll while open
-   * - Includes recording + live voice visualization (Web Audio API)
-   * ========================================================= */
-  const EQUIPMENT_BLUE = "#2D9CDB";
-  const [showEquipmentCheck, setShowEquipmentCheck] = useState(true);
-  const [deviceType, setDeviceType] = useState("Device");
+  const [sections, setSections] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [qStepIdx, setQStepIdx] = useState(0);
+  const [status, setStatus] = useState("listen");
+  const [secondsLeft, setSecondsLeft] = useState(30);
+  const [modal, setModal] = useState(null);
+  const [viewMode, setViewMode] = useState("sample");
+  const [sampleQuestionFlatIndex, setSampleQuestionFlatIndex] = useState(0);
 
-  const [microphones, setMicrophones] = useState([]);
-  const [speakers, setSpeakers] = useState([]);
-  const [selectedMicId, setSelectedMicId] = useState("");
-  const [selectedSpeakerId, setSelectedSpeakerId] = useState("");
-
-  const [permissionError, setPermissionError] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioUrl, setAudioUrl] = useState("");
-  const [readyChecked, setReadyChecked] = useState(false);
-  const [isEquipmentOpenAnimating, setIsEquipmentOpenAnimating] = useState(false);
-
-  // Dropdown open state (custom overlay menus so modal never resizes)
-  const [isMicMenuOpen, setIsMicMenuOpen] = useState(false);
-  const [isSpeakerMenuOpen, setIsSpeakerMenuOpen] = useState(false);
-  const micMenuWrapRef = useRef(null);
-  const speakerMenuWrapRef = useRef(null);
-
-  // Recording refs
   const streamRef = useRef(null);
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
-
-  // Audio visualization refs (Web Audio API)
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const dataArrayRef = useRef(null);
   const rafRef = useRef(null);
+  const timerRef = useRef(null);
   const canvasRef = useRef(null);
+  const recordingsRef = useRef([]);
+  const goNextRef = useRef(null);
+  const steps = buildSteps(sections);
+  const questionSteps = steps.filter((s) => s.type === "question");
 
-  const canStartExam = useMemo(() => {
-    // Checkbox only becomes visible after recording, so this naturally enforces flow.
-    return !!audioUrl && readyChecked && !isRecording;
-  }, [audioUrl, readyChecked, isRecording]);
+  const currentQStep = questionSteps[qStepIdx];
+  const currentQuestion = currentQStep?.question;
+  const currentPartLabel = currentQStep?.partLabel || "Part 1";
+  const qDuration = QUESTION_DURATION[currentPartLabel] || 30;
 
-  const selectedMicLabel = useMemo(() => {
-    const d = microphones.find((x) => x.deviceId === selectedMicId);
-    if (!d) return "Select microphone";
-    return d.label || (d.deviceId === "default" ? "Default Microphone" : "Microphone");
-  }, [microphones, selectedMicId]);
+  // Active step index for dots styling
+  const activeStepsIdx = steps.findIndex(
+    (s) =>
+      s.type === "question" &&
+      s.sectionIdx === currentQStep?.sectionIdx &&
+      s.questionIdx === currentQStep?.questionIdx
+  );
 
-  const selectedSpeakerLabel = useMemo(() => {
-    const d = speakers.find((x) => x.deviceId === selectedSpeakerId);
-    if (!d) return "Select speaker";
-    return d.label || (d.deviceId === "default" ? "Default Speaker" : "Speaker");
-  }, [speakers, selectedSpeakerId]);
-
-  const detectDeviceType = () => {
-    const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-    if (/Macintosh|Mac OS X/i.test(ua)) return "MacBook";
-    if (/Windows/i.test(ua)) return "Windows PC";
-    return "Device";
-  };
-
-  const pickDefaultDeviceId = (devices, kind) => {
-    const list = devices.filter((d) => d.kind === kind);
-    if (list.length === 0) return "";
-    const defaultDevice = list.find((d) => d.deviceId === "default");
-    return (defaultDevice || list[0]).deviceId || "";
-  };
-
-  const stopVisualizationLoop = () => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+  const stopAll = () => {
+    clearInterval(timerRef.current);
+    cancelAnimationFrame(rafRef.current);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     }
-  };
-
-  const closeAudioContext = async () => {
-    const ctx = audioContextRef.current;
-    audioContextRef.current = null;
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
     analyserRef.current = null;
-    dataArrayRef.current = null;
-    if (!ctx) return;
-    try {
-      await ctx.close();
-    } catch {
-      // ignore
-    }
   };
 
-  const stopStreamTracks = () => {
-    const stream = streamRef.current;
-    if (stream) {
-      stream.getTracks().forEach((t) => t.stop());
-    }
-    streamRef.current = null;
-  };
-
-  const cleanupRecording = async () => {
-    // Stop recorder if needed (prevents memory leaks / mic lock)
-    const recorder = recorderRef.current;
-        if (recorder && recorder.state !== "inactive") {
-      try {
-        recorder.stop();
-      } catch {
-        // ignore
-      }
-    }
-    recorderRef.current = null;
-    chunksRef.current = [];
-
-    stopVisualizationLoop();
-    stopStreamTracks();
-    await closeAudioContext();
-    setIsRecording(false);
-  };
-
-  const refreshDevices = async () => {
-    if (!navigator?.mediaDevices?.enumerateDevices) return;
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const mics = devices.filter((d) => d.kind === "audioinput");
-    const outs = devices.filter((d) => d.kind === "audiooutput");
-
-    setMicrophones(mics);
-    setSpeakers(outs);
-
-    setSelectedMicId((prev) => prev || pickDefaultDeviceId(devices, "audioinput"));
-    setSelectedSpeakerId((prev) => prev || pickDefaultDeviceId(devices, "audiooutput"));
-  };
-
-  const ensureCanvasSized = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    const { clientWidth, clientHeight } = canvas;
-    const nextW = Math.max(1, Math.floor(clientWidth * dpr));
-    const nextH = Math.max(1, Math.floor(clientHeight * dpr));
-    if (canvas.width !== nextW) canvas.width = nextW;
-    if (canvas.height !== nextH) canvas.height = nextH;
-  };
-
-  const drawVisualizerFrame = () => {
-    const canvas = canvasRef.current;
-    const analyser = analyserRef.current;
-    if (!canvas) {
-      rafRef.current = requestAnimationFrame(drawVisualizerFrame);
-      return;
-    }
-
-    ensureCanvasSized();
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      rafRef.current = requestAnimationFrame(drawVisualizerFrame);
-      return;
-    }
-
-    const w = canvas.width;
-    const h = canvas.height;
-
-    // Background (keep subtle, IELTS-like)
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "rgba(45,156,219,0.08)";
-    ctx.fillRect(0, 0, w, h);
-
-    // If analyser isn't ready yet, show an idle baseline
-    if (!analyser || !dataArrayRef.current) {
-      ctx.strokeStyle = "rgba(45,156,219,0.55)";
-      ctx.lineWidth = Math.max(1, Math.floor(w * 0.002));
-      ctx.beginPath();
-      ctx.moveTo(0, h * 0.62);
-      ctx.lineTo(w, h * 0.62);
-      ctx.stroke();
-      rafRef.current = requestAnimationFrame(drawVisualizerFrame);
-      return;
-    }
-
-    // Voice activity bars (reacts to mic input)
-    const data = dataArrayRef.current;
-    analyser.getByteFrequencyData(data);
-
-    const bars = 28; // fixed number = stable layout
-    const gap = Math.max(2, Math.floor(w * 0.005));
-    const barW = Math.max(3, Math.floor((w - gap * (bars - 1)) / bars));
-
-    for (let i = 0; i < bars; i++) {
-      const idx = Math.floor((i / bars) * data.length);
-      const v = data[idx] / 255; // 0..1
-      const barH = Math.max(3, Math.floor(v * h * 0.95));
-      const x = i * (barW + gap);
-      const y = h - barH;
-
-      ctx.fillStyle = "rgba(45,156,219,0.95)";
-      // rounded bars (manual)
-      const r = Math.min(8, Math.floor(barW / 2));
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.lineTo(x + barW - r, y);
-      ctx.quadraticCurveTo(x + barW, y, x + barW, y + r);
-      ctx.lineTo(x + barW, y + barH - r);
-      ctx.quadraticCurveTo(x + barW, y + barH, x + barW - r, y + barH);
-      ctx.lineTo(x + r, y + barH);
-      ctx.quadraticCurveTo(x, y + barH, x, y + barH - r);
-      ctx.lineTo(x, y + r);
-      ctx.quadraticCurveTo(x, y, x + r, y);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    rafRef.current = requestAnimationFrame(drawVisualizerFrame);
-  };
-
-  /* ---------------- Equipment Check: lifecycle & safety ---------------- */
-  useEffect(() => {
-    setDeviceType(detectDeviceType());
-    refreshDevices().catch(() => {});
-
-    const onDeviceChange = () => refreshDevices().catch(() => {});
-    if (navigator?.mediaDevices?.addEventListener) {
-      navigator.mediaDevices.addEventListener("devicechange", onDeviceChange);
-    } else if (navigator?.mediaDevices) {
-      navigator.mediaDevices.ondevicechange = onDeviceChange;
-    }
-
-    return () => {
-      if (navigator?.mediaDevices?.removeEventListener) {
-        navigator.mediaDevices.removeEventListener("devicechange", onDeviceChange);
-      } else if (navigator?.mediaDevices) {
-        navigator.mediaDevices.ondevicechange = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Open animation (subtle scale + fade)
-  useEffect(() => {
-    if (!showEquipmentCheck) return;
-    setIsEquipmentOpenAnimating(false);
-    const t = setTimeout(() => setIsEquipmentOpenAnimating(true), 10);
-    return () => clearTimeout(t);
-  }, [showEquipmentCheck]);
-
-  // Close dropdown menus on outside click / ESC (keeps modal stable)
-  useEffect(() => {
-    if (!showEquipmentCheck) return;
-
-    const onPointerDown = (e) => {
-      const micWrap = micMenuWrapRef.current;
-      const spWrap = speakerMenuWrapRef.current;
-      if (micWrap && !micWrap.contains(e.target)) setIsMicMenuOpen(false);
-      if (spWrap && !spWrap.contains(e.target)) setIsSpeakerMenuOpen(false);
-    };
-
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") {
-        setIsMicMenuOpen(false);
-        setIsSpeakerMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [showEquipmentCheck]);
-
-  // Disable body scroll while overlay is open (prevents layout jump/overflow)
-  useEffect(() => {
-    if (!showEquipmentCheck) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [showEquipmentCheck]);
-
-  // Cleanup any active media resources on unmount (no leaks)
-  useEffect(() => {
-    return () => {
-      stopVisualizationLoop();
-      stopStreamTracks();
-      closeAudioContext();
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /* ---------------- Equipment Check: recording logic ---------------- */
-  const startRecording = async () => {
-    setPermissionError("");
-    setReadyChecked(false);
-
-    // Replace any previous recording
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
-      setAudioUrl("");
-    }
-
-    await cleanupRecording();
-
-    if (!navigator?.mediaDevices?.getUserMedia) {
-      setPermissionError("Microphone is not supported in this browser.");
-      return;
-    }
-
-    try {
-      const constraints = {
-        audio: selectedMicId
-          ? {
-              deviceId:
-                selectedMicId === "default" ? undefined : { exact: selectedMicId },
-            }
-          : true,
+  const saveAndThen = useCallback((callback) => {
+    stopAll();
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      recorderRef.current.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        if (currentQuestion) {
+          recordingsRef.current.push({
+            questionId: currentQuestion.id,
+            question: currentQuestion.question,
+            partLabel: currentQStep.partLabel,
+            blob,
+          });
+        }
+        callback();
       };
+      recorderRef.current.stop();
+    } else {
+      callback();
+    }
+  }, [currentQuestion, currentQStep]);
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  const goNext = useCallback(() => {
+    saveAndThen(() => {
+      const next = qStepIdx + 1;
+      if (next >= questionSteps.length) {
+        window.speechSynthesis.cancel();
+        navigate(`/speaking-result/${id}`, { state: { recordings: recordingsRef.current } });
+      } else {
+        setQStepIdx(next);
+        setStatus("listen");
+      }
+    });
+  }, [qStepIdx, questionSteps.length, saveAndThen, navigate, id]);
+
+  useEffect(() => { goNextRef.current = goNext; }, [goNext]);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setIsLoading(true);
+      setLoadError("");
+      const result = await getSpeakingTest(id);
+      if (!mounted) return;
+
+      if (result?.error || !result?.data) {
+        setLoadError(result?.error || "Failed to load speaking test.");
+        setSections([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const mappedSections = normalizeSpeakingSections(result.data);
+      setSections(mappedSections);
+      setQStepIdx(0);
+      setSampleQuestionFlatIndex(0);
+      setIsLoading(false);
+    };
+
+    if (id) load();
+    return () => {
+      mounted = false;
+    };
+  }, [getSpeakingTest, id]);
+
+  const startRecordingPhase = useCallback(async () => {
+    setSecondsLeft(qDuration);
+    setStatus("recording");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-
-      // After permission, device labels become available
-      refreshDevices().catch(() => {});
-
-      // --- Audio visualization setup (Web Audio API) ---
-      const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-      const audioCtx = new AudioContextCtor();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       audioContextRef.current = audioCtx;
-
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.85;
       source.connect(analyser);
-
       analyserRef.current = analyser;
       dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
 
-      // --- Recording setup (MediaRecorder) ---
       const recorder = new MediaRecorder(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = () => {
-        try {
-          const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-          const url = URL.createObjectURL(blob);
-          setAudioUrl(url);
-        } catch {
-          setPermissionError("Could not create audio preview. Please try again.");
-        } finally {
-          // Stop mic usage after recording stops (privacy & performance)
-          stopStreamTracks();
-          closeAudioContext();
-          setIsRecording(false);
-        }
-      };
-
-      recorder.onerror = () => {
-        setPermissionError("Recording failed. Please try again.");
-        stopStreamTracks();
-        closeAudioContext();
-        setIsRecording(false);
-      };
-
+      recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
       recorder.start();
-      setIsRecording(true);
 
-      // Start visualizer loop AFTER refs are ready
-      stopVisualizationLoop();
-      rafRef.current = requestAnimationFrame(drawVisualizerFrame);
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        const bufferLength = analyser.frequencyBinCount;
+        const render = () => {
+          if (!analyserRef.current) return;
+          analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          const bw = (canvas.width / bufferLength) * 3;
+          let x = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            const bh = (dataArrayRef.current[i] / 255) * canvas.height;
+            ctx.fillStyle = COLOR;
+            ctx.fillRect(x, canvas.height - bh, bw - 1, bh);
+            x += bw;
+          }
+          rafRef.current = requestAnimationFrame(render);
+        };
+        render();
+      }
+
+      timerRef.current = setInterval(() => {
+        setSecondsLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            goNextRef.current && goNextRef.current();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } catch (err) {
-      await cleanupRecording();
-      setPermissionError(
-        err?.name === "NotAllowedError"
-          ? "Microphone permission was denied. Please allow access and try again."
-          : "Could not access microphone. Please check your device settings."
+      console.error("Mic error:", err);
+    }
+  }, [qDuration]);
+
+  const speakAndRecord = useCallback((text) => {
+    if (!window.speechSynthesis) { startRecordingPhase(); return; }
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const enVoice =
+      voices.find((v) => v.lang === "en-GB" || v.lang === "en-US") ||
+      voices.find((v) => v.lang.startsWith("en"));
+    if (enVoice) utter.voice = enVoice;
+    utter.lang = "en-US";
+    utter.rate = 0.9;
+    utter.onend = () => startRecordingPhase();
+    window.speechSynthesis.speak(utter);
+  }, [startRecordingPhase]);
+
+  useEffect(() => {
+    if (viewMode !== "practice") return;
+    setStatus("listen");
+    if (!currentQuestion) return;
+    const speak = () => speakAndRecord(currentQuestion.question);
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = speak;
+    } else {
+      speak();
+    }
+    return () => { window.speechSynthesis.cancel(); stopAll(); };
+  }, [qStepIdx, viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== "practice") {
+      window.speechSynthesis.cancel();
+      stopAll();
+    }
+  }, [viewMode]);
+
+  const handleModalConfirm = () => {
+    const type = modal;
+    setModal(null);
+    window.speechSynthesis.cancel();
+    if (type === "back") {
+      saveAndThen(() => navigate("/speaking-library"));
+    } else {
+      saveAndThen(() =>
+        navigate(`/speaking-result/${id}`, { state: { recordings: recordingsRef.current } })
       );
     }
   };
 
-  const stopRecording = () => {
-    const recorder = recorderRef.current;
-    if (!recorder || recorder.state === "inactive") return;
-    try {
-      recorder.stop();
-      // Keep last drawn waveform visible (static is fine)
-      stopVisualizationLoop();
-    } catch {
-      setPermissionError("Could not stop recording. Please try again.");
+  const displayTime = `${String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:${String(secondsLeft % 60).padStart(2, "0")}`;
+
+  const sampleStep = questionSteps[sampleQuestionFlatIndex];
+  const sampleAnswerText = sampleStep?.question?.sampleAnswer || "";
+  const sampleActiveStepsIdx =
+    sampleStep
+      ? steps.findIndex(
+          (s) =>
+            s.type === "question" &&
+            s.sectionIdx === sampleStep.sectionIdx &&
+            s.questionIdx === sampleStep.questionIdx
+        )
+      : -1;
+
+  const handleSampleStepClick = (step) => {
+    if (step.type === "part") {
+      const fi = questionSteps.findIndex((q) => q.sectionIdx === step.sectionIdx);
+      if (fi >= 0) setSampleQuestionFlatIndex(fi);
+      return;
     }
+    const fi = questionSteps.findIndex(
+      (q) => q.sectionIdx === step.sectionIdx && q.questionIdx === step.questionIdx
+    );
+    if (fi >= 0) setSampleQuestionFlatIndex(fi);
   };
 
-  const [activeQuestion, setActiveQuestion] = useState(
-    mockSpeakingQuestions[0]
-  );
-  const [answer, setAnswer] = useState("");
-  const [isSpeaking, setIsSpeaking] = useState(false);
-
-  // 🔊 TEXT → SPEECH (Browser API, error chiqarmaydi)
-  const readAnswerAloud = () => {
-    if (!answer.trim()) return;
-
-    // Agar oldingi ovoz bo‘lsa to‘xtat
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(answer);
-    utterance.lang = "en-US";
-    utterance.rate = 1;
-    utterance.pitch = 1;
-
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    window.speechSynthesis.speak(utterance);
-  };
-
-  return (
+  const renderSampleMode = () => (
     <>
-      {/* Equipment check only. Exam is at /speaking-practice/:id/session (Start Exam navigates there). */}
-      {/* Legacy UI (kept): do NOT render during Equipment Check. */}
-      {!showEquipmentCheck ? (
-        <div className="flex h-[calc(100vh-64px)] p-4 gap-4 bg-gray-50">
-          {/* LEFT — QUESTIONS */}
-          <div className="w-1/3 bg-white border rounded-xl p-4 overflow-y-auto">
-            <h2 className="text-lg font-bold mb-4">Speaking Questions</h2>
+      <header style={{
+        borderBottom: "1px solid #f0f0f0",
+        padding: "12px 24px 10px",
+        background: "#fff",
+      }}>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
+          alignItems: "center",
+          columnGap: 16,
+        }}>
+          <div style={{ display: "flex", justifyContent: "flex-start" }}>
+            <button
+              type="button"
+              onClick={() => navigate("/speaking-library")}
+              style={{
+                background: COLOR, color: "#fff", border: "none",
+                borderRadius: 8, padding: "7px 14px",
+                fontWeight: 600, fontSize: 13, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = COLOR_DARK}
+              onMouseLeave={(e) => e.currentTarget.style.background = COLOR}
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setViewMode("practice")}
+            style={{
+              background: COLOR, color: "#fff", border: "none",
+              borderRadius: 8, padding: "7px 14px",
+              fontWeight: 600, fontSize: 13, cursor: "pointer",
+              flexShrink: 0,
+              justifySelf: "center",
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = COLOR_DARK}
+            onMouseLeave={(e) => e.currentTarget.style.background = COLOR}
+          >
+            Try Your Self
+          </button>
+          <div aria-hidden="true" />
+        </div>
+      </header>
 
-            <div className="flex flex-col gap-2">
-              {mockSpeakingQuestions.map((q) => {
-                const isActive = q.id === activeQuestion.id;
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        borderBottom: "1px solid #e5e7eb",
+        padding: "12px 24px 14px",
+        background: "#fff",
+        flexShrink: 0,
+      }}>
+        <div style={{ width: "100%", maxWidth: 1100, position: "relative" }}>
+          <div style={{
+            position: "absolute", top: 9, left: 0, right: 0,
+            height: 2, background: "#e5e7eb", zIndex: 0,
+          }} />
+          <div style={{ position: "relative", display: "flex", alignItems: "flex-start" }}>
+            {steps.map((step, si) => {
+              const isPast = si < sampleActiveStepsIdx;
+              const isActive = si === sampleActiveStepsIdx;
+              const isPartType = step.type === "part";
+              return (
+                <button
+                  key={si}
+                  type="button"
+                  onClick={() => handleSampleStepClick(step)}
+                  style={{
+                    position: "relative", zIndex: 2,
+                    display: "flex", flexDirection: "column", alignItems: "center",
+                    flex: 1,
+                    border: "none", background: "transparent",
+                    padding: 0, margin: 0, cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: "50%",
+                    border: `2px solid ${isActive || isPast ? COLOR : "#d1d5db"}`,
+                    background: isPast ? COLOR : "#fff",
+                    boxShadow: isActive ? `0 0 0 4px ${COLOR_LIGHT}` : "none",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    marginBottom: 4, transition: "all 0.3s",
+                  }}>
+                    {isPast && (
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.8"
+                          strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: 11,
+                    fontWeight: isPartType || isActive ? 700 : 500,
+                    color: isActive ? COLOR : isPast ? COLOR : "#9ca3af",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {step.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
+        <div style={{
+          flex: 1, display: "flex", flexDirection: "column",
+          justifyContent: "flex-start", padding: "40px 48px 48px", minWidth: 0,
+        }}>
+          <span style={{ color: COLOR, fontWeight: 700, fontSize: 14, marginBottom: 8, display: "block" }}>
+            {sampleStep?.partLabel || ""}
+          </span>
+          <h1 style={{ color: "#111827", fontSize: 26, fontWeight: 600, lineHeight: 1.6, margin: 0, maxWidth: 720 }}>
+            {sampleStep?.question?.question || ""}
+          </h1>
+        </div>
+
+        <div style={{
+          width: "42%",
+          minWidth: 320,
+          borderLeft: "1px solid #f0f0f0",
+          background: "#fff",
+          display: "flex",
+          flexDirection: "column",
+          padding: "40px 32px 32px",
+          gap: 20,
+          minHeight: 0,
+        }}>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: COLOR, margin: 0 }}>
+            Sample Answer
+          </h3>
+          <div style={{
+            flex: 1,
+            minHeight: 200,
+            padding: "16px 18px",
+            borderRadius: 12,
+            border: `1px solid ${COLOR_LIGHT}`,
+            background: "#f8fcfe",
+            color: "#374151",
+            fontSize: 15,
+            lineHeight: 1.65,
+            overflowY: "auto",
+            whiteSpace: "pre-wrap",
+          }}>
+            {sampleAnswerText}
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setSampleQuestionFlatIndex((i) =>
+                questionSteps.length ? (i + 1) % questionSteps.length : 0
+              )
+            }
+            style={{
+              width: "100%",
+              background: COLOR,
+              color: "#fff",
+              border: "none",
+              borderRadius: 12,
+              padding: "14px 0",
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: "pointer",
+              boxShadow: `0 4px 16px ${COLOR_LIGHT}`,
+              marginTop: "auto",
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = COLOR_DARK}
+            onMouseLeave={(e) => e.currentTarget.style.background = COLOR}
+          >
+            Next Question
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  const renderPracticeMode = () => (
+    <>
+      {modal && (
+        <ConfirmModal
+          message={modal === "back" ? "Are you sure you want to leave?" : "Are you sure you want to finish?"}
+          onConfirm={handleModalConfirm}
+          onCancel={() => setModal(null)}
+        />
+      )}
+
+      <header style={{
+        borderBottom: "1px solid #f0f0f0",
+        padding: "12px 24px 10px",
+        background: "#fff",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+
+          <button
+            onClick={() => setModal("back")}
+            style={{
+              background: COLOR, color: "#fff", border: "none",
+              borderRadius: 8, padding: "7px 14px",
+              fontWeight: 600, fontSize: 13, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = COLOR_DARK}
+            onMouseLeave={(e) => e.currentTarget.style.background = COLOR}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+
+          <div style={{ flex: 1, position: "relative" }}>
+            <div style={{
+              position: "absolute", top: 9, left: 0, right: 0,
+              height: 2, background: "#e5e7eb", zIndex: 0,
+            }} />
+
+            <div style={{ position: "relative", display: "flex", alignItems: "flex-start" }}>
+              {steps.map((step, si) => {
+                const isPast = si < activeStepsIdx;
+                const isActive = si === activeStepsIdx;
+                const isPartType = step.type === "part";
                 return (
-                  <button
-                    key={q.id}
-                    onClick={() => {
-                      setActiveQuestion(q);
-                      setAnswer("");
-                    }}
-                    className={`text-left p-3 rounded-lg border transition-all ${
-                      isActive
-                        ? "bg-blue-50 border-blue-500 font-semibold"
-                        : "hover:bg-gray-100"
-                    }`}
-                  >
-                    {q.question}
-                  </button>
+                  <div key={si} style={{
+                    position: "relative", zIndex: 2,
+                    display: "flex", flexDirection: "column", alignItems: "center",
+                    flex: 1,
+                  }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: "50%",
+                      border: `2px solid ${isActive || isPast ? COLOR : "#d1d5db"}`,
+                      background: isPast ? COLOR : "#fff",
+                      boxShadow: isActive ? `0 0 0 4px ${COLOR_LIGHT}` : "none",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      marginBottom: 4, transition: "all 0.3s",
+                    }}>
+                      {isPast && (
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                          <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.8"
+                            strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: isPartType || isActive ? 700 : 500,
+                      color: isActive ? COLOR : isPast ? COLOR : "#9ca3af",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {step.label}
+                    </span>
+                  </div>
                 );
               })}
             </div>
           </div>
 
-          {/* RIGHT — ANSWER */}
-          <div className="flex-1 bg-white border rounded-xl p-4 flex flex-col">
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-lg font-bold">Your Answer</h2>
-              <button
-                onClick={() => navigate(-1)}
-                className="text-sm text-gray-500 hover:text-black"
-              >
-                ← Back
-              </button>
-            </div>
+        </div>
+      </header>
 
-            <p className="text-gray-700 mb-3">
-              <span className="font-semibold">Question:</span>{" "}
-              {activeQuestion.question}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
+        <div style={{
+          flex: 1, display: "flex", flexDirection: "column",
+          justifyContent: "flex-start", padding: "40px 72px 48px",
+        }}>
+          <span style={{ color: COLOR, fontWeight: 700, fontSize: 18, marginBottom: 16, display: "block" }}>
+            Question {qStepIdx + 1}
+          </span>
+          <h1 style={{ color: "#111827", fontSize: 28, fontWeight: 600, lineHeight: 1.6, margin: 0, maxWidth: 700 }}>
+            {currentQuestion?.question || ""}
+          </h1>
+        </div>
+
+        <div style={{
+          width: 310, borderLeft: "1px solid #f0f0f0", background: "#fff",
+          display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", padding: "32px 24px", gap: 20,
+        }}>
+          <div style={{
+            width: 76, height: 76, borderRadius: "50%",
+            background: status === "recording" ? COLOR_LIGHT : "#f3f4f6",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill={status === "recording" ? COLOR : "#9ca3af"}>
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+            </svg>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <h3 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>
+              {status === "recording" ? "Recording" : "Listen"}
+            </h3>
+            <p style={{ fontSize: 13, color: "#9ca3af", margin: 0, lineHeight: 1.5 }}>
+              {status === "recording"
+                ? "Speak your answer clearly into the microphone."
+                : "The examiner is reading the question..."}
             </p>
-
-            <textarea
-              className="flex-1 resize-none border rounded-lg p-4 outline-none focus:ring-2 focus:ring-blue-200"
-              placeholder="Type your answer here..."
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-            />
-
-            <div className="flex justify-between items-center mt-4">
-              <span className="text-sm text-gray-500">
-                Words: {answer.trim() ? answer.trim().split(/\s+/).length : 0}
-              </span>
-
-              <button
-                onClick={readAnswerAloud}
-                disabled={!answer.trim()}
-                className={`px-4 py-2 rounded-lg text-white font-semibold transition-all ${
-                  isSpeaking
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}
-              >
-                {isSpeaking ? "Reading..." : "▶ Read My Answer"}
-              </button>
-            </div>
           </div>
-        </div>
-      ) : null}
 
-      {/* =========================================================
-          EQUIPMENT CHECK OVERLAY UI (modal-style)
-          - Covers the page content area only (keeps the main header visible)
-          - Blocks background interaction until user completes equipment check
-         ========================================================= */}
-      {showEquipmentCheck ? (
-        <div
-          /* Background interaction is blocked because this fixed overlay sits above the page. */
-          /* Strong dark overlay keeps the speaking page unreadable behind the modal. */
-          className={`fixed inset-0 z-[2147483647] pointer-events-auto px-3 py-4
-            flex items-center justify-center transition-opacity duration-200 ease-out
-            ${
-              isEquipmentOpenAnimating
-                ? "opacity-100 bg-black/85 backdrop-blur-sm"
-                : "opacity-0 bg-black/85 backdrop-blur-sm"
-            }`}
-            role="dialog"
-            aria-modal="true"
-            
-        >
-          {/* Modal size is controlled here: compact width + padding, no internal scrolling. */}
-          <div
-            /* Modal size is LOCKED:
-               - fixed max width (`max-w-lg`) for a balanced, not-tiny card
-               - fixed height (bounded by viewport) so buttons never clip off-screen
-               - `overflow-hidden` so nothing forces resizing */
-            className={`w-full max-w-lg h-[min(600px,calc(100vh-32px))] bg-white rounded-3xl shadow-[0_18px_55px_rgba(0,0,0,0.35)] border border-gray-100 overflow-hidden transform transition-all duration-200 ease-out ${
-              isEquipmentOpenAnimating ? "opacity-100 scale-100" : "opacity-0 scale-95"
-            }`}
+          {status === "recording" && (
+            <div style={{ fontSize: 50, fontWeight: 800, fontFamily: "monospace", color: "#111827", letterSpacing: 3 }}>
+              {displayTime}
+            </div>
+          )}
+
+          {status === "recording" && (
+            <div style={{
+              width: "100%", height: 50, background: "#f9fafb",
+              borderRadius: 12, overflow: "hidden", border: "1px solid #f0f0f0",
+            }}>
+              <canvas ref={canvasRef} style={{ width: "100%", height: "100%" }} width={262} height={50} />
+            </div>
+          )}
+
+          {status === "recording" && (
+            <button
+              onClick={goNext}
+              style={{
+                width: "100%", background: COLOR, color: "#fff",
+                border: "none", borderRadius: 12, padding: "15px 0",
+                fontWeight: 700, fontSize: 14, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                boxShadow: `0 4px 16px ${COLOR_LIGHT}`,
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = COLOR_DARK}
+              onMouseLeave={(e) => e.currentTarget.style.background = COLOR}
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+              </svg>
+              Submit Recording
+            </button>
+          )}
+
+          <button
+            onClick={() => setModal("finish")}
+            style={{
+              width: "100%", background: "#b91c1c", color: "#fff",
+              border: "none", borderRadius: 12, padding: "13px 0",
+              fontWeight: 600, fontSize: 13, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#991b1b"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "#b91c1c"}
           >
-            <div className="px-5 sm:px-6 py-5 sm:py-6 h-full flex flex-col">
-              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 text-center">
-                Equipment Check
-              </h2>
-              <p className="mt-1 text-xs sm:text-sm text-gray-600 text-center">
-                Let’s make sure your microphone and speakers are ready for the test.
-              </p>
-
-              {/* DEVICE INFO */}
-              <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 flex items-center justify-between">
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  Device
-                </div>
-                <div className="text-xs sm:text-sm font-semibold text-gray-900">
-                  {deviceType}
-                </div>
-              </div>
-
-              {/* MICROPHONE & SPEAKER SELECTORS
-                  Dropdowns do NOT resize the modal because the option lists are rendered as
-                  absolutely-positioned overlay menus (not normal-flow content). */}
-              <div className="mt-3 space-y-3">
-                {/* Microphone dropdown (overlay menu) */}
-                <div className="space-y-1.5" ref={micMenuWrapRef}>
-                  <div className="text-sm font-semibold text-gray-900">Microphone</div>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSpeakerMenuOpen(false);
-                        setIsMicMenuOpen((v) => !v);
-                      }}
-                      className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-left outline-none focus:ring-2 focus:ring-[rgba(45,156,219,0.25)] focus:border-[rgba(45,156,219,0.55)] flex items-center justify-between gap-3"
-                    >
-                      <span className="truncate text-gray-900">{selectedMicLabel}</span>
-                      <span className="text-gray-400 text-xs">▾</span>
-                    </button>
-
-                    {isMicMenuOpen ? (
-                      <div className="absolute left-0 right-0 mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                        <div className="max-h-48 overflow-auto">
-                          {microphones.length === 0 ? (
-                            <button
-                              type="button"
-                              className="w-full px-3 py-2 text-left text-sm text-gray-500"
-                              onClick={() => setIsMicMenuOpen(false)}
-                            >
-                              No microphones found
-                            </button>
-                          ) : (
-                            microphones.map((d, idx) => (
-                              <button
-                                type="button"
-                                key={`${d.deviceId}-${idx}`}
-                                onClick={() => {
-                                  setSelectedMicId(d.deviceId);
-                                  setIsMicMenuOpen(false);
-                                }}
-                                className={`w-full px-3 py-2 text-left text-sm hover:bg-[rgba(45,156,219,0.08)] ${
-                                  d.deviceId === selectedMicId ? "bg-[rgba(45,156,219,0.12)]" : ""
-                                }`}
-                              >
-                                <span className="block truncate text-gray-900">
-                                  {d.label ||
-                                    (d.deviceId === "default"
-                                      ? "Default Microphone"
-                                      : "Microphone")}
-                                </span>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* Speaker dropdown (overlay menu) */}
-                <div className="space-y-1.5" ref={speakerMenuWrapRef}>
-                  <div className="text-sm font-semibold text-gray-900">Speaker</div>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMicMenuOpen(false);
-                        setIsSpeakerMenuOpen((v) => !v);
-                      }}
-                      className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-left outline-none focus:ring-2 focus:ring-[rgba(45,156,219,0.25)] focus:border-[rgba(45,156,219,0.55)] flex items-center justify-between gap-3"
-                    >
-                      <span className="truncate text-gray-900">{selectedSpeakerLabel}</span>
-                      <span className="text-gray-400 text-xs">▾</span>
-                    </button>
-
-                    {isSpeakerMenuOpen ? (
-                      <div className="absolute left-0 right-0 mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                        <div className="max-h-48 overflow-auto">
-                          {speakers.length === 0 ? (
-                            <button
-                              type="button"
-                              className="w-full px-3 py-2 text-left text-sm text-gray-500"
-                              onClick={() => setIsSpeakerMenuOpen(false)}
-                            >
-                              Default speaker
-                            </button>
-                          ) : (
-                            speakers.map((d, idx) => (
-                              <button
-                                type="button"
-                                key={`${d.deviceId}-${idx}`}
-                                onClick={() => {
-                                  setSelectedSpeakerId(d.deviceId);
-                                  setIsSpeakerMenuOpen(false);
-                                }}
-                                className={`w-full px-3 py-2 text-left text-sm hover:bg-[rgba(45,156,219,0.08)] ${
-                                  d.deviceId === selectedSpeakerId ? "bg-[rgba(45,156,219,0.12)]" : ""
-                                }`}
-                              >
-                                <span className="block truncate text-gray-900">
-                                  {d.label ||
-                                    (d.deviceId === "default"
-                                      ? "Default Speaker"
-                                      : "Speaker")}
-                                </span>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* RECORDING CHECK */}
-                <div className="rounded-xl border border-gray-200 bg-white px-3 py-3">
-                  <div className="text-sm font-semibold text-gray-900">Recording</div>
-
-                  {permissionError ? (
-                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                      {permissionError}
-                    </div>
-                  ) : null}
-
-                  {/* Recording state controls UI:
-                      - Waveform is hidden by default to keep the modal small/compact.
-                      - Waveform is shown ONLY while recording (after user clicks Start Recording).
-                      - After recording stops, waveform hides and audio preview appears. */}
-                  <div className="mt-3">
-                    <button
-                      type="button"
-                      onClick={isRecording ? stopRecording : startRecording}
-                      className="w-full h-10 rounded-xl text-sm font-semibold text-white transition"
-                      style={{ backgroundColor: EQUIPMENT_BLUE }}
-                    >
-                      {isRecording ? "Stop Recording" : "Start Recording"}
-                    </button>
-                  </div>
-
-                  {/* LIVE VOICE LEVEL VISUALIZATION (Web Audio API)
-                      Hidden unless recording to avoid empty/inactive UI taking space. */}
-                  {isRecording ? (
-                    <div className="mt-2 rounded-xl border border-gray-200 bg-white overflow-hidden">
-                      <canvas
-                        ref={canvasRef}
-                        className="w-full h-12"
-                        aria-label="Microphone activity visualizer"
-                      />
-                    </div>
-                  ) : null}
-
-                  {/* AFTER RECORDING: audio playback + checkbox */}
-                  {!isRecording && audioUrl ? (
-                    <div className="mt-3 space-y-2.5">
-                      <audio
-                        controls
-                        className="w-full"
-                        preload="none"
-                        ref={(el) => {
-                          if (!el) return;
-                          // Best-effort output device selection (supported on some browsers only)
-                          if (typeof el.setSinkId === "function" && selectedSpeakerId) {
-                            el.setSinkId(selectedSpeakerId).catch(() => {});
-                          }
-                        }}
-                        src={audioUrl}
-                      />
-
-                      <label className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={readyChecked}
-                          onChange={(e) => setReadyChecked(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-gray-300 text-[rgb(45,156,219)] focus:ring-[rgba(45,156,219,0.25)]"
-                        />
-                        <span className="text-sm text-gray-700 leading-snug">
-                          I’m sure that microphone and speakers are ready.
-                        </span>
-                      </label>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* ACTIONS: Cancel / Start Exam */}
-              <div className="mt-auto pt-4 flex gap-2.5">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    // Where the user can safely exit without affecting speaking logic
-                    await cleanupRecording();
-                    setIsMicMenuOpen(false);
-                    setIsSpeakerMenuOpen(false);
-                    if (audioUrl) {
-                      URL.revokeObjectURL(audioUrl);
-                      setAudioUrl("");
-                    }
-                    navigate(-1);
-                  }}
-                  className="flex-1 h-10 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  disabled={!canStartExam}
-                  onClick={async () => {
-                    await cleanupRecording();
-                    setIsMicMenuOpen(false);
-                    setIsSpeakerMenuOpen(false);
-                    if (audioUrl) {
-                      URL.revokeObjectURL(audioUrl);
-                      setAudioUrl("");
-                    }
-                    if (id === "shadowing") {
-                      setShowEquipmentCheck(false);
-                      navigate(`/speaking-practice/shadowing/shadowing`);
-                      return;
-                    }
-                    if (id === "human") {
-                      setShowEquipmentCheck(false);
-                      navigate(`/speaking-practice/human/human`);
-                      return;
-                    }
-                    setShowEquipmentCheck(false);
-                    navigate(`/speaking-practice/${id}/session`);
-                  }}
-                  className="flex-1 h-10 rounded-xl text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: EQUIPMENT_BLUE }}
-                >
-                  Start Exam
-                </button>
-              </div>
-            </div>
-          </div>
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2" />
+            </svg>
+            Finish Exam
+          </button>
         </div>
-      ) : null}
+      </div>
     </>
   );
-};
 
-export default SpeakingPracticePage;
+  return (
+    <div style={{
+      fontFamily: "'Segoe UI', system-ui, sans-serif",
+      height: "100vh", display: "flex", flexDirection: "column",
+      background: "#fff", overflow: "hidden",
+    }}>
+      {isLoading && (
+        <div style={{ margin: "auto", color: "#6b7280", fontSize: 16 }}>Loading speaking test...</div>
+      )}
+      {!isLoading && loadError && (
+        <div style={{ margin: "auto", textAlign: "center", color: "#b91c1c" }}>
+          <p>{loadError}</p>
+          <button
+            type="button"
+            onClick={() => navigate("/speaking-library")}
+            style={{
+              marginTop: 12,
+              background: COLOR,
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              padding: "8px 14px",
+              cursor: "pointer",
+            }}
+          >
+            Back to library
+          </button>
+        </div>
+      )}
+      {!isLoading && !loadError && questionSteps.length === 0 && (
+        <div style={{ margin: "auto", textAlign: "center", color: "#6b7280" }}>
+          <p>No speaking questions were found for this test.</p>
+          <button
+            type="button"
+            onClick={() => navigate("/speaking-library")}
+            style={{
+              marginTop: 12,
+              background: COLOR,
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              padding: "8px 14px",
+              cursor: "pointer",
+            }}
+          >
+            Back to library
+          </button>
+        </div>
+      )}
+      {!isLoading && !loadError && questionSteps.length > 0 && viewMode === "sample" && renderSampleMode()}
+      {!isLoading && !loadError && questionSteps.length > 0 && viewMode === "practice" && renderPracticeMode()}
+    </div>
+  );
+}

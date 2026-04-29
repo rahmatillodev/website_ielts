@@ -534,12 +534,12 @@ const DashboardPage = () => {
       },
       {
         label: 'Writing',
-        value: 'Coming Soon',
+        value: scores.writing ? scores.writing.toFixed(1) : '0.0',
         icon: LuPenTool,
-        iconColor: 'text-gray-400',
-        bgColor: 'bg-gray-50',
-        borderColor: 'border-gray-200',
-        isActive: false,
+        iconColor: 'text-purple-500',
+        bgColor: 'bg-purple-50',
+        borderColor: 'border-purple-200',
+        isActive: true,
       },
       {
         label: 'Speaking',

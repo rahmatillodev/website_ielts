@@ -6,6 +6,7 @@
 
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
+/** @typedef {import("@/types/speakingSchema").SpeakingTestDetail} SpeakingTestDetail */
 
 /** Embed string for single-query fetch. If your schema uses "parts" not "part", or different column names, the fallback will run. */
 const SPEAKING_TEST_SELECT = `
@@ -16,11 +17,14 @@ const SPEAKING_TEST_SELECT = `
     title,
     question (
       id,
+        question_text,
       instruction,
       questions (
         id,
         question_number,
-        question_text
+          question_text,
+          correct_answer,
+          explanation
       )
     )
   )
@@ -105,11 +109,13 @@ async function fetchSpeakingTestBySteps(testId) {
       id: s.id,
       question_number: s.question_number,
       question_text: s.question_text ?? "",
+      correct_answer: s.correct_answer ?? null,
       explanation: s.explanation ?? null,
-    }));
+    })).sort((a, b) => (a.question_number ?? 0) - (b.question_number ?? 0));
     questionByPartId.get(partId).push({
       id: q.id,
       instruction: q.instruction ?? null,
+      question_text: q.question_text ?? null,
       questions: sub,
     });
   }

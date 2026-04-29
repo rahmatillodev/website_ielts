@@ -220,6 +220,7 @@ export const useWritingCompletedStore = create((set) => ({
           )
         `)
         .eq('user_id', userId)
+        .is('mock_id', null)
         .not('writing_id', 'is', null)
         .order('completed_at', { ascending: false });
 
@@ -260,6 +261,7 @@ export const useWritingCompletedStore = create((set) => ({
           .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
           .eq('id', attemptId)
           .eq('user_id', userId)
+          .is('mock_id', null)
           .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
@@ -274,6 +276,7 @@ export const useWritingCompletedStore = create((set) => ({
           .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
           .eq('user_id', userId)
           .eq('writing_id', writingId)
+          .is('mock_id', null)
           .order('completed_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -285,6 +288,7 @@ export const useWritingCompletedStore = create((set) => ({
             .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
             .eq('user_id', userId)
             .eq('test_id', writingId)
+            .is('mock_id', null)
             .order('completed_at', { ascending: false })
             .limit(1)
             .maybeSingle();
