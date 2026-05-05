@@ -152,6 +152,8 @@ export const useAnalyticsStore = create((set, get) => ({
       .select(`
         id,
         test_id,
+        writing_id,
+        type,
         score,
         total_questions,
         correct_answers,
@@ -167,7 +169,7 @@ export const useAnalyticsStore = create((set, get) => ({
         )
       `)
       .eq('user_id', userId)
-      .not('test_id', 'is', null)
+      .or('test_id.not.is.null,writing_id.not.is.null')
       .gte('completed_at', startDate)
       .order('completed_at', { ascending: false })
       .range(from, to);
@@ -290,8 +292,14 @@ export function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5)
   }
 
   // Separate reading and listening attempts
-  const readingAttempts = attempts.filter(a => a.test?.type === 'reading');
-  const listeningAttempts = attempts.filter(a => a.test?.type === 'listening');
+  const getAttemptType = (attempt) => (
+    attempt?.type ||
+    attempt?.test?.type ||
+    (attempt?.writing_id ? 'writing' : null)
+  );
+
+  const readingAttempts = attempts.filter((a) => getAttemptType(a) === 'reading');
+  const listeningAttempts = attempts.filter((a) => getAttemptType(a) === 'listening');
 
   // Calculate averages (rounded to nearest 0.5 for valid IELTS scores)
   const readingAvgRaw = readingAttempts.length > 0

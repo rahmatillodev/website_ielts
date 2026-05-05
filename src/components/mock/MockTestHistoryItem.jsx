@@ -57,7 +57,7 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
                     {results.listening.score?.toFixed(1) || 'N/A'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {results.listening.correct_answers || 0}/{results.listening.total_questions || 0} correct
+                    {Number(results.listening.correct_answers ?? 0)}/{results.listening.total_questions || 0} correct
                   </p>
                 </div>
               )}
@@ -68,7 +68,7 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
                     {results.reading.score?.toFixed(1) || 'N/A'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {results.reading.correct_answers || 0}/{results.reading.total_questions || 0} correct
+                    {Number(results.reading.correct_answers ?? 0)}/{results.reading.total_questions || 0} correct
                   </p>
                 </div>
               )}

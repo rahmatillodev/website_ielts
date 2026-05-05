@@ -120,7 +120,7 @@ const MockTestClientResults = ({
                           <div className="flex items-center gap-1 text-green-700">
                             <CheckCircle2 size={14} />
                             <span className="font-semibold">
-                              {item.correct_answers ?? 'N/A'}
+                              {Number(item.correct_answers ?? 0)}
                             </span>
                           </div>
                         </div>

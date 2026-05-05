@@ -207,7 +207,7 @@ const CardLocked = ({
             </span>
             {isCompleted ? (
               <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                <MdQuiz className="text-[10px] md:text-xs" /> {correct_answers || 0}/{total_questions || question_quantity || 0} Correct
+                <MdQuiz className="text-[10px] md:text-xs" /> {Number(correct_answers ?? 0)}/{total_questions || question_quantity || 0} Correct
               </span>
             ) : (
               question_quantity != null && (

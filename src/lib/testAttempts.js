@@ -86,9 +86,10 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
       test_id: testId,
       score: bandScore,
       total_questions: totalQuestions,
-      correct_answers: correctCount,
+      correct_answers: String(correctCount),
       time_taken: timeTakenSeconds, // Store in seconds
       completed_at: new Date().toISOString(),
+      type,
     };
     // Add mock_id when in mock test mode (links attempt to mock_test.id)
     if (mockTestContext?.mockTestId) {

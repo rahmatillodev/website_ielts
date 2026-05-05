@@ -84,6 +84,7 @@ const MockTestClientResultsPage = () => {
             writing_id,
             score,
             feedback,
+            type,
             correct_answers,
             total_questions,
             time_taken,
@@ -106,14 +107,10 @@ const MockTestClientResultsPage = () => {
         };
 
         if (attempts && attempts.length > 0) {
-          // Get test IDs and writing IDs
+          // Get test IDs for metadata lookup only when needed
           const testIds = attempts
             .filter(a => a.test_id)
             .map(a => a.test_id);
-
-          const writingIds = attempts
-            .filter(a => a.writing_id)
-            .map(a => a.writing_id);
 
           // Fetch test types
           const testTypeMap = {};
@@ -130,20 +127,6 @@ const MockTestClientResultsPage = () => {
             }
           }
 
-          // Fetch writing types
-          if (writingIds.length > 0) {
-            const { data: writingsData } = await supabase
-              .from('writings')
-              .select('id')
-              .in('id', writingIds);
-
-            if (writingsData) {
-              writingsData.forEach(w => {
-                testTypeMap[w.id] = 'writing';
-              });
-            }
-          }
-
           // Get the mock test using client's mock_test_id
           const { data: mockTestData } = await supabase
             .from('mock_test')
@@ -154,16 +137,16 @@ const MockTestClientResultsPage = () => {
           if (mockTestData) {
             // Assign results
             attempts.forEach(attempt => {
-              if (attempt.writing_id && attempt.writing_id === mockTestData.writing_id) {
+              const attemptType = attempt.type || (attempt.test_id ? testTypeMap[attempt.test_id] : null);
+
+              if (attemptType === 'writing' || (attempt.writing_id && attempt.writing_id === mockTestData.writing_id)) {
                 resultsData.writing = attempt;
               } else if (attempt.test_id) {
-                const type = testTypeMap[attempt.test_id];
-
                 if (attempt.test_id === mockTestData.listening_id) {
                   resultsData.listening = attempt;
                 } else if (attempt.test_id === mockTestData.reading_id) {
                   resultsData.reading = attempt;
-                } else if (type === 'speaking') {
+                } else if (attemptType === 'speaking') {
                   resultsData.speaking = attempt;
                 }
               }
