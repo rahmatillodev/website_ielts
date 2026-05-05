@@ -101,7 +101,7 @@ const ReadingResultPage = () => {
             test_id: attempt.test_id,
             score: attempt.score,
             total_questions: attempt.total_questions,
-            correct_answers: attempt.correct_answers,
+            correct_answers: Number(attempt.correct_answers ?? 0),
             time_taken: attempt.time_taken,
             completed_at: attempt.completed_at,
             created_at: attempt.created_at,

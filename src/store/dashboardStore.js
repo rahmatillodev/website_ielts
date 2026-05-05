@@ -67,7 +67,7 @@ export const useDashboardStore = create((set, get) => ({
       // Fetch attempts first (limit to reduce cached egress; dashboard shows recent activity)
       const { data: attemptsData, error: attemptsError } = await supabase
         .from('user_attempts')
-        .select('id, test_id, score, time_taken, total_questions, correct_answers, created_at, completed_at')
+        .select('id, test_id, writing_id, score, time_taken, total_questions, correct_answers, created_at, completed_at, type')
         .eq('user_id', userId)
         .order('completed_at', { ascending: false })
         .range(from, to);
@@ -131,11 +131,12 @@ export const useDashboardStore = create((set, get) => ({
                 id: attempt.id,
                 test_id: attempt.test_id,
                 score: attempt.score,
-                correct_answers: attempt.correct_answers,
+                correct_answers: Number(attempt.correct_answers ?? 0),
                 total_questions: attempt.total_questions,
                 time_taken: attempt.time_taken,
                 completed_at: attempt.completed_at,
                 created_at: attempt.created_at,
+                type: attempt.type,
               },
             };
           }
@@ -145,7 +146,8 @@ export const useDashboardStore = create((set, get) => ({
       // Add test type and metadata to each attempt
       const attemptsWithType = attempts.map((attempt) => ({
         ...attempt,
-        testType: testTypesMap[attempt.test_id]?.type || null,
+        testType: attempt.type || testTypesMap[attempt.test_id]?.type || (attempt.writing_id ? 'writing' : null),
+        correct_answers: Number(attempt.correct_answers ?? 0),
         testTitle: testTypesMap[attempt.test_id]?.title || null,
         testDifficulty: testTypesMap[attempt.test_id]?.difficulty || null,
       }));

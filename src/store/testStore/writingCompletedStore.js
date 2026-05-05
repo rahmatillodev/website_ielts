@@ -60,19 +60,9 @@ export const useWritingCompletedStore = create((set) => ({
         .eq('writing_id', writingId);
 
       if (tasksError) {
-        // If writing_id doesn't work, try with test_id (fallback)
-        const { data: retryTasks, error: retryTasksError } = await supabase
-          .from('writing_tasks')
-          .select('id, task_name')
-          .eq('test_id', writingId);
-
-        if (retryTasksError) {
-          throw new Error(`Failed to fetch writing tasks: ${retryTasksError.message}`);
-        }
-        writingTasks = retryTasks;
-      } else {
-        writingTasks = tasksData;
+        throw new Error(`Failed to fetch writing tasks: ${tasksError.message}`);
       }
+      writingTasks = tasksData;
 
       if (!writingTasks || writingTasks.length === 0) {
         throw new Error('No writing tasks found for this writing');
@@ -87,12 +77,13 @@ export const useWritingCompletedStore = create((set) => ({
       // Prepare attempt data - correct_answers should be null
       const attemptDataToInsert = {
         user_id: userId,
-        writing_id: writingId, // Note: This assumes writing_id column exists
+        writing_id: writingId,
         score: null, // Writing doesn't have automated scoring
         total_questions: 1, // Constant as per requirements
         correct_answers: null, // Set to null as per new requirement
         time_taken: timeTakenSeconds, // Store in seconds
         completed_at: new Date().toISOString(),
+        type: 'writing',
       };
 
       // Add mock_id if provided (for mock test mode)
@@ -102,49 +93,14 @@ export const useWritingCompletedStore = create((set) => ({
       }
 
       // Insert into user_attempts table
-      let attemptData = null;
-      let attemptError = null;
-      
       const { data: insertedAttempt, error: insertError } = await supabase
         .from('user_attempts')
         .insert(attemptDataToInsert)
         .select()
         .single();
 
-      if (insertError) {
-        // If writing_id column doesn't exist, try with test_id instead
-        if (insertError.message.includes('writing_id') || insertError.code === '42703') {
-          const retryDataToInsert = {
-            user_id: userId,
-            test_id: writingId, // Fallback to test_id
-            score: null,
-            total_questions: 1,
-            correct_answers: null, // Set to null as per new requirement
-            time_taken: timeTakenSeconds, // Store in seconds
-            completed_at: new Date().toISOString(),
-          };
-
-          // Add mock_id if provided
-          // mock_id should reference mock_test.id, not mock_test_clients.id
-          if (mockTestId) {
-            retryDataToInsert.mock_id = mockTestId;
-          }
-
-          const { data: retryData, error: retryError } = await supabase
-            .from('user_attempts')
-            .insert(retryDataToInsert)
-            .select()
-            .single();
-
-          if (retryError) throw retryError;
-          
-          attemptData = retryData;
-        } else {
-          throw insertError;
-        }
-      } else {
-        attemptData = insertedAttempt;
-      }
+      if (insertError) throw insertError;
+      const attemptData = insertedAttempt;
 
       const attemptId = attemptData.id;
 
@@ -258,7 +214,7 @@ export const useWritingCompletedStore = create((set) => ({
       if (attemptId) {
         const { data, error } = await supabase
           .from('user_attempts')
-          .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
+          .select('id, user_id, writing_id, score, total_questions, correct_answers, time_taken, completed_at, created_at, type')
           .eq('id', attemptId)
           .eq('user_id', userId)
           .is('mock_id', null)
@@ -273,32 +229,13 @@ export const useWritingCompletedStore = create((set) => ({
         // Fetch latest attempt - try with writing_id first
         let { data, error } = await supabase
           .from('user_attempts')
-          .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
+          .select('id, user_id, writing_id, score, total_questions, correct_answers, time_taken, completed_at, created_at, type')
           .eq('user_id', userId)
           .eq('writing_id', writingId)
           .is('mock_id', null)
           .order('completed_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-
-        // If writing_id doesn't exist, try with test_id
-        if (error && (error.message.includes('writing_id') || error.code === '42703')) {
-          const { data: retryData, error: retryError } = await supabase
-            .from('user_attempts')
-            .select('id, user_id, writing_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
-            .eq('user_id', userId)
-            .eq('test_id', writingId)
-            .is('mock_id', null)
-            .order('completed_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (retryError && retryError.code !== 'PGRST116') {
-            throw retryError;
-          }
-          data = retryData;
-          error = retryError;
-        }
 
         if (error && error.code !== 'PGRST116') {
           throw error;
@@ -349,47 +286,18 @@ export const useWritingCompletedStore = create((set) => ({
         }
 
         // Fetch writing_tasks separately to map question_id to task_name
-        const writingId = attemptData.writing_id || attemptData.test_id;
+        const writingId = attemptData.writing_id;
         const { data: writingTasks, error: tasksError } = await supabase
           .from('writing_tasks')
           .select('id, task_name')
           .eq('writing_id', writingId);
 
         if (tasksError) {
-          // Try with test_id as fallback
-          const { data: retryTasks, error: retryTasksError } = await supabase
-            .from('writing_tasks')
-            .select('id, task_name')
-            .eq('test_id', writingId);
-
-          if (retryTasksError || !retryTasks || retryTasks.length === 0) {
-            console.warn('Error fetching writing tasks:', retryTasksError);
-            return {
-              success: true,
-              attempt: attemptData,
-              answers: {},
-            };
-          }
-
-          // Map question_id to task_name
-          const taskIdToNameMap = {};
-          retryTasks.forEach(task => {
-            taskIdToNameMap[task.id] = task.task_name;
-          });
-
-          // Build answers object
-          const answers = {};
-          answersOnly.forEach(answer => {
-            const taskName = taskIdToNameMap[answer.question_id];
-            if (taskName) {
-              answers[taskName] = answer.user_answer || '';
-            }
-          });
-
+          console.warn('Error fetching writing tasks:', tasksError);
           return {
             success: true,
             attempt: attemptData,
-            answers,
+            answers: {},
           };
         }
 
