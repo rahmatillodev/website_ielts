@@ -114,6 +114,26 @@ const CardLocked = ({
             </div>
           )}
 
+            <motion.div className="flex gap-2 md:gap-3 text-gray-500 mt-2 md:mt-3 items-center flex-wrap">
+              <span className="flex items-baseline gap-1.5 text-[9px] md:text-[10px] font-medium leading-none">
+                <SignalBars level={difficulty?.toLowerCase() === "hard" ? 3 : difficulty?.toLowerCase() === "medium" ? 2 : 1} />
+                <span className="text-gray-600">{difficulty || "—"}</span>
+              </span>
+              <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
+                <MdTimer className="text-[10px] md:text-xs" /> {duration} min
+              </span>
+              {isCompleted ? (
+                <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
+                  <MdQuiz className="text-[10px] md:text-xs" /> {Number(correct_answers ?? 0)}/{total_questions || question_quantity || 0} Correct
+                </span>
+              ) : (
+                question_quantity != null && (
+                  <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
+                    <MdQuiz className="text-[10px] md:text-xs" /> {question_quantity} {question_quantity === 1 ? "question" : "questions"}
+                  </span>
+                )
+              )}
+            </motion.div>
 
           {/* Unlock Button - Always show for locked tests, even if completed */}
           <UpgradeModal>
