@@ -48,6 +48,7 @@
   import MockTestResults from "./pages/dashboard/mock/MockTestResults";
   import MockTestHistoryPage from "./pages/dashboard/mock/MockTestHistoryPage";
   import MockTestClientResultsPage from "./pages/dashboard/mock/MockTestClientResultsPage";
+  import MockTestLocalArchivePage from "./pages/dashboard/mock/MockTestLocalArchivePage";
   import MockTestRoute from "./components/MockTestRoute";
   import RegularDashboardRoute from "./components/RegularDashboardRoute";
   import SpeakingPodcast from "./pages/dashboard/speaking/SpeakingPodcast";
@@ -349,6 +350,7 @@
                 <Route path="/mock/center" element={<MockCenterPage />} />
                 <Route path="/mock-test/flow/:mockTestId" element={<MockTestFlow />} />
                 <Route path="/mock-test/results" element={<MockTestResults />} />
+                <Route path="/mock-tests/local-archive" element={<MockTestLocalArchivePage />} />
 
                 <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
                 <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />

@@ -362,6 +362,61 @@ const mapQuestionType = (groupType) => {
 };
 
 /**
+ * Read a single answer from the client answers map. Keys may be UUIDs (any casing),
+ * numeric question_number, or stringified numbers — depending on question component.
+ * @param {Record<string, unknown>} answers
+ * @param {string|number|null|undefined} questionId - questions.id when present
+ * @param {string|number|null|undefined} questionNumber
+ * @returns {string} trimmed user answer or ''
+ */
+const pickStoredAnswer = (answers, questionId, questionNumber) => {
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+    return '';
+  }
+
+  const keyVariants = (key) => {
+    if (key == null || key === '') return [];
+    const out = [];
+    const pushUnique = (v) => {
+      if (v == null || v === '') return;
+      if (!out.includes(v)) out.push(v);
+    };
+    pushUnique(key);
+    pushUnique(String(key));
+    const s = String(key);
+    if (/^[0-9a-fA-F-]{36}$/.test(s)) {
+      pushUnique(s.toLowerCase());
+      pushUnique(s.toUpperCase());
+    }
+    if (typeof key === 'string' && /^\d+$/.test(s)) {
+      const n = Number(s);
+      if (!Number.isNaN(n)) pushUnique(n);
+    }
+    if (typeof key === 'number' && Number.isFinite(key)) {
+      pushUnique(String(key));
+    }
+    return out;
+  };
+
+  const orderedKeys = [];
+  if (questionId != null && questionId !== '') {
+    orderedKeys.push(...keyVariants(questionId));
+  }
+  if (questionNumber != null && questionNumber !== '') {
+    orderedKeys.push(...keyVariants(questionNumber));
+  }
+
+  for (const k of orderedKeys) {
+    if (!Object.prototype.hasOwnProperty.call(answers, k)) continue;
+    const raw = answers[k];
+    if (raw == null) continue;
+    const trimmed = String(raw).trim();
+    if (trimmed !== '') return trimmed;
+  }
+  return '';
+};
+
+/**
  * Calculate test score by comparing user answers with correct answers
  * @param {object} answers - User answers { [questionId]: answer }
  * @param {object} currentTest - Test data with parts and questions
@@ -398,7 +453,7 @@ const calculateTestScore = (answers, currentTest) => {
         // For multiple_answers: parse group-level answer and check each question
         if (isMultipleAnswers) {
           // Get group-level answer (comma-separated option_keys like "A,C")
-          const groupAnswer = answers[questionGroup.id] || '';
+          const groupAnswer = pickStoredAnswer(answers, questionGroup.id, null);
           const selectedOptionKeys = groupAnswer
             .split(',')
             .map(key => key.trim().toUpperCase())
@@ -461,13 +516,10 @@ const calculateTestScore = (answers, currentTest) => {
             // Use questions.id as primary key (from nested structure), fallback to question_number for backward compatibility
             const questionId = question.id; // This is questions.id from the nested structure
             const questionNumber = question.question_number;
-            
-            // Try to get answer using questions.id first, then fallback to question_number
-            const userAnswer = (questionId && answers[questionId]?.toString().trim()) || 
-                              (questionNumber && answers[questionNumber]?.toString().trim()) || 
-                              '';
-            
-            // Skip if no answer found and no question ID/number
+
+            const userAnswer = pickStoredAnswer(answers, questionId, questionNumber);
+
+            // Skip if no question identity (cannot persist row)
             if (!questionId && !questionNumber) return;
             
             totalQuestions++;

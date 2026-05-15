@@ -1,14 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
 import { useMockTestClientStore } from '@/store/mockTestClientStore';
 import { useAuthStore } from '@/store/authStore';
 import { saveMockTestData, loadMockTestData, clearAllMockTestDataForId, loadAudioCheckState, saveAudioCheckState } from '@/store/LocalStorage/mockTestStorage';
+import { putRunPartial, mergeSection, markRunCompleted } from '@/lib/mockTestIndexedArchive';
 import MockTestListening from './MockTestListening';
 import MockTestReading from './MockTestReading';
 import MockTestWriting from './MockTestWriting';
 import MockTestResults from './MockTestResults';
 import MockTestStart from './MockTestStart';
 import InstructionalVideo from '@/components/mock/InstructionalVideo';
+
+const MOCK_TEST_SESSION_RUN_KEY = 'mock_test_session_run';
 
 /**
  * Main orchestrator component for the mock test flow
@@ -31,6 +35,9 @@ const MockTestFlow = () => {
     reading: null,
     writing: null,
   });
+
+  /** IndexedDB archive run id (persisted in sessionStorage for practice-page navigations). */
+  const [mockRunId, setMockRunId] = useState(null);
 
   const listeningVideoSrc = "/videos/listeningVideo.mp4";
   const readingVideoSrc = "/videos/readingVideo.mp4";
@@ -116,6 +123,62 @@ const MockTestFlow = () => {
   // Use param mockTestId if available, otherwise use fetched mockTest
   const effectiveMockTestId = paramMockTestId || mockTest?.id;
 
+  // One run per mock session (reuse on refresh while same user + same mock test).
+  useEffect(() => {
+    if (!effectiveMockTestId || !userProfile?.id || !mockTest?.id) return;
+    try {
+      const raw = sessionStorage.getItem(MOCK_TEST_SESSION_RUN_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.mockTestId === effectiveMockTestId && parsed?.userId === userProfile.id && parsed?.runId) {
+          setMockRunId(parsed.runId);
+          return;
+        }
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    const runId = uuidv4();
+    try {
+      sessionStorage.setItem(
+        MOCK_TEST_SESSION_RUN_KEY,
+        JSON.stringify({ mockTestId: effectiveMockTestId, userId: userProfile.id, runId })
+      );
+    } catch (_) {
+      /* ignore */
+    }
+    setMockRunId(runId);
+  }, [effectiveMockTestId, userProfile?.id, mockTest?.id]);
+
+  // Seed IndexedDB archive row (parallel to Supabase; safe no-op on failure).
+  useEffect(() => {
+    if (!mockRunId || !mockTest?.id || !userProfile?.id) return;
+    putRunPartial(mockRunId, {
+      user: {
+        id: userProfile.id,
+        email: userProfile.email ?? null,
+        username: userProfile.full_name ?? userProfile.username ?? null,
+      },
+      mockTest: { id: mockTest.id, title: mockTest.title ?? null },
+      sections: {
+        listening: {
+          testId: mockTest.listening_id ?? null,
+          title: null,
+          type: 'listening',
+        },
+        reading: {
+          testId: mockTest.reading_id ?? null,
+          title: null,
+          type: 'reading',
+        },
+        writing: {
+          testId: mockTest.writing_id ?? null,
+          title: null,
+          type: 'writing',
+        },
+      },
+    });
+  }, [mockRunId, mockTest?.id, mockTest?.title, mockTest?.listening_id, mockTest?.reading_id, mockTest?.writing_id, userProfile?.id, userProfile?.email, userProfile?.full_name, userProfile?.username]);
 
   // When coming from MockTestsPage after device check: skip device check and go to listening
   useEffect(() => {
@@ -351,20 +414,26 @@ const MockTestFlow = () => {
   }, [client?.id, effectiveMockTestId, updateClientStatus, userProfile?.id, userProfile?.email, userProfile?.full_name, userProfile?.phone_number, createClientForMockTest]);
 
   const handleListeningComplete = useCallback((result) => {
+    if (mockRunId && result) {
+      mergeSection(mockRunId, 'listening', { submitMeta: result });
+    }
     setSectionResults((prevResults) => ({
       ...prevResults,
       listening: result,
     }));
     setCurrentSection('reading');
-  }, []);
+  }, [mockRunId]);
 
   const handleReadingComplete = useCallback((result) => {
+    if (mockRunId && result) {
+      mergeSection(mockRunId, 'reading', { submitMeta: result });
+    }
     setSectionResults((prevResults) => ({
       ...prevResults,
       reading: result,
     }));
     setCurrentSection('writing');
-  }, []);
+  }, [mockRunId]);
 
   const handleWritingComplete = useCallback(async (result) => {
     // Only treat as successful completion if we have a valid result (data was saved to Supabase)
@@ -394,6 +463,22 @@ const MockTestFlow = () => {
       console.warn('[MockTestFlow] Cannot update status to completed: client.id is not available');
     }
 
+    if (mockRunId) {
+      try {
+        await markRunCompleted(mockRunId);
+        if (result) {
+          await mergeSection(mockRunId, 'writing', { submitMeta: result });
+        }
+      } catch (e) {
+        console.warn('[MockTestFlow] IndexedDB archive finalize failed:', e);
+      }
+      try {
+        sessionStorage.removeItem(MOCK_TEST_SESSION_RUN_KEY);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
     // Clear mock test data and go to results only after writing flow has finished
     // (Storage clear is safe here; completion signals were already consumed by the wrapper)
     const currentMockTestId = paramMockTestId || storeState.mockTest?.id;
@@ -402,7 +487,7 @@ const MockTestFlow = () => {
     }
 
     setCurrentSection('results');
-  }, [client?.id, paramMockTestId, updateClientStatus]);
+  }, [client?.id, paramMockTestId, updateClientStatus, mockRunId]);
 
   // Handler for early exit ("I Want to Finish"): finish test immediately.
   // - Saves only the current section result (already submitted by practice page); remaining sections are not written.
@@ -433,13 +518,29 @@ const MockTestFlow = () => {
       }
     }
 
+    if (mockRunId) {
+      try {
+        void markRunCompleted(mockRunId);
+        if (result && section) {
+          void mergeSection(mockRunId, section, { submitMeta: result });
+        }
+      } catch (e) {
+        console.warn('[MockTestFlow] IndexedDB archive early-exit finalize failed:', e);
+      }
+      try {
+        sessionStorage.removeItem(MOCK_TEST_SESSION_RUN_KEY);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
     // Clear all mock test data from localStorage (no partial progress for skipped sections)
     if (currentMockTestId) {
       clearAllMockTestDataForId(currentMockTestId);
     }
 
     setCurrentSection('results');
-  }, [paramMockTestId, client?.id, updateClientStatus]);
+  }, [paramMockTestId, client?.id, updateClientStatus, mockRunId]);
 
   const handleAudioCheckComplete = () => {
     // Save audio check completion state
@@ -523,6 +624,7 @@ const MockTestFlow = () => {
         <MockTestListening
           testId={mockTest.listening_id}
           mockTestId={mockTest.id}
+          mockRunId={mockRunId}
           mockClientId={client?.id}
           onComplete={handleListeningComplete}
           onEarlyExit={handleEarlyExit}
@@ -537,6 +639,7 @@ const MockTestFlow = () => {
         <MockTestReading
           testId={mockTest.reading_id}
           mockTestId={mockTest.id}
+          mockRunId={mockRunId}
           mockClientId={client?.id}
           onComplete={handleReadingComplete}
           onEarlyExit={handleEarlyExit}
@@ -550,6 +653,7 @@ const MockTestFlow = () => {
         <MockTestWriting
           writingId={mockTest.writing_id}
           mockTestId={mockTest.id}
+          mockRunId={mockRunId}
           mockClientId={client?.id}
           onComplete={handleWritingComplete}
           onEarlyExit={handleEarlyExit}
@@ -563,6 +667,7 @@ const MockTestFlow = () => {
         <MockTestResults
           results={sectionResults}
           mockTestId={effectiveMockTestId}
+          mockRunId={mockRunId}
           onBack={() => navigate('/mock-tests')}
         />
       );
@@ -588,6 +693,7 @@ const MockTestFlow = () => {
           <MockTestResults
             results={sectionResults}
             mockTestId={effectiveMockTestId}
+            mockRunId={mockRunId}
             onBack={() => navigate('/mock-tests')}
           />
         );
@@ -596,6 +702,7 @@ const MockTestFlow = () => {
           <MockTestWriting
             writingId={mockTest.writing_id}
             mockTestId={mockTest.id}
+            mockRunId={mockRunId}
             mockClientId={client?.id}
             onComplete={handleWritingComplete}
             onEarlyExit={handleEarlyExit}
@@ -608,6 +715,7 @@ const MockTestFlow = () => {
           <MockTestReading
             testId={mockTest.reading_id}
             mockTestId={mockTest.id}
+            mockRunId={mockRunId}
             mockClientId={client?.id}
             onComplete={handleReadingComplete}
             onEarlyExit={handleEarlyExit}
@@ -621,6 +729,7 @@ const MockTestFlow = () => {
         <MockTestListening
           testId={mockTest.listening_id}
           mockTestId={mockTest.id}
+          mockRunId={mockRunId}
           mockClientId={client?.id}
           onComplete={handleListeningComplete}
           onEarlyExit={handleEarlyExit}

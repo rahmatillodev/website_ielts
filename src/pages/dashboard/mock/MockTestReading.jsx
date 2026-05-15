@@ -12,7 +12,7 @@ import ReadingPracticePage from '../reading/ReadingPracticePage';
  * - Security restrictions
  * - Auto-submit on time expiry
  */
-const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack, videoSrc }) => {
+const MockTestReading = ({ testId, mockTestId, mockRunId, mockClientId, onComplete, onEarlyExit, onBack, videoSrc }) => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVideo, setShowVideo] = useState(true);
@@ -160,58 +160,52 @@ const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onEarly
   // Update URL to match practice page route - MUST happen before ReadingPracticePage renders
   // Use location-based detection to ensure React Router has completed navigation
   useEffect(() => {
-    if (!testId || showVideo) {
+    if (!testId || showVideo || !mockRunId) {
       setUrlReady(false);
       return;
     }
-    
+
     const expectedPath = `/reading-practice/${testId}`;
     const currentPath = location.pathname;
-    
-    // Check if already on correct route (with or without query params)
-    if (currentPath === expectedPath || currentPath.startsWith(`${expectedPath}?`)) {
-      // Check if URL params are correct
-      const currentSearch = new URLSearchParams(location.search);
-      const hasMockTest = currentSearch.get('mockTest') === 'true';
-      const hasMockTestId = currentSearch.get('mockTestId') === mockTestId;
-      
-      if (hasMockTest && hasMockTestId) {
-        // URL is already correct, set ready immediately
-        setUrlReady(true);
-        return;
-      }
+    const currentSearch = new URLSearchParams(location.search);
+    const hasMockTest = currentSearch.get('mockTest') === 'true';
+    const hasMockTestId = currentSearch.get('mockTestId') === mockTestId;
+    const hasRun = currentSearch.get('mockRunId') === mockRunId;
+
+    if ((currentPath === expectedPath || currentPath.startsWith(`${expectedPath}?`)) && hasMockTest && hasMockTestId && hasRun) {
+      setUrlReady(true);
+      return;
     }
-    
-    // Navigate to practice route with correct params
+
     const searchParams = new URLSearchParams({
       mockTest: 'true',
       mockTestId: mockTestId || '',
+      mockRunId: mockRunId || '',
       mockClientId: mockClientId || '',
       duration: '3600' // 60 minutes for reading
     });
-    
+
     navigate(`/reading-practice/${testId}?${searchParams.toString()}`, { replace: true });
-  }, [testId, mockTestId, mockClientId, showVideo, location.pathname, location.search, navigate]);
+  }, [testId, mockTestId, mockRunId, mockClientId, showVideo, location.pathname, location.search, navigate]);
 
   // Set urlReady when location matches expected route
   // This ensures React Router has fully processed the navigation before rendering practice page
   useEffect(() => {
-    if (!testId || showVideo) {
+    if (!testId || showVideo || !mockRunId) {
       setUrlReady(false);
       return;
     }
-    
+
     const expectedPath = `/reading-practice/${testId}`;
     const currentPath = location.pathname;
-    
-    // Check if path matches (with or without query params)
+
     if (currentPath === expectedPath || currentPath.startsWith(`${expectedPath}?`)) {
-      // Verify query params are correct
       const currentSearch = new URLSearchParams(location.search);
       const hasMockTest = currentSearch.get('mockTest') === 'true';
       const hasMockTestId = currentSearch.get('mockTestId') === mockTestId;
-      
-      if (hasMockTest && hasMockTestId) {
+      const hasRun = currentSearch.get('mockRunId') === mockRunId;
+
+      if (hasMockTest && hasMockTestId && hasRun) {
         setUrlReady(true);
       } else {
         setUrlReady(false);
@@ -219,7 +213,7 @@ const MockTestReading = ({ testId, mockTestId, mockClientId, onComplete, onEarly
     } else {
       setUrlReady(false);
     }
-  }, [location.pathname, location.search, testId, mockTestId, showVideo]);
+  }, [location.pathname, location.search, testId, mockTestId, mockRunId, showVideo]);
 
   // Early return for video - must be AFTER all hooks
   if (showVideo) {

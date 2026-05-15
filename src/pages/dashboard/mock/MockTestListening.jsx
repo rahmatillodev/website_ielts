@@ -14,7 +14,7 @@ import ListeningPracticePage from '../listening/ListeningPracticePage';
  * - Auto-submit on time expiry
  * - Can proceed early
  */
-const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack, videoSrc, onVideoStart }) => {
+const MockTestListening = ({ testId, mockTestId, mockRunId, mockClientId, onComplete, onEarlyExit, onBack, videoSrc, onVideoStart }) => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVideo, setShowVideo] = useState(true);
@@ -173,36 +173,49 @@ const MockTestListening = ({ testId, mockTestId, mockClientId, onComplete, onEar
   // Update URL to match practice page route - MUST happen before ListeningPracticePage renders
   // Use location-based detection to ensure React Router has completed navigation
   useEffect(() => {
-    if (!testId || showVideo) return;
+    if (!testId || showVideo || !mockRunId) return;
 
     const expectedPath = `/listening-practice/${testId}`;
-    
-    // Check if already on correct route
-    if (location.pathname === expectedPath) {
+    const currentSearch = new URLSearchParams(location.search);
+    const hasMock = currentSearch.get('mockTest') === 'true';
+    const hasMockTestId = currentSearch.get('mockTestId') === mockTestId;
+    const hasRun = currentSearch.get('mockRunId') === mockRunId;
+
+    if (location.pathname === expectedPath && hasMock && hasMockTestId && hasRun) {
       setUrlReady(true);
       return;
     }
-    
-    // Navigate to practice route
+
     const searchParams = new URLSearchParams({
       mockTest: 'true',
       mockTestId: mockTestId || '',
+      mockRunId: mockRunId || '',
       mockClientId: mockClientId || '',
       duration: '2400' // 40 minutes
     });
-    
+
     navigate(`/listening-practice/${testId}?${searchParams.toString()}`, { replace: true });
-  }, [testId, mockTestId, mockClientId, showVideo, location.pathname, navigate]);
+  }, [testId, mockTestId, mockRunId, mockClientId, showVideo, location.pathname, location.search, navigate]);
 
   // Set urlReady when location matches expected route
   // This ensures React Router has fully processed the navigation before rendering practice page
   useEffect(() => {
-    if (testId && !showVideo && location.pathname === `/listening-practice/${testId}`) {
-      setUrlReady(true);
-    } else {
+    if (!testId || !mockRunId || showVideo) {
       setUrlReady(false);
+      return;
     }
-  }, [location.pathname, testId, showVideo]);
+    const expectedPath = `/listening-practice/${testId}`;
+    if (location.pathname !== expectedPath) {
+      setUrlReady(false);
+      return;
+    }
+    const currentSearch = new URLSearchParams(location.search);
+    const ok =
+      currentSearch.get('mockTest') === 'true' &&
+      currentSearch.get('mockTestId') === mockTestId &&
+      currentSearch.get('mockRunId') === mockRunId;
+    setUrlReady(!!ok);
+  }, [location.pathname, location.search, testId, mockTestId, mockRunId, showVideo]);
 
   // Early return for video - must be AFTER all hooks
   if (showVideo) {

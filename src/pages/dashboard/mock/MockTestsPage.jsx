@@ -7,6 +7,7 @@ import {  MdHistory } from "react-icons/md";
 import MockTestPasswordModal from "@/components/modal/MockTestPasswordModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
+import { listAllRuns } from "@/lib/mockTestIndexedArchive";
 
 const MockTestsPage = () => {
   const { 
@@ -28,8 +29,28 @@ const MockTestsPage = () => {
   const [passwordCode, setPasswordCode] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasLocalArchive, setHasLocalArchive] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const runs = await listAllRuns();
+        if (!cancelled) setHasLocalArchive(runs.length > 0);
+      } catch {
+        if (!cancelled) setHasLocalArchive(false);
+      }
+    };
+    check();
+    const onFocus = () => check();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
 
   const handlePasswordChange = (value) => {
     setPasswordCode(value);
@@ -156,7 +177,17 @@ const MockTestsPage = () => {
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          {hasLocalArchive && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-sm font-semibold"
+              onClick={() => navigate("/mock-tests/local-archive")}
+            >
+              Local answer archive
+            </Button>
+          )}
           {isMockTestClient === true && (
             <Link
               to="/mock-test/history"

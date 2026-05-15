@@ -1,30 +1,71 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FaTelegramPlane } from 'react-icons/fa';
 import { MdSchedule, MdCheckCircleOutline } from 'react-icons/md';
-import { clearAllMockTestDataForId, clearAllMockTestData } from '@/store/LocalStorage/mockTestStorage';
+import { clearAllMockTestDataForId } from '@/store/LocalStorage/mockTestStorage';
+import { getRun, sanitizeRunForDisplay } from '@/lib/mockTestIndexedArchive';
+import MockTestArchiveSections from '@/components/mock/MockTestArchiveSections';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 /**
  * Mock Test Results Page (Pending Evaluation)
  * - No scores shown
- * - User is informed that results will be available in 2 days
- * - Telegram bot reminder notice
+ * - IndexedDB archive: staff can open "Show" to review captured answers (same browser)
  */
-const MockTestResults = ({ mockTestId, results, onBack }) => {
+const MockTestResults = ({ mockTestId, mockRunId, results, onBack }) => {
+  const location = useLocation();
   const navigate = useNavigate();
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
-  // Log when results page is displayed and ensure localStorage is cleared
-  useEffect(() => {
-    console.log('[MockTestResults] Results page displayed', { mockTestId, results });
+  const effectiveMockTestId =
+    mockTestId ?? location.state?.mockTestId ?? searchParams.get('mockTestId') ?? undefined;
+  const effectiveMockRunId =
+    mockRunId ?? location.state?.mockRunId ?? searchParams.get('mockRunId') ?? undefined;
+  const effectiveResults = results ?? location.state?.results;
 
-    // Ensure all localStorage data is cleared when results page loads
-    // This is a safety measure in case cleanup didn't happen earlier
-    if (mockTestId) {
-      console.log('[MockTestResults] Ensuring localStorage cleanup for mock test:', mockTestId);
-      clearAllMockTestDataForId(mockTestId);
-      clearAllMockTestData();
+  const handleBack = onBack ?? (() => navigate('/mock-tests'));
+
+  const [showArchive, setShowArchive] = useState(false);
+  const [archive, setArchive] = useState(null);
+  const [archiveError, setArchiveError] = useState(null);
+
+  const loadArchive = useCallback(async () => {
+    if (!effectiveMockRunId) {
+      setArchiveError('No session archive id (mockRunId).');
+      setArchive(null);
+      return;
     }
-  }, [mockTestId, results]);
+    setArchiveError(null);
+    try {
+      const data = await getRun(effectiveMockRunId);
+      setArchive(data ? sanitizeRunForDisplay(data) : null);
+      if (!data) {
+        setArchiveError('No archived data found for this session.');
+      }
+    } catch (e) {
+      console.error('[MockTestResults] Failed to load archive:', e);
+      setArchiveError(e?.message || 'Failed to load archive');
+      setArchive(null);
+    }
+  }, [effectiveMockRunId]);
+
+  useEffect(() => {
+    // Clear only this mock test's flow keys in localStorage (do not wipe other users' keys on shared PC)
+    if (effectiveMockTestId) {
+      clearAllMockTestDataForId(effectiveMockTestId);
+    }
+  }, [effectiveMockTestId, effectiveResults, effectiveMockRunId]);
+
+  const handleOpenShow = () => {
+    setShowArchive(true);
+    loadArchive();
+  };
 
   return (
     <div className="bg-gray-50 py-12 px-4 flex items-center justify-center">
@@ -49,10 +90,25 @@ const MockTestResults = ({ mockTestId, results, onBack }) => {
             The evaluation process is currently in progress.
           </p>
 
+          {effectiveMockRunId && (
+            <div className="mb-8">
+              <Button type="button" variant="outline" onClick={handleOpenShow}>
+                Show archived answers
+              </Button>
+              <p className="text-xs text-gray-400 mt-2">Stored on this device for staff review (IndexedDB).</p>
+            </div>
+          )}
+
+          <div className="mb-6">
+            <Button type="button" variant="ghost" onClick={handleBack}>
+              Back to mock tests
+            </Button>
+          </div>
+
           {/* Info Card */}
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 mb-8 text-left">
             <div className="flex items-start gap-4">
-              <MdCheckCircleOutline className="text-blue-600 flex-shrink-0 mt-1" size={28} />
+              <MdCheckCircleOutline className="text-blue-600 shrink-0 mt-1" size={28} />
               <div>
                 <h3 className="text-lg font-bold text-blue-900 mb-2">
                   Results will be available within 2 days
@@ -68,7 +124,7 @@ const MockTestResults = ({ mockTestId, results, onBack }) => {
           {/* Telegram Notice */}
           <div className="bg-green-50 border border-green-100 rounded-2xl p-6 mb-10 text-left">
             <div className="flex items-start gap-4">
-              <FaTelegramPlane className="text-green-600 flex-shrink-0 mt-1" size={26} />
+              <FaTelegramPlane className="text-green-600 shrink-0 mt-1" size={26} />
               <div>
                 <h3 className="text-lg font-bold text-green-900 mb-2">
                   Telegram Notification
@@ -86,24 +142,26 @@ const MockTestResults = ({ mockTestId, results, onBack }) => {
             No scores are displayed at this stage. Please wait for the official evaluation.
           </p>
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => {
-                navigate('/mock-tests');
-                clearAllMockTestDataForId(mockTestId);
-                clearAllMockTestData();
-              }}
-              className="px-8 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-all shadow-md"
-            >
-              Go to Mock Tests
-            </button>
-
-
-          </div>
-
         </div>
       </div>
+
+      <Dialog open={showArchive} onOpenChange={setShowArchive}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Archived mock answers</DialogTitle>
+          </DialogHeader>
+          {archiveError && (
+            <p className="text-sm text-red-600 text-left">{archiveError}</p>
+          )}
+          {archive && (
+            <MockTestArchiveSections
+              run={archive}
+              mockTestIdFallback={effectiveMockTestId}
+              listMaxHeightClass="max-h-64"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
