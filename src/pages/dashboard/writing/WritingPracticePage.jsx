@@ -622,7 +622,10 @@ const WritingPracticePageContent = () => {
       // Only handle if it's for writing section and matches our mockTestId
       if (section === 'writing' && eventMockTestId === mockTestId) {
         // Prevent duplicate submissions
-        if (isAutoSubmitting || isSaving) return;
+        if (isAutoSubmitting || isSaving) {
+          toast.error('Submission already in progress');
+          return;
+        }
 
         setIsSaving(true);
 
@@ -960,6 +963,10 @@ const WritingPracticePageContent = () => {
   const handleExitConfirm = async () => {
     setShowExitModal(false);
     resetExitModal();
+    if (isMockTest && !mockRunId) {
+      toast.error('Session archive id missing. Cannot save your answers.');
+      return;
+    }
     // Mark as early exit so we navigate to results after submission
     setIsEarlyExit(true);
     window.dispatchEvent(new CustomEvent('mockTestForceSubmit', {
@@ -981,7 +988,14 @@ const WritingPracticePageContent = () => {
 
   // Auto-submit function (no loading overlay, no modal)
   const handleAutoSubmit = useCallback(async () => {
-    if (!currentWriting || !currentWriting.writing_tasks || isAutoSubmitting || isSaving) return;
+    if (isAutoSubmitting || isSaving) {
+      if (isMockTest) toast.error('Submission already in progress');
+      return;
+    }
+    if (!currentWriting || !currentWriting.writing_tasks) {
+      if (isMockTest) toast.error('Writing test is not loaded yet. Please wait and try again.');
+      return;
+    }
 
     // Stop timer immediately (set state first to stop timer interval)
     setIsAutoSubmitting(true);

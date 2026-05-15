@@ -1,26 +1,29 @@
 /**
  * Shared IndexedDB mock archive viewer: question snapshot + user answers only (sanitized; no correct keys).
  */
-import { sanitizeRunForDisplay } from '@/lib/mockTestIndexedArchive';
+import { sanitizeRunForDisplay, pickFlatUserAnswer } from '@/lib/mockTestIndexedArchive';
 
 export function lookupUserAnswer(answers, row) {
-  if (!answers || typeof answers !== 'object') return '';
-  const rawKeys = [
-    row.questionId,
-    row.groupQuestionId,
-    row.questionNumber,
-    row.questionNumber != null ? String(row.questionNumber) : null,
-  ].filter((k) => k != null && k !== '');
-  const keys = [...new Set(rawKeys.map((k) => (typeof k === 'number' ? k : String(k))))];
-  for (const k of keys) {
-    const v = answers[k];
-    if (v != null && String(v).trim() !== '') return String(v).trim();
+  if (!answers || typeof answers !== 'object') return null;
+  const id = row.questionId || row.taskName;
+  if (id != null && id !== '') {
+    const entry = answers[id];
+    if (entry != null && typeof entry === 'object' && 'user_answer' in entry) {
+      const ua = entry.user_answer;
+      if (ua != null && String(ua).trim() !== '') return String(ua).trim();
+      return null;
+    }
   }
   if (row.taskName && answers[row.taskName] != null) {
-    return String(answers[row.taskName]).trim();
+    const entry = answers[row.taskName];
+    if (typeof entry === 'object' && entry != null && 'user_answer' in entry) {
+      const ua = entry.user_answer;
+      if (ua != null && String(ua).trim() !== '') return String(ua).trim();
+      return null;
+    }
   }
-  if (row.userAnswerPreview) return String(row.userAnswerPreview).trim();
-  return '';
+  // Legacy flat key-value rows
+  return pickFlatUserAnswer(answers, row);
 }
 
 function SectionBlock({ title, section, listMaxHeightClass }) {
@@ -42,20 +45,26 @@ function SectionBlock({ title, section, listMaxHeightClass }) {
   return (
     <div className={`space-y-3 overflow-y-auto pr-1 ${listMaxHeightClass}`}>
       {rows.map((row, idx) => {
-        const ans = lookupUserAnswer(answersObj, row);
-        const num =
+        const userAnswer = lookupUserAnswer(answersObj, row);
+        const numLabel =
           row.questionNumber != null
-            ? `Q${row.questionNumber}`
-            : row.taskName || `Row ${idx + 1}`;
+            ? `Question ${row.questionNumber}`
+            : row.taskName
+              ? `Question ${idx + 1}`
+              : `Row ${idx + 1}`;
         return (
-          <div key={`${num}-${idx}`} className="border-b border-gray-100 pb-2 text-left text-sm">
-            <div className="font-semibold text-gray-800">{num}</div>
+          <div key={`${numLabel}-${idx}`} className="border-b border-gray-100 pb-2 text-left text-sm">
+            <div className="font-semibold text-gray-800">{numLabel}</div>
             {row.questionText && (
-              <div className="text-gray-600 mt-0.5 whitespace-pre-wrap wrap-break-word">{row.questionText}</div>
+              <div className="text-gray-600 mt-0.5 whitespace-pre-wrap wrap-break-word">
+                {row.questionText}
+              </div>
             )}
             <div className="mt-1 text-blue-900">
               <span className="font-medium">Your answer: </span>
-              <span className={ans ? '' : 'text-gray-400 italic'}>{ans || '(empty)'}</span>
+              <span className={userAnswer ? '' : 'text-gray-400 italic'}>
+                {userAnswer ?? 'No answer'}
+              </span>
             </div>
           </div>
         );

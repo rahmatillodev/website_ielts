@@ -8,7 +8,7 @@ import { useTestDetailStore } from '@/store/testStore/testDetailStore';
 import { useAuthStore } from '@/store/authStore';
 
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
-const getUserIdFromLocalStorage = () => {
+export const getUserIdFromLocalStorage = () => {
   try {
     const authStore = localStorage.getItem('auth-storage');
     if (authStore) {

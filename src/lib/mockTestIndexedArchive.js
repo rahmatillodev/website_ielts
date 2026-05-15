@@ -47,6 +47,16 @@ function stripHtmlInstruction(html) {
     .trim();
 }
 
+/** @param {unknown} v */
+function isStructuredArchiveAnswer(v) {
+  return (
+    v != null &&
+    typeof v === 'object' &&
+    !Array.isArray(v) &&
+    ('user_answer' in v || 'question_number' in v)
+  );
+}
+
 /**
  * Recursively strip correct-key / solution fields from answer blobs (IndexedDB write + display).
  * @param {unknown} input
@@ -62,6 +72,19 @@ export function sanitizeAnswersForArchive(input) {
     if (isForbiddenAnswerKey(k)) continue;
     const kl = k.toLowerCase();
     if (kl.endsWith('_correct')) continue;
+    if (isStructuredArchiveAnswer(v)) {
+      const entry = {};
+      if (v.question_number != null) entry.question_number = v.question_number;
+      else entry.question_number = null;
+      if (v.user_answer == null) {
+        entry.user_answer = null;
+      } else {
+        const ua = String(v.user_answer).trim();
+        entry.user_answer = ua === '' ? null : ua;
+      }
+      out[k] = entry;
+      continue;
+    }
     out[k] = sanitizeAnswersForArchive(v);
   }
   return out;
@@ -101,37 +124,106 @@ export function sanitizeQuestionsIndexRow(row) {
 }
 
 /**
- * Duplicate each answer under every known key (UUID, question number, group question_id) so archive rows always resolve.
- * Reading stores answers under mixed keys (TFNG uses numbers, gap-fill uses UUIDs, etc.).
+ * @param {object} row
+ * @param {MockSection} section
+ * @returns {string|null}
+ */
+export function resolveArchiveQuestionId(row, section) {
+  if (!row || typeof row !== 'object') return null;
+  if (section === 'writing') {
+    const name = row.taskName ?? row.questionId;
+    return name != null && name !== '' ? String(name) : null;
+  }
+  if (row.questionId != null && row.questionId !== '') return String(row.questionId);
+  if (row.groupQuestionId != null && row.groupQuestionId !== '') return String(row.groupQuestionId);
+  if (row.questionNumber != null && row.questionNumber !== '') return String(row.questionNumber);
+  return null;
+}
+
+/**
+ * Read a user answer string from flat practice state or legacy structured/flat archive rows.
+ * @param {Record<string, unknown>} flatAnswers
+ * @param {object} row
+ * @returns {string|null}
+ */
+export function pickFlatUserAnswer(flatAnswers, row) {
+  if (!flatAnswers || typeof flatAnswers !== 'object') return null;
+  const rawKeys = [
+    row.questionId,
+    row.groupQuestionId,
+    row.questionNumber,
+    row.questionNumber != null ? String(row.questionNumber) : null,
+    row.taskName,
+  ].filter((k) => k != null && k !== '');
+  const keys = [...new Set(rawKeys.map((k) => (typeof k === 'number' ? k : String(k))))];
+  for (const k of keys) {
+    const v = flatAnswers[k];
+    if (v == null) continue;
+    if (isStructuredArchiveAnswer(v)) {
+      if (v.user_answer == null) continue;
+      const trimmed = String(v.user_answer).trim();
+      if (trimmed !== '') return trimmed;
+      continue;
+    }
+    const trimmed = String(v).trim();
+    if (trimmed !== '') return trimmed;
+  }
+  return null;
+}
+
+/**
+ * Flatten structured archive answers into a map for merging with live practice answers.
+ * @param {Record<string, unknown>} answers
+ * @returns {Record<string, unknown>}
+ */
+function flattenAnswersToMap(answers) {
+  if (!answers || typeof answers !== 'object') return {};
+  const out = {};
+  for (const [k, v] of Object.entries(answers)) {
+    if (isForbiddenAnswerKey(k)) continue;
+    if (isStructuredArchiveAnswer(v)) {
+      out[k] = v.user_answer;
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+/** @param {Record<string, unknown>} answers */
+function isLegacyFlatAnswers(answers) {
+  if (!answers || typeof answers !== 'object') return false;
+  return Object.values(answers).some((v) => typeof v === 'string' || typeof v === 'number');
+}
+
+/**
+ * Build per-question archive answers: { [question_id]: { question_number, user_answer } }.
+ * @param {Record<string, unknown>} flatAnswers
+ * @param {Array<object>} questionsIndex
+ * @param {MockSection} section
+ */
+export function formatAnswersForArchive(flatAnswers, questionsIndex, section) {
+  const rows = Array.isArray(questionsIndex) ? questionsIndex : [];
+  const flat = flattenAnswersToMap(flatAnswers || {});
+  const out = {};
+  for (const row of rows) {
+    const questionId = resolveArchiveQuestionId(row, section);
+    if (!questionId) continue;
+    const picked = pickFlatUserAnswer(flat, row);
+    out[questionId] = {
+      question_number: row.questionNumber != null ? row.questionNumber : null,
+      user_answer: picked,
+    };
+  }
+  return sanitizeAnswersForArchive(out);
+}
+
+/**
  * @param {Record<string, unknown>} answers
  * @param {Array<object>} questionsIndex
  */
 export function normalizeReadingAnswersForArchive(answers, questionsIndex) {
-  if (!answers || typeof answers !== 'object') return sanitizeAnswersForArchive({});
-  const out = { ...answers };
-  const rows = Array.isArray(questionsIndex) ? questionsIndex : [];
-  for (const row of rows) {
-    const candidates = [];
-    if (row.questionId != null && row.questionId !== '') candidates.push(String(row.questionId));
-    if (row.groupQuestionId != null && row.groupQuestionId !== '') candidates.push(String(row.groupQuestionId));
-    if (row.questionNumber != null) {
-      candidates.push(row.questionNumber, String(row.questionNumber));
-    }
-    const uniq = [...new Set(candidates)];
-    let found = undefined;
-    for (const k of uniq) {
-      const v = out[k];
-      if (v != null && String(v).trim() !== '') {
-        found = v;
-        break;
-      }
-    }
-    if (found === undefined) continue;
-    for (const k of uniq) {
-      out[k] = found;
-    }
-  }
-  return sanitizeAnswersForArchive(out);
+  return formatAnswersForArchive(answers, questionsIndex, 'reading');
 }
 
 /**
@@ -145,12 +237,19 @@ export function sanitizeRunForDisplay(run) {
   keys.forEach((k) => {
     const sec = run.sections?.[k];
     if (!sec) return;
+    const questionsIndex = Array.isArray(sec.questionsIndex)
+      ? sec.questionsIndex.map(sanitizeQuestionsIndexRow)
+      : [];
+    let answers = sec.answers || {};
+    if (questionsIndex.length > 0 && isLegacyFlatAnswers(answers)) {
+      answers = formatAnswersForArchive(answers, questionsIndex, k);
+    } else {
+      answers = sanitizeAnswersForArchive(answers);
+    }
     sections[k] = {
       ...sec,
-      answers: sanitizeAnswersForArchive(sec.answers || {}),
-      questionsIndex: Array.isArray(sec.questionsIndex)
-        ? sec.questionsIndex.map(sanitizeQuestionsIndexRow)
-        : [],
+      answers,
+      questionsIndex,
       submitMeta: sec.submitMeta != null ? sanitizeSubmitMetaForArchive(sec.submitMeta) : null,
     };
   });
@@ -251,14 +350,16 @@ export const buildQuestionsIndexFromTest = (currentTest, testType) => {
  */
 export const buildWritingQuestionsIndex = (currentWriting, answers) => {
   if (!currentWriting) return [];
-  const tasks = currentWriting.tasks || currentWriting.writing_tasks || [];
+  const tasks = [...(currentWriting.tasks || currentWriting.writing_tasks || [])].sort((a, b) =>
+    (a.task_name || a.name || '').localeCompare(b.task_name || b.name || '')
+  );
   const rows = [];
-  tasks.forEach((t) => {
+  tasks.forEach((t, index) => {
     const name = t.task_name || t.name || 'task';
     const label = t.title || t.instruction || name;
     rows.push({
-      questionId: null,
-      questionNumber: null,
+      questionId: name,
+      questionNumber: index + 1,
       questionText: `${name}: ${(label || '').toString().slice(0, 500)}`,
       partNumber: null,
       groupType: 'writing_task',
@@ -290,15 +391,26 @@ const mergeSectionsDeep = (baseSections, patchSections) => {
   keys.forEach((k) => {
     const b = baseSections?.[k] || {};
     const p = patchSections?.[k] || {};
-    const mergedAnswers = sanitizeAnswersForArchive({
-      ...(b.answers || {}),
-      ...(p.answers || {}),
-    });
     const qi = Array.isArray(p.questionsIndex)
       ? p.questionsIndex.map(sanitizeQuestionsIndexRow)
       : Array.isArray(b.questionsIndex)
         ? b.questionsIndex.map(sanitizeQuestionsIndexRow)
         : [];
+    let mergedAnswers = b.answers || {};
+    if (qi.length > 0 && p.answers != null) {
+      const flatPatch = {
+        ...flattenAnswersToMap(b.answers || {}),
+        ...flattenAnswersToMap(p.answers),
+      };
+      mergedAnswers = formatAnswersForArchive(flatPatch, qi, k);
+    } else if (p.answers != null) {
+      mergedAnswers = sanitizeAnswersForArchive({
+        ...flattenAnswersToMap(b.answers || {}),
+        ...flattenAnswersToMap(p.answers),
+      });
+    } else {
+      mergedAnswers = sanitizeAnswersForArchive(b.answers || {});
+    }
     out[k] = {
       ...b,
       ...p,
@@ -368,25 +480,31 @@ export async function mergeSection(runId, section, data) {
     });
     const base = existing && typeof existing === 'object' ? existing : defaultRunShape(runId);
     const prevSec = base.sections?.[section] || defaultRunShape(runId).sections[section];
-    const rawAnswers = {
-      ...prevSec.answers,
-      ...(data.answers != null ? data.answers : {}),
-    };
-    const mergedAnswers =
-      section === 'reading' &&
-      data.questionsIndex != null &&
-      Array.isArray(data.questionsIndex) &&
-      data.questionsIndex.length > 0
-        ? normalizeReadingAnswersForArchive(rawAnswers, data.questionsIndex)
-        : sanitizeAnswersForArchive(rawAnswers);
+    const questionsIndex =
+      data.questionsIndex != null && Array.isArray(data.questionsIndex)
+        ? data.questionsIndex.map(sanitizeQuestionsIndexRow)
+        : Array.isArray(prevSec.questionsIndex)
+          ? prevSec.questionsIndex.map(sanitizeQuestionsIndexRow)
+          : [];
+    let mergedAnswers;
+    if (questionsIndex.length > 0) {
+      const flatPatch = {
+        ...flattenAnswersToMap(prevSec.answers || {}),
+        ...(data.answers != null ? flattenAnswersToMap(data.answers) : {}),
+      };
+      mergedAnswers = formatAnswersForArchive(flatPatch, questionsIndex, section);
+    } else {
+      mergedAnswers = sanitizeAnswersForArchive({
+        ...flattenAnswersToMap(prevSec.answers || {}),
+        ...(data.answers != null ? flattenAnswersToMap(data.answers) : {}),
+      });
+    }
     const nextSec = {
       ...prevSec,
       ...(data.testId != null ? { testId: data.testId } : {}),
       ...(data.title != null ? { title: data.title } : {}),
       answers: mergedAnswers,
-      ...(data.questionsIndex != null && Array.isArray(data.questionsIndex)
-        ? { questionsIndex: data.questionsIndex.map(sanitizeQuestionsIndexRow) }
-        : {}),
+      ...(questionsIndex.length > 0 ? { questionsIndex } : {}),
       ...(data.submitMeta != null
         ? { submitMeta: sanitizeSubmitMetaForArchive(data.submitMeta) }
         : {}),

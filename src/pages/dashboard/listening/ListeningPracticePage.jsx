@@ -6,7 +6,7 @@ import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import PracticeFooter from "@/components/questions/PracticeFooter";
 import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData, clearAudioPosition, setAudioPlaybackCompleted, isAudioPlaybackCompleted, clearAudioPlaybackCompleted } from "@/store/LocalStorage/listeningStorage";
 import { saveSectionData, loadSectionData, loadMockTestData } from "@/store/LocalStorage/mockTestStorage";
-import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
+import { submitTestAttempt, fetchLatestAttempt, getUserIdFromLocalStorage } from "@/lib/testAttempts";
 import { mergeSection, buildQuestionsIndexFromTest, createDebouncedMerge } from "@/lib/mockTestIndexedArchive";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
@@ -579,6 +579,7 @@ const ListeningPracticePageContent = () => {
             }
           } else if (result && !result.success && isMountedRef.current) {
             console.error('[ListeningPracticePage] Auto-submit failed:', result.error);
+            toast.error(result.error || 'Failed to submit test attempt');
             // Reset the flag so user can try again
             hasAutoSubmittedRef.current = false;
             isSubmittingRef.current = false;
@@ -586,6 +587,7 @@ const ListeningPracticePageContent = () => {
           }
         } catch (error) {
           console.error('[ListeningPracticePage] Auto-submit error:', error);
+          toast.error(error?.message || 'An error occurred while submitting your test');
           // Reset the flag on error
           if (isMountedRef.current) {
             hasAutoSubmittedRef.current = false;
@@ -859,11 +861,18 @@ const ListeningPracticePageContent = () => {
   const handleSubmitTest = async () => {
     // Prevent duplicate submissions using ref
     if (isSubmittingRef.current || isSubmitting) {
-      return { success: false, error: 'Submission already in progress' };
+      const err = 'Submission already in progress';
+      toast.error(err);
+      return { success: false, error: err };
     }
 
-    if (!authUser || !effectiveTestId || !currentTest) {
-      return { success: false, error: 'Missing required information' };
+    const userId = getUserIdFromLocalStorage();
+    if (!userId || !effectiveTestId || !currentTest) {
+      const msg = !userId
+        ? 'User not authenticated. Please sign in again.'
+        : 'Missing required information';
+      toast.error(msg);
+      return { success: false, error: msg };
     }
 
     // Stop the timer immediately when submission starts (set ref first to stop timer interval)

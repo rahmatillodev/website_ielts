@@ -3,6 +3,8 @@
 ## Overview
 This document describes the complete mock test flow architecture, including component structure, state management, and data flow. Use this as a reference when debugging or making changes to the mock test system.
 
+For the **IndexedDB local answer archive** (office browser staff review, `mockRunId`, sanitization, and practice-page writes), see [MOCK_TEST_INDEXEDDB_ARCHIVE.md](./MOCK_TEST_INDEXEDDB_ARCHIVE.md).
+
 ## Flow Sequence
 
 ### 1. Entry Point: MockTestsPage
