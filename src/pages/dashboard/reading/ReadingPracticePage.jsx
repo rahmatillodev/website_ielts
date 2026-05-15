@@ -8,6 +8,7 @@ import QuestionHeader from "@/components/questions/QuestionHeader";
 import { saveReadingPracticeData, loadReadingPracticeData, clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
 import { saveSectionData, loadSectionData, loadMockTestData } from "@/store/LocalStorage/mockTestStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
+import { mergeSection, buildQuestionsIndexFromTest, createDebouncedMerge } from "@/lib/mockTestIndexedArchive";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "react-toastify";
@@ -47,6 +48,9 @@ const ReadingPracticePageContent = () => {
   const mockClientId =
     searchParams.get('mockClientId') ||
     (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mockClientId'));
+  const mockRunId =
+    searchParams.get('mockRunId') ||
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mockRunId'));
 
   // Get effective test ID from URL (handles history.replaceState case)
   const getEffectiveTestId = () => {
@@ -59,6 +63,11 @@ const ReadingPracticePageContent = () => {
   };
 
   const effectiveTestId = getEffectiveTestId();
+
+  const { schedule: scheduleArchiveReading, flush: flushArchiveReading } = useMemo(
+    () => createDebouncedMerge(800),
+    []
+  );
 
   // Status: 'taking', 'completed', 'reviewing'
   // Initialize status immediately from URL to prevent flickering
@@ -79,10 +88,27 @@ const ReadingPracticePageContent = () => {
   const [isEarlyExit, setIsEarlyExit] = useState(false);
 
   const [answers, setAnswers] = useState({});
+  const answersArchiveRef = useRef(answers);
+  useEffect(() => {
+    answersArchiveRef.current = answers;
+  }, [answers]);
   const [reviewData, setReviewData] = useState({}); // Stores review data: { [questionId]: { userAnswer, isCorrect, correctAnswer } }
   const [latestAttemptId, setLatestAttemptId] = useState(null);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true); // Toggle for showing correct answers in review mode
   const [bookmarks, setBookmarks] = useState(new Set()); // Store bookmarked question IDs/numbers
+
+  const archiveReadingContextRef = useRef({});
+  useEffect(() => {
+    archiveReadingContextRef.current = {
+      isMockTest,
+      mockTestId,
+      mockRunId,
+      currentTest,
+      effectiveTestId,
+      status,
+      hasInteracted,
+    };
+  }, [isMockTest, mockTestId, mockRunId, currentTest, effectiveTestId, status, hasInteracted]);
 
   const questionRefs = useRef({});
   const questionsContainerRef = useRef(null);
@@ -745,6 +771,57 @@ const ReadingPracticePageContent = () => {
     };
   }, []);
 
+  // Mock test: IndexedDB archive (office browser; does not affect Supabase)
+  useEffect(() => {
+    if (!isMockTest || !mockTestId || !mockRunId || !currentTest || status !== 'taking') return;
+    if (!hasInteracted && Object.keys(answers).length === 0) return;
+    scheduleArchiveReading(mockRunId, 'reading', {
+      testId: effectiveTestId,
+      title: currentTest.title || null,
+      answers: { ...answers },
+      questionsIndex: buildQuestionsIndexFromTest(currentTest, 'reading'),
+    });
+  }, [
+    answers,
+    isMockTest,
+    mockTestId,
+    mockRunId,
+    currentTest,
+    effectiveTestId,
+    status,
+    hasInteracted,
+    scheduleArchiveReading,
+  ]);
+
+  useEffect(() => {
+    if (!isMockTest || !mockRunId) return undefined;
+    const persistReadingArchive = async () => {
+      const ctx = archiveReadingContextRef.current;
+      if (!ctx.isMockTest || !ctx.mockRunId || !ctx.currentTest || ctx.status !== 'taking') return;
+      if (!ctx.hasInteracted && Object.keys(answersArchiveRef.current).length === 0) return;
+      await flushArchiveReading();
+      await mergeSection(ctx.mockRunId, 'reading', {
+        testId: ctx.effectiveTestId,
+        title: ctx.currentTest.title || null,
+        answers: { ...answersArchiveRef.current },
+        questionsIndex: buildQuestionsIndexFromTest(ctx.currentTest, 'reading'),
+      }).catch(() => {});
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') void persistReadingArchive();
+    };
+    const onPageHide = () => {
+      void persistReadingArchive();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onPageHide);
+      void persistReadingArchive();
+    };
+  }, [isMockTest, mockRunId, flushArchiveReading]);
+
   // persist data on change
   useEffect(() => {
     if (!hasInteracted) return;
@@ -972,8 +1049,22 @@ const ReadingPracticePageContent = () => {
         section: 'reading'
       } : null;
 
-      // Submit test attempt to backend
-      const result = await submitTestAttempt(effectiveTestId, answers, currentTest, timeTaken, 'reading', mockTestContext);
+      if (isMockTest && mockRunId && currentTest && effectiveTestId) {
+        try {
+          await flushArchiveReading();
+          await mergeSection(mockRunId, 'reading', {
+            testId: effectiveTestId,
+            title: currentTest.title || null,
+            answers: { ...answersArchiveRef.current },
+            questionsIndex: buildQuestionsIndexFromTest(currentTest, 'reading'),
+          });
+        } catch (e) {
+          console.warn('[ReadingPracticePage] IDB archive flush before submit failed:', e);
+        }
+      }
+
+      // Submit test attempt to backend (use ref so force-submit listener always persists latest answers)
+      const result = await submitTestAttempt(effectiveTestId, answersArchiveRef.current, currentTest, timeTaken, 'reading', mockTestContext);
 
       // Only set completion / navigate when submit truly succeeded and we have attemptId (data saved to Supabase)
       if (result.success && result.attemptId != null) {
@@ -1022,7 +1113,7 @@ const ReadingPracticePageContent = () => {
       toast.error(error.message || 'An error occurred while submitting your test');
       return { success: false, error: error.message };
     }
-  }, [isSubmitting, authUser, effectiveTestId, currentTest, answers, startTime, isMockTest, mockTestId]);
+  }, [isSubmitting, authUser, effectiveTestId, currentTest, startTime, isMockTest, mockTestId, mockClientId, mockRunId, navigate, flushArchiveReading]);
 
   /* ================= FORCE SUBMIT HANDLER (Mock Test) ================= */
   // Listen for forced submission when user confirms exit

@@ -13,7 +13,7 @@ import WritingPracticePage from '../writing/WritingPracticePage';
  * - Auto-submit on time expiry
  * - Timer starts automatically after intro (no button needed)
  */
-const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEarlyExit, onBack, videoSrc }) => {
+const MockTestWriting = ({ writingId, mockTestId, mockRunId, mockClientId, onComplete, onEarlyExit, onBack, videoSrc }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showExitModal, setShowExitModal] = useState(false);
@@ -181,26 +181,29 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
   // Use location-based detection to ensure React Router has completed navigation
   // BUT: Don't navigate if completion is already detected
   useEffect(() => {
-    if (!writingId || showVideo || isCompleted) return;
-    
+    if (!writingId || showVideo || isCompleted || !mockRunId) return;
+
     const expectedPath = `/writing-practice/${writingId}`;
-    
-    // Check if already on correct route
-    if (location.pathname === expectedPath) {
+    const currentSearch = new URLSearchParams(location.search);
+    const hasMock = currentSearch.get('mockTest') === 'true';
+    const hasMockTestId = currentSearch.get('mockTestId') === mockTestId;
+    const hasRun = currentSearch.get('mockRunId') === mockRunId;
+
+    if (location.pathname === expectedPath && hasMock && hasMockTestId && hasRun) {
       setUrlReady(true);
       return;
     }
-    
-    // Navigate to practice route
+
     const searchParams = new URLSearchParams({
       mockTest: 'true',
       mockTestId: mockTestId || '',
+      mockRunId: mockRunId || '',
       mockClientId: mockClientId || '',
       duration: '3600' // 60 minutes for writing
     });
-    
+
     navigate(`/writing-practice/${writingId}?${searchParams.toString()}`, { replace: true });
-  }, [writingId, mockTestId, mockClientId, showVideo, location.pathname, navigate, isCompleted]);
+  }, [writingId, mockTestId, mockRunId, mockClientId, showVideo, location.pathname, location.search, navigate, isCompleted]);
 
   // Set urlReady when location matches expected route
   // This ensures React Router has fully processed the navigation before rendering practice page
@@ -210,12 +213,22 @@ const MockTestWriting = ({ writingId, mockTestId, mockClientId, onComplete, onEa
       setUrlReady(false);
       return;
     }
-    if (writingId && !showVideo && location.pathname === `/writing-practice/${writingId}`) {
-      setUrlReady(true);
-    } else {
+    if (!writingId || !mockRunId || showVideo) {
       setUrlReady(false);
+      return;
     }
-  }, [location.pathname, writingId, showVideo, isCompleted]);
+    const expectedPath = `/writing-practice/${writingId}`;
+    if (location.pathname !== expectedPath) {
+      setUrlReady(false);
+      return;
+    }
+    const currentSearch = new URLSearchParams(location.search);
+    const ok =
+      currentSearch.get('mockTest') === 'true' &&
+      currentSearch.get('mockTestId') === mockTestId &&
+      currentSearch.get('mockRunId') === mockRunId;
+    setUrlReady(!!ok);
+  }, [location.pathname, location.search, writingId, mockTestId, mockRunId, showVideo, isCompleted]);
 
   // Early return for video - must be AFTER all hooks
   if (showVideo) {

@@ -32,6 +32,7 @@ import {
 import { LuWifi, LuWifiHigh, LuWifiLow, LuWifiOff } from 'react-icons/lu';
 
 import { saveSectionData, loadSectionData, clearAllMockTestData } from "@/store/LocalStorage/mockTestStorage";
+import { mergeSection, buildWritingQuestionsIndex, createDebouncedMerge } from "@/lib/mockTestIndexedArchive";
 import { convertDurationToSeconds } from "@/utils/testDuration";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
@@ -102,6 +103,10 @@ const WritingPracticePageContent = () => {
     searchParams.get('mockClientId') || urlSearchParams.get('mockClientId'),
     [searchParams, urlSearchParams]
   );
+  const mockRunId = React.useMemo(
+    () => searchParams.get('mockRunId') || urlSearchParams.get('mockRunId'),
+    [searchParams, urlSearchParams]
+  );
   const themeName = useAppearance().theme;
 
   const {
@@ -155,6 +160,10 @@ const WritingPracticePageContent = () => {
 
   const [currentTaskType, setCurrentTaskType] = useState(null);
   const [answers, setAnswers] = useState({});
+  const answersArchiveRef = useRef(answers);
+  useEffect(() => {
+    answersArchiveRef.current = answers;
+  }, [answers]);
   const [leftWidth, setLeftWidth] = useState(50);
 
   // Status: 'taking', 'reviewing'
@@ -188,6 +197,91 @@ const WritingPracticePageContent = () => {
   const mockTestInitializedRef = useRef(false);
   /** After saving to DB we clear localStorage; keep last submitted answers here so success modal PDF still works */
   const lastSubmittedAnswersRef = useRef(null);
+
+  const { schedule: scheduleArchiveWriting, flush: flushArchiveWriting } = useMemo(
+    () => createDebouncedMerge(800),
+    []
+  );
+
+  const archiveWritingContextRef = useRef({});
+  useEffect(() => {
+    archiveWritingContextRef.current = {
+      isMockTest,
+      mockTestId,
+      mockRunId,
+      currentWriting,
+      id,
+      status,
+      isPracticeMode,
+    };
+  }, [isMockTest, mockTestId, mockRunId, currentWriting, id, status, isPracticeMode]);
+
+  useEffect(() => {
+    if (!isMockTest || !mockTestId || !mockRunId || !currentWriting || status !== 'taking') return;
+    const keys = Object.keys(answers);
+    if (keys.length === 0 && !isPracticeMode) return;
+    scheduleArchiveWriting(mockRunId, 'writing', {
+      testId: id,
+      title: currentWriting.title || null,
+      answers: { ...answers },
+      questionsIndex: buildWritingQuestionsIndex(currentWriting, answers),
+    });
+  }, [
+    answers,
+    isMockTest,
+    mockTestId,
+    mockRunId,
+    currentWriting,
+    id,
+    status,
+    isPracticeMode,
+    scheduleArchiveWriting,
+  ]);
+
+  const flushWritingArchive = useCallback(async () => {
+    if (!isMockTest || !mockRunId || !currentWriting || !id) return;
+    try {
+      await flushArchiveWriting();
+      await mergeSection(mockRunId, 'writing', {
+        testId: id,
+        title: currentWriting.title || null,
+        answers: { ...answersArchiveRef.current },
+        questionsIndex: buildWritingQuestionsIndex(currentWriting, answersArchiveRef.current),
+      });
+    } catch (e) {
+      console.warn('[WritingPracticePage] IDB archive flush failed:', e);
+    }
+  }, [isMockTest, mockRunId, currentWriting, id, flushArchiveWriting]);
+
+  useEffect(() => {
+    if (!isMockTest || !mockRunId) return undefined;
+    const persistWritingArchive = async () => {
+      const ctx = archiveWritingContextRef.current;
+      if (!ctx.isMockTest || !ctx.mockRunId || !ctx.currentWriting || !ctx.id || ctx.status !== 'taking') return;
+      const keys = Object.keys(answersArchiveRef.current);
+      if (keys.length === 0 && !ctx.isPracticeMode) return;
+      await flushArchiveWriting();
+      await mergeSection(ctx.mockRunId, 'writing', {
+        testId: ctx.id,
+        title: ctx.currentWriting.title || null,
+        answers: { ...answersArchiveRef.current },
+        questionsIndex: buildWritingQuestionsIndex(ctx.currentWriting, answersArchiveRef.current),
+      }).catch(() => {});
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') void persistWritingArchive();
+    };
+    const onPageHide = () => {
+      void persistWritingArchive();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onPageHide);
+      void persistWritingArchive();
+    };
+  }, [isMockTest, mockRunId, flushArchiveWriting]);
 
   /* ================= HANDLERS ================= */
   const handleReviewWriting = useCallback(async () => {
@@ -520,7 +614,7 @@ const WritingPracticePageContent = () => {
   /* ================= FORCE SUBMIT HANDLER (Mock Test) ================= */
   // Listen for forced submission when user confirms exit
   useEffect(() => {
-    if (!isMockTest || !mockTestId) return;
+    if (!isMockTest || !mockTestId || !mockRunId) return;
 
     const handleForceSubmit = async (event) => {
       const { section, mockTestId: eventMockTestId, writingId: eventWritingId } = event.detail || {};
@@ -549,8 +643,10 @@ const WritingPracticePageContent = () => {
             ? Math.floor((Date.now() - startTime) / 1000)
             : elapsedTime;
 
+          await flushWritingArchive();
+
           // Save to database
-          const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockTestId : null);
+          const result = await submitWritingAttempt(writingIdToUse, answersArchiveRef.current, timeTaken, isMockTest ? mockTestId : null);
 
           if (result.success && result.attemptId != null && isMockTest) {
             // Signal completion only when data was saved to Supabase
@@ -587,7 +683,7 @@ const WritingPracticePageContent = () => {
     return () => {
       window.removeEventListener('mockTestForceSubmit', handleForceSubmit);
     };
-  }, [isMockTest, mockTestId, mockClientId, id, answers, startTime, elapsedTime, isAutoSubmitting, isSaving, submitWritingAttempt, updateClientStatus]);
+  }, [isMockTest, mockTestId, mockRunId, mockClientId, id, startTime, elapsedTime, isAutoSubmitting, isSaving, submitWritingAttempt, updateClientStatus, flushWritingArchive]);
 
   /* ================= TIMER ================= */
   useEffect(() => {
@@ -911,9 +1007,11 @@ const WritingPracticePageContent = () => {
         throw new Error('Writing ID is required but not available');
       }
 
+      await flushWritingArchive();
+
       // Save to database (silently, no loading overlay)
       // Pass mockTestId if in mock test mode (will be stored in mock_id field)
-      const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockTestId : null);
+      const result = await submitWritingAttempt(writingIdToUse, answersArchiveRef.current, timeTaken, isMockTest ? mockTestId : null);
 
       if (result.success && result.attemptId != null) {
         if (isMockTest && mockTestId) {
@@ -980,7 +1078,7 @@ const WritingPracticePageContent = () => {
       setIsPaused(false);
       setIsStarted(true);
     }
-  }, [currentWriting, answers, startTime, elapsedTime, id, searchParams, setSearchParams, submitWritingAttempt, isAutoSubmitting, isSaving, isMockTest, mockTestId, mockClientId, updateClientStatus, navigate]);
+  }, [currentWriting, answers, startTime, elapsedTime, id, searchParams, setSearchParams, submitWritingAttempt, isAutoSubmitting, isSaving, isMockTest, mockTestId, mockRunId, mockClientId, updateClientStatus, navigate, flushWritingArchive]);
 
   // If all tasks have at least one word, open the finish modal and save the writing
 
@@ -1009,9 +1107,11 @@ const WritingPracticePageContent = () => {
         throw new Error('Writing ID is required but not available');
       }
 
+      await flushWritingArchive();
+
       // Save to database
       // Pass mockTestId if in mock test mode (will be stored in mock_id field)
-      const result = await submitWritingAttempt(writingIdToUse, answers, timeTaken, isMockTest ? mockTestId : null);
+      const result = await submitWritingAttempt(writingIdToUse, answersArchiveRef.current, timeTaken, isMockTest ? mockTestId : null);
 
       if (result.success && result.attemptId != null) {
         if (isMockTest && mockTestId) {

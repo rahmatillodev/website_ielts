@@ -7,6 +7,7 @@ import PracticeFooter from "@/components/questions/PracticeFooter";
 import { saveListeningPracticeData, loadListeningPracticeData, clearListeningPracticeData, clearAudioPosition, setAudioPlaybackCompleted, isAudioPlaybackCompleted, clearAudioPlaybackCompleted } from "@/store/LocalStorage/listeningStorage";
 import { saveSectionData, loadSectionData, loadMockTestData } from "@/store/LocalStorage/mockTestStorage";
 import { submitTestAttempt, fetchLatestAttempt } from "@/lib/testAttempts";
+import { mergeSection, buildQuestionsIndexFromTest, createDebouncedMerge } from "@/lib/mockTestIndexedArchive";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "react-toastify";
@@ -51,6 +52,10 @@ const ListeningPracticePageContent = () => {
     searchParams.get('mockClientId') || urlSearchParams.get('mockClientId'),
     [searchParams, urlSearchParams]
   );
+  const mockRunId = React.useMemo(
+    () => searchParams.get('mockRunId') || urlSearchParams.get('mockRunId'),
+    [searchParams, urlSearchParams]
+  );
 
   // Get effective test ID from URL (handles history.replaceState case)
   // For mock test, the testId is passed via URL params, so check both useParams and URL
@@ -69,6 +74,11 @@ const ListeningPracticePageContent = () => {
 
   // Re-compute effectiveTestId on every render to catch URL updates
   const effectiveTestId = getEffectiveTestId();
+
+  const { schedule: scheduleArchiveListening, flush: flushArchiveListening } = React.useMemo(
+    () => createDebouncedMerge(800),
+    []
+  );
 
   // ====== TIMER/CONTROL STATE ======
   // Status: 'taking', 'completed', 'reviewing'
@@ -90,10 +100,28 @@ const ListeningPracticePageContent = () => {
 
 
   const [answers, setAnswers] = useState({});
+  /** IndexedDB archive: always read latest answers on submit (mock force-submit). */
+  const answersArchiveRef = useRef(answers);
+  useEffect(() => {
+    answersArchiveRef.current = answers;
+  }, [answers]);
   const [reviewData, setReviewData] = useState({});
   const [latestAttemptId, setLatestAttemptId] = useState(null);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
   const [bookmarks, setBookmarks] = useState(new Set());
+
+  const archiveListeningContextRef = useRef({});
+  useEffect(() => {
+    archiveListeningContextRef.current = {
+      isMockTest,
+      mockTestId,
+      mockRunId,
+      currentTest,
+      effectiveTestId,
+      status,
+      hasInteracted,
+    };
+  }, [isMockTest, mockTestId, mockRunId, currentTest, effectiveTestId, status, hasInteracted]);
 
   // Audio player state
   const [playbackRate, setPlaybackRate] = useState(1.0);
@@ -588,6 +616,58 @@ const ListeningPracticePageContent = () => {
     };
   }, []);
 
+  // Mock test: IndexedDB archive (office browser; does not affect Supabase)
+  useEffect(() => {
+    if (!isMockTest || !mockTestId || !mockRunId || !currentTest || status !== 'taking') return;
+    if (!hasInteracted && Object.keys(answers).length === 0) return;
+    scheduleArchiveListening(mockRunId, 'listening', {
+      testId: effectiveTestId,
+      title: currentTest.title || null,
+      answers: { ...answers },
+      questionsIndex: buildQuestionsIndexFromTest(currentTest, 'listening'),
+    });
+  }, [
+    answers,
+    isMockTest,
+    mockTestId,
+    mockRunId,
+    currentTest,
+    effectiveTestId,
+    status,
+    hasInteracted,
+    scheduleArchiveListening,
+  ]);
+
+  // Mock test: flush IndexedDB archive on tab hide / unload / unmount (power loss mitigation)
+  useEffect(() => {
+    if (!isMockTest || !mockRunId) return undefined;
+    const persistListeningArchive = async () => {
+      const ctx = archiveListeningContextRef.current;
+      if (!ctx.isMockTest || !ctx.mockRunId || !ctx.currentTest || ctx.status !== 'taking') return;
+      if (!ctx.hasInteracted && Object.keys(answersArchiveRef.current).length === 0) return;
+      await flushArchiveListening();
+      await mergeSection(ctx.mockRunId, 'listening', {
+        testId: ctx.effectiveTestId,
+        title: ctx.currentTest.title || null,
+        answers: { ...answersArchiveRef.current },
+        questionsIndex: buildQuestionsIndexFromTest(ctx.currentTest, 'listening'),
+      }).catch(() => {});
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') void persistListeningArchive();
+    };
+    const onPageHide = () => {
+      void persistListeningArchive();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onPageHide);
+      void persistListeningArchive();
+    };
+  }, [isMockTest, mockRunId, flushArchiveListening]);
+
   // persist data on change
   useEffect(() => {
     if (!hasInteracted) return;
@@ -805,8 +885,22 @@ const ListeningPracticePageContent = () => {
         section: 'listening'
       } : null;
 
+      if (isMockTest && mockRunId && currentTest && effectiveTestId) {
+        try {
+          await flushArchiveListening();
+          await mergeSection(mockRunId, 'listening', {
+            testId: effectiveTestId,
+            title: currentTest.title || null,
+            answers: { ...answersArchiveRef.current },
+            questionsIndex: buildQuestionsIndexFromTest(currentTest, 'listening'),
+          });
+        } catch (e) {
+          console.warn('[ListeningPracticePage] IDB archive flush before submit failed:', e);
+        }
+      }
+
       // Submit test attempt to backend
-      const result = await submitTestAttempt(effectiveTestId, answers, currentTest, timeTaken, 'listening', mockTestContext);
+      const result = await submitTestAttempt(effectiveTestId, answersArchiveRef.current, currentTest, timeTaken, 'listening', mockTestContext);
 
       // Only set completion / navigate when submit truly succeeded and we have attemptId (data saved to Supabase)
       if (result.success && result.attemptId != null) {
