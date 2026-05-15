@@ -4,14 +4,7 @@ import { FaTelegramPlane } from 'react-icons/fa';
 import { MdSchedule, MdCheckCircleOutline } from 'react-icons/md';
 import { clearAllMockTestDataForId } from '@/store/LocalStorage/mockTestStorage';
 import { getRun, sanitizeRunForDisplay } from '@/lib/mockTestIndexedArchive';
-import MockTestArchiveSections from '@/components/mock/MockTestArchiveSections';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+
 
 /**
  * Mock Test Results Page (Pending Evaluation)
@@ -29,7 +22,6 @@ const MockTestResults = ({ mockTestId, mockRunId, results, onBack }) => {
     mockRunId ?? location.state?.mockRunId ?? searchParams.get('mockRunId') ?? undefined;
   const effectiveResults = results ?? location.state?.results;
 
-  const handleBack = onBack ?? (() => navigate('/mock-tests'));
 
   const [showArchive, setShowArchive] = useState(false);
   const [archive, setArchive] = useState(null);
@@ -90,20 +82,9 @@ const MockTestResults = ({ mockTestId, mockRunId, results, onBack }) => {
             The evaluation process is currently in progress.
           </p>
 
-          {effectiveMockRunId && (
-            <div className="mb-8">
-              <Button type="button" variant="outline" onClick={handleOpenShow}>
-                Show archived answers
-              </Button>
-              <p className="text-xs text-gray-400 mt-2">Stored on this device for staff review (IndexedDB).</p>
-            </div>
-          )}
+          
 
-          <div className="mb-6">
-            <Button type="button" variant="ghost" onClick={handleBack}>
-              Back to mock tests
-            </Button>
-          </div>
+          
 
           {/* Info Card */}
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 mb-8 text-left">
@@ -145,23 +126,7 @@ const MockTestResults = ({ mockTestId, mockRunId, results, onBack }) => {
         </div>
       </div>
 
-      <Dialog open={showArchive} onOpenChange={setShowArchive}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Archived mock answers</DialogTitle>
-          </DialogHeader>
-          {archiveError && (
-            <p className="text-sm text-red-600 text-left">{archiveError}</p>
-          )}
-          {archive && (
-            <MockTestArchiveSections
-              run={archive}
-              mockTestIdFallback={effectiveMockTestId}
-              listMaxHeightClass="max-h-64"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      
     </div>
   );
 };

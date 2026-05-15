@@ -11,8 +11,12 @@ import MockTestWriting from './MockTestWriting';
 import MockTestResults from './MockTestResults';
 import MockTestStart from './MockTestStart';
 import InstructionalVideo from '@/components/mock/InstructionalVideo';
+import { toast } from 'react-toastify';
 
 const MOCK_TEST_SESSION_RUN_KEY = 'mock_test_session_run';
+
+const isSectionSubmitSuccess = (result) =>
+  result && result.success !== false && result.attemptId != null;
 
 /**
  * Main orchestrator component for the mock test flow
@@ -414,6 +418,10 @@ const MockTestFlow = () => {
   }, [client?.id, effectiveMockTestId, updateClientStatus, userProfile?.id, userProfile?.email, userProfile?.full_name, userProfile?.phone_number, createClientForMockTest]);
 
   const handleListeningComplete = useCallback((result) => {
+    if (!isSectionSubmitSuccess(result)) {
+      toast.error(result?.error || 'Listening answers were not saved. Please try again.');
+      return;
+    }
     if (mockRunId && result) {
       mergeSection(mockRunId, 'listening', { submitMeta: result });
     }
@@ -425,6 +433,10 @@ const MockTestFlow = () => {
   }, [mockRunId]);
 
   const handleReadingComplete = useCallback((result) => {
+    if (!isSectionSubmitSuccess(result)) {
+      toast.error(result?.error || 'Reading answers were not saved. Please try again.');
+      return;
+    }
     if (mockRunId && result) {
       mergeSection(mockRunId, 'reading', { submitMeta: result });
     }
@@ -437,7 +449,11 @@ const MockTestFlow = () => {
 
   const handleWritingComplete = useCallback(async (result) => {
     // Only treat as successful completion if we have a valid result (data was saved to Supabase)
-    const isValidResult = result && (result.success !== false) && (result.attemptId != null || result.success === true);
+    const isValidResult = isSectionSubmitSuccess(result);
+    if (!isValidResult) {
+      toast.error(result?.error || 'Writing answers were not saved. Please try again.');
+      return;
+    }
     setSectionResults((prevResults) => ({
       ...prevResults,
       writing: result ?? prevResults.writing,
@@ -457,8 +473,6 @@ const MockTestFlow = () => {
       } catch (err) {
         console.error('[MockTestFlow] Error updating mock test client status to completed:', err);
       }
-    } else if (!isValidResult) {
-      console.warn('[MockTestFlow] Writing result invalid or missing attemptId; not updating client status to completed');
     } else if (!clientIdToUpdate) {
       console.warn('[MockTestFlow] Cannot update status to completed: client.id is not available');
     }
@@ -494,6 +508,10 @@ const MockTestFlow = () => {
   // - Sets mock_test_clients status to 'completed' so the test is fully finished.
   // - Clears storage and navigates to results page.
   const handleEarlyExit = useCallback(async (result, section) => {
+    if (result && section && !isSectionSubmitSuccess(result)) {
+      toast.error(result?.error || 'Your answers were not saved. Please try submitting again.');
+      return;
+    }
     // Save the result for the current section if provided (only completed sections have results; skipped remain null)
     if (result && section) {
       setSectionResults((prevResults) => ({

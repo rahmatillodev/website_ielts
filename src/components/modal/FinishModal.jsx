@@ -30,6 +30,7 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
           }
         } else if (result && result.success === false) {
           console.error('Submission failed:', result.error);
+          toast.error(result.error || 'Failed to submit test attempt');
         }
       } else {
         if (testId) {
