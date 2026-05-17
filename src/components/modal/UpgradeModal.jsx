@@ -12,13 +12,17 @@ import {
 import { Button } from '@/components/ui/button'
 import { useSettingsStore } from '@/store/systemStore'
 
-const UpgradeModal = ({ children }) => {
-    const { settings } = useSettingsStore()
+const UpgradeModal = ({ children, open, onOpenChange }) => {
+  const { settings } = useSettingsStore()
+  const isControlled = open !== undefined
+
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <Dialog open={isControlled ? open : undefined} onOpenChange={onOpenChange}>
+      {!isControlled && children ? (
+        <DialogTrigger asChild>
+          {children}
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">

@@ -6,6 +6,7 @@ import supabase from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { formatDateToDayMonth } from "@/utils/formatDate";
+import { isPremiumSubscriber } from "@/utils/isPremiumSubscriber";
 import SpeakingPodcastCard from "./SpeakingPodcastCard";
 
 /**
@@ -36,11 +37,10 @@ const SpeakingPodcast = () => {
   const [fetchError, setFetchError] = useState("");
 
   const authUser = useAuthStore((state) => state.authUser);
+  const userProfile = useAuthStore((state) => state.userProfile);
+  const fetchUserProfile = useAuthStore((state) => state.fetchUserProfile);
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
-  const isProMember =
-    authUser?.subscription_status === "premium" ||
-    authUser?.user_metadata?.subscription_status === "premium" ||
-    authUser?.app_metadata?.plan === "pro";
+  const isProMember = isPremiumSubscriber(userProfile);
 
   const loadPodcasts = useCallback(async () => {
     setLoading(true);
@@ -72,15 +72,16 @@ const SpeakingPodcast = () => {
     }
 
     const list = Array.isArray(data) ? data : [];
-    setRows(list.map(mapPodcastRow).filter((x) => x.videoUrl));
+    setRows(list.map(mapPodcastRow));
     setLoading(false);
   }, []);
 
   useEffect(() => {
     if (authUser?.id) {
+      fetchUserProfile(authUser.id, false);
       fetchDashboardData(authUser.id, false);
     }
-  }, [authUser?.id, fetchDashboardData]);
+  }, [authUser?.id, fetchUserProfile, fetchDashboardData]);
 
   useEffect(() => {
     loadPodcasts();
@@ -145,12 +146,13 @@ const SpeakingPodcast = () => {
               {filteredData.map((item) => (
                 <SpeakingPodcastCard
                   key={item.id}
+                  testId={item.id}
                   title={item.title}
                   image={item.image}
                   duration={item.duration}
                   videoUrl={item.videoUrl}
                   date={item.date}
-                  isPremium={item.isPremium}
+                  isPremium={Boolean(item.isPremium)}
                   isProUser={isProMember}
                 />
               ))}
