@@ -106,15 +106,43 @@ const MatchingInformation = ({
         });
         
         // Sort by key and extract texts
-        optionKeyList.sort((a, b) => {
-          const firstKey = a.key;
-          if (/^\d+$/.test(firstKey)) {
-            return parseInt(a.key) - parseInt(b.key);
-          } else if (/^[IVX]+$/i.test(firstKey)) {
-            return a.key.localeCompare(b.key);
-          } else {
-            return a.key.localeCompare(b.key);
+        const romanToNumber = (roman) => {
+          const values = { I: 1, V: 5, X: 10, L: 50, C: 100 };
+          const normalized = String(roman || "").toUpperCase();
+          let total = 0;
+          let prev = 0;
+
+          for (let i = normalized.length - 1; i >= 0; i--) {
+            const current = values[normalized[i]];
+            if (!current) return NaN;
+            if (current < prev) {
+              total -= current;
+            } else {
+              total += current;
+              prev = current;
+            }
           }
+
+          return total;
+        };
+
+        optionKeyList.sort((a, b) => {
+          const aKey = String(a.key).trim().toUpperCase();
+          const bKey = String(b.key).trim().toUpperCase();
+
+          const aIsNumeric = /^\d+$/.test(aKey);
+          const bIsNumeric = /^\d+$/.test(bKey);
+          if (aIsNumeric && bIsNumeric) {
+            return parseInt(aKey, 10) - parseInt(bKey, 10);
+          }
+
+          const aIsRoman = /^[IVXLC]+$/.test(aKey);
+          const bIsRoman = /^[IVXLC]+$/.test(bKey);
+          if (aIsRoman && bIsRoman) {
+            return romanToNumber(aKey) - romanToNumber(bKey);
+          }
+
+          return aKey.localeCompare(bKey);
         });
         
         answerOptions = optionKeyList.map(item => item.text);
