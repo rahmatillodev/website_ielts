@@ -169,6 +169,8 @@ const TestsLibraryPage = ({
             (test.task_types instanceof Set && selectedTaskTypes.some(type => test.task_types.has(type))) ||
             (Array.isArray(test.task_types) && selectedTaskTypes.some(type => test.task_types.includes(type)))
           ));
+      } else if (testType === "speaking") {
+        matchesType = true;
       } else {
         // For reading/listening: filter by question types
         matchesType = selectedQuestionTypes.length === 0 ||
@@ -323,8 +325,10 @@ const TestsLibraryPage = ({
   const handleFilterOpen = () => {
     if (testType === "writing") {
       setTempSelectedTypes([...selectedTaskTypes]);
-    } else {
+    } else if (testType !== "speaking") {
       setTempSelectedTypes([...selectedQuestionTypes]);
+    } else {
+      setTempSelectedTypes([]);
     }
     setTempSelectedPartLabels([...selectedPartLabels]);
     setTempSelectedWritingTaskLabels([...selectedWritingTaskLabels]);
@@ -339,8 +343,10 @@ const TestsLibraryPage = ({
   const handleFilterCancel = () => {
     if (testType === "writing") {
       setTempSelectedTypes([...selectedTaskTypes]);
-    } else {
+    } else if (testType !== "speaking") {
       setTempSelectedTypes([...selectedQuestionTypes]);
+    } else {
+      setTempSelectedTypes([]);
     }
     setTempSelectedPartLabels([...selectedPartLabels]);
     setTempSelectedWritingTaskLabels([...selectedWritingTaskLabels]);
@@ -357,7 +363,7 @@ const TestsLibraryPage = ({
     setSelectedWritingTaskLabels([]);
     if (testType === "writing") {
       setSelectedTaskTypes([]);
-    } else {
+    } else if (testType !== "speaking") {
       setSelectedQuestionTypes([]);
     }
     setSortOrder("oldest");
@@ -367,7 +373,7 @@ const TestsLibraryPage = ({
   const handleFilterSearch = () => {
     if (testType === "writing") {
       setSelectedTaskTypes([...tempSelectedTypes]);
-    } else {
+    } else if (testType !== "speaking") {
       setSelectedQuestionTypes([...tempSelectedTypes]);
     }
     setSelectedPartLabels([...tempSelectedPartLabels]);
@@ -475,7 +481,11 @@ const TestsLibraryPage = ({
   const hasActiveFilters =
     selectedPartLabels.length > 0 ||
     (testType === "writing" && selectedWritingTaskLabels.length > 0) ||
-    (testType === "writing" ? selectedTaskTypes.length > 0 : selectedQuestionTypes.length > 0) ||
+    (testType === "writing"
+      ? selectedTaskTypes.length > 0
+      : testType === "speaking"
+        ? false
+        : selectedQuestionTypes.length > 0) ||
     sortOrder !== "oldest";
 
 
@@ -553,7 +563,7 @@ const TestsLibraryPage = ({
 
             <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto ">
               {/* filter question_type or task_type */}
-              {(testType === "reading" || testType === "listening" || testType === "writing") && (
+              {(testType === "reading" || testType === "listening" || testType === "writing" || testType === "speaking") && (
                 <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                   <PopoverTrigger asChild>
                     <button
@@ -566,11 +576,15 @@ const TestsLibraryPage = ({
                     >
                       <CiFilter className="w-6 h-6" />
                       {((testType === "writing" && (selectedTaskTypes.length > 0 || selectedWritingTaskLabels.length > 0)) ||
-                        (testType !== "writing" && (selectedQuestionTypes.length > 0 || selectedPartLabels.length > 0))) && (
+                        (testType === "speaking" && selectedPartLabels.length > 0) ||
+                        ((testType === "reading" || testType === "listening") &&
+                          (selectedQuestionTypes.length > 0 || selectedPartLabels.length > 0))) && (
                         <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full min-w-[24px] h-6 px-1 flex items-center justify-center font-bold shadow-md">
                           {testType === "writing"
                             ? selectedTaskTypes.length + selectedWritingTaskLabels.length
-                            : selectedQuestionTypes.length + selectedPartLabels.length}
+                            : testType === "speaking"
+                              ? selectedPartLabels.length
+                              : selectedQuestionTypes.length + selectedPartLabels.length}
                         </span>
                       )}
                     </button>
@@ -652,39 +666,42 @@ const TestsLibraryPage = ({
                             </div>
                           )}
 
-                        {/* Question Types or Task Types Section */}
-                        <div className="mb-2">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-sm font-semibold text-gray-900">
-                              {testType === "writing" ? "Task Types" : "Question Types"}
-                            </h3>
-                          </div>
-                          <div className="">
-                            {(testType === "writing" ? WRITING_TASK_TYPES : QUESTION_TYPE_GROUPS).map((type) => {
-                              const isChecked = tempSelectedTypes.includes(type);
-                              return (
-                                <label
-                                  key={type}
-                                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                                >
-                                  <Checkbox
-                                    checked={isChecked}
-                                    onCheckedChange={() => toggleType(type)}
-                                    className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer accent-blue-600"
-                                  />
-                                  <span className="text-sm text-gray-700 font-medium">
-                                    {testType === "writing"
-                                      ? getWritingTaskTypeDisplayName(type)
-                                      : getQuestionTypeDisplayName(type)}
-                                  </span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
+                        {/* Question Types or Task Types Section (not for speaking) */}
+                        {testType !== "speaking" && (
+                          <>
+                            <div className="mb-2">
+                              <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-sm font-semibold text-gray-900">
+                                  {testType === "writing" ? "Task Types" : "Question Types"}
+                                </h3>
+                              </div>
+                              <div className="">
+                                {(testType === "writing" ? WRITING_TASK_TYPES : QUESTION_TYPE_GROUPS).map((type) => {
+                                  const isChecked = tempSelectedTypes.includes(type);
+                                  return (
+                                    <label
+                                      key={type}
+                                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                                    >
+                                      <Checkbox
+                                        checked={isChecked}
+                                        onCheckedChange={() => toggleType(type)}
+                                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer accent-blue-600"
+                                      />
+                                      <span className="text-sm text-gray-700 font-medium">
+                                        {testType === "writing"
+                                          ? getWritingTaskTypeDisplayName(type)
+                                          : getQuestionTypeDisplayName(type)}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
 
-                        {/* Separator */}
-                        <div className="border-t border-gray-200 my-2" />
+                            <div className="border-t border-gray-200 my-2" />
+                          </>
+                        )}
 
                         {/* Sort Section */}
                         <div className="mb-2">
@@ -845,7 +862,7 @@ const TestsLibraryPage = ({
                       `No tests found for: ${selectedWritingTaskLabels.join(", ")}.`
                     ) : ((testType === "reading" || testType === "listening") && selectedQuestionTypes.length > 0) ? (
                       `No tests found with question type${selectedQuestionTypes.length > 1 ? 's' : ''}: ${selectedQuestionTypes.map(type => getQuestionTypeDisplayName(type)).join(', ')}.`
-                    ) : selectedPartLabels.length > 0 ? (
+                    ) : (testType === "speaking" || testType === "reading" || testType === "listening") && selectedPartLabels.length > 0 ? (
                       `No tests found for: ${selectedPartLabels.join(", ")}.`
                     ) : searchQuery.trim() !== "" && emptySearchMessage ? (
                       emptySearchMessage
