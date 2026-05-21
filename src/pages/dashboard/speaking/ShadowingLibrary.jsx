@@ -6,6 +6,7 @@ import supabase from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { formatDateToDayMonth } from "@/utils/formatDate";
+import { isPremiumSubscriber } from "@/utils/isPremiumSubscriber";
 import ShadowingCard from "./ShadowingCard";
 
 /**
@@ -38,11 +39,10 @@ const ShadowingLibrary = () => {
   const [fetchError, setFetchError] = useState("");
 
   const authUser = useAuthStore((state) => state.authUser);
+  const userProfile = useAuthStore((state) => state.userProfile);
+  const fetchUserProfile = useAuthStore((state) => state.fetchUserProfile);
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
-  const isProMember =
-    authUser?.subscription_status === "premium" ||
-    authUser?.user_metadata?.subscription_status === "premium" ||
-    authUser?.app_metadata?.plan === "pro";
+  const isProMember = isPremiumSubscriber(userProfile);
 
   /** Narrow columns + defer dashboard fetch so this page is not blocked by user_attempts + test metadata. */
   useEffect(() => {
@@ -78,12 +78,12 @@ const ShadowingLibrary = () => {
         setLoading(false);
       } else {
         const list = Array.isArray(data) ? data : [];
-        const mapped = list.map(mapItemForCard).filter((x) => x.videoUrl);
-        setRows(mapped);
+        setRows(list.map(mapItemForCard));
         setLoading(false);
       }
 
       if (authUser?.id) {
+        fetchUserProfile(authUser.id, false);
         fetchDashboardData(authUser.id, false);
       }
     })();
@@ -91,7 +91,7 @@ const ShadowingLibrary = () => {
     return () => {
       cancelled = true;
     };
-  }, [authUser?.id, fetchDashboardData]);
+  }, [authUser?.id, fetchUserProfile, fetchDashboardData]);
 
   const filteredData = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -152,12 +152,13 @@ const ShadowingLibrary = () => {
               {filteredData.map((item) => (
                 <ShadowingCard
                   key={item.id}
+                  testId={item.id}
                   title={item.title}
                   image={item.image}
                   duration={item.duration}
                   videoUrl={item.videoUrl}
                   date={item.date}
-                  isPremium={item.is_premium}
+                  isPremium={Boolean(item.is_premium)}
                   isProUser={isProMember}
                 />
               ))}

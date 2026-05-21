@@ -390,6 +390,8 @@ export const useAuthStore = create(
           // Check if premium_until is past the current date
           if (data.premium_until && new Date(data.premium_until) < new Date()) {
             data.subscription_status = 'free';
+            data.premium_until = null;
+            data.premium_started_at = null;
           }
 
           set({ userProfile: data });

@@ -1,15 +1,24 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { X } from "lucide-react";
 import { toIframeSrc } from "@/utils/videoIframeSrc";
+import { usePremiumVideoAccess } from "@/hooks/usePremiumVideoAccess";
 
 const PodcastPlayer = () => {
   const { videoId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const videoUrlFromState = location.state?.videoUrl;
+  const { accessDenied, checking } = usePremiumVideoAccess();
+
+  useEffect(() => {
+    if (!checking && accessDenied) {
+      navigate("/speaking/podcasts", { replace: true });
+    }
+  }, [accessDenied, checking, navigate]);
 
   const iframeSrc = useMemo(() => {
+    if (checking || accessDenied) return "";
     if (videoUrlFromState && String(videoUrlFromState).trim()) {
       return toIframeSrc(String(videoUrlFromState));
     }
@@ -17,7 +26,11 @@ const PodcastPlayer = () => {
       return toIframeSrc(videoId);
     }
     return "";
-  }, [videoUrlFromState, videoId]);
+  }, [videoUrlFromState, videoId, accessDenied, checking]);
+
+  if (checking || accessDenied) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-[99999] bg-black flex items-center justify-center">
@@ -33,12 +46,17 @@ const PodcastPlayer = () => {
 
       <div className="relative w-full h-full">
         {iframeSrc ? (
-          <iframe width="100%" className="absolute inset-0 w-full h-full border-0" height="100%" 
-          src={iframeSrc} title="Speaking podcast player" 
-          frameBorder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-          referrerPolicy="strict-origin-when-cross-origin" allowFullScreen>
-          </iframe>
-
+          <iframe
+            width="100%"
+            className="absolute inset-0 w-full h-full border-0"
+            height="100%"
+            src={iframeSrc}
+            title="Speaking podcast player"
+            frameBorder="0"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center text-white">
             <p className="text-lg font-medium text-white/90">No video URL provided.</p>
