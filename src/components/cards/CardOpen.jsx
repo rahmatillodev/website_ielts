@@ -9,6 +9,12 @@ import { useDashboardStore } from "@/store/dashboardStore";
 import { motion } from "framer-motion";
 import { FaCrown, FaPencilAlt } from "react-icons/fa";
 import { formatDateToDayMonth } from "@/utils/formatDate";
+import {
+  CEFR_TOTAL_QUESTIONS,
+  formatTestScore,
+  getTestQuestionTotal,
+  resolveIsCefr,
+} from "@/lib/testScoring";
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
   <span className="inline-flex items-end gap-[2px] h-[10px]">
@@ -33,6 +39,7 @@ const CardOpen = ({
   testType = "reading",
   partLabel,
   video_id,
+  is_cefr,
 }) => {
   const navigate = useNavigate();
 
@@ -48,6 +55,11 @@ const CardOpen = ({
   const attemptData = useMemo(() => {
     return completionData?.attempt || null;
   }, [completionData]);
+
+  const isCefr = useMemo(
+    () => resolveIsCefr({ attempt: attemptData, test: { is_cefr } }),
+    [attemptData, is_cefr]
+  );
 
 
   const handleStartTest = (e) => {
@@ -119,7 +131,15 @@ const CardOpen = ({
 
   const score = attemptData?.score || null;
   const correctAnswers = attemptData?.correct_answers || 0;
-  const totalQuestions = attemptData?.total_questions || question_quantity || 0;
+  const totalQuestions =
+    attemptData?.total_questions ||
+    getTestQuestionTotal({ is_cefr, question_quantity }) ||
+    question_quantity ||
+    0;
+  const displayScore = formatTestScore(score, isCefr);
+  const questionCountLabel = isCefr
+    ? CEFR_TOTAL_QUESTIONS
+    : question_quantity || totalQuestions || 0;
 
   // Container classes with green border for completed tests
   const containerClass = isGridView
@@ -171,7 +191,7 @@ const CardOpen = ({
               <div className="bg-white border border-gray-200 w-12 md:w-14 h-12 md:h-14 rounded-full flex flex-col items-center justify-center shadow-sm">
                 <span className="text-[10px] text-gray-500 font-semibold">Score</span>
                 <span className="text-sm md:text-base font-black text-green-600">
-                  {score?.toFixed(1) || '0.0'}
+                  {displayScore}
                 </span>
               </div>
             ) : (
@@ -232,9 +252,9 @@ const CardOpen = ({
                   <MdQuiz className="text-[10px] md:text-xs" /> {correctAnswers}/{totalQuestions} Correct
                 </span>
               ) : (
-                question_quantity != null && (
+                (isCefr || question_quantity != null) && (
                   <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                    <MdQuiz className="text-[10px] md:text-xs" /> {question_quantity} {question_quantity === 1 ? "question" : "questions"}
+                    <MdQuiz className="text-[10px] md:text-xs" /> {questionCountLabel} {questionCountLabel === 1 ? "question" : "questions"}
                   </span>
                 )
               )}
@@ -360,7 +380,7 @@ const CardOpen = ({
             <>
               <div className="flex flex-col items-end border-l border-gray-200 pl-3 md:pl-6">
                 <span className="text-[10px] md:text-xs text-gray-500 font-semibold mb-1">Score</span>
-                <span className="text-xl md:text-2xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
+                <span className="text-xl md:text-2xl font-black text-green-600">{displayScore}</span>
               </div>
               <div className="flex flex-col gap-1.5 md:gap-2 mr-2 md:mr-4">
                 <button

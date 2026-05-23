@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 // import PremiumBanner from "@/components/badges/PremiumBanner";
 // import { useTestStore } from "@/store/testStore";
 import { useAuthStore } from "@/store/authStore";
+import { useTestStore } from "@/store/testStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { QUESTION_TYPE_GROUPS, getQuestionTypeDisplayName } from "@/store/testStore/utils/questionTypeUtils";
 import { WRITING_TASK_TYPES, getWritingTaskTypeDisplayName } from "@/store/testStore/utils/writingTaskTypeUtils";
@@ -88,6 +89,7 @@ const TestsLibraryPage = ({
   };
 
   const userProfile = useAuthStore((state) => state.userProfile);
+  const testProgram = useTestStore((state) => state.testProgram);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -108,10 +110,10 @@ const TestsLibraryPage = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, fetchTests]); // Re-run when route changes
 
-  // Reset fetch flag when route changes to allow fresh fetch
+  // Reset fetch flag when route or program changes to allow fresh fetch
   useEffect(() => {
     hasFetchedRef.current = false;
-  }, [location.pathname]);
+  }, [location.pathname, testProgram]);
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(allTests) || allTests.length === 0) {

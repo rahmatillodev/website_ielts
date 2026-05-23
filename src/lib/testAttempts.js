@@ -6,6 +6,11 @@
 import supabase from './supabase';
 import { useTestDetailStore } from '@/store/testStore/testDetailStore';
 import { useAuthStore } from '@/store/authStore';
+import {
+  CEFR_TOTAL_QUESTIONS,
+  calculateTestScoreValue,
+  isCefrTest,
+} from '@/lib/testScoring';
 
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
 export const getUserIdFromLocalStorage = () => {
@@ -31,6 +36,9 @@ export const getUserIdFromLocalStorage = () => {
  * @param {object|null} mockTestContext - If in mock test: { mockTestId, mockClientId, section }. mockTestId is stored in user_attempts.mock_id
  */
 const VALID_ATTEMPT_TYPES = ['listening', 'reading'];
+
+const USER_ATTEMPT_LIST_FIELDS =
+  'id, user_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at, is_cefr, type';
 
 export const submitTestAttempt = async (testId, answers, currentTest, timeTaken = null, type, mockTestContext = null) => {
   try {
@@ -69,11 +77,17 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
       // Continue with currentTest if fetch fails
     }
 
-    // Calculate score and correctness using test with correct answers
-    const { correctCount, totalQuestions, answerResults } = calculateTestScore(answers, testWithCorrectAnswers);
+    const isCefr =
+      isCefrTest(testWithCorrectAnswers) || isCefrTest(currentTest);
 
-    // Calculate band score (IELTS 0-9 scale based on percentage)
-    const bandScore = calculateBandScore(correctCount, totalQuestions, type);
+    // Calculate score and correctness using test with correct answers
+    const { correctCount, totalQuestions, answerResults } = calculateTestScore(
+      answers,
+      testWithCorrectAnswers,
+      isCefr
+    );
+
+    const score = calculateTestScoreValue(correctCount, totalQuestions, type, isCefr);
 
     // Store time_taken in seconds (minimum 1 second)
     const timeTakenSeconds = timeTaken !== null && timeTaken !== undefined
@@ -84,12 +98,13 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
     const attemptPayload = {
       user_id: authenticatedUserId,
       test_id: testId,
-      score: bandScore,
+      score: String(score),
       total_questions: totalQuestions,
       correct_answers: String(correctCount),
       time_taken: timeTakenSeconds, // Store in seconds
       completed_at: new Date().toISOString(),
       type,
+      is_cefr: isCefr,
     };
     // Add mock_id when in mock test mode (links attempt to mock_test.id)
     if (mockTestContext?.mockTestId) {
@@ -131,9 +146,10 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
     return {
       success: true,
       attemptId,
-      score: bandScore,
+      score: String(score),
       correctCount,
       totalQuestions,
+      is_cefr: isCefr,
     };
   } catch (error) {
     console.error('Error submitting test attempt:', error);
@@ -199,7 +215,7 @@ export const fetchAttemptById = async (attemptId) => {
     }
     const { data, error } = await supabase
       .from('user_attempts')
-      .select('id, user_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
+      .select(USER_ATTEMPT_LIST_FIELDS)
       .eq('id', attemptId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -236,7 +252,7 @@ export const fetchLatestAttempt = async (userId, testId) => {
     // Fetch latest attempt
     const { data: attemptData, error: attemptError } = await supabase
       .from('user_attempts')
-      .select('id, user_id, test_id, score, total_questions, correct_answers, time_taken, completed_at, created_at')
+      .select(USER_ATTEMPT_LIST_FIELDS)
       .eq('user_id', userId)
       .eq('test_id', testId)
       .order('completed_at', { ascending: false })
@@ -289,7 +305,7 @@ export const checkTestCompleted = async (testId) => {
 
     const { data, error } = await supabase
       .from('user_attempts')
-      .select('id, test_id, score, completed_at, correct_answers, total_questions')
+      .select('id, test_id, score, completed_at, correct_answers, total_questions, is_cefr')
       .eq('user_id', authenticatedUserId)
       .eq('test_id', testId)
       .order('completed_at', { ascending: false })
@@ -422,14 +438,18 @@ const pickStoredAnswer = (answers, questionId, questionNumber) => {
  * @param {object} currentTest - Test data with parts and questions
  * @returns {object} { correctCount, totalQuestions, answerResults }
  */
-const calculateTestScore = (answers, currentTest) => {
+const calculateTestScore = (answers, currentTest, isCefr = false) => {
   if (!currentTest || !currentTest.parts) {
-    return { correctCount: 0, totalQuestions: 0, answerResults: [] };
+    return {
+      correctCount: 0,
+      totalQuestions: isCefr ? CEFR_TOTAL_QUESTIONS : 0,
+      answerResults: [],
+    };
   }
 
   const answerResults = [];
   let correctCount = 0;
-  let totalQuestions = 0;
+  let countedQuestions = 0;
   
 
   // Iterate through all parts and questions
@@ -466,7 +486,7 @@ const calculateTestScore = (answers, currentTest) => {
           // Each question stores its own userAnswer individually
           validQuestions.forEach((question) => {
             const questionId = question.id || question.question_number;
-            totalQuestions++;
+            countedQuestions++;
 
             // Correct answer for this question
             const correctAnswerKey = question.correct_answer?.toString().trim().toUpperCase() || '';
@@ -522,7 +542,7 @@ const calculateTestScore = (answers, currentTest) => {
             // Skip if no question identity (cannot persist row)
             if (!questionId && !questionNumber) return;
             
-            totalQuestions++;
+            countedQuestions++;
             const correctAnswer = getCorrectAnswer(question, questionGroup);
 
             // Normalize answers for comparison
@@ -549,6 +569,8 @@ const calculateTestScore = (answers, currentTest) => {
       });
     }
   });
+
+  const totalQuestions = isCefr ? CEFR_TOTAL_QUESTIONS : countedQuestions;
 
   return { correctCount, totalQuestions, answerResults };
 };
@@ -725,59 +747,4 @@ const getCorrectAnswer = (question, questionGroup) => {
 const normalizeAnswer = (answer) => {
   if (!answer) return '';
   return answer.toString().trim().toLowerCase();
-};
-
-const readingBands = [
-  { min: 39, band: 9 },
-  { min: 37, band: 8.5 },
-  { min: 35, band: 8 },
-  { min: 33, band: 7.5 },
-  { min: 30, band: 7 },
-  { min: 27, band: 6.5 },
-  { min: 23, band: 6 },
-  { min: 19, band: 5.5 },
-  { min: 15, band: 5 },
-  { min: 13, band: 4.5 },
-  { min: 10, band: 4 },
-  { min: 9, band: 3.5 },
-  { min: 7, band: 3 },
-  { min: 5, band: 2.5 },
-  { min: 3, band: 2 },
-  { min: 2, band: 1.5 },
-  { min: 1, band: 1 },
-  { min: 0, band: 0 },
-];
-
-const listeningBands = [
-  { min: 39, band: 9 },
-  { min: 37, band: 8.5 },
-  { min: 35, band: 8 },
-  { min: 33, band: 7.5 },
-  { min: 30, band: 7 },
-  { min: 26, band: 6.5 },
-  { min: 23, band: 6 },
-  { min: 18, band: 5.5 },
-  { min: 16, band: 5 },
-  { min: 13, band: 4.5 },
-  { min: 10, band: 4 },
-  { min: 9, band: 3.5 },
-  { min: 7, band: 3 },
-  { min: 5, band: 2.5 },
-  { min: 3, band: 2 },
-  { min: 2, band: 1.5 },
-  { min: 1, band: 1 },
-  { min: 0, band: 0 },
-];
-const calculateBandScore = (correctCount, totalQuestions, type) => {
-  if (totalQuestions === 0) return 0.0;
-
-  const normalizedScore = Math.round((correctCount / totalQuestions) * 40);
-
-  if (type === 'reading') {
-    return readingBands.find(band => normalizedScore >= band.min)?.band || 0.0;
-  } else if (type === 'listening') {
-    return listeningBands.find(band => normalizedScore >= band.min)?.band || 0.0;
-  }
-
-  throw new Error('Invalid test type');
 };

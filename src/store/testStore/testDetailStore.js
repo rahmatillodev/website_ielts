@@ -31,6 +31,12 @@ const readCachedTestDetail = (testId, includeCorrectAnswers) => {
       return null;
     }
 
+    // Invalidate pre-CEFR cache entries that lack program metadata
+    if (!Object.prototype.hasOwnProperty.call(data, "is_cefr")) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
     return {
       data,
       sourceUpdatedAt: sourceUpdatedAt || data.updated_at || null,
@@ -283,7 +289,7 @@ export const useTestDetailStore = create((set, get) => {
         // Step 1: Fetch test metadata
         const metadataQuery = supabase
           .from("test")
-          .select("id, title, duration, difficulty, type, is_premium, is_active, question_quantity, created_at, updated_at")
+          .select("id, title, duration, difficulty, type, is_premium, is_active, is_cefr, question_quantity, created_at, updated_at")
           .eq("id", testId)
           .eq("is_active", true)
           .maybeSingle();
@@ -521,6 +527,7 @@ export const useTestDetailStore = create((set, get) => {
         question_quantity: testData.question_quantity,
         is_premium: testData.is_premium,
         is_active: testData.is_active,
+        is_cefr: testData.is_cefr === true,
         created_at: testData.created_at,
         updated_at: testData.updated_at || null,
         parts: processedParts,

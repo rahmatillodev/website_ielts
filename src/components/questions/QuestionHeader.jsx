@@ -9,6 +9,7 @@ import AppearanceSettingsModal from '@/components/modal/AppearanceSettingsModal'
 import ConfirmModal from '@/components/modal/ConfirmModal'
 import { useAppearance } from '@/contexts/AppearanceContext'
 import { useAnnotation } from '@/contexts/AnnotationContext'
+import { getExamProgramLabel } from '@/lib/testScoring'
 
 const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, isPaused, handleStart, handlePause, onBack, showCorrectAnswers, onToggleShowCorrect, status, type, showTryPractice, handleRedoTask, isPracticeMode }) => {
   // Immediately check URL for review mode to prevent flickering
@@ -83,6 +84,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
       .padStart(2, "0")}`;
   };
   const navigate = useNavigate()
+  const examProgramLabel = getExamProgramLabel(currentTest)
 
   const handleBackClick = () => {
     // For Writing: only show confirmation modal if practice has started
@@ -137,7 +139,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             className="text-xl font-semibold"
             style={{ color: themeColors.text }}
           >
-            IELTS | {type}
+            {examProgramLabel} | {type}
           </span>
           <span 
             className="text-sm"

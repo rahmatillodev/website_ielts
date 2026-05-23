@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
 import { toast } from "react-toastify";
+import { isCefrTest } from "@/lib/testScoring";
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
 const getUserIdFromLocalStorage = () => {
   try {
@@ -68,6 +69,17 @@ export const useWritingCompletedStore = create((set) => ({
         throw new Error('No writing tasks found for this writing');
       }
 
+      const { data: writingMeta, error: writingMetaError } = await supabase
+        .from("writings")
+        .select("is_cefr")
+        .eq("id", writingId)
+        .maybeSingle();
+
+      if (writingMetaError) {
+        console.warn("[writingCompletedStore] Could not load writing is_cefr:", writingMetaError);
+      }
+      const isCefr = isCefrTest(writingMeta);
+
       // Create a map of task_name to task_id
       const taskNameToIdMap = {};
       writingTasks.forEach(task => {
@@ -84,6 +96,7 @@ export const useWritingCompletedStore = create((set) => ({
         time_taken: timeTakenSeconds, // Store in seconds
         completed_at: new Date().toISOString(),
         type: 'writing',
+        is_cefr: isCefr,
       };
 
       // Add mock_id if provided (for mock test mode)

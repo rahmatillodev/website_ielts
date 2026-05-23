@@ -160,6 +160,7 @@ export const useAnalyticsStore = create((set, get) => ({
         time_taken,
         completed_at,
         created_at,
+        is_cefr,
         test:test_id (
           id,
           title,

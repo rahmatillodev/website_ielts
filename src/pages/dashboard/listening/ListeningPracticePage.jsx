@@ -689,7 +689,7 @@ const ListeningPracticePageContent = () => {
         timeRemaining,
         startTime,
         bookmarks,
-      });
+      }, currentTest);
     }
   }, [answers, id, hasInteracted, timeRemaining, startTime, bookmarks, isMockTest, mockTestId]);
 
@@ -714,7 +714,7 @@ const ListeningPracticePageContent = () => {
             timeRemaining,
             startTime,
             bookmarks,
-          });
+          }, currentTest);
         }
       }
     }, 5000);
@@ -796,7 +796,7 @@ const ListeningPracticePageContent = () => {
         timeRemaining,
         startTime: Date.now(),
         bookmarks,
-      });
+      }, currentTest);
     }
   };
 
@@ -1170,7 +1170,7 @@ const ListeningPracticePageContent = () => {
             timeRemaining,
             startTime: newStartTime,
             bookmarks,
-          });
+          }, currentTest);
         }
       }
     }

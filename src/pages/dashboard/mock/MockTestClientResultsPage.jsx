@@ -88,7 +88,8 @@ const MockTestClientResultsPage = () => {
             correct_answers,
             total_questions,
             time_taken,
-            completed_at
+            completed_at,
+            is_cefr
           `)
           .eq('user_id', clientData.user_id)
           .eq('mock_id', clientData.mock_test_id)

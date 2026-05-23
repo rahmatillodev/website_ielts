@@ -2,25 +2,54 @@ import { create } from "zustand";
 import supabase from "@/lib/supabase";
 import { toast } from "react-toastify";
 import { useWritingTaskTypeStore } from "./writingTaskTypeStore";
+import { useTestListStore } from "./testListStore";
 
 export const useWritingStore = create((set, get) => ({
   writings: [],
+  writingsFetchedProgram: null,
+  writingsLoaded: false,
   currentWriting: null, // writing + tasks ichma-ich
   loadingWritings: false,
   loadingCurrentWriting: false,
   errorWritings: null,
   errorCurrentWriting: null,
 
-  // Barcha writings ni olish
-  fetchWritings: async () => {
+  // Barcha writings ni olish (filtered by sidebar IELTS / CEFR program)
+  fetchWritings: async (forceRefresh = false) => {
+    const currentState = get();
+    const testProgram = useTestListStore.getState().testProgram;
+    const hasData = currentState.writings?.length > 0;
+    const programMatches = currentState.writingsFetchedProgram === testProgram;
+
+    if (
+      currentState.writingsLoaded &&
+      hasData &&
+      programMatches &&
+      !currentState.loadingWritings &&
+      !forceRefresh
+    ) {
+      return currentState.writings;
+    }
+
+    if (currentState.loadingWritings && hasData && programMatches && !forceRefresh) {
+      return currentState.writings;
+    }
+
     set({ loadingWritings: true, errorWritings: null });
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("writings")
         .select("*, writing_tasks(task_name)")
         .eq("is_active", true)
-        .or("is_mock.eq.false,is_mock.is.null")
-        .order("created_at", { ascending: false });
+        .or("is_mock.eq.false,is_mock.is.null");
+
+      if (testProgram === "cefr") {
+        query = query.eq("is_cefr", true);
+      } else {
+        query = query.or("is_cefr.eq.false,is_cefr.is.null");
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -56,10 +85,22 @@ export const useWritingStore = create((set, get) => ({
         task_types: taskTypesMap[writing.id] || new Set(),
       }));
 
-      set({ writings: enrichedWritings, loadingWritings: false });
+      set({
+        writings: enrichedWritings,
+        writingsFetchedProgram: testProgram,
+        writingsLoaded: true,
+        loadingWritings: false,
+        errorWritings: null,
+      });
+      return enrichedWritings;
     } catch (err) {
       toast.error(err.message);
-      set({ errorWritings: err.message, loadingWritings: false });
+      set({
+        errorWritings: err.message,
+        loadingWritings: false,
+        writingsLoaded: false,
+      });
+      throw err;
     }
   },
 
@@ -171,4 +212,15 @@ export const useWritingStore = create((set, get) => ({
     set({ writings: list });
   }
 }));
+
+let lastSyncedTestProgram = useTestListStore.getState().testProgram;
+useTestListStore.subscribe((state) => {
+  if (state.testProgram === lastSyncedTestProgram) return;
+  lastSyncedTestProgram = state.testProgram;
+  useWritingStore.setState({
+    writings: [],
+    writingsFetchedProgram: null,
+    writingsLoaded: false,
+  });
+});
 

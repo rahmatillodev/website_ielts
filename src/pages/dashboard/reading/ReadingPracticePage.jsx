@@ -848,7 +848,7 @@ const ReadingPracticePageContent = () => {
         elapsedTime,
         startTime: startTime || (hasInteracted || isStarted ? Date.now() : null),
         bookmarks,
-      });
+      }, currentTest);
     }
   }, [answers, id, hasInteracted, isStarted, timeRemaining, startTime, bookmarks, isMockTest, mockTestId]);
 
@@ -878,7 +878,7 @@ const ReadingPracticePageContent = () => {
             elapsedTime,
             startTime: startTime || Date.now(),
             bookmarks,
-          });
+          }, currentTest);
         }
       }
     }, 5000);
@@ -973,7 +973,7 @@ const ReadingPracticePageContent = () => {
         elapsedTime: 0,
         startTime: now,
         bookmarks,
-      });
+      }, currentTest);
     }
   };
 
@@ -1335,7 +1335,7 @@ const ReadingPracticePageContent = () => {
           elapsedTime: 0,
           startTime: newStartTime,
           bookmarks,
-        });
+        }, currentTest);
       }
     }
   };

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import supabase from '@/lib/supabase';
+import { formatDashboardScore, parseIeltsBand, resolveIsCefr } from '@/lib/testScoring';
 
 export const useDashboardStore = create((set, get) => ({
   // --- State ---
@@ -67,7 +68,7 @@ export const useDashboardStore = create((set, get) => ({
       // Fetch attempts first (limit to reduce cached egress; dashboard shows recent activity)
       const { data: attemptsData, error: attemptsError } = await supabase
         .from('user_attempts')
-        .select('id, test_id, writing_id, score, time_taken, total_questions, correct_answers, created_at, completed_at, type')
+        .select('id, test_id, writing_id, score, time_taken, total_questions, correct_answers, created_at, completed_at, type, is_cefr')
         .eq('user_id', userId)
         .order('completed_at', { ascending: false })
         .range(from, to);
@@ -137,6 +138,7 @@ export const useDashboardStore = create((set, get) => ({
                 completed_at: attempt.completed_at,
                 created_at: attempt.created_at,
                 type: attempt.type,
+                is_cefr: attempt.is_cefr,
               },
             };
           }
@@ -156,27 +158,37 @@ export const useDashboardStore = create((set, get) => ({
       const listeningAttempts = attemptsWithType.filter((a) => a.testType === 'listening');
       const readingAttempts = attemptsWithType.filter((a) => a.testType === 'reading');
 
-      const lastListening = listeningAttempts[0]?.score ?? null;
-      const lastReading = readingAttempts[0]?.score ?? null;
+      const lastListeningAttempt = listeningAttempts[0];
+      const lastReadingAttempt = readingAttempts[0];
+      const lastListening = lastListeningAttempt?.score ?? null;
+      const lastReading = lastReadingAttempt?.score ?? null;
+      const listeningIsCefr = resolveIsCefr({ attempt: lastListeningAttempt });
+      const readingIsCefr = resolveIsCefr({ attempt: lastReadingAttempt });
 
-      // Mavjud ballarni yig'ish
-      const latestScores = [lastListening, lastReading].filter(
-        (s) => s !== null && s !== undefined
-      );
+      const ieltsBands = [];
+      if (!listeningIsCefr) {
+        const band = parseIeltsBand(lastListening);
+        if (band != null) ieltsBands.push(band);
+      }
+      if (!readingIsCefr) {
+        const band = parseIeltsBand(lastReading);
+        if (band != null) ieltsBands.push(band);
+      }
 
-      // Oddiy o'rtachani hisoblash
       const rawAverage =
-        latestScores.length > 0
-          ? latestScores.reduce((a, b) => a + b, 0) / latestScores.length
+        ieltsBands.length > 0
+          ? ieltsBands.reduce((a, b) => a + b, 0) / ieltsBands.length
           : null;
 
-      // IELTS qoidasi bo'yicha yaxlitlangan o'rtacha ball
       const averageScore = roundIELTS(rawAverage);
 
       const scores = {
-        listening: lastListening,
-        reading: lastReading,
-        average: averageScore ? Number(averageScore.toFixed(1)) : null,
+        listening: formatDashboardScore(lastListening, listeningIsCefr),
+        reading: formatDashboardScore(lastReading, readingIsCefr),
+        writing: null,
+        average: averageScore != null ? averageScore.toFixed(1) : null,
+        listeningIsCefr,
+        readingIsCefr,
       };
 
       set({

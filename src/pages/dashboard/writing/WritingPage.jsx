@@ -1,15 +1,9 @@
-import React, { useEffect } from "react";
+import React from "react";
 import TestsLibraryPage from "@/components/TestsLibraryPage";
 import { useWritingStore } from "@/store/testStore/writingStore";
 
 const WritingPage = () => {
-
   const { writings, loadingWritings: loading, fetchWritings } = useWritingStore();
-
-  useEffect(() => {
-    fetchWritings();
-  }, [fetchWritings]);
-
 
   return (
     <TestsLibraryPage

@@ -516,7 +516,7 @@ const DashboardPage = () => {
     () => [
       {
         label: 'Listening',
-        value: scores.listening ? scores.listening.toFixed(1) : '0.0',
+        value: scores.listening ?? '—',
         icon: LuHeadphones,
         iconColor: 'text-blue-500',
         bgColor: 'bg-blue-50',
@@ -525,7 +525,7 @@ const DashboardPage = () => {
       },
       {
         label: 'Reading',
-        value: scores.reading ? scores.reading.toFixed(1) : '0.0',
+        value: scores.reading ?? '—',
         icon: LuBookOpen,
         iconColor: 'text-orange-500',
         bgColor: 'bg-orange-50',
@@ -534,7 +534,7 @@ const DashboardPage = () => {
       },
       {
         label: 'Writing',
-        value: scores.writing ? scores.writing.toFixed(1) : '0.0',
+        value: scores.writing ?? '—',
         icon: LuPenTool,
         iconColor: 'text-purple-500',
         bgColor: 'bg-purple-50',
@@ -651,7 +651,7 @@ const DashboardPage = () => {
                   Average Score
                 </p>
                 <p className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-semibold">
-                  {scores.average ? `Band ${scores.average.toFixed(1)}` : '0.0'}
+                  {scores.average != null ? `Band ${scores.average}` : '—'}
                 </p>
               </div>
             </motion.div>

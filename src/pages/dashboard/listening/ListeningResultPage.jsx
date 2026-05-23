@@ -15,6 +15,12 @@ import ResultBanner from "@/components/badges/ResultBanner";
 import { useSettingsStore } from "@/store/systemStore";
 import { clearListeningPracticeData } from "@/store/LocalStorage/listeningStorage";
 import { formatDateToDayMonth } from "@/store/analyticsStore";
+import {
+  CEFR_TOTAL_QUESTIONS,
+  formatTestScore,
+  getCorrectPercentage,
+  resolveIsCefr,
+} from "@/lib/testScoring";
 
 const ListeningResultPage = () => {
   const { id } = useParams();
@@ -101,6 +107,7 @@ const ListeningResultPage = () => {
             time_taken: attempt.time_taken,
             completed_at: attempt.completed_at,
             created_at: attempt.created_at,
+            is_cefr: attempt.is_cefr,
           },
           answers: answersResult.answers || {},
         };
@@ -482,15 +489,21 @@ const ListeningResultPage = () => {
     });
   }, [resultData, testForDisplay, getCorrectAnswerFromTest, formatMultipleAnswersAnswer]);
 
+  const isCefr = useMemo(
+    () => resolveIsCefr({ attempt: attemptData, test: testForDisplay }),
+    [attemptData, testForDisplay]
+  );
+
   // Memoized stats calculations
   const stats = useMemo(() => {
-    // Use total_questions from attempt data if available, otherwise use answered count
-    const totalQuestions = attemptData?.total_questions ?? answerDisplayData.length;
+    const totalQuestions = isCefr
+      ? CEFR_TOTAL_QUESTIONS
+      : (attemptData?.total_questions ?? answerDisplayData.length);
     const correctCount = answerDisplayData.filter(a => a.isCorrect).length;
     const timeTaken = formatTime(elapsedTime);
     const avgTime = totalQuestions > 0 ? formatTime(Math.floor(elapsedTime / totalQuestions)) : "0m 0s";
-    const score = attemptData?.score?.toFixed(1) || "0.0";
-    const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+    const score = formatTestScore(attemptData?.score, isCefr);
+    const percentage = getCorrectPercentage(correctCount, totalQuestions, isCefr);
 
     return {
       totalQuestions,
@@ -499,8 +512,9 @@ const ListeningResultPage = () => {
       avgTime,
       score,
       percentage,
+      isCefr,
     };
-  }, [answerDisplayData, elapsedTime, attemptData, formatTime]);
+  }, [answerDisplayData, elapsedTime, attemptData, formatTime, isCefr]);
 
   // PDF Export function
   const downloadPDF = useCallback(async () => {
@@ -564,10 +578,13 @@ const ListeningResultPage = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2">
-              Exam Results
+              {stats.isCefr ? "CEFR Results" : "Exam Results"}
             </h1>
             <div className="flex flex-wrap items-center gap-2 text-slate-500 font-medium text-xs sm:text-sm">
-              <span>{testForDisplay?.title || "Academic Listening Practice Test"}</span>
+              <span>
+                {testForDisplay?.title ||
+                  (stats.isCefr ? "CEFR Listening Practice Test" : "Academic Listening Practice Test")}
+              </span>
               <span className="text-gray-400">•</span>
               <span>Completed on {formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt)}</span>
             </div>
@@ -592,19 +609,25 @@ const ListeningResultPage = () => {
           <div className="border-2 border-blue-200 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
             <div className="relative z-10">
               <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest mb-3">
-                Overall Band Score
+                {stats.isCefr ? "CEFR Level" : "Overall Band Score"}
               </h3>
               <div className="flex items-baseline gap-1 mb-4">
                 <span className="text-4xl sm:text-5xl font-black text-blue-600">
                   {stats.score}
                 </span>
-                <span className="text-gray-500 font-semibold text-lg">/ 9.0</span>
+                {!stats.isCefr && (
+                  <span className="text-gray-500 font-semibold text-lg">/ 9.0</span>
+                )}
               </div>
               {/* Progress Bar */}
               <div className="w-full bg-blue-200 h-2.5 rounded-full overflow-hidden">
                 <div 
                   className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${(parseFloat(stats.score) / 9.0) * 100}%` }}
+                  style={{
+                    width: stats.isCefr
+                      ? `${stats.percentage}%`
+                      : `${(parseFloat(stats.score) / 9.0) * 100}%`,
+                  }}
                 ></div>
               </div>
             </div>
@@ -653,7 +676,7 @@ const ListeningResultPage = () => {
             </div>
           </div>
         </div>
-        <ResultBanner score={stats.score} testType="Listening" />
+        <ResultBanner score={stats.score} testType="Listening" isCefr={stats.isCefr} />
 
         {/* Detailed Answer Review Section */}
         <div className="mt-12">

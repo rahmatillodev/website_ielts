@@ -9,6 +9,13 @@ import { useQuestionTypeStore } from "./questionTypeStore";
 const DEFAULT_TIMEOUT_MS = 15000;
 const MIN_PART_NUMBER = 1;
 const MAX_PART_NUMBER = 5;
+const TEST_PROGRAM_STORAGE_KEY = "testProgram";
+
+/** @returns {"ielts" | "cefr"} */
+function getInitialTestProgram() {
+  const saved = localStorage.getItem(TEST_PROGRAM_STORAGE_KEY);
+  return saved === "cefr" ? "cefr" : "ielts";
+}
 
 /** Max parts that count as "full" per test type: reading = 3, listening = 4. */
 const FULL_PART_COUNT_BY_TYPE = {
@@ -56,18 +63,38 @@ export const useTestListStore = create((set, get) => ({
   test_reading: [],
   test_listening: [],
   test_speaking: [],
+  testProgram: getInitialTestProgram(),
+  fetchedProgram: null,
   loading: false,
   error: null,
   loaded: false,
 
+  setTestProgram: (program) => {
+    const next = program === "cefr" ? "cefr" : "ielts";
+    const { testProgram } = get();
+    if (testProgram === next) return;
+    localStorage.setItem(TEST_PROGRAM_STORAGE_KEY, next);
+    set({
+      testProgram: next,
+      loaded: false,
+      test_reading: [],
+      test_listening: [],
+      test_speaking: [],
+    });
+  },
+
   fetchTests: async (forceRefresh = false) => {
     const currentState = get();
+    const { testProgram } = currentState;
 
     // Allow refetch if data is empty even if loaded is true
     const hasData = (currentState.test_reading?.length > 0 || currentState.test_listening?.length > 0 || currentState.test_speaking?.length > 0);
 
+    const programMatches =
+      currentState.fetchedProgram === testProgram;
+
     // Return early only if already loaded with data AND not currently loading AND not forcing refresh
-    if (currentState.loaded && hasData && !currentState.loading && !forceRefresh) {
+    if (currentState.loaded && hasData && programMatches && !currentState.loading && !forceRefresh) {
       return {
         test_reading: currentState.test_reading || [],
         test_listening: currentState.test_listening || [],
@@ -76,8 +103,8 @@ export const useTestListStore = create((set, get) => ({
       };
     }
 
-    // If loading is stuck, return current data if available
-    if (currentState.loading && hasData && !forceRefresh) {
+    // If loading is stuck, return current data if available (same program only)
+    if (currentState.loading && hasData && programMatches && !forceRefresh) {
       return {
         test_reading: currentState.test_reading || [],
         test_listening: currentState.test_listening || [],
@@ -95,12 +122,19 @@ export const useTestListStore = create((set, get) => ({
     });
 
     try {
-      const testsQueryPromise = supabase
+      let testsQuery = supabase
         .from("test")
-        .select("id, title, type, difficulty, duration, is_active, is_mock, created_at, question_quantity, is_premium, part(part_number)")
+        .select("id, title, type, difficulty, duration, is_active, is_mock, is_cefr, created_at, question_quantity, is_premium, part(part_number)")
         .eq("is_active", true)
-        .or("is_mock.eq.false,is_mock.is.null")
-        .order("created_at", { ascending: false });
+        .or("is_mock.eq.false,is_mock.is.null");
+
+      if (testProgram === "cefr") {
+        testsQuery = testsQuery.eq("is_cefr", true);
+      } else {
+        testsQuery = testsQuery.or("is_cefr.eq.false,is_cefr.is.null");
+      }
+
+      const testsQueryPromise = testsQuery.order("created_at", { ascending: false });
       const { data, error } = await Promise.race([
         testsQueryPromise,
         timeoutPromise
@@ -187,6 +221,7 @@ export const useTestListStore = create((set, get) => ({
         test_listening: enriched_listening,
         test_speaking: enriched_speaking,
         loaded: true, // Always set to true after successful fetch, even with empty data
+        fetchedProgram: testProgram,
         error: null,
       });
 

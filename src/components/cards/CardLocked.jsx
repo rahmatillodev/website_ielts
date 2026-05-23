@@ -4,6 +4,12 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import UpgradeModal from "../modal/UpgradeModal";
 import { formatDateToDayMonth } from "@/utils/formatDate";
+import {
+  CEFR_TOTAL_QUESTIONS,
+  formatTestScore,
+  getTestQuestionTotal,
+  resolveIsCefr,
+} from "@/lib/testScoring";
 import { FaCrown } from "react-icons/fa";
 
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
@@ -29,7 +35,16 @@ const CardLocked = ({
   score,
   correct_answers,
   total_questions,
+  is_cefr,
 }) => {
+  const isCefr = resolveIsCefr({ test: { is_cefr } });
+  const displayScore = formatTestScore(score, isCefr);
+  const questionTotal =
+    total_questions ||
+    getTestQuestionTotal({ is_cefr, question_quantity }) ||
+    question_quantity ||
+    0;
+  const questionCountLabel = isCefr ? CEFR_TOTAL_QUESTIONS : question_quantity || questionTotal;
 
   const completedDate = date ? formatDateToDayMonth(date) : '';
   const createdDate = created_at ? formatDateToDayMonth(created_at) : '';
@@ -74,7 +89,7 @@ const CardLocked = ({
           <div className="absolute top-3 right-3 z-10">
             <div className="bg-white border border-gray-200 rounded-full px-2 py-1 flex items-center gap-1 shadow-sm">
               <span className="text-[10px] text-gray-500 font-semibold">Score</span>
-              <span className="text-sm font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
+              <span className="text-sm font-black text-green-600">{displayScore}</span>
             </div>
           </div>
         )}
@@ -124,12 +139,12 @@ const CardLocked = ({
               </span>
               {isCompleted ? (
                 <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                  <MdQuiz className="text-[10px] md:text-xs" /> {Number(correct_answers ?? 0)}/{total_questions || question_quantity || 0} Correct
+                  <MdQuiz className="text-[10px] md:text-xs" /> {Number(correct_answers ?? 0)}/{questionTotal || 0} Correct
                 </span>
               ) : (
-                question_quantity != null && (
+                (isCefr || question_quantity != null) && (
                   <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                    <MdQuiz className="text-[10px] md:text-xs" /> {question_quantity} {question_quantity === 1 ? "question" : "questions"}
+                    <MdQuiz className="text-[10px] md:text-xs" /> {questionCountLabel} {questionCountLabel === 1 ? "question" : "questions"}
                   </span>
                 )
               )}
@@ -227,12 +242,12 @@ const CardLocked = ({
             </span>
             {isCompleted ? (
               <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                <MdQuiz className="text-[10px] md:text-xs" /> {Number(correct_answers ?? 0)}/{total_questions || question_quantity || 0} Correct
+                <MdQuiz className="text-[10px] md:text-xs" /> {Number(correct_answers ?? 0)}/{questionTotal || 0} Correct
               </span>
             ) : (
-              question_quantity != null && (
+              (isCefr || question_quantity != null) && (
                 <span className="flex items-center gap-1 text-[9px] md:text-[10px] font-medium">
-                  <MdQuiz className="text-[10px] md:text-xs" /> {question_quantity} {question_quantity === 1 ? "question" : "questions"}
+                  <MdQuiz className="text-[10px] md:text-xs" /> {questionCountLabel} {questionCountLabel === 1 ? "question" : "questions"}
                 </span>
               )
             )}
@@ -243,7 +258,7 @@ const CardLocked = ({
           {isCompleted ? (
             <div className="flex flex-col items-end border-l border-gray-200 pl-3 md:pl-6">
               <span className="text-[10px] md:text-xs text-gray-500 font-semibold mb-1">Score</span>
-              <span className="text-xl md:text-2xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
+                <span className="text-xl md:text-2xl font-black text-green-600">{displayScore}</span>
             </div>
           ) : (
             <UpgradeModal>

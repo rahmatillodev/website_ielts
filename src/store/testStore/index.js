@@ -27,6 +27,8 @@ export const useTestStore = create((set, get) => {
       test_reading: listState.test_reading,
       test_listening: listState.test_listening,
       test_speaking: listState.test_speaking,
+      testProgram: listState.testProgram,
+      fetchedProgram: listState.fetchedProgram,
       loading: listState.loading,
       loaded: listState.loaded,
       currentTest: detailState.currentTest,
@@ -40,6 +42,11 @@ export const useTestStore = create((set, get) => {
     ...syncState(),
 
     // Actions from test list store
+    setTestProgram: (program) => {
+      useTestListStore.getState().setTestProgram(program);
+      set(syncState());
+    },
+
     fetchTests: async (forceRefresh = false) => {
       const result = await useTestListStore.getState().fetchTests(forceRefresh);
       set(syncState());
@@ -74,6 +81,7 @@ export const useTestStore = create((set, get) => {
           test_listening: [],
           test_speaking: [],
           loaded: false,
+          fetchedProgram: null,
         });
       }
       
@@ -116,6 +124,7 @@ export const useTestStore = create((set, get) => {
         test_speaking: [],
         loading: false,
         loaded: false,
+        fetchedProgram: null,
         error: null,
       });
       useTestDetailStore.setState({
@@ -139,6 +148,8 @@ useTestListStore.subscribe(() => {
     test_reading: listState.test_reading,
     test_listening: listState.test_listening,
     test_speaking: listState.test_speaking,
+    testProgram: listState.testProgram,
+    fetchedProgram: listState.fetchedProgram,
     loading: listState.loading,
     loaded: listState.loaded,
     error: listState.error || detailState.error,

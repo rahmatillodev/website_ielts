@@ -3,6 +3,8 @@
  * Stores answers and elapsed time for a specific test
  */
 
+import { buildPracticeStoragePayload } from "@/lib/testScoring";
+
 const STORAGE_KEY_PREFIX = 'listening_practice_';
 
 /**
@@ -15,18 +17,18 @@ const getStorageKey = (testId) => `${STORAGE_KEY_PREFIX}${testId}`;
  * @param {string|number} testId - The test ID
  * @param {object} data - Data to save { answers, timeRemaining, elapsedTime, startTime }
  */
-export const saveListeningPracticeData = (testId, data) => {
+export const saveListeningPracticeData = (testId, data, testMeta = null) => {
   try {
     const key = getStorageKey(testId);
-    const storageData = {
-      testId,
+    const storageData = buildPracticeStoragePayload(testId, {
       answers: data.answers || {},
       timeRemaining: data.timeRemaining || 0,
       elapsedTime: data.elapsedTime || 0,
       startTime: data.startTime || Date.now(),
       bookmarks: data.bookmarks || new Set(),
       lastSaved: Date.now(),
-    };
+      ...data,
+    }, testMeta ?? { is_cefr: data.is_cefr, question_quantity: data.question_quantity });
     // Convert Set to Array for JSON serialization
     if (storageData.bookmarks instanceof Set) {
       storageData.bookmarks = Array.from(storageData.bookmarks);
@@ -101,17 +103,17 @@ const RESULT_KEY_PREFIX = 'listening_result_';
 
 const getResultStorageKey = (testId) => `${RESULT_KEY_PREFIX}${testId}`;
 
-export const saveListeningResultData = (testId, data) => {
+export const saveListeningResultData = (testId, data, testMeta = null) => {
   try {
     const key = getResultStorageKey(testId);
-    const storageData = {
-      testId,
+    const storageData = buildPracticeStoragePayload(testId, {
       answers: data.answers || {},
       timeRemaining: data.timeRemaining || 0,
       elapsedTime: data.elapsedTime || 0,
       startTime: data.startTime || null,
       completedAt: Date.now(),
-    };
+      ...data,
+    }, testMeta ?? { is_cefr: data.is_cefr, question_quantity: data.question_quantity });
     localStorage.setItem(key, JSON.stringify(storageData));
   } catch (error) {
     console.error('Error saving listening result data:', error);

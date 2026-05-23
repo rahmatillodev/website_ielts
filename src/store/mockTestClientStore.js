@@ -336,7 +336,8 @@ export const useMockTestClientStore = create((set) => ({
                     total_questions,
                     time_taken,
                     completed_at,
-                    mock_id
+                    mock_id,
+                    is_cefr
                 `)
                 .eq('user_id', userId)
                 .eq('mock_id', mockTest.id);
@@ -360,7 +361,8 @@ export const useMockTestClientStore = create((set) => ({
                         total_questions,
                         time_taken,
                         completed_at,
-                        mock_id
+                        mock_id,
+                        is_cefr
                     `)
                     .eq('user_id', userId)
                     .order('completed_at', { ascending: false })
