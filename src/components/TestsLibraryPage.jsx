@@ -10,6 +10,11 @@ import { useTestStore } from "@/store/testStore";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { QUESTION_TYPE_GROUPS, getQuestionTypeDisplayName } from "@/store/testStore/utils/questionTypeUtils";
 import { WRITING_TASK_TYPES, getWritingTaskTypeDisplayName } from "@/store/testStore/utils/writingTaskTypeUtils";
+import {
+  CEFR_WRITING_TASK_LABELS,
+  IELTS_WRITING_TASK_LABELS,
+} from "@/store/testStore/utils/writingTaskUtils";
+import { useTestListStore } from "@/store/testStore/testListStore";
 import CardLocked from "./cards/CardLocked";
 import CardOpen from "./cards/CardOpen";
 import { motion } from "framer-motion";
@@ -56,6 +61,7 @@ const TestsLibraryPage = ({
   const [tempSelectedPartLabels, setTempSelectedPartLabels] = useState([]); // Temporary part labels in popover
   const [tempSelectedWritingTaskLabels, setTempSelectedWritingTaskLabels] = useState([]); // Temporary writing task labels in popover
   const [tempSortOrder, setTempSortOrder] = useState("oldest"); // Temporary sort state
+  const testPrograms = useTestListStore((s) => s.testProgram);
   const [displayedItems, setDisplayedItems] = useState(12); // Initial items to display
   const itemsPerLoad = 12; // Items to load per scroll
   const scrollContainerRef = useRef(null);
@@ -454,13 +460,16 @@ const TestsLibraryPage = ({
     });
   }, [allTests, testType]);
 
-  // Unique writing task labels: Task 1, Task 2, Both (for writing only)
-  const WRITING_TASK_LABELS = ["Task 1", "Task 2", "Both"];
+  // Writing task labels: IELTS (Task 1 / Task 2 / Both) or CEFR (All / Task 1.1 / …)
+  const writingTaskLabelOrder =
+    testProgram === "cefr" ? CEFR_WRITING_TASK_LABELS : IELTS_WRITING_TASK_LABELS;
   const availableWritingTaskLabels = useMemo(() => {
     if (testType !== "writing" || !Array.isArray(allTests)) return [];
     const labels = allTests.map((t) => t.taskLabel).filter(Boolean);
-    return [...new Set(labels)].sort((a, b) => WRITING_TASK_LABELS.indexOf(a) - WRITING_TASK_LABELS.indexOf(b));
-  }, [allTests, testType]);
+    return [...new Set(labels)].sort(
+      (a, b) => writingTaskLabelOrder.indexOf(a) - writingTaskLabelOrder.indexOf(b)
+    );
+  }, [allTests, testType, writingTaskLabelOrder]);
 
   const togglePartLabelTemp = (label) => {
     setTempSelectedPartLabels((prev) =>

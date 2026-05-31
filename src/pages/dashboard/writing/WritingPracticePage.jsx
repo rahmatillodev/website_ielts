@@ -34,6 +34,12 @@ import { LuWifi, LuWifiHigh, LuWifiLow, LuWifiOff } from 'react-icons/lu';
 import { saveSectionData, loadSectionData, clearAllMockTestData } from "@/store/LocalStorage/mockTestStorage";
 import { mergeSection, buildWritingQuestionsIndex, createDebouncedMerge } from "@/lib/mockTestIndexedArchive";
 import { convertDurationToSeconds } from "@/utils/testDuration";
+import { isCefrTest } from "@/lib/testScoring";
+import {
+  getDefaultTaskName,
+  getMinWordCount,
+  sortWritingTasks,
+} from "@/store/testStore/utils/writingTaskUtils";
 import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRenderer";
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
 import { PenSquare } from "lucide-react";
@@ -326,7 +332,8 @@ const WritingPracticePageContent = () => {
         if (tasks.length > 0) {
           // Find first task with an answer, or default to Task 1 when both exist
           const taskWithAnswer = tasks.find(t => result.answers[t.task_name]);
-          const defaultTask = tasks.find((t) => t.task_name === "Task 1") || tasks[0];
+          const defaultTaskName = getDefaultTaskName(tasks, isCefrTest(writing));
+          const defaultTask = tasks.find((t) => t.task_name === defaultTaskName) || tasks[0];
           const taskToSet = taskWithAnswer ? taskWithAnswer.task_name : defaultTask.task_name;
           console.log('[WritingPracticePage] Setting currentTaskType to:', taskToSet, 'Available answers keys:', Object.keys(result.answers));
           setCurrentTaskType(taskToSet);
@@ -414,14 +421,14 @@ const WritingPracticePageContent = () => {
     if (!currentWriting?.writing_tasks?.length) return;
 
     const tasks = currentWriting.writing_tasks;
-    // Prefer Task 1 as default when both exist (tasks may be unsorted from other code paths)
-    const firstTask = tasks.find((t) => t.task_name === "Task 1") || tasks[0];
+    const isCefr = isCefrTest(currentWriting);
+    const defaultName = getDefaultTaskName(tasks, isCefr);
+    const firstTask = tasks.find((t) => t.task_name === defaultName) || tasks[0];
 
     // Check URL parameter for review mode
     const isReviewMode = searchParams.get('mode') === 'review';
     const urlPracticeMode = searchParams.get('mode') === 'practice';
 
-    // Always set currentTaskType to first task if not set (Task 1 when both exist)
     if (!currentTaskType && tasks.length > 0) {
       setCurrentTaskType(firstTask?.task_name ?? tasks[0].task_name);
     }
@@ -930,7 +937,8 @@ const WritingPracticePageContent = () => {
       currentWriting.writing_tasks.forEach(t => {
         init[t.task_name] = "";
       });
-      const firstTask = currentWriting.writing_tasks.find((t) => t.task_name === "Task 1") || currentWriting.writing_tasks[0];
+      const defaultName = getDefaultTaskName(currentWriting.writing_tasks, isCefrTest(currentWriting));
+      const firstTask = currentWriting.writing_tasks.find((t) => t.task_name === defaultName) || currentWriting.writing_tasks[0];
       setCurrentTaskType(firstTask.task_name);
     }
     setAnswers(init);
@@ -1239,11 +1247,19 @@ const WritingPracticePageContent = () => {
         }
       };
 
-      for (const task of currentWriting.writing_tasks) {
-        const taskKey = task.task_name === "Task 1" ? "task1" : "task2";
+      const sortedTasks = sortWritingTasks(
+        currentWriting.writing_tasks,
+        isCefrTest(currentWriting)
+      );
+      const pdfIsCefr = isCefrTest(currentWriting);
+      for (let index = 0; index < sortedTasks.length; index++) {
+        const task = sortedTasks[index];
+        const taskKey = `task${index + 1}`;
         const imageData = task.image_url ? await loadImage(task.image_url) : null;
 
         tasks[taskKey] = {
+          title: task.task_name,
+          subtitle: pdfIsCefr ? "CEFR Writing" : index === 0 ? "Academic/General Training" : "Essay Writing",
           question: task.content || "",
           answer: answersForPdf[task.task_name] || "",
           image: imageData,
@@ -1346,10 +1362,12 @@ const WritingPracticePageContent = () => {
   }, [addNote]);
 
   const displayWriting = currentWriting;
+  const isCefrWriting = isCefrTest(displayWriting);
 
-  // Ensure currentTaskType is set (prefer Task 1 when both exist)
+  // Ensure currentTaskType is set (first task in program order)
   const tasksForDisplay = displayWriting?.writing_tasks ?? [];
-  const defaultTaskType = tasksForDisplay.find((t) => t.task_name === "Task 1") || tasksForDisplay[0];
+  const defaultTaskName = getDefaultTaskName(tasksForDisplay, isCefrWriting);
+  const defaultTaskType = tasksForDisplay.find((t) => t.task_name === defaultTaskName) || tasksForDisplay[0];
   const effectiveTaskType = currentTaskType || defaultTaskType?.task_name;
   const currentTask = displayWriting?.writing_tasks?.find(
     (t) => t.task_name === effectiveTaskType
@@ -1490,7 +1508,7 @@ const WritingPracticePageContent = () => {
                           fontSize: `${fontSizeValue.base}px`
                         }}
                       >
-                        IELTS Writing Practice - {taskToDisplay.title}
+                        {isCefrWriting ? "CEFR" : "IELTS"} Writing Practice - {taskToDisplay.title}
                       </span>
                     </div>
 
@@ -1737,7 +1755,7 @@ const WritingPracticePageContent = () => {
                         : countWords(taskToDisplay?.sample || "")
                   }</span>
                   <span style={{ color: '#ef4444' }}>
-                    MINIMUM: {effectiveTaskType === "Task 1" ? 150 : 250} WORDS
+                    MINIMUM: {getMinWordCount(effectiveTaskType, isCefrWriting)} WORDS
                   </span>
                 </div>
               </>

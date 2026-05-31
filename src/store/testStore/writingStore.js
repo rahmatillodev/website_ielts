@@ -3,6 +3,10 @@ import supabase from "@/lib/supabase";
 import { toast } from "react-toastify";
 import { useWritingTaskTypeStore } from "./writingTaskTypeStore";
 import { useTestListStore } from "./testListStore";
+import {
+  deriveWritingTaskLabel,
+  sortWritingTasks,
+} from "./utils/writingTaskUtils";
 
 export const useWritingStore = create((set, get) => ({
   writings: [],
@@ -55,17 +59,12 @@ export const useWritingStore = create((set, get) => ({
 
       const rawWritings = Array.isArray(data) ? data : [];
 
-      // Derive taskLabel from writing_tasks: "Task 1", "Task 2", or "Both"
+      // Derive taskLabel: IELTS (Task 1 / Task 2 / Both) or CEFR (All / Task 1.1 · …)
       const writingsWithLabel = rawWritings.map((writing) => {
         const rawTasks = writing.writing_tasks;
         const tasks = Array.isArray(rawTasks) ? rawTasks : rawTasks != null ? [rawTasks] : [];
         const names = tasks.map((t) => t?.task_name).filter(Boolean);
-        const hasTask1 = names.some((n) => n === "Task 1" || String(n).toLowerCase().includes("task 1"));
-        const hasTask2 = names.some((n) => n === "Task 2" || String(n).toLowerCase().includes("task 2"));
-        let taskLabel = null;
-        if (hasTask1 && hasTask2) taskLabel = "Both";
-        else if (hasTask1) taskLabel = "Task 1";
-        else if (hasTask2) taskLabel = "Task 2";
+        const taskLabel = deriveWritingTaskLabel(writing, names);
         const { writing_tasks: _wt, ...rest } = writing;
         return { ...rest, taskLabel };
       });
@@ -133,10 +132,11 @@ export const useWritingStore = create((set, get) => ({
       //   "updated_at": "...",
       //   "is_active": true,
       //   "is_premium": false,
-      //    This can only be Task 1 or Task 2, sometimes there will be 2.      //     { "id": "task-id-1", 
+      //   "writing_tasks": IELTS: Task 1, Task 2 (or both). CEFR: Task 1.1, Task 1.2, Task 2.
+      //     { "id": "task-id-1", 
       //   "writing_tasks": [
       //       "writing_id": "writing-id-1",
-      //       "task_name": "Task 1", only Task 1, Task 2 are available
+      //       "task_name": "Task 1" | "Task 1.1" | etc.
       //       "title": "...",
       //       "task_types": , table , line_graph, bar_chart, pie_chart, map, process_diagram, formal_letter, semi_formal, informal, 
       //       "image_url": "...", only for TASK_1
@@ -169,14 +169,7 @@ export const useWritingStore = create((set, get) => ({
         data.writing_tasks = [];
       }
 
-      // Sort so Task 1 always comes before Task 2 (prevents Task 1 being "left out" when tasks[0] is used)
-      data.writing_tasks.sort((a, b) => {
-        const nameA = (a?.task_name || "").toLowerCase();
-        const nameB = (b?.task_name || "").toLowerCase();
-        if (nameA.includes("task 1") && nameB.includes("task 2")) return -1;
-        if (nameA.includes("task 2") && nameB.includes("task 1")) return 1;
-        return (nameA || "").localeCompare(nameB || "");
-      });
+      data.writing_tasks = sortWritingTasks(data.writing_tasks, data.is_cefr === true);
 
       console.log('[useWritingStore] Successfully fetched writing:', {
         id: data.id,

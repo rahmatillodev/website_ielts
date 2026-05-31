@@ -67,9 +67,20 @@ export const generateWritingPDF = async (tasks, totalTime, settings) => {
 
   yPos += 5; // Headerdan keyingi boshlang'ich masofa
 
-  for (const taskKey of ["task1", "task2"]) {
+  const taskKeys = Object.keys(tasks)
+    .filter((k) => tasks[k])
+    .sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ""), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ""), 10) || 0;
+      return numA - numB;
+    });
+
+  for (const taskKey of taskKeys) {
     const task = tasks[taskKey];
     if (!task) continue;
+
+    const headerTitle = task.title || (taskKey === "task1" ? "Writing Task 1" : taskKey === "task2" ? "Writing Task 2" : `Writing ${taskKey}`);
+    const headerSubtitle = task.subtitle || (taskKey === "task1" ? "Academic/General Training" : taskKey === "task2" ? "Essay Writing" : "Writing Practice");
 
     // Tasklar orasida yangi sahifa tekshiruvi
     if (yPos + 40 > pageHeight - BOTTOM_MARGIN) {
@@ -87,11 +98,11 @@ export const generateWritingPDF = async (tasks, totalTime, settings) => {
     doc.setFont(undefined, "bold");
     doc.setFontSize(13);
     doc.setTextColor(255, 255, 255);
-    doc.text(taskKey === "task1" ? "Writing Task 1" : "Writing Task 2", margin + 8, yPos + 8);
+    doc.text(headerTitle, margin + 8, yPos + 8);
 
     doc.setFontSize(8);
     doc.setFont(undefined, "normal");
-    doc.text(taskKey === "task1" ? "Academic/General Training" : "Essay Writing", margin + 8, yPos + 14);
+    doc.text(headerSubtitle, margin + 8, yPos + 14);
 
     yPos += taskHeaderHeight + SECTION_GAP;
 
@@ -102,7 +113,7 @@ export const generateWritingPDF = async (tasks, totalTime, settings) => {
     doc.text("QUESTION PROMPT:", margin, yPos);
     yPos += 4;
 
-    const hasImage = taskKey === "task1" && task.image;
+    const hasImage = Boolean(task.image);
     const questionTextWidth = pageWidth - 2 * margin - (hasImage ? 65 : 10);
     const questionLines = doc.splitTextToSize(task.question || "", questionTextWidth);
     

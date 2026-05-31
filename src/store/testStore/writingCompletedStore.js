@@ -2,6 +2,7 @@ import { create } from "zustand";
 import supabase from "@/lib/supabase";
 import { toast } from "react-toastify";
 import { isCefrTest } from "@/lib/testScoring";
+import { sortWritingTasks } from "./utils/writingTaskUtils";
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
 const getUserIdFromLocalStorage = () => {
   try {
@@ -91,7 +92,7 @@ export const useWritingCompletedStore = create((set) => ({
         user_id: userId,
         writing_id: writingId,
         score: null, // Writing doesn't have automated scoring
-        total_questions: 1, // Constant as per requirements
+        total_questions: writingTasks.length,
         correct_answers: null, // Set to null as per new requirement
         time_taken: timeTakenSeconds, // Store in seconds
         completed_at: new Date().toISOString(),
@@ -117,13 +118,11 @@ export const useWritingCompletedStore = create((set) => ({
 
       const attemptId = attemptData.id;
 
-      // Map task_name to question_number (Task 1 -> 1, Task 2 -> 2) for result page ordering
+      // Map task_name to question_number for result page ordering
       const taskNameToQuestionNumber = {};
-      [...writingTasks]
-        .sort((a, b) => (a.task_name || '').localeCompare(b.task_name || ''))
-        .forEach((task, index) => {
-          taskNameToQuestionNumber[task.task_name] = index + 1;
-        });
+      sortWritingTasks(writingTasks, isCefr).forEach((task, index) => {
+        taskNameToQuestionNumber[task.task_name] = index + 1;
+      });
 
       // Insert individual answers into user_answers table
       const answersToInsert = Object.entries(answers)

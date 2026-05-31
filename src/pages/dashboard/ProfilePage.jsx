@@ -17,6 +17,15 @@ import { motion } from "framer-motion";
 import { useFeedbacksStore } from "@/store/feedbacks";
 import { toast } from "react-toastify";
 
+const DEFAULT_TARGET_BAND_SCORE = "0.0";
+
+const formatTargetBandScore = (value) => {
+  if (value === "" || value == null) return DEFAULT_TARGET_BAND_SCORE;
+  const parsed = parseFloat(String(value));
+  if (Number.isNaN(parsed)) return DEFAULT_TARGET_BAND_SCORE;
+  return String(parsed);
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -84,16 +93,24 @@ const ProfilePage = () => {
   const [savingTarget, setSavingTarget] = useState(false);
   const authUser = useAuthStore((state) => state.authUser);
   const userProfile = useAuthStore((state) => state.userProfile);
-  const [targetBandScore, setTargetBandScore] = useState(userProfile?.target_band_score || 7.5);
+  const [targetBandScore, setTargetBandScore] = useState(
+    userProfile?.target_band_score ?? DEFAULT_TARGET_BAND_SCORE
+  );
   const updateUserProfile = useAuthStore((state) => state.updateUserProfile);
   const settings = useSettingsStore((state) => state.settings);
   const addFeedback = useFeedbacksStore((state) => state.addFeedback);
 
   // Get user data from store
   const fullName = userProfile?.full_name || "";
-  const email = authUser?.email || "";
+  const email = userProfile?.email || authUser?.email || "";
   const phone_number = userProfile?.phone_number || "";
   const tg_username = userProfile?.telegram_username || "";
+  const birthdayLabel = userProfile?.birthday
+    ? format(new Date(userProfile.birthday), "MMMM dd, yyyy")
+    : "";
+  const joinedAtLabel = userProfile?.joined_at
+    ? format(new Date(userProfile.joined_at), "MMMM dd, yyyy")
+    : "";
 
   // Memoize name parts and first name
   const { nameParts, firstName } = useMemo(() => {
@@ -200,26 +217,26 @@ const ProfilePage = () => {
 
   const handleTargetScoreChange = async (value) => {
     const numValue = parseFloat(value);
-    if (isNaN(numValue) || numValue < 0 || numValue > 9) {
-      toast.error('Target score must be between 0 and 9');
+    if (Number.isNaN(numValue) || numValue < 0 || numValue > 9) {
+      toast.error("Target score must be between 0 and 9");
       return;
     }
 
-    setTargetBandScore(numValue);
+    const formattedScore = formatTargetBandScore(value);
+    setTargetBandScore(formattedScore);
     setSavingTarget(true);
 
     try {
-      const result = await updateUserProfile({ target_band_score: numValue });
+      const result = await updateUserProfile({ target_band_score: formattedScore });
       if (result.success) {
-        toast.success('Target band score updated');
+        toast.success("Target band score updated");
       } else {
-        toast.error(result.error || 'Failed to update target score');
-        // Revert on error
-        setTargetBandScore(userProfile?.target_band_score || 7.5);
+        toast.error(result.error || "Failed to update target score");
+        setTargetBandScore(userProfile?.target_band_score ?? DEFAULT_TARGET_BAND_SCORE);
       }
     } catch (error) {
-      toast.error('Failed to update target score');
-      setTargetBandScore(userProfile?.target_band_score || 7.5);
+      toast.error("Failed to update target score");
+      setTargetBandScore(userProfile?.target_band_score ?? DEFAULT_TARGET_BAND_SCORE);
     } finally {
       setSavingTarget(false);
     }
@@ -437,6 +454,28 @@ const ProfilePage = () => {
               </motion.div>
               <motion.div className="space-y-2" variants={inputVariants}>
                 <Label className="text-sm font-black text-gray-400 uppercase tracking-tighter">
+                  Birthday
+                </Label>
+                <Input
+                  value={birthdayLabel}
+                  placeholder="Not set"
+                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
+                  readOnly
+                />
+              </motion.div>
+              <motion.div className="space-y-2" variants={inputVariants}>
+                <Label className="text-sm font-black text-gray-400 uppercase tracking-tighter">
+                  Member Since
+                </Label>
+                <Input
+                  value={joinedAtLabel}
+                  placeholder="—"
+                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
+                  readOnly
+                />
+              </motion.div>
+              <motion.div className="space-y-2" variants={inputVariants}>
+                <Label className="text-sm font-black text-gray-400 uppercase tracking-tighter">
                   Target Band Score
                 </Label>
                 <Input
@@ -448,7 +487,7 @@ const ProfilePage = () => {
                   value={targetBandScore}
                   onChange={(e) => setTargetBandScore(e.target.value)}
                   // onBlur={(e) => handleTargetScoreChange(e.target.value)}
-                  placeholder="7.5"
+                  placeholder={DEFAULT_TARGET_BAND_SCORE}
                   readOnly
                   className="bg-white border-gray-200 rounded-xl h-12 focus-visible:ring-blue-100"
                 />

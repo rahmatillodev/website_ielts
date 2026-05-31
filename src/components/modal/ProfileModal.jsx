@@ -12,7 +12,27 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { HiOutlineCamera } from 'react-icons/hi2';
 import { toast } from 'react-toastify';
+import { format } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
+
+const DEFAULT_TARGET_BAND_SCORE = '0.0';
+
+const toDateInputValue = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : format(date, 'yyyy-MM-dd');
+};
+
+const formatTargetBandScore = (value) => {
+  if (value === '' || value == null) return DEFAULT_TARGET_BAND_SCORE;
+  const parsed = parseFloat(String(value));
+  if (Number.isNaN(parsed)) return DEFAULT_TARGET_BAND_SCORE;
+  return String(parsed);
+};
+
+const getMaxBirthdayDate = () => format(new Date(), 'yyyy-MM-dd');
+
+const isFutureBirthday = (dateStr) => Boolean(dateStr && dateStr > getMaxBirthdayDate());
 
 const ProfileModal = ({ open, onOpenChange }) => {
   const userProfile = useAuthStore((state) => state.userProfile);
@@ -29,7 +49,8 @@ const ProfileModal = ({ open, onOpenChange }) => {
     telegram_username: userProfile?.telegram_username || '',
     phone_number: userProfile?.phone_number || '',
     avatar_image: userProfile?.avatar_image || null,
-    target_band_score: userProfile?.target_band_score || 7.5,
+    target_band_score: userProfile?.target_band_score ?? DEFAULT_TARGET_BAND_SCORE,
+    birthday: toDateInputValue(userProfile?.birthday),
   });
 
   useEffect(() => {
@@ -38,7 +59,8 @@ const ProfileModal = ({ open, onOpenChange }) => {
         full_name: userProfile.full_name || '',
         telegram_username: userProfile.telegram_username || '',
         phone_number: userProfile.phone_number || '',
-        target_band_score: userProfile.target_band_score || 7.5,
+        target_band_score: userProfile.target_band_score ?? DEFAULT_TARGET_BAND_SCORE,
+        birthday: toDateInputValue(userProfile.birthday),
       });
       setAvatarPreview(userProfile.avatar_image || null);
     }
@@ -49,12 +71,24 @@ const ProfileModal = ({ open, onOpenChange }) => {
     const { name, value } = e.target;
     if (name === 'phone_number') {
       setFormData((prev) => ({ ...prev, [name]: formatUzPhone(value) }));
-    } else if (name === 'target_band_score') {
-      const numValue = parseFloat(value);
-      if (!isNaN(numValue) && numValue >= 0 && numValue <= 9) {
-        setFormData((prev) => ({ ...prev, [name]: numValue }));
-      } else if (value === '') {
+    } else if (name === 'birthday') {
+      if (value === '') {
         setFormData((prev) => ({ ...prev, [name]: '' }));
+        return;
+      }
+      if (isFutureBirthday(value)) {
+        toast.error('Birthday cannot be in the future');
+        return;
+      }
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    } else if (name === 'target_band_score') {
+      if (value === '') {
+        setFormData((prev) => ({ ...prev, [name]: '' }));
+        return;
+      }
+      const numValue = parseFloat(value);
+      if (!Number.isNaN(numValue) && numValue >= 0 && numValue <= 9) {
+        setFormData((prev) => ({ ...prev, [name]: value }));
       }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -170,13 +204,22 @@ const ProfileModal = ({ open, onOpenChange }) => {
         return;
       }
 
+      if (isFutureBirthday(formData.birthday)) {
+        toast.error('Birthday cannot be in the future');
+        setLoading(false);
+        return;
+      }
+
       // Prepare profile data - only include phone_number if it's provided and properly formatted
       const profileData = {
         full_name: formData.full_name.trim() || null,
         telegram_username: formData.telegram_username.trim() || null,
         phone_number: phoneNumber || null,
         avatar_image: avatarUrl,
-        target_band_score: targetScore !== '' ? parseFloat(targetScore) : 7.5,
+        target_band_score: formatTargetBandScore(targetScore),
+        birthday: formData.birthday
+          ? new Date(`${formData.birthday}T12:00:00`).toISOString()
+          : null,
       };
 
       // Update user profile
@@ -275,6 +318,18 @@ const ProfileModal = ({ open, onOpenChange }) => {
           </div>
 
           <div className="space-y-2">
+            <Label className="text-sm font-semibold text-gray-500">Birthday</Label>
+            <Input
+              type="date"
+              name="birthday"
+              value={formData.birthday}
+              onChange={handleChange}
+              max={getMaxBirthdayDate()}
+              className="rounded-xl h-11"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label className="text-sm font-semibold text-gray-500">Target Band Score</Label>
             <Input
               type="number"
@@ -284,7 +339,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
               min="0"
               max="9"
               step="0.5"
-              placeholder="7.5"
+              placeholder="0.0"
               className="rounded-xl h-11"
             />
             <p className="text-xs text-gray-400">

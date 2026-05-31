@@ -112,16 +112,12 @@ export const useAuthStore = create(
           if (uploadError) throw uploadError;
 
           const { data: urlData } = supabase.storage.from('avatar-image').getPublicUrl(filePath);
-          const url = urlData?.publicUrl;
-          const currentVersion = Number(get().userProfile?.avatar_version) || 0;
-          const nextVersion = currentVersion + 1;
+          const baseUrl = urlData?.publicUrl;
+          const url = baseUrl ? `${baseUrl}?t=${Date.now()}` : null;
 
           const { error: updateError } = await supabase
             .from('users')
-            .update({
-              avatar_image: url,
-              avatar_version: nextVersion,
-            })
+            .update({ avatar_image: url })
             .eq('id', userId);
 
           if (updateError) throw updateError;
