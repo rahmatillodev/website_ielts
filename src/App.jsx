@@ -377,7 +377,7 @@
                 {/* Practice pages accessible from regular dashboard */}
                 <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
                 <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />
-                <Route path="/speaking-library" element={<SpeakingLibraryPage />} />  
+                {/* <Route path="/speaking-library" element={<SpeakingLibraryPage />} />   */}
                 <Route path="/speaking-practice/shadowing" element={<SpeakingShadowing />} />
                 <Route path="/speaking-practice/shadowing-player" element={<SpeakingShadowing />} />
                 <Route path="/speaking-practice/shadowing-player/:videoId" element={<SpeakingShadowing />} />

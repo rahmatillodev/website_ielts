@@ -9,9 +9,11 @@ const CARDS = [
   {
     id: "speaking",
     title: "Speaking",
-    description: "TTS questions and voice recording practice.",
-    to: "/speaking-library",
+    description: "Practice real conversations with AI voice assistant.",
+        to: "/speaking-library",
     icon: RiSpeakLine,
+    disabled: true,
+    comingSoon: true,
   },
   {
     id: "shadowing",
@@ -58,12 +60,17 @@ const SpeakingPage = () => {
             const Icon = card.icon;
             const content = (
               <div
-                className={`${cardShellClass} ${
-                  card.disabled
-                    ? "cursor-not-allowed opacity-80"
-                    : "cursor-pointer hover:-translate-y-1 hover:shadow-md"
-                }`}
-              >
+              className={`${cardShellClass} relative ${
+                card.disabled
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer hover:-translate-y-1 hover:shadow-md"
+              }`}
+            >
+              {card.comingSoon && (
+                <span className="absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                  Coming soon
+                </span>
+              )}
                 <span className="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center text-blue-600 bg-gray-100 border border-gray-200">
                   <Icon className="w-6 h-6 md:w-7 md:h-7" />
                 </span>

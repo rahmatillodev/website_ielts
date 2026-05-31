@@ -516,7 +516,7 @@ const DashboardPage = () => {
     () => [
       {
         label: 'Listening',
-        value: scores.listening ? scores.listening.toFixed(1) : '0.0',
+        value: scores.listening ? scores.listening : '0.0',
         icon: LuHeadphones,
         iconColor: 'text-blue-500',
         bgColor: 'bg-blue-50',
@@ -525,7 +525,7 @@ const DashboardPage = () => {
       },
       {
         label: 'Reading',
-        value: scores.reading ? scores.reading.toFixed(1) : '0.0',
+        value: scores.reading ? scores.reading : '0.0',
         icon: LuBookOpen,
         iconColor: 'text-orange-500',
         bgColor: 'bg-orange-50',
@@ -534,7 +534,7 @@ const DashboardPage = () => {
       },
       {
         label: 'Writing',
-        value: scores.writing ? scores.writing.toFixed(1) : '0.0',
+        value: scores.writing ? scores.writing : '0.0',
         icon: LuPenTool,
         iconColor: 'text-purple-500',
         bgColor: 'bg-purple-50',
