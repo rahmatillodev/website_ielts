@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useDashboardStore } from '@/store/dashboardStore';
+import { useTestStore } from '@/store/testStore';
+import {
+  formatDashboardScore,
+  parseIeltsBand,
+  resolveIsCefr,
+} from '@/lib/testScoring';
 import DashboardShimmer from '@/components/shimmer/DashboardShimmer';
 import {
   LuHeadphones,
@@ -15,6 +22,62 @@ import {
   LuTrophy,
   LuSparkles,
 } from 'react-icons/lu';
+
+/** @param {object[]} attempts @param {"ielts"|"cefr"} program */
+function filterAttemptsByProgram(attempts, program) {
+  const wantCefr = program === 'cefr';
+  return (attempts || []).filter(
+    (attempt) => resolveIsCefr({ attempt }) === wantCefr
+  );
+}
+
+/** Mirrors dashboardStore score aggregation on a program-filtered attempt list. */
+function computeMyProgressScores(attempts) {
+  const roundIELTS = (score) => {
+    if (score === null || score === undefined) return null;
+    return Math.round(score * 2) / 2;
+  };
+
+  const listeningAttempts = attempts.filter((a) => a.testType === 'listening');
+  const readingAttempts = attempts.filter((a) => a.testType === 'reading');
+  const writingAttempts = attempts.filter((a) => a.testType === 'writing');
+
+  const lastListeningAttempt = listeningAttempts[0];
+  const lastReadingAttempt = readingAttempts[0];
+  const lastWritingAttempt = writingAttempts[0];
+  const lastListening = lastListeningAttempt?.score ?? null;
+  const lastReading = lastReadingAttempt?.score ?? null;
+  const lastWriting = lastWritingAttempt?.score ?? null;
+  const listeningIsCefr = resolveIsCefr({ attempt: lastListeningAttempt });
+  const readingIsCefr = resolveIsCefr({ attempt: lastReadingAttempt });
+  const writingIsCefr = resolveIsCefr({ attempt: lastWritingAttempt });
+
+  const ieltsBands = [];
+  if (!listeningIsCefr) {
+    const band = parseIeltsBand(lastListening);
+    if (band != null) ieltsBands.push(band);
+  }
+  if (!readingIsCefr) {
+    const band = parseIeltsBand(lastReading);
+    if (band != null) ieltsBands.push(band);
+  }
+
+  const rawAverage =
+    ieltsBands.length > 0
+      ? ieltsBands.reduce((a, b) => a + b, 0) / ieltsBands.length
+      : null;
+
+  const averageScore = roundIELTS(rawAverage);
+
+  return {
+    listening: formatDashboardScore(lastListening, listeningIsCefr),
+    reading: formatDashboardScore(lastReading, readingIsCefr),
+    writing: formatDashboardScore(lastWriting, writingIsCefr),
+    average: averageScore != null ? averageScore.toFixed(1) : null,
+    listeningIsCefr,
+    readingIsCefr,
+  };
+}
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -65,19 +128,19 @@ const CircularProgress = ({ progress, size = 80, strokeWidth = 8 }) => {
 // Custom hook to fetch and share user attempts data
 const useUserAttempts = () => {
   const authUser = useAuthStore((state) => state.authUser);
+  const location = useLocation();
   const attempts = useDashboardStore((state) => state.attempts);
-  const scores = useDashboardStore((state) => state.scores);
   const loading = useDashboardStore((state) => state.loading);
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
 
-  // Trigger fetch only once on mount (with smart caching in store)
+  // Always refetch when the dashboard route is shown so My Progress stays current
   useEffect(() => {
-    if (authUser?.id) {
-      fetchDashboardData(authUser.id, false); // false = don't force refresh, use cache if valid
+    if (authUser?.id && location.pathname === '/dashboard') {
+      fetchDashboardData(authUser.id, true);
     }
-  }, [authUser?.id, fetchDashboardData]);
+  }, [authUser?.id, fetchDashboardData, location.pathname]);
 
-  return { attempts, loading, scores };
+  return { attempts, loading };
 };
 
 // Helper function to normalize date to YYYY-MM-DD string (timezone-safe)
@@ -445,7 +508,18 @@ const DashboardPage = () => {
   const firstName = displayName.split(' ')[0] || displayName;
 
   // Use shared hook for attempts data
-  const { attempts, scores, loading } = useUserAttempts();
+  const { attempts, loading } = useUserAttempts();
+  const testProgram = useTestStore((state) => state.testProgram);
+
+  const myProgressScores = useMemo(() => {
+    const programAttempts = filterAttemptsByProgram(attempts, testProgram);
+    return computeMyProgressScores(programAttempts);
+  }, [attempts, testProgram]);
+
+  const averageScoreDisplay = useMemo(() => {
+    if (myProgressScores.average == null) return '—';
+    return `Band ${myProgressScores.average}`;
+  }, [myProgressScores.average]);
 
   // Calculate statistics
   const testsCompleted = attempts.length;
@@ -511,12 +585,12 @@ const DashboardPage = () => {
   const dailyTarget = 3; // Target tests per day
   const dailyProgress = Math.min((todayTestsCount / dailyTarget) * 100, 100);
 
-  // Create scores array with actual data
+  // My Progress: latest scores per skill for the active IELTS / CEFR tab only
   const SCORES = useMemo(
     () => [
       {
         label: 'Listening',
-        value: scores.listening ?? '—',
+        value: myProgressScores.listening ?? '—',
         icon: LuHeadphones,
         iconColor: 'text-blue-500',
         bgColor: 'bg-blue-50',
@@ -525,7 +599,7 @@ const DashboardPage = () => {
       },
       {
         label: 'Reading',
-        value: scores.reading ?? '—',
+        value: myProgressScores.reading ?? '—',
         icon: LuBookOpen,
         iconColor: 'text-orange-500',
         bgColor: 'bg-orange-50',
@@ -534,7 +608,7 @@ const DashboardPage = () => {
       },
       {
         label: 'Writing',
-        value: scores.writing ?? '—',
+        value: myProgressScores.writing ?? '—',
         icon: LuPenTool,
         iconColor: 'text-purple-500',
         bgColor: 'bg-purple-50',
@@ -551,7 +625,7 @@ const DashboardPage = () => {
         isActive: false,
       },
     ],
-    [scores]
+    [myProgressScores]
   );
 
   // Show shimmer ONLY when we have no cached data AND are loading
@@ -651,7 +725,7 @@ const DashboardPage = () => {
                   Average Score
                 </p>
                 <p className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-semibold">
-                  {scores.average != null ? `Band ${scores.average}` : '—'}
+                  {averageScoreDisplay}
                 </p>
               </div>
             </motion.div>

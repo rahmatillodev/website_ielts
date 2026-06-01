@@ -21,13 +21,9 @@ import { RiSpeakLine } from "react-icons/ri";
 import { IoDocumentAttachOutline } from "react-icons/io5";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import { useSmallScreen } from "@/hooks/useSmallScreen";
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
 import LogoDesign from "../LogoDesign";
 import { MdAutoStories } from "react-icons/md";
 import UpgradeModal from "../modal/UpgradeModal";
-import { useTestStore } from "@/store/testStore";
-import { useWritingStore } from "@/store/testStore/writingStore";
 
 const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapsed }) => {
   const content = (
@@ -63,94 +59,6 @@ const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapse
   return content;
 };
 
-const TEST_PROGRAMS = [
-  { id: "ielts", label: "IELTS", short: "IL", hint: "Band 0.0–9.0", activeClass: "text-[#4A90E2]", pillRing: "ring-[#4A90E2]/25", pillShadow: "shadow-[0_2px_10px_rgba(74,144,226,0.18)]" },
-  { id: "cefr", label: "CEFR", short: "CE", hint: "A1–C2", activeClass: "text-emerald-600", pillRing: "ring-emerald-500/25", pillShadow: "shadow-[0_2px_10px_rgba(16,185,129,0.18)]" },
-];
-
-const TestProgramSwitcher = ({ value, onChange, isCollapsed, loading }) => (
-  <div className={cn("shrink-0", isCollapsed ? "px-2 pb-2" : "px-4 pb-3")}>
-   
-    <div
-      role="tablist"
-      aria-label="Test program"
-      className={cn(
-        "relative flex gap-0.5 rounded-2xl border border-gray-200/90 p-1",
-        "bg-linear-to-b from-[#F8FAFC] to-[#EEF2F7]",
-        "shadow-[inset_0_1px_2px_rgba(15,23,42,0.05)]",
-        isCollapsed ? "flex-col" : "flex-row",
-        loading && "pointer-events-none opacity-60"
-      )}
-    >
-      {TEST_PROGRAMS.map((program) => {
-        const isActive = value === program.id;
-        const button = (
-          <button
-            key={program.id}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            aria-label={`${program.label} tests`}
-            onClick={() => onChange(program.id)}
-            className={cn(
-              "relative z-10 flex flex-1 flex-col items-center justify-center rounded-xl transition-colors duration-200 outline-none",
-              "focus-visible:ring-2 focus-visible:ring-[#4A90E2]/40 focus-visible:ring-offset-1",
-              isCollapsed ? "min-h-[36px] py-2" : "min-h-[46px] py-2.5 px-2",
-              isActive ? program.activeClass : "text-[#94A3B8] hover:text-[#475569]"
-            )}
-          >
-            {isActive && (
-              <motion.div
-                layoutId="sidebar-test-program-pill"
-                className={cn(
-                  "absolute inset-0 rounded-xl bg-white ring-1",
-                  program.pillRing,
-                  program.pillShadow
-                )}
-                transition={{ type: "spring", stiffness: 400, damping: 34 }}
-              />
-            )}
-            <span
-              className={cn(
-                "relative z-10 flex flex-col items-center leading-tight",
-                isCollapsed ? "text-[10px] font-black uppercase tracking-wider" : "gap-0.5"
-              )}
-            >
-              <span className={cn(!isCollapsed && "text-xs 2xl:text-[13px] font-bold tracking-wide")}>
-                {isCollapsed ? program.short : program.label}
-              </span>
-              {!isCollapsed && (
-                <span
-                  className={cn(
-                    "text-[9px] 2xl:text-[10px] font-semibold",
-                    isActive ? "opacity-80" : "text-[#CBD5E1]"
-                  )}
-                >
-                  {program.hint}
-                </span>
-              )}
-            </span>
-          </button>
-        );
-
-        if (isCollapsed) {
-          return (
-            <Tooltip key={program.id}>
-              <TooltipTrigger asChild>{button}</TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">
-                {program.label}
-                <span className="ml-1 text-muted-foreground">· {program.hint}</span>
-              </TooltipContent>
-            </Tooltip>
-          );
-        }
-
-        return button;
-      })}
-    </div>
-  </div>
-);
-
 const DashboardSidebar = ({ onNavigate }) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -159,20 +67,6 @@ const DashboardSidebar = ({ onNavigate }) => {
   const signOut = useAuthStore((state) => state.signOut);
   const isMockTestClient = useMockTestClientStore((state) => state.isMockTestClient);
   const isSmallScreen = useSmallScreen();
-  const testProgram = useTestStore((state) => state.testProgram);
-  const setTestProgram = useTestStore((state) => state.setTestProgram);
-  const fetchTests = useTestStore((state) => state.fetchTests);
-  const testsLoading = useTestStore((state) => state.loading);
-  const fetchWritings = useWritingStore((state) => state.fetchWritings);
-  const writingsLoading = useWritingStore((state) => state.loadingWritings);
-  const programSwitcherLoading = testsLoading || writingsLoading;
-
-  const handleTestProgramChange = (value) => {
-    if (!value || value === testProgram) return;
-    setTestProgram(value);
-    fetchTests(true);
-    fetchWritings(true);
-  };
 
   // Load collapsed state from localStorage, default to false
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -258,8 +152,6 @@ const DashboardSidebar = ({ onNavigate }) => {
         </>
       </div>
 
-     
-
       {/* Navigatsiya - paddinglar qisqardi */}
       <nav className="flex-1 overflow-y-auto py-1 2xl:py-2 scrollbar-hide space-y-0.5 2xl:space-y-1">
         <SidebarItem
@@ -276,12 +168,6 @@ const DashboardSidebar = ({ onNavigate }) => {
             Practice
           </div>
         )}
-        <TestProgramSwitcher
-          value={testProgram}
-          onChange={handleTestProgramChange}
-          isCollapsed={effectiveIsCollapsed}
-          loading={programSwitcherLoading}
-        />
         <SidebarItem
           icon={LuBookOpen}
           label="Reading"

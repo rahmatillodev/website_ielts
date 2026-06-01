@@ -43,8 +43,8 @@ export const useDashboardStore = create((set, get) => ({
       };
     }
 
-    // Prevent concurrent fetches
-    if (state.loading) {
+    // Prevent concurrent fetches unless a forced refresh is requested (e.g. after test submit)
+    if (state.loading && !forceRefresh) {
       return {
         attempts: state.attempts,
         completions: state.completions,
@@ -217,6 +217,16 @@ export const useDashboardStore = create((set, get) => ({
         scores: { listening: null, reading: null, average: null },
       };
     }
+  },
+
+  /** Force-refresh dashboard attempts (call after completing a test). */
+  refreshDashboardData: (userId) => {
+    if (!userId) return Promise.resolve();
+    return get().fetchDashboardData(userId, true);
+  },
+
+  invalidateDashboardCache: () => {
+    set({ lastFetched: null });
   },
 
   // Get completion status for a specific test

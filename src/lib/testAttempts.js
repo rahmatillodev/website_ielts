@@ -6,6 +6,7 @@
 import supabase from './supabase';
 import { useTestDetailStore } from '@/store/testStore/testDetailStore';
 import { useAuthStore } from '@/store/authStore';
+import { useDashboardStore } from '@/store/dashboardStore';
 import {
   CEFR_TOTAL_QUESTIONS,
   calculateTestScoreValue,
@@ -142,6 +143,8 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
         throw answersError;
       }
     }
+
+    void useDashboardStore.getState().refreshDashboardData(authenticatedUserId);
 
     return {
       success: true,

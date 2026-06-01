@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useAnalyticsStore, calculateAnalytics, formatDateToDayMonth, getDateKey } from '@/store/analyticsStore';
+import { parseIeltsBand } from '@/lib/testScoring';
 import PerformanceOverviewCards from '@/components/analytics/PerformanceOverviewCards';
 import ScoreProgressionChart from '@/components/analytics/ScoreProgressionChart';
 import InsightsSection from '@/components/analytics/InsightsSection';
@@ -80,26 +81,30 @@ const AnalyticsPage = () => {
 
     // Group reading attempts by day and get best score per day
     const readingByDay = {};
-    filteredReadingAttempts.forEach(attempt => {
+    filteredReadingAttempts.forEach((attempt) => {
       if (!attempt.completed_at) return;
+      const band = parseIeltsBand(attempt.score);
+      if (band == null) return;
       const dateKey = getDateKey(attempt.completed_at);
-      if (!readingByDay[dateKey] || attempt.score > readingByDay[dateKey].score) {
+      if (!readingByDay[dateKey] || band > readingByDay[dateKey].score) {
         readingByDay[dateKey] = {
           date: attempt.completed_at,
-          score: attempt.score,
+          score: band,
         };
       }
     });
 
     // Group listening attempts by day and get best score per day
     const listeningByDay = {};
-    filteredListeningAttempts.forEach(attempt => {
+    filteredListeningAttempts.forEach((attempt) => {
       if (!attempt.completed_at) return;
+      const band = parseIeltsBand(attempt.score);
+      if (band == null) return;
       const dateKey = getDateKey(attempt.completed_at);
-      if (!listeningByDay[dateKey] || attempt.score > listeningByDay[dateKey].score) {
+      if (!listeningByDay[dateKey] || band > listeningByDay[dateKey].score) {
         listeningByDay[dateKey] = {
           date: attempt.completed_at,
-          score: attempt.score,
+          score: band,
         };
       }
     });

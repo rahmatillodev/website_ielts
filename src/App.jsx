@@ -34,7 +34,7 @@
   import SpeakingResultPage from "./pages/dashboard/speaking/SpeakingResultPage";
   import SpeakingTipsPage from "./pages/dashboard/speaking/SpeakingTips";
   import ListeningResultPage from "./pages/dashboard/listening/ListeningResultPage";
-  import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
+  import AnalyticsRouter from "./pages/dashboard/AnalyticsRouter";
   import OwnWritingPage from "./pages/dashboard/writing/OwnWritingPage";
   import MockTestsPage from "./pages/dashboard/mock/MockTestsPage";
   import MockTypeSelectionPage from "./pages/dashboard/mock/MockTypeSelectionPage";
@@ -371,7 +371,7 @@
                 <Route path="/writing" element={<WritingPage />} />
                 <Route path="/speaking" element={<SpeakingPage />} />
                 <Route path="/shadowing-library" element={<ShadowingLibrary />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/analytics" element={<AnalyticsRouter />} />
                 <Route path="/own-writing" element={<OwnWritingPage />} />
                 <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
                 {/* Practice pages accessible from regular dashboard */}

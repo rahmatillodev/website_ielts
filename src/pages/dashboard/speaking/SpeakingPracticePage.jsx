@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useSpeakingDetailStore } from "@/store/testStore";
 
 const COLOR = "#2D9CDB";
@@ -115,6 +115,7 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
 export default function SpeakingPracticePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const getSpeakingTest = useSpeakingDetailStore((state) => state.get);
 
   const [sections, setSections] = useState([]);
@@ -124,7 +125,9 @@ export default function SpeakingPracticePage() {
   const [status, setStatus] = useState("listen");
   const [secondsLeft, setSecondsLeft] = useState(30);
   const [modal, setModal] = useState(null);
-  const [viewMode, setViewMode] = useState("sample");
+  const [viewMode, setViewMode] = useState(() =>
+    searchParams.get("mode") === "practice" ? "practice" : "sample"
+  );
   const [sampleQuestionFlatIndex, setSampleQuestionFlatIndex] = useState(0);
 
   const streamRef = useRef(null);
@@ -138,6 +141,19 @@ export default function SpeakingPracticePage() {
   const canvasRef = useRef(null);
   const recordingsRef = useRef([]);
   const goNextRef = useRef(null);
+
+  useEffect(() => {
+    const mode = searchParams.get("mode");
+    if (mode === "practice") {
+      setViewMode("practice");
+      setQStepIdx(0);
+      setStatus("listen");
+      recordingsRef.current = [];
+    } else if (!mode || mode === "sample") {
+      setViewMode("sample");
+    }
+  }, [searchParams]);
+
   const steps = buildSteps(sections);
   const questionSteps = steps.filter((s) => s.type === "question");
 
@@ -305,7 +321,7 @@ export default function SpeakingPracticePage() {
   }, [startRecordingPhase]);
 
   useEffect(() => {
-    if (viewMode !== "practice") return;
+    if (viewMode !== "practice" || isLoading) return;
     setStatus("listen");
     if (!currentQuestion) return;
     const speak = () => speakAndRecord(currentQuestion.question);
@@ -315,7 +331,7 @@ export default function SpeakingPracticePage() {
       speak();
     }
     return () => { window.speechSynthesis.cancel(); stopAll(); };
-  }, [qStepIdx, viewMode]);
+  }, [qStepIdx, viewMode, isLoading, currentQuestion?.id, speakAndRecord]);
 
   useEffect(() => {
     if (viewMode !== "practice") {
@@ -397,7 +413,7 @@ export default function SpeakingPracticePage() {
           </div>
           <button
             type="button"
-            onClick={() => setViewMode("practice")}
+            onClick={() => navigate(`/equipment-check/${id}`)}
             style={{
               background: COLOR, color: "#fff", border: "none",
               borderRadius: 8, padding: "7px 14px",

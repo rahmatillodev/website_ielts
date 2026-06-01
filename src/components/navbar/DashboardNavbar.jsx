@@ -17,13 +17,29 @@ import LogoutModal from '../modal/LogoutModal';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import LogoDesign from '../LogoDesign';
-
+import TestProgramSwitcher from './TestProgramSwitcher';
+import { useTestStore } from '@/store/testStore';
+import { useWritingStore } from '@/store/testStore/writingStore';
 
 const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
   const navigate = useNavigate();
   const authUser = useAuthStore((state) => state.authUser);
   const userProfile = useAuthStore((state) => state.userProfile);
   const signOut = useAuthStore((state) => state.signOut);
+  const testProgram = useTestStore((state) => state.testProgram);
+  const setTestProgram = useTestStore((state) => state.setTestProgram);
+  const fetchTests = useTestStore((state) => state.fetchTests);
+  const testsLoading = useTestStore((state) => state.loading);
+  const fetchWritings = useWritingStore((state) => state.fetchWritings);
+  const writingsLoading = useWritingStore((state) => state.loadingWritings);
+  const programSwitcherLoading = testsLoading || writingsLoading;
+
+  const handleTestProgramChange = (value) => {
+    if (!value || value === testProgram) return;
+    setTestProgram(value);
+    fetchTests(true);
+    fetchWritings(true);
+  };
 
   const displayName =
     userProfile?.full_name ||
@@ -74,20 +90,28 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
                 </span>
               </div>
         )}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {onMenuClick && (
             <button
               type="button"
               onClick={onMenuClick}
-              className="md:hidden inline-flex items-center justify-center size-10 rounded-xl border border-gray-100 text-gray-600 hover:bg-gray-50"
+              className="md:hidden inline-flex shrink-0 items-center justify-center size-10 rounded-xl border border-gray-100 text-gray-600 hover:bg-gray-50"
               aria-label="Open sidebar"
             >
               <LuMenu className="w-5 h-5" />
             </button>
           )}
+          {flow !== 'mockTest' && (
+            <TestProgramSwitcher
+              value={testProgram}
+              onChange={handleTestProgramChange}
+              loading={programSwitcherLoading}
+            />
+          )}
         </div>
 
         {/* ===== RIGHT: USER MENU ===== */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-3 cursor-pointer">
@@ -156,6 +180,7 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </nav>
   );

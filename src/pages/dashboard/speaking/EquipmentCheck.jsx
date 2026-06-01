@@ -384,7 +384,7 @@ const EquipmentCheck = () => {
       navigate("/speaking-practice/shadowing");
       return;
     }
-    navigate(`/speaking-practice/${id}/session`);
+    navigate(`/speaking-practice/${id}/session?mode=practice`, { replace: true });
   };
 
   const handleCancel = async () => {

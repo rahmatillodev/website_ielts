@@ -10,6 +10,21 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+/** IELTS band chart values only; CEFR level strings (e.g. "B2") return null. */
+const toIeltsChartValue = (score) => {
+  if (score == null || score === '') return null;
+  const n = typeof score === 'number' ? score : parseFloat(score);
+  if (!Number.isFinite(n)) return null;
+  return Number(n.toFixed(1));
+};
+
+const formatTooltipBand = (value) => {
+  if (value == null) return 'N/A';
+  const n = typeof value === 'number' ? value : parseFloat(value);
+  if (!Number.isFinite(n)) return 'N/A';
+  return n.toFixed(1);
+};
+
 const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
   if (!scoreTrends || scoreTrends.length === 0) {
     return (
@@ -24,8 +39,8 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
     test: trend.dateLabel || `T${trend.testNumber}`, // Display date in "day.month" format
     fullTestName: trend.dateLabel || `Test ${trend.testNumber}`, // Use dateLabel for tooltip
     date: trend.date || null, // Store full date for reference
-    Reading: trend.reading !== null ? Number(trend.reading.toFixed(1)) : null,
-    Listening: trend.listening !== null ? Number(trend.listening.toFixed(1)) : null,
+    Reading: toIeltsChartValue(trend.reading),
+    Listening: toIeltsChartValue(trend.listening),
   }));
 
   // Dinamik kenglikni hisoblash: har bir test uchun kamida 60px joy ajratamiz
@@ -40,7 +55,7 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
             <div key={index} className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></div>
               <span className="text-sm font-semibold text-gray-700">
-                {entry.name}: {entry.value !== null ? entry.value.toFixed(1) : 'N/A'}
+                {entry.name}: {formatTooltipBand(entry.value)}
               </span>
             </div>
           ))}

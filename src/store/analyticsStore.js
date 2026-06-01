@@ -7,6 +7,14 @@
 
 import { create } from 'zustand';
 import supabase from '@/lib/supabase';
+import { parseIeltsBand, resolveIsCefr } from '@/lib/testScoring';
+
+/** IELTS analytics only — exclude CEFR attempts (handled by cefrAnalyticsStore). */
+function filterIeltsAttempts(attempts) {
+  return (attempts || []).filter(
+    (attempt) => !resolveIsCefr({ attempt, test: attempt?.test })
+  );
+}
 
 // TEMPORARY: Mock data flag for testing (set to false to disable)
 // TODO: Set USE_MOCK_DATA = false before production deployment
@@ -179,7 +187,9 @@ export const useAnalyticsStore = create((set, get) => ({
 
       if (attemptsError) throw attemptsError;
 
-      const attempts = Array.isArray(attemptsData) ? attemptsData : [];
+      const attempts = filterIeltsAttempts(
+        Array.isArray(attemptsData) ? attemptsData : []
+      );
 
       // Fetch user answers with question types for all attempts
       const attemptIds = attempts.map(a => a.id).filter(Boolean);
@@ -292,33 +302,45 @@ export function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5)
     };
   }
 
-  // Separate reading and listening attempts
-  const getAttemptType = (attempt) => (
-    attempt?.type ||
-    attempt?.test?.type ||
-    (attempt?.writing_id ? 'writing' : null)
-  );
+  const getAttemptType = (attempt) => {
+    const testMeta = Array.isArray(attempt?.test) ? attempt.test[0] : attempt?.test;
+    return (
+      attempt?.type ||
+      testMeta?.type ||
+      (attempt?.writing_id ? 'writing' : null)
+    );
+  };
 
   const readingAttempts = attempts.filter((a) => getAttemptType(a) === 'reading');
   const listeningAttempts = attempts.filter((a) => getAttemptType(a) === 'listening');
 
-  // Calculate averages (rounded to nearest 0.5 for valid IELTS scores)
-  const readingAvgRaw = readingAttempts.length > 0
-    ? readingAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / readingAttempts.length
-    : null;
+  const readingBands = readingAttempts
+    .map((a) => parseIeltsBand(a.score))
+    .filter((band) => band != null);
+  const listeningBands = listeningAttempts
+    .map((a) => parseIeltsBand(a.score))
+    .filter((band) => band != null);
+
+  const readingAvgRaw =
+    readingBands.length > 0
+      ? readingBands.reduce((sum, band) => sum + band, 0) / readingBands.length
+      : null;
   const readingAvg = roundToHalf(readingAvgRaw);
 
-  const listeningAvgRaw = listeningAttempts.length > 0
-    ? listeningAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / listeningAttempts.length
-    : null;
+  const listeningAvgRaw =
+    listeningBands.length > 0
+      ? listeningBands.reduce((sum, band) => sum + band, 0) / listeningBands.length
+      : null;
   const listeningAvg = roundToHalf(listeningAvgRaw);
 
-  // Calculate overall band (average of latest reading and listening, rounded to nearest 0.5)
-  const latestReading = readingAttempts[0]?.score || null;
-  const latestListening = listeningAttempts[0]?.score || null;
-  const overallBandRaw = (latestReading !== null && latestListening !== null)
-    ? (latestReading + latestListening) / 2
-    : (latestReading !== null ? latestReading : latestListening);
+  const latestReading = parseIeltsBand(readingAttempts[0]?.score);
+  const latestListening = parseIeltsBand(listeningAttempts[0]?.score);
+  const overallBandRaw =
+    latestReading != null && latestListening != null
+      ? (latestReading + latestListening) / 2
+      : latestReading != null
+        ? latestReading
+        : latestListening;
   const overallBand = roundToHalf(overallBandRaw);
 
   // Calculate total practice time (time_taken is in seconds)
@@ -398,26 +420,30 @@ export function getDateKey(dateString) {
 function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
   // Group reading attempts by day and get best score per day
   const readingByDay = {};
-  readingAttempts.forEach(attempt => {
+  readingAttempts.forEach((attempt) => {
     if (!attempt.completed_at) return;
+    const band = parseIeltsBand(attempt.score);
+    if (band == null) return;
     const dateKey = getDateKey(attempt.completed_at);
-    if (!readingByDay[dateKey] || attempt.score > readingByDay[dateKey].score) {
+    if (!readingByDay[dateKey] || band > readingByDay[dateKey].score) {
       readingByDay[dateKey] = {
         date: attempt.completed_at,
-        score: attempt.score,
+        score: band,
       };
     }
   });
 
   // Group listening attempts by day and get best score per day
   const listeningByDay = {};
-  listeningAttempts.forEach(attempt => {
+  listeningAttempts.forEach((attempt) => {
     if (!attempt.completed_at) return;
+    const band = parseIeltsBand(attempt.score);
+    if (band == null) return;
     const dateKey = getDateKey(attempt.completed_at);
-    if (!listeningByDay[dateKey] || attempt.score > listeningByDay[dateKey].score) {
+    if (!listeningByDay[dateKey] || band > listeningByDay[dateKey].score) {
       listeningByDay[dateKey] = {
         date: attempt.completed_at,
-        score: attempt.score,
+        score: band,
       };
     }
   });

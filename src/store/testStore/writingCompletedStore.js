@@ -2,6 +2,7 @@ import { create } from "zustand";
 import supabase from "@/lib/supabase";
 import { toast } from "react-toastify";
 import { isCefrTest } from "@/lib/testScoring";
+import { useDashboardStore } from "@/store/dashboardStore";
 import { sortWritingTasks } from "./utils/writingTaskUtils";
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
 const getUserIdFromLocalStorage = () => {
@@ -150,6 +151,7 @@ export const useWritingCompletedStore = create((set) => ({
       }
 
       set({ loading: false, error: null });
+      void useDashboardStore.getState().refreshDashboardData(userId);
       return {
         success: true,
         attemptId: attemptId,

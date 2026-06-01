@@ -7,14 +7,11 @@ import {
   FaDownload,
   FaFileAlt,
   FaBars,
-  FaCheck,
 } from "react-icons/fa";
 import { LuChevronsLeftRight } from "react-icons/lu";
 import { PenSquare, X } from "lucide-react";
 import { AppearanceProvider, useAppearance } from "@/contexts/AppearanceContext";
 import AppearanceSettingsModal from "@/components/modal/AppearanceSettingsModal";
-import WritingFinishModal from "@/components/modal/WritingFinishModal";
-import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
 import { toast } from "react-toastify";
 import { useSettingsStore } from "@/store/systemStore";
@@ -29,13 +26,9 @@ const OwnWritingPageContent = () => {
   const [activeTask, setActiveTask] = useState("task1");
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [leftWidth, setLeftWidth] = useState(50);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isFinishOpen, setIsFinishOpen] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isConfirmExitOpen, setIsConfirmExitOpen] = useState(false);
 
   const containerRef = useRef(null);
@@ -257,8 +250,7 @@ const OwnWritingPageContent = () => {
           <span className="font-bold text-lg">{formatTime(elapsedTime)}</span>
           <button
             onClick={() => setIsRunning((p) => !p)}
-            disabled={isSubmitted}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-blue-500 text-white rounded"
           >
             {isRunning ? "Pause" : "Start"}
           </button>
@@ -390,7 +382,6 @@ const OwnWritingPageContent = () => {
             className="flex-1 p-5 resize-none outline-none bg-transparent focus:ring-0 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Write your answer here..."
             value={currentTask.answer}
-            disabled={isSubmitted}
             style={{ backgroundColor: themeColors.background }}
             onChange={(e) =>
               setTasks((p) => ({
@@ -401,7 +392,7 @@ const OwnWritingPageContent = () => {
                 },
               }))
             }
-            onFocus={() => !isRunning && !isSubmitted && setIsRunning(true)}
+            onFocus={() => !isRunning && setIsRunning(true)}
           />
 
           <div
@@ -442,55 +433,12 @@ const OwnWritingPageContent = () => {
             </button>
           ))}
         </div>
-
-        <button
-          onClick={() => setIsFinishOpen(true)}
-          disabled={isSubmitted}
-          className="absolute right-2 w-24 rounded-sm flex items-center justify-center text-sm bg-black text-white gap-2 p-2" >
-        
-          <FaCheck className="w-4 h-4"  /> Save
-        </button>
       </footer>
 
       {/* ================= MODALS ================= */}
       <AppearanceSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-      />
-
-      <WritingFinishModal
-        isOpen={isFinishOpen}
-        onClose={() => setIsFinishOpen(false)}
-        onConfirm={async () => {
-          // Close modal first
-          setIsFinishOpen(false);
-          
-          // Stop timer and disable button
-          setIsRunning(false);
-          setIsSubmitted(true);
-
-          try {
-            // Check if at least one task has content
-            const hasTask1 = tasks.task1.answer && tasks.task1.answer.trim();
-            const hasTask2 = tasks.task2.answer && tasks.task2.answer.trim();
-            
-            if (!hasTask1 && !hasTask2) {
-              toast.error('Please write at least one word in either Task 1 or Task 2 before generating PDF.');
-              setIsSubmitted(false);
-              setIsRunning(true);
-              return;
-            }
-
-            // Show success modal which will allow PDF download
-            setIsSuccessModalOpen(true);
-          } catch (error) {
-            console.error('Error preparing PDF:', error);
-            setIsSubmitted(false);
-            setIsRunning(true);
-            toast.error('An error occurred while preparing your writing');
-          }
-        }}
-        loading={false}
       />
 
       <ConfirmModal
