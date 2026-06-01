@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import supabase from '@/lib/supabase';
-import { organizeMockTestSectionResults } from '@/utils/mockTestResults';
+import { loadMockTestSectionResults } from '@/utils/mockTestResults';
 import MockTestClientResults from './MockTestClientResults';
 import { MdArrowBack } from 'react-icons/md';
 import { useMockTestClientStore } from '@/store/mockTestClientStore';
@@ -75,60 +75,11 @@ const MockTestClientResultsPage = () => {
           return;
         }
 
-        // Fetch attempts for this specific mock test
-        // mock_id references mock_test.id, not mock_test_clients.id
-        const { data: attempts, error: attemptsError } = await supabase
-          .from('user_attempts')
-          .select(`
-            id,
-            test_id,
-            writing_id,
-            score,
-            feedback,
-            type,
-            correct_answers,
-            total_questions,
-            time_taken,
-            completed_at
-          `)
-          .eq('user_id', clientData.user_id)
-          .eq('mock_id', clientData.mock_test_id)
-          .order('completed_at', { ascending: false });
-
-        if (attemptsError) {
-          console.error('Error fetching attempts:', attemptsError);
-        }
-
-        let resultsData = {
-          listening: null,
-          reading: null,
-          writing: null,
-          speaking: null,
-        };
-
-        if (attempts?.length) {
-          const testIds = attempts.filter((a) => a.test_id).map((a) => a.test_id);
-          const testTypeMap = {};
-
-          if (testIds.length > 0) {
-            const { data: testsData } = await supabase
-              .from('test')
-              .select('id, type')
-              .in('id', testIds);
-
-            testsData?.forEach((t) => {
-              testTypeMap[t.id] = t.type;
-            });
-          }
-
-          const { data: mockTestData } = await supabase
-            .from('mock_test')
-            .select('id, listening_id, reading_id, writing_id')
-            .eq('id', clientData.mock_test_id)
-            .maybeSingle();
-
-          resultsData = organizeMockTestSectionResults(attempts, mockTestData, testTypeMap);
-        }
+        const resultsData = await loadMockTestSectionResults(
+          supabase,
+          clientData.user_id,
+          clientData,
+        );
 
         setResults(resultsData);
       } catch (err) {

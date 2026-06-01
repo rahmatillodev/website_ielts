@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { generateMockTestPDF } from '@/utils/mockTestPdf';
+import { formatBandScore } from '@/utils/mockTestResults';
 import { useSettingsStore } from "@/store/systemStore";
 import { toast } from 'sonner';
 
@@ -95,7 +96,7 @@ const MockTestClientResults = ({
                     <div className="p-3 bg-gray-50 rounded-lg">
                       <p className="text-xs text-gray-500 uppercase font-bold mb-1">Score</p>
                       <p className="text-xl font-black text-indigo-600">
-                        {item.score?.toFixed(1) ?? 'N/A'}
+                        {formatBandScore(item.score)}
                       </p>
                     </div>
                     <div className="p-3 bg-gray-50 rounded-lg">

@@ -1,23 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import supabase from '@/lib/supabase';
-import { organizeMockTestSectionResults } from '@/utils/mockTestResults';
+import {
+  MOCK_ATTEMPT_SELECT,
+  buildSpeakingAttemptsByTestId,
+  buildTestTypeMap,
+  fetchSpeakingAttemptsByTestIds,
+  mergeAttemptsForClient,
+  organizeMockTestSectionResults,
+  resolveSpeakingAttemptForClient,
+} from '@/utils/mockTestResults';
 
 const COMPLETED_STATUSES = ['completed', 'checked', 'notified'];
-
-const ATTEMPT_SELECT = `
-  id,
-  test_id,
-  writing_id,
-  score,
-  feedback,
-  correct_answers,
-  total_questions,
-  time_taken,
-  completed_at,
-  mock_id,
-  type
-`;
 
 /**
  * Custom hook for managing mock test history
@@ -49,7 +43,8 @@ export const useMockTestHistory = () => {
           created_at,
           full_name,
           email,
-          mock_test_id
+          mock_test_id,
+          speaking_id
         `)
         .eq('user_id', userProfile.id)
         .in('status', COMPLETED_STATUSES)
@@ -65,10 +60,12 @@ export const useMockTestHistory = () => {
       }
 
       const mockTestIds = [...new Set(clients.map((c) => c.mock_test_id).filter(Boolean))];
+      const speakingIds = [...new Set(clients.map((c) => c.speaking_id).filter(Boolean))];
 
       const [
         { data: mockTests, error: mockTestsError },
         { data: attempts, error: attemptsError },
+        speakingRows,
       ] = await Promise.all([
         supabase
           .from('mock_test')
@@ -76,34 +73,21 @@ export const useMockTestHistory = () => {
           .in('id', mockTestIds),
         supabase
           .from('user_attempts')
-          .select(ATTEMPT_SELECT)
+          .select(MOCK_ATTEMPT_SELECT)
           .eq('user_id', userProfile.id)
           .in('mock_id', mockTestIds),
+        fetchSpeakingAttemptsByTestIds(supabase, userProfile.id, speakingIds),
       ]);
 
       if (mockTestsError) throw mockTestsError;
       if (attemptsError) throw attemptsError;
 
       const mockTestById = Object.fromEntries((mockTests || []).map((mt) => [mt.id, mt]));
-
-      const testIds = [
-        ...new Set((attempts || []).filter((a) => a.test_id).map((a) => a.test_id)),
-      ];
-      const testTypeMap = {};
-      if (testIds.length > 0) {
-        const { data: testsData, error: testsError } = await supabase
-          .from('test')
-          .select('id, type')
-          .in('id', testIds);
-
-        if (testsError) {
-          console.warn('Error fetching test types for mock history:', testsError);
-        } else {
-          testsData?.forEach((t) => {
-            testTypeMap[t.id] = t.type;
-          });
-        }
-      }
+      const speakingByTestId = buildSpeakingAttemptsByTestId(speakingRows);
+      const testTypeMap = await buildTestTypeMap(supabase, [
+        ...(attempts || []),
+        ...speakingRows,
+      ]);
 
       const attemptsByMockId = {};
       (attempts || []).forEach((attempt) => {
@@ -114,21 +98,36 @@ export const useMockTestHistory = () => {
         attemptsByMockId[attempt.mock_id].push(attempt);
       });
 
-      const historyItems = clients.map((client) => {
-        const mockTest = mockTestById[client.mock_test_id];
-        const sectionResults = organizeMockTestSectionResults(
-          attemptsByMockId[client.mock_test_id],
-          mockTest,
-          testTypeMap,
-        );
-        const hasAnyResult = Object.values(sectionResults).some((value) => value !== null);
+      const historyItems = await Promise.all(
+        clients.map(async (client) => {
+          const mockAttempts = attemptsByMockId[client.mock_test_id] || [];
+          const speakingAttempt = await resolveSpeakingAttemptForClient(
+            supabase,
+            userProfile.id,
+            {
+              speakingId: client.speaking_id,
+              mockTestId: client.mock_test_id,
+            },
+            speakingByTestId,
+            mockAttempts,
+          );
 
-        return {
-          client,
-          results: hasAnyResult ? sectionResults : null,
-          completedAt: client.created_at,
-        };
-      });
+          const mergedAttempts = mergeAttemptsForClient(mockAttempts, speakingAttempt);
+          const mockTest = mockTestById[client.mock_test_id];
+          const sectionResults = organizeMockTestSectionResults(
+            mergedAttempts,
+            mockTest,
+            testTypeMap,
+          );
+          const hasAnyResult = Object.values(sectionResults).some((value) => value !== null);
+
+          return {
+            client,
+            results: hasAnyResult ? sectionResults : null,
+            completedAt: client.created_at,
+          };
+        }),
+      );
 
       setHistory(historyItems);
     } catch (err) {
