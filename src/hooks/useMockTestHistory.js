@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import supabase from '@/lib/supabase';
+import { organizeMockTestSectionResults } from '@/utils/mockTestResults';
 
 const COMPLETED_STATUSES = ['completed', 'checked', 'notified'];
 
@@ -17,38 +18,6 @@ const ATTEMPT_SELECT = `
   mock_id,
   type
 `;
-
-function organizeSectionResults(attempts, mockTest, testTypeMap) {
-  const results = {
-    listening: null,
-    reading: null,
-    writing: null,
-    speaking: null,
-  };
-
-  if (!attempts?.length || !mockTest) {
-    return results;
-  }
-
-  attempts.forEach((attempt) => {
-    const attemptType =
-      attempt.type || (attempt.test_id ? testTypeMap[attempt.test_id] : null);
-
-    if (attempt.writing_id && attempt.writing_id === mockTest.writing_id) {
-      results.writing = attempt;
-    } else if (attempt.test_id) {
-      if (attempt.test_id === mockTest.listening_id) {
-        results.listening = attempt;
-      } else if (attempt.test_id === mockTest.reading_id) {
-        results.reading = attempt;
-      } else if (attemptType === 'speaking') {
-        results.speaking = attempt;
-      }
-    }
-  });
-
-  return results;
-}
 
 /**
  * Custom hook for managing mock test history
@@ -147,7 +116,7 @@ export const useMockTestHistory = () => {
 
       const historyItems = clients.map((client) => {
         const mockTest = mockTestById[client.mock_test_id];
-        const sectionResults = organizeSectionResults(
+        const sectionResults = organizeMockTestSectionResults(
           attemptsByMockId[client.mock_test_id],
           mockTest,
           testTypeMap,

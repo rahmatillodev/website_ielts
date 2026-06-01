@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MdCheckCircle } from "react-icons/md";
 import { formatDateToDayMonth } from "@/utils/formatDate";
+import { formatBandScore } from "@/utils/mockTestResults";
 
 /**
  * Pure presentation component for a single history item
@@ -54,7 +55,7 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
                 <div className="bg-blue-50 rounded-lg p-3">
                   <p className="text-xs text-gray-600 mb-1">Listening</p>
                   <p className="text-lg font-bold text-blue-600">
-                    {results.listening.score?.toFixed(1) || 'N/A'}
+                    {formatBandScore(results.listening.score)}
                   </p>
                   <p className="text-xs text-gray-500">
                     {Number(results.listening.correct_answers ?? 0)}/{results.listening.total_questions || 0} correct
@@ -65,7 +66,7 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
                 <div className="bg-green-50 rounded-lg p-3">
                   <p className="text-xs text-gray-600 mb-1">Reading</p>
                   <p className="text-lg font-bold text-green-600">
-                    {results.reading.score?.toFixed(1) || 'N/A'}
+                    {formatBandScore(results.reading.score)}
                   </p>
                   <p className="text-xs text-gray-500">
                     {Number(results.reading.correct_answers ?? 0)}/{results.reading.total_questions || 0} correct
@@ -76,24 +77,28 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
                 <div className="bg-purple-50 rounded-lg p-3">
                   <p className="text-xs text-gray-600 mb-1">Writing</p>
                   <p className="text-lg font-bold text-purple-600">
-                    {results.writing.score?.toFixed(1) || 'N/A'}
+                    {formatBandScore(results.writing.score)}
                   </p>
                   <p className="text-xs text-gray-500">
                     Writed 2 Tasks and Submitted
                   </p>
                 </div>
               )}
+              {results.speaking && (
                 <div className="bg-red-50 rounded-lg p-3">
                   <p className="text-xs text-gray-600 mb-1">Speaking</p>
                   <p className="text-lg font-bold text-red-600">
-                    {results.speaking?.score?.toFixed(1) || 'N/A'}
+                    {formatBandScore(results.speaking.score)}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {results.speaking?.time_taken 
-                      ? `${Math.floor(results.speaking?.time_taken / 60)} min` 
-                      : 'Completed'}
+                    {results.speaking.time_taken
+                      ? `${Math.floor(results.speaking.time_taken / 60)} min`
+                      : results.speaking.feedback
+                        ? 'Reviewed'
+                        : 'Completed'}
                   </p>
                 </div>
+              )}
             </div>
           )}
 
@@ -105,7 +110,7 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
                   Total Score:
                 </span>
                 <span className="text-2xl font-bold text-green-600">
-                  {client.total_score.toFixed(1)}
+                  {formatBandScore(client.total_score)}
                 </span>
               </div>
             </div>

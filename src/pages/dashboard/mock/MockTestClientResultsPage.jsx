@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import supabase from '@/lib/supabase';
+import { organizeMockTestSectionResults } from '@/utils/mockTestResults';
 import MockTestClientResults from './MockTestClientResults';
 import { MdArrowBack } from 'react-icons/md';
 import { useMockTestClientStore } from '@/store/mockTestClientStore';
@@ -98,60 +99,35 @@ const MockTestClientResultsPage = () => {
           console.error('Error fetching attempts:', attemptsError);
         }
 
-        // Organize attempts by type
-        const resultsData = {
+        let resultsData = {
           listening: null,
           reading: null,
           writing: null,
           speaking: null,
         };
 
-        if (attempts && attempts.length > 0) {
-          // Get test IDs for metadata lookup only when needed
-          const testIds = attempts
-            .filter(a => a.test_id)
-            .map(a => a.test_id);
-
-          // Fetch test types
+        if (attempts?.length) {
+          const testIds = attempts.filter((a) => a.test_id).map((a) => a.test_id);
           const testTypeMap = {};
+
           if (testIds.length > 0) {
             const { data: testsData } = await supabase
               .from('test')
               .select('id, type')
               .in('id', testIds);
 
-            if (testsData) {
-              testsData.forEach(t => {
-                testTypeMap[t.id] = t.type;
-              });
-            }
+            testsData?.forEach((t) => {
+              testTypeMap[t.id] = t.type;
+            });
           }
 
-          // Get the mock test using client's mock_test_id
           const { data: mockTestData } = await supabase
             .from('mock_test')
             .select('id, listening_id, reading_id, writing_id')
             .eq('id', clientData.mock_test_id)
             .maybeSingle();
 
-          if (mockTestData) {
-            // Assign results
-            attempts.forEach(attempt => {
-              const attemptType = attempt.type || (attempt.test_id ? testTypeMap[attempt.test_id] : null);
-
-              if (attemptType === 'writing' || (attempt.writing_id && attempt.writing_id === mockTestData.writing_id)) {
-                resultsData.writing = attempt;
-              } else if (attempt.test_id) {
-                if (attempt.test_id === mockTestData.listening_id) {
-                  resultsData.listening = attempt;
-                } else if (attempt.test_id === mockTestData.reading_id) {
-                  resultsData.reading = attempt;
-                } else if (attemptType === 'speaking') {
-                  resultsData.speaking = attempt;
-                }
-              }
-            });
-          }
+          resultsData = organizeMockTestSectionResults(attempts, mockTestData, testTypeMap);
         }
 
         setResults(resultsData);
