@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FaArrowRight, FaArrowLeft, FaHistory, FaSearch } from "react-icons/fa";
+import { FaArrowRight, FaArrowLeft, FaHistory, FaSearch, FaKeyboard } from "react-icons/fa";
 import { IoGridOutline, IoListOutline } from "react-icons/io5";
 import { Input } from "@/components/ui/input";
 // import PremiumBanner from "@/components/badges/PremiumBanner";
@@ -34,6 +34,7 @@ const TestsLibraryPage = ({
   customHeight = "h-[calc(100vh-64px)]",
   headerAction = null,
   headerActionText = "Practice Now",
+  typingPracticeBadge = null,
 }) => {
 
   // Load view preference from localStorage, default to list view (false)
@@ -512,7 +513,21 @@ const TestsLibraryPage = ({
           </div>
           <div className="flex justify-end gap-3">
             {testType === "writing" && (
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-2">
+                <Link
+                  to="/writing/typing"
+                  className="relative text-sm bg-gray-200 text-black px-4 py-2 rounded-md 
+                   hover:bg-gray-300 transition-all duration-200 
+                   flex items-center gap-2"
+                >
+                  {typingPracticeBadge && (
+                    <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded-full uppercase leading-none shadow-md">
+                      {typingPracticeBadge}
+                    </span>
+                  )}
+                  <FaKeyboard className="w-4 h-4" />
+                  Typing Practice
+                </Link>
                 <Link
                   to="/writing/writing-history"
                   className="text-sm bg-gray-200 text-black px-4 py-2 rounded-md 

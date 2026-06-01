@@ -3,13 +3,11 @@ import TestsLibraryPage from "@/components/TestsLibraryPage";
 import { useWritingStore } from "@/store/testStore/writingStore";
 
 const WritingPage = () => {
-
   const { writings, loadingWritings: loading, fetchWritings } = useWritingStore();
 
   useEffect(() => {
     fetchWritings();
   }, [fetchWritings]);
-
 
   return (
     <TestsLibraryPage
@@ -21,23 +19,9 @@ const WritingPage = () => {
       fetchTests={fetchWritings}
       headerAction={"/own-writing"}
       headerActionText="Practice Now"
+      typingPracticeBadge="NEW"
     />
-   
   );
 };
 
 export default WritingPage;
-
-
-
-// import React from 'react'
-// import ComingSoonPage from "../ComingSoonPage";
-// const WritingPage = () => {
-//   return (
-//      <div>
-//       <ComingSoonPage type="writing" title="Writing Library" description="Boost your band score with our extensive library of writing tests." headerAction="/own-writing" headerActionText="Practice Now" />
-//     </div>
-//   )
-// }
-
-// export default WritingPage

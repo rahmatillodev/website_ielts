@@ -1,4 +1,4 @@
-  import { useEffect, useState, useRef } from "react";
+  import { useEffect, useState, useRef, lazy, Suspense } from "react";
   import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
   import { DndProvider } from "react-dnd";
   import { HTML5Backend } from "react-dnd-html5-backend";
@@ -53,6 +53,17 @@
   import RegularDashboardRoute from "./components/RegularDashboardRoute";
   import SpeakingPodcast from "./pages/dashboard/speaking/SpeakingPodcast";
   import PodcastPlayer from "./pages/dashboard/speaking/PodcastPlayer";
+
+  const TypingPracticePage = lazy(() =>
+    import("./pages/dashboard/writing/TypingPracticePage")
+  );
+
+  const TypingPracticeFallback = () => (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
+    </div>
+  );
+
   // Main App component with routing
   function App() {
     const initializeSession = useAuthStore((state) => state.initializeSession);
@@ -113,6 +124,8 @@
       return path.includes('/reading-practice') || 
             path.includes('/listening-practice') || 
             path.includes('/writing-practice') ||
+            path.includes('/writing/typing') ||
+            path.includes('/typing-practice') ||
             path.includes('/speaking-practice') ||
             path.includes('/equipment-check') ||
             path.includes('/reading-result') ||
@@ -169,7 +182,9 @@
                   location.pathname.startsWith('/speaking/') ||
                   location.pathname.startsWith('/dashboard/speaking/') ||
                   location.pathname === '/analytics' ||
-                  location.pathname === '/own-writing') {
+                  location.pathname === '/own-writing' ||
+                  location.pathname === '/writing/typing' ||
+                  location.pathname.startsWith('/typing-practice')) {
           // Regular dashboard routes - set to regular
           sessionStorage.setItem('accessMode', 'regular');
         }
@@ -215,6 +230,8 @@
       location.pathname.includes("/reading-practice") || 
       location.pathname.includes("/listening-practice") || 
       location.pathname.includes("/writing-practice") || 
+      location.pathname.includes("/writing/typing") ||
+      location.pathname.includes("/typing-practice") ||
       location.pathname.includes("/speaking-practice") || 
       location.pathname.includes("/own-writing") ||
       location.pathname.includes("/mock-test/flow") || 
@@ -285,7 +302,9 @@
                                         pathname.startsWith('/dashboard/speaking/') ||
                                         pathname === '/analytics' ||
                                         pathname === '/own-writing' ||
-                                        pathname.startsWith('/writing/writing-history');
+                                        pathname.startsWith('/writing/writing-history') ||
+                                        pathname === '/writing/typing' ||
+                                        pathname.startsWith('/typing-practice');
 
         if (isRegularDashboardRoute) {
           target = '/mock-tests';
@@ -374,6 +393,22 @@
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/own-writing" element={<OwnWritingPage />} />
                 <Route path="/writing/writing-history" element={<WritingHistoryPage />} />
+                <Route
+                  path="/writing/typing"
+                  element={
+                    <Suspense fallback={<TypingPracticeFallback />}>
+                      <TypingPracticePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/typing-practice/:id"
+                  element={
+                    <Suspense fallback={<TypingPracticeFallback />}>
+                      <TypingPracticePage />
+                    </Suspense>
+                  }
+                />
                 {/* Practice pages accessible from regular dashboard */}
                 <Route path="/reading-practice/:id" element={<ReadingPracticePage />} />
                 <Route path="/listening-practice/:id" element={<ListeningPracticePage />} />

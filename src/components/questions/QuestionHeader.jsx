@@ -20,6 +20,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
   
   // For writing: show "Try practice" button when not in practice mode
   const isWriting = type === "Writing";
+  const isTyping = type === "Typing";
   const shouldShowTryPractice = isWriting && showTryPractice && !isReviewMode;
   // Try to use appearance context, but don't fail if not available (for backward compatibility)
   let themeColors = { text: '#000000', background: '#ffffff', border: '#e5e7eb' };
@@ -45,6 +46,8 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
     console.log('annotation context not available', e);
     // Context not available, sidebar toggle won't work
   }
+
+  const showNotes = !isTyping && Boolean(toggleSidebar);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -86,7 +89,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
 
   const handleBackClick = () => {
     // For Writing: only show confirmation modal if practice has started
-    if (type === "Writing" && !isPracticeMode && !isStarted) {
+    if ((type === "Writing" || type === "Typing") && !isPracticeMode && !isStarted) {
       // Practice hasn't started, go back directly without confirmation
       if (onBack) {
         onBack();
@@ -104,14 +107,15 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
     setIsConfirmModalOpen(false);
     if (onBack) {
       onBack();
+      return;
     }
-      if (type == "Reading") {
-        navigate("/reading");
-      } else if (type == "Writing") {
-        navigate("/writing");
-      } else {
-        navigate("/listening");
-      }
+    if (type == "Reading") {
+      navigate("/reading");
+    } else if (type == "Writing" || type == "Typing") {
+      navigate("/writing");
+    } else {
+      navigate("/listening");
+    }
   };
   return (
     <header 
@@ -147,7 +151,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
           </span>
         </div>
         {/* Show Correct Answers Toggle - only in review mode */}
-        {isReviewMode && !isWriting && (
+        {isReviewMode && !isWriting && !isTyping && (
           <div className="flex items-center gap-2 ml-4">
             <Label htmlFor="show-correct-answers" className="flex items-center gap-2 cursor-pointer">
               <span 
@@ -257,7 +261,8 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
               )}
             </button>
           )}
-          <button 
+          {!isTyping && (
+            <button 
             onClick={() => setIsSettingsModalOpen(true)}
             className="p-2 rounded transition-colors"
             style={{ color: themeColors.text }}
@@ -267,29 +272,39 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
           >
             <FaBars className="w-5 h-5" />
           </button>
-          <button 
-            onClick={() => toggleSidebar && toggleSidebar()}
-            className="p-2 rounded transition-colors relative"
-            style={{ 
-              color: themeColors.text,
-              backgroundColor: isSidebarOpen ? (theme === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.1)') : 'transparent'
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = theme === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.1)'}
-            onMouseLeave={(e) => {
-              if (!isSidebarOpen) {
-                e.target.style.backgroundColor = 'transparent';
+          )}
+          {showNotes && (
+            <button
+              onClick={() => toggleSidebar()}
+              className="p-2 rounded transition-colors relative"
+              style={{
+                color: themeColors.text,
+                backgroundColor: isSidebarOpen
+                  ? theme === "light"
+                    ? "#f3f4f6"
+                    : "rgba(255,255,255,0.1)"
+                  : "transparent",
+              }}
+              onMouseEnter={(e) =>
+                (e.target.style.backgroundColor =
+                  theme === "light" ? "#f3f4f6" : "rgba(255,255,255,0.1)")
               }
-            }}
-            title={isSidebarOpen ? "Close Notes" : "Open Notes"}
-          >
-            <FaEdit className="w-5 h-5" />
-            {(notes.length > 0 || isSidebarOpen) && (
-              <span 
-                className="absolute top-0 right-0 w-2 h-2 rounded-full"
-                style={{ backgroundColor: '#3b82f6' }}
-              />
-            )}
-          </button>
+              onMouseLeave={(e) => {
+                if (!isSidebarOpen) {
+                  e.target.style.backgroundColor = "transparent";
+                }
+              }}
+              title={isSidebarOpen ? "Close Notes" : "Open Notes"}
+            >
+              <FaEdit className="w-5 h-5" />
+              {(notes.length > 0 || isSidebarOpen) && (
+                <span
+                  className="absolute top-0 right-0 w-2 h-2 rounded-full"
+                  style={{ backgroundColor: "#3b82f6" }}
+                />
+              )}
+            </button>
+          )}
         </div>
       </div>
 

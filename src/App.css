@@ -1,3 +1,22 @@
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.shake {
+  animation: shake 0.3s ease;
+}
+
+@keyframes typing-caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typing-caret {
+  animation: typing-caret-blink 1s step-end infinite;
+}
+
 .fixed_bottom_right_container {
   position: fixed;
   bottom: 20px;

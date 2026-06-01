@@ -26,6 +26,8 @@ const DashboardLayout = () => {
     const isPracticePage = pathname.includes('/reading-practice') ||
                           pathname.includes('/listening-practice') ||
                           pathname.includes('/writing-practice') ||
+                          pathname.includes('/writing/typing') ||
+                          pathname.includes('/typing-practice') ||
                           pathname.includes('/speaking-practice') ||
                           pathname.includes('/equipment-check') ||
                           pathname.includes('/reading-result') ||
@@ -63,6 +65,8 @@ const DashboardLayout = () => {
       const isPracticePage = pathname.includes('/reading-practice') || 
                             pathname.includes('/listening-practice') || 
                             pathname.includes('/writing-practice') ||
+                            pathname.includes('/writing/typing') ||
+                          pathname.includes('/typing-practice') ||
                             pathname.includes('/speaking-practice') ||
                             pathname.includes('/reading-result') ||
                             pathname.includes('/listening-result') ||
@@ -120,6 +124,8 @@ const DashboardLayout = () => {
     "/speaking-result",
     "/pricing",
     "/writing-practice",
+    "/writing/typing",
+    "/typing-practice",
     "/own-writing",
     "/mock-test/results",
   ]
