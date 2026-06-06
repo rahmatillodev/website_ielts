@@ -187,3 +187,4 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
 };
 
 export default DashboardNavbar;
+  
