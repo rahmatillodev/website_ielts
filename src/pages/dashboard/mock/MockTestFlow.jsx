@@ -13,6 +13,21 @@ import MockTestStart from './MockTestStart';
 import InstructionalVideo from '@/components/mock/InstructionalVideo';
 import { toast } from 'react-toastify';
 
+/**
+ * `mock_test_clients.status` ni 'completed' ga o'tkazish muvaffaqiyatsiz bo'lsa - buni talabadan
+ * yashirib bo'lmaydi. Ilgari faqat console.error qilinardi: talaba muvaffaqiyat ekranini ko'rardi,
+ * ish esa 'started' holatida qolib, tekshiruvchilar navbatiga umuman tushmasdi.
+ * Toast yopilmaydigan qilingan - talaba xabarni ko'rib, qayta urinishi yoki bog'lanishi kerak.
+ */
+const notifyCompletionWriteFailed = (message) => {
+  toast.error(
+    message
+      ? `Your test was not registered as completed: ${message}. Please contact support before leaving.`
+      : 'Your test was not registered as completed. Please contact support before leaving.',
+    { autoClose: false, toastId: 'mock-completion-write-failed' }
+  );
+};
+
 const MOCK_TEST_SESSION_RUN_KEY = 'mock_test_session_run';
 
 const isSectionSubmitSuccess = (result) =>
@@ -27,7 +42,7 @@ const MockTestFlow = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userProfile } = useAuthStore();
-  const { fetchMockTestByUserId, fetchMockTestById, mockTest, client, loading, error, updateClientStatus, findClientForMockTest, fetchClientById, createClientForMockTest } = useMockTestClientStore();
+  const { fetchMockTestById, mockTest, client, loading, error, updateClientStatus, findClientForMockTest, fetchClientById, createClientForMockTest, hasUserCompletedMockTest } = useMockTestClientStore();
   const appliedAudioCheckDoneRef = useRef(false);
   const restorationAttemptedRef = useRef(false);
 
@@ -47,16 +62,26 @@ const MockTestFlow = () => {
   const readingVideoSrc = "/videos/readingVideo.mp4";
   const writingVideoSrc = "/videos/writingVideo.mp4";
 
-  // Load mock test data on mount
+  // Load mock test data on mount.
+  // fetchMockTestById endi sessiyadagi tasdiqlangan parolni RPC'ga uzatadi - parol bo'lmasa
+  // (ya'ni foydalanuvchi modaldan o'tmagan bo'lsa) kontent qaytmaydi va quyida /mock-tests'ga
+  // qaytariladi.
   useEffect(() => {
     if (paramMockTestId) {
-      // If mockTestId is in route params (accessed via password), fetch by ID
       fetchMockTestById(paramMockTestId);
-    } else if (userProfile?.id) {
-      // Otherwise, use the old method for backward compatibility
-      fetchMockTestByUserId(userProfile.id);
     }
-  }, [paramMockTestId, userProfile?.id, fetchMockTestById, fetchMockTestByUserId]);
+  }, [paramMockTestId, fetchMockTestById]);
+
+  // Parolsiz to'g'ridan-to'g'ri /mock-test/flow/:id ga kirishga urinish - ro'yxatga qaytaramiz.
+  useEffect(() => {
+    if (!paramMockTestId) return;
+    if (loading) return;
+    if (mockTest) return;
+    navigate('/mock-tests', {
+      replace: true,
+      state: { error: 'Please enter the mock test password to start.' },
+    });
+  }, [paramMockTestId, loading, mockTest, navigate]);
 
   // Fetch or create client when mock test is loaded (so status can be updated to 'started' when video starts)
   useEffect(() => {
@@ -104,25 +129,28 @@ const MockTestFlow = () => {
     loadClient();
   }, [mockTest?.id, userProfile?.id, userProfile?.email, userProfile?.full_name, userProfile?.phone_number, findClientForMockTest, fetchClientById, createClientForMockTest]);
 
-  // Check if user has already completed the mock test after it's loaded
-  // useEffect(() => {
-  //   const checkCompletion = async () => {
-  //     if (!userProfile?.id || !mockTest?.id) return;
-      
-  //     const hasCompleted = await hasUserCompletedMockTest(userProfile.id, mockTest.id);
-  //     if (hasCompleted) {
-  //       // User has already completed this test, redirect to mock tests page
-  //       navigate('/mock-tests', { 
-  //         replace: true,
-  //         state: { 
-  //           error: 'You have already completed this mock test. You cannot access it again.' 
-  //         }
-  //       });
-  //     }
-  //   };
-    
-  //   checkCompletion();
-  // }, [userProfile?.id, mockTest?.id, hasUserCompletedMockTest, navigate]);
+  // Check if user has already completed the mock test after it's loaded.
+  // Bu tekshiruv verifyPassword ichida ham bor, lekin /mock-test/flow/:id ga to'g'ridan-to'g'ri
+  // kirish mumkin - shuning uchun bu yerda ham kerak. Aks holda qayta topshirish clientni
+  // 'checked' -> 'started' ga qaytarib yuboradi (DB trigger ham buni bloklaydi).
+  useEffect(() => {
+    const checkCompletion = async () => {
+      if (!userProfile?.id || !mockTest?.id) return;
+
+      const hasCompleted = await hasUserCompletedMockTest(userProfile.id, mockTest.id);
+      if (hasCompleted) {
+        // User has already completed this test, redirect to mock tests page
+        navigate('/mock-tests', {
+          replace: true,
+          state: {
+            error: 'You have already completed this mock test. You cannot access it again.'
+          }
+        });
+      }
+    };
+
+    checkCompletion();
+  }, [userProfile?.id, mockTest?.id, hasUserCompletedMockTest, navigate]);
 
   // Use param mockTestId if available, otherwise use fetched mockTest
   const effectiveMockTestId = paramMockTestId || mockTest?.id;
@@ -405,9 +433,12 @@ const MockTestFlow = () => {
         const updateResult = await updateClientStatus(clientIdToUpdate, 'started', mockTestIdToSet);
         if (!updateResult.success) {
           console.error('[MockTestFlow] Failed to update status to started:', updateResult.error);
+          // 'started' yozilmasa, keyingi 'completed' ham mos kelmasligi mumkin - ogohlantiramiz.
+          toast.warning('Could not register the start of your test. If results do not appear, contact support.');
         }
       } catch (err) {
         console.error('[MockTestFlow] Error updating mock test client status to started:', err);
+        toast.warning('Could not register the start of your test. If results do not appear, contact support.');
       }
     } else {
       console.warn('[MockTestFlow] Cannot update status to started: client.id or mockTest.id is not available', {
@@ -469,9 +500,13 @@ const MockTestFlow = () => {
         const updateResult = await updateClientStatus(clientIdToUpdate, 'completed');
         if (!updateResult.success) {
           console.error('[MockTestFlow] Failed to update status to completed:', updateResult.error);
+          // Bu jim o'tib ketmasligi kerak: status 'completed' bo'lmasa, ish xodimlarning
+          // tekshirish navbatiga tushmaydi - talaba esa muvaffaqiyat ekranini ko'radi.
+          notifyCompletionWriteFailed(updateResult.error);
         }
       } catch (err) {
         console.error('[MockTestFlow] Error updating mock test client status to completed:', err);
+        notifyCompletionWriteFailed(err?.message);
       }
     } else if (!clientIdToUpdate) {
       console.warn('[MockTestFlow] Cannot update status to completed: client.id is not available');
@@ -530,9 +565,11 @@ const MockTestFlow = () => {
         const updateResult = await updateClientStatus(clientIdToUpdate, 'completed');
         if (!updateResult.success) {
           console.error('[MockTestFlow] Early exit: failed to update status to completed:', updateResult.error);
+          notifyCompletionWriteFailed(updateResult.error);
         }
       } catch (err) {
         console.error('[MockTestFlow] Early exit: error updating mock test client status to completed:', err);
+        notifyCompletionWriteFailed(err?.message);
       }
     }
 

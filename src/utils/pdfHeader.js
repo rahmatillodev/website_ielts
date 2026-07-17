@@ -129,7 +129,9 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
       doc.roundedRect(margin, yPos, pageWidth - 2 * margin, headerHeight, 2, 2, 'F');
       
       // Load and add logo
-      const logoUrl = '/logo.png';
+      // Kvadrat ikonka: PDF logoni logoSize x logoSize qilib chizadi (addImage), shuning uchun
+      // keng wordmark (2250x994) siqilib ketardi. logo-icon.png kvadrat (512x512).
+      const logoUrl = '/logo-icon.png';
       const logoDataUrl = await imageToBase64(logoUrl, {
         maxWidth: 64,
         maxHeight: 64,

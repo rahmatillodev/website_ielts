@@ -5,7 +5,6 @@
   import PublicLayout from "./layouts/LandingLayout";
   import DashboardLayout from "./layouts/DashboardLayout";
   import MockTestLayout from "./layouts/MockTestLayout";
-  import PricingPage from "./pages/landing/PricingPage";
   import DashboardPage from "./pages/dashboard/DashboardPage";
   import LoginPage from "./pages/landing/LoginPage";
   import SignUpPage from "./pages/landing/SignUpPage";

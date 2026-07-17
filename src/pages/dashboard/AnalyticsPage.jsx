@@ -11,6 +11,7 @@ import DashboardShimmer from '@/components/shimmer/DashboardShimmer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ComingSoonPage from './ComingSoonPage';
 import AnalyticsWarningModal, { hasSeenAnalyticsWarning } from '@/components/modal/AnalyticsWarningModal';
+import { toScore } from '@/utils/score';
 
 const AnalyticsPage = () => {
 
@@ -83,10 +84,10 @@ const AnalyticsPage = () => {
     filteredReadingAttempts.forEach(attempt => {
       if (!attempt.completed_at) return;
       const dateKey = getDateKey(attempt.completed_at);
-      if (!readingByDay[dateKey] || attempt.score > readingByDay[dateKey].score) {
+      if (!readingByDay[dateKey] || (toScore(attempt.score) ?? -1) > (toScore(readingByDay[dateKey].score) ?? -1)) {
         readingByDay[dateKey] = {
           date: attempt.completed_at,
-          score: attempt.score,
+          score: toScore(attempt.score),
         };
       }
     });
@@ -96,10 +97,10 @@ const AnalyticsPage = () => {
     filteredListeningAttempts.forEach(attempt => {
       if (!attempt.completed_at) return;
       const dateKey = getDateKey(attempt.completed_at);
-      if (!listeningByDay[dateKey] || attempt.score > listeningByDay[dateKey].score) {
+      if (!listeningByDay[dateKey] || (toScore(attempt.score) ?? -1) > (toScore(listeningByDay[dateKey].score) ?? -1)) {
         listeningByDay[dateKey] = {
           date: attempt.completed_at,
-          score: attempt.score,
+          score: toScore(attempt.score),
         };
       }
     });
@@ -128,8 +129,8 @@ const AnalyticsPage = () => {
         date: date,
         dateKey: dateKey,
         dateLabel: formatDateToDayMonth(date),
-        reading: readingDayData?.score || null,
-        listening: listeningDayData?.score || null,
+        reading: toScore(readingDayData?.score),
+        listening: toScore(listeningDayData?.score),
       };
     });
 
@@ -142,7 +143,7 @@ const AnalyticsPage = () => {
           date: dayData?.date || null,
           dateKey: dateKey,
           dateLabel: formatDateToDayMonth(dayData?.date || dateKey),
-          score: dayData?.score || null,
+          score: toScore(dayData?.score),
         };
       }),
       listening: datesToShow.map((dateKey, index) => {
@@ -152,7 +153,7 @@ const AnalyticsPage = () => {
           date: dayData?.date || null,
           dateKey: dateKey,
           dateLabel: formatDateToDayMonth(dayData?.date || dateKey),
-          score: dayData?.score || null,
+          score: toScore(dayData?.score),
         };
       }),
       combined: combinedTrends,

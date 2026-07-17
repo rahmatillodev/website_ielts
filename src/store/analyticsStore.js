@@ -7,12 +7,21 @@
 
 import { create } from 'zustand';
 import supabase from '@/lib/supabase';
+import { toScore } from '@/utils/score';
 
 // TEMPORARY: Mock data flag for testing (set to false to disable)
 // TODO: Set USE_MOCK_DATA = false before production deployment
 const USE_MOCK_DATA = true;
 const DEFAULT_ATTEMPTS_PAGE_SIZE = 100;
 const ANSWERS_BATCH_SIZE = 100;
+
+/**
+ * Ballni normallashtiradi. Ikki muammoni birga hal qiladi:
+ *  1. `score || null` - 0 ham haqiqiy IELTS bali, lekin falsy bo'lgani uchun yo'qolardi.
+ *  2. score satr bo'lishi mumkin (dev'da ustun `text`, "A1" kabi qiymatlar ham bor) -
+ *     bunda arifmetika jimgina NaN beradi va `.toFixed` crash qiladi.
+ */
+const toScoreOrNull = toScore;
 
 /**
  * Mock ma'lumotlarni 10 barobar ko'paytirilgan varianti (100 ta attempt)
@@ -303,18 +312,21 @@ export function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5)
 
   // Calculate averages (rounded to nearest 0.5 for valid IELTS scores)
   const readingAvgRaw = readingAttempts.length > 0
-    ? readingAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / readingAttempts.length
+    ? readingAttempts.reduce((sum, a) => sum + (toScoreOrNull(a.score) ?? 0), 0) / readingAttempts.length
     : null;
   const readingAvg = roundToHalf(readingAvgRaw);
 
   const listeningAvgRaw = listeningAttempts.length > 0
-    ? listeningAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / listeningAttempts.length
+    ? listeningAttempts.reduce((sum, a) => sum + (toScoreOrNull(a.score) ?? 0), 0) / listeningAttempts.length
     : null;
   const listeningAvg = roundToHalf(listeningAvgRaw);
 
-  // Calculate overall band (average of latest reading and listening, rounded to nearest 0.5)
-  const latestReading = readingAttempts[0]?.score || null;
-  const latestListening = listeningAttempts[0]?.score || null;
+  // Calculate overall band (average of latest reading and listening, rounded to nearest 0.5).
+  // MUHIM: `x || null` ishlatilmaydi - 0 ham haqiqiy IELTS bali va u "ma'lumot yo'q" degani emas.
+  // Ilgari 0 ball null'ga aylanib, overall faqat ikkinchi bo'lim bo'yicha hisoblanardi:
+  // reading=0, listening=6 -> 6.0 ko'rsatilardi (to'g'risi 3.0).
+  const latestReading = toScoreOrNull(readingAttempts[0]?.score);
+  const latestListening = toScoreOrNull(listeningAttempts[0]?.score);
   const overallBandRaw = (latestReading !== null && latestListening !== null)
     ? (latestReading + latestListening) / 2
     : (latestReading !== null ? latestReading : latestListening);
@@ -400,7 +412,7 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
   readingAttempts.forEach(attempt => {
     if (!attempt.completed_at) return;
     const dateKey = getDateKey(attempt.completed_at);
-    if (!readingByDay[dateKey] || attempt.score > readingByDay[dateKey].score) {
+    if (!readingByDay[dateKey] || (toScoreOrNull(attempt.score) ?? -1) > (toScoreOrNull(readingByDay[dateKey].score) ?? -1)) {
       readingByDay[dateKey] = {
         date: attempt.completed_at,
         score: attempt.score,
@@ -413,7 +425,7 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
   listeningAttempts.forEach(attempt => {
     if (!attempt.completed_at) return;
     const dateKey = getDateKey(attempt.completed_at);
-    if (!listeningByDay[dateKey] || attempt.score > listeningByDay[dateKey].score) {
+    if (!listeningByDay[dateKey] || (toScoreOrNull(attempt.score) ?? -1) > (toScoreOrNull(listeningByDay[dateKey].score) ?? -1)) {
       listeningByDay[dateKey] = {
         date: attempt.completed_at,
         score: attempt.score,
@@ -441,7 +453,7 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
       date: dayData?.date || null,
       dateKey: dateKey,
       dateLabel: formatDateToDayMonth(dayData?.date || dateKey),
-      score: dayData?.score || null,
+      score: toScoreOrNull(dayData?.score),
     };
   });
 
@@ -452,7 +464,7 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
       date: dayData?.date || null,
       dateKey: dateKey,
       dateLabel: formatDateToDayMonth(dayData?.date || dateKey),
-      score: dayData?.score || null,
+      score: toScoreOrNull(dayData?.score),
     };
   });
 
@@ -469,8 +481,8 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
       date: date,
       dateKey: dateKey,
       dateLabel: formatDateToDayMonth(date),
-      reading: readingDayData?.score || null,
-      listening: listeningDayData?.score || null,
+      reading: toScoreOrNull(readingDayData?.score),
+      listening: toScoreOrNull(listeningDayData?.score),
     };
   });
 
