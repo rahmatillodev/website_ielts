@@ -16,6 +16,7 @@ import { useSettingsStore } from "@/store/systemStore";
 import { toast } from "react-toastify";
 import { clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
 import { formatDateToDayMonth } from "@/store/analyticsStore";
+import { formatScore } from "@/utils/score";
 
 
 const ReadingResultPage = () => {
@@ -493,7 +494,8 @@ const ReadingResultPage = () => {
     const correctCount = answerDisplayData.filter(a => a.isCorrect).length;
     const timeTaken = formatTime(elapsedTime);
     const avgTime = totalQuestions > 0 ? formatTime(Math.floor(elapsedTime / totalQuestions)) : "0m 0s";
-    const score = attemptData?.score?.toFixed(1) || "0.0";
+    // score DB'dan satr ("7.5") bo'lib kelishi mumkin -> .toFixed crash qilardi.
+    const score = formatScore(attemptData?.score, "0.0");
     const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
     return {

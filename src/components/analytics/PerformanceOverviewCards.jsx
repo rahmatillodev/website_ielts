@@ -4,12 +4,9 @@ import { LuBookOpen, LuHeadphones, LuClock } from 'react-icons/lu';
 import { FaArrowUp, FaChartSimple } from 'react-icons/fa6';
 import {  FaExclamationTriangle } from 'react-icons/fa';
 import { useResponsiveGridCols } from '@/hooks/useResponsiveGridCols';
+import { hasScore, formatScore } from '@/utils/score';
 
-/**
- * Ball mavjudligini tekshiradi. `score ? ... : '—'` ishlatib bo'lmaydi: 0 ham haqiqiy IELTS bali,
- * lekin falsy - shuning uchun haqiqiy 0 ball "ma'lumot yo'q" (—) bo'lib ko'rinardi.
- */
-const hasScore = (value) => value !== null && value !== undefined && Number.isFinite(Number(value));
+// Ball tekshiruvi/formatlash bitta joydan: 0 ham haqiqiy ball, satr ham kelishi mumkin.
 
 const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
   const cols = useResponsiveGridCols();
@@ -115,7 +112,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         </div>
         <div className="mb-4">
           <div className="text-4xl font-black text-gray-900 mb-2">
-            {hasScore(overallBand) ? overallBand.toFixed(1) : '—'}
+            {formatScore(overallBand)}
           </div>
           <div className="text-sm text-gray-500">
             Target: {targetBandScore}
@@ -155,7 +152,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         </div>
         <div className="mb-4">
           <div className="text-4xl font-black text-gray-900 mb-2">
-            {hasScore(readingAvg) ? readingAvg.toFixed(1) : '—'}
+            {formatScore(readingAvg)}
           </div>
           {readingTrend !== null && readingTrend !== 0 && (
             <div className={`flex items-center gap-1 text-sm font-semibold ${
@@ -199,7 +196,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         </div>
         <div className="mb-4">
           <div className="text-4xl font-black text-gray-900 mb-2">
-            {hasScore(listeningAvg) ? listeningAvg.toFixed(1) : '—'}
+            {formatScore(listeningAvg)}
           </div>
           {listeningRecommendation && (
             <div className="flex items-center gap-1 text-sm font-semibold text-orange-600">

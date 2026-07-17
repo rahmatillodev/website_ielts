@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import supabase from '@/lib/supabase';
+import { toScore } from '@/utils/score';
 
 export const useDashboardStore = create((set, get) => ({
   // --- State ---
@@ -156,8 +157,10 @@ export const useDashboardStore = create((set, get) => ({
       const listeningAttempts = attemptsWithType.filter((a) => a.testType === 'listening');
       const readingAttempts = attemptsWithType.filter((a) => a.testType === 'reading');
 
-      const lastListening = listeningAttempts[0]?.score ?? null;
-      const lastReading = readingAttempts[0]?.score ?? null;
+      // MUHIM: score satr bo'lishi mumkin. Xom holda qo'shsak `0 + "7.5"` -> "07.5" (konkatenatsiya)
+      // -> o'rtacha NaN bo'lib, dashboard bandi jimgina yo'qolardi.
+      const lastListening = toScore(listeningAttempts[0]?.score);
+      const lastReading = toScore(readingAttempts[0]?.score);
 
       // Mavjud ballarni yig'ish
       const latestScores = [lastListening, lastReading].filter(
