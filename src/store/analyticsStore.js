@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import supabase from '@/lib/supabase';
+import { toScore } from '@/utils/score';
 
 // TEMPORARY: Mock data flag for testing (set to false to disable)
 // TODO: Set USE_MOCK_DATA = false before production deployment
@@ -15,17 +16,12 @@ const DEFAULT_ATTEMPTS_PAGE_SIZE = 100;
 const ANSWERS_BATCH_SIZE = 100;
 
 /**
- * Ballni normallashtiradi: FAQAT null/undefined "ma'lumot yo'q" degani.
- *
- * `score || null` ishlatib bo'lmaydi: 0 ham haqiqiy IELTS bali (prod'da 18 ta urinishda 0 bor),
- * lekin JS'da falsy - shuning uchun u null'ga aylanib, band hisobidan tushib qolardi va
- * grafiklardan yo'qolardi.
+ * Ballni normallashtiradi. Ikki muammoni birga hal qiladi:
+ *  1. `score || null` - 0 ham haqiqiy IELTS bali, lekin falsy bo'lgani uchun yo'qolardi.
+ *  2. score satr bo'lishi mumkin (dev'da ustun `text`, "A1" kabi qiymatlar ham bor) -
+ *     bunda arifmetika jimgina NaN beradi va `.toFixed` crash qiladi.
  */
-const toScoreOrNull = (value) => {
-  if (value === null || value === undefined || value === '') return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
-};
+const toScoreOrNull = toScore;
 
 /**
  * Mock ma'lumotlarni 10 barobar ko'paytirilgan varianti (100 ta attempt)
@@ -316,12 +312,12 @@ export function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5)
 
   // Calculate averages (rounded to nearest 0.5 for valid IELTS scores)
   const readingAvgRaw = readingAttempts.length > 0
-    ? readingAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / readingAttempts.length
+    ? readingAttempts.reduce((sum, a) => sum + (toScoreOrNull(a.score) ?? 0), 0) / readingAttempts.length
     : null;
   const readingAvg = roundToHalf(readingAvgRaw);
 
   const listeningAvgRaw = listeningAttempts.length > 0
-    ? listeningAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / listeningAttempts.length
+    ? listeningAttempts.reduce((sum, a) => sum + (toScoreOrNull(a.score) ?? 0), 0) / listeningAttempts.length
     : null;
   const listeningAvg = roundToHalf(listeningAvgRaw);
 
@@ -416,7 +412,7 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
   readingAttempts.forEach(attempt => {
     if (!attempt.completed_at) return;
     const dateKey = getDateKey(attempt.completed_at);
-    if (!readingByDay[dateKey] || attempt.score > readingByDay[dateKey].score) {
+    if (!readingByDay[dateKey] || (toScoreOrNull(attempt.score) ?? -1) > (toScoreOrNull(readingByDay[dateKey].score) ?? -1)) {
       readingByDay[dateKey] = {
         date: attempt.completed_at,
         score: attempt.score,
@@ -429,7 +425,7 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
   listeningAttempts.forEach(attempt => {
     if (!attempt.completed_at) return;
     const dateKey = getDateKey(attempt.completed_at);
-    if (!listeningByDay[dateKey] || attempt.score > listeningByDay[dateKey].score) {
+    if (!listeningByDay[dateKey] || (toScoreOrNull(attempt.score) ?? -1) > (toScoreOrNull(listeningByDay[dateKey].score) ?? -1)) {
       listeningByDay[dateKey] = {
         date: attempt.completed_at,
         score: attempt.score,

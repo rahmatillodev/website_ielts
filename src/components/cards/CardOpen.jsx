@@ -9,6 +9,7 @@ import { useDashboardStore } from "@/store/dashboardStore";
 import { motion } from "framer-motion";
 import { FaCrown, FaPencilAlt } from "react-icons/fa";
 import { formatDateToDayMonth } from "@/utils/formatDate";
+import { toScore, formatScore } from "@/utils/score";
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
   <span className="inline-flex items-end gap-[2px] h-[10px]">
@@ -117,7 +118,8 @@ const CardOpen = ({
   const createdDate = created_at ? formatDateToDayMonth(created_at) : '';
   const completedDate = attemptData?.completed_at ? formatDateToDayMonth(attemptData.completed_at) : (date ? formatDateToDayMonth(date) : '');
 
-  const score = attemptData?.score || null;
+  // Ballni bir joyda songa o'giramiz: DB'dan satr ('7.5') yoki yaroqsiz qiymat ('A1') kelishi mumkin.
+  const score = toScore(attemptData?.score);
   const correctAnswers = attemptData?.correct_answers || 0;
   const totalQuestions = attemptData?.total_questions || question_quantity || 0;
 
@@ -171,7 +173,7 @@ const CardOpen = ({
               <div className="bg-white border border-gray-200 w-12 md:w-14 h-12 md:h-14 rounded-full flex flex-col items-center justify-center shadow-sm">
                 <span className="text-[10px] text-gray-500 font-semibold">Score</span>
                 <span className="text-sm md:text-base font-black text-green-600">
-                  {score?.toFixed(1) || '0.0'}
+                  {formatScore(score, '0.0')}
                 </span>
               </div>
             ) : (
@@ -360,7 +362,7 @@ const CardOpen = ({
             <>
               <div className="flex flex-col items-end border-l border-gray-200 pl-3 md:pl-6">
                 <span className="text-[10px] md:text-xs text-gray-500 font-semibold mb-1">Score</span>
-                <span className="text-xl md:text-2xl font-black text-green-600">{score?.toFixed(1) || '0.0'}</span>
+                <span className="text-xl md:text-2xl font-black text-green-600">{formatScore(score, '0.0')}</span>
               </div>
               <div className="flex flex-col gap-1.5 md:gap-2 mr-2 md:mr-4">
                 <button

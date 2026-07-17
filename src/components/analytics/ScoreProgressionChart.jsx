@@ -9,6 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { toScore } from '@/utils/score';
 
 const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
   if (!scoreTrends || scoreTrends.length === 0) {
@@ -20,13 +21,21 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
     );
   }
 
-  const chartData = scoreTrends.map((trend) => ({
-    test: trend.dateLabel || `T${trend.testNumber}`, // Display date in "day.month" format
-    fullTestName: trend.dateLabel || `Test ${trend.testNumber}`, // Use dateLabel for tooltip
-    date: trend.date || null, // Store full date for reference
-    Reading: trend.reading !== null ? Number(trend.reading.toFixed(1)) : null,
-    Listening: trend.listening !== null ? Number(trend.listening.toFixed(1)) : null,
-  }));
+  // MUHIM: `trend.reading !== null ? trend.reading.toFixed(1) : null` ishlatib bo'lmaydi.
+  // U faqat null'ni tekshiradi, lekin qiymat satr ("7.5") bo'lsa .toFixed mavjud emas va
+  // butun sahifa "toFixed is not a function" bilan qulab tushadi. toScore() har qanday
+  // kirishni xavfsiz songa o'giradi (yaroqsiz bo'lsa - null).
+  const chartData = scoreTrends.map((trend) => {
+    const reading = toScore(trend.reading);
+    const listening = toScore(trend.listening);
+    return {
+      test: trend.dateLabel || `T${trend.testNumber}`, // Display date in "day.month" format
+      fullTestName: trend.dateLabel || `Test ${trend.testNumber}`, // Use dateLabel for tooltip
+      date: trend.date || null, // Store full date for reference
+      Reading: reading === null ? null : Number(reading.toFixed(1)),
+      Listening: listening === null ? null : Number(listening.toFixed(1)),
+    };
+  });
 
   // Dinamik kenglikni hisoblash: har bir test uchun kamida 60px joy ajratamiz
   const minChartWidth = Math.max(scoreTrends.length * 60, 500);
@@ -40,7 +49,7 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
             <div key={index} className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></div>
               <span className="text-sm font-semibold text-gray-700">
-                {entry.name}: {entry.value !== null ? entry.value.toFixed(1) : 'N/A'}
+                {entry.name}: {toScore(entry.value) !== null ? toScore(entry.value).toFixed(1) : 'N/A'}
               </span>
             </div>
           ))}
