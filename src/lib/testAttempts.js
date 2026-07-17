@@ -5,7 +5,6 @@
 
 import supabase from './supabase';
 import { useTestDetailStore } from '@/store/testStore/testDetailStore';
-import { useAuthStore } from '@/store/authStore';
 
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
 export const getUserIdFromLocalStorage = () => {
@@ -52,21 +51,25 @@ export const submitTestAttempt = async (testId, answers, currentTest, timeTaken 
       throw new Error('Mock test context requires mockTestId');
     }
 
-    // Fetch test with correct answers to ensure we have correct_answer data for scoring
-    // This is necessary because currentTest might not have correct_answer fields
-    let testWithCorrectAnswers = currentTest;
+    // Fetch test with correct answers to ensure we have correct_answer data for scoring.
+    // The practice page loads the test WITHOUT the answer key (includeCorrectAnswers = false while
+    // taking), so this refetch is the only source of correct answers at submit time.
+    //
+    // MUHIM: bu yerda xatoni yutib yuborib bo'lmaydi. Ilgari fetch muvaffaqiyatsiz bo'lsa
+    // console.warn qilinib, kalitsiz `currentTest` bilan davom etilardi - natijada HAMMA javob
+    // noto'g'ri deb hisoblanib, ball 0 bo'lib DOIMIY ravishda user_attempts'ga yozilardi.
+    // Foydalanuvchi hech qanday xato ko'rmasdi va qayta baholash yo'li ham yo'q edi.
+    let testWithCorrectAnswers;
     try {
-      // Get user subscription status from auth store
-      const authStore = useAuthStore.getState();
-      
       const testDetailStore = useTestDetailStore.getState();
-      const fetchedTest = await testDetailStore.fetchTestById(testId, false, true); // Include correct answers
-      if (fetchedTest) {
-        testWithCorrectAnswers = fetchedTest;
-      }
+      testWithCorrectAnswers = await testDetailStore.fetchTestById(testId, false, true); // Include correct answers
     } catch (error) {
-      console.warn('Failed to fetch test with correct answers, using provided currentTest:', error);
-      // Continue with currentTest if fetch fails
+      console.error('Failed to fetch answer key for scoring:', error);
+      throw new Error('Could not load the answer key to score your test. Please check your connection and try again.');
+    }
+
+    if (!testWithCorrectAnswers) {
+      throw new Error('Could not load the answer key to score your test. Please check your connection and try again.');
     }
 
     // Calculate score and correctness using test with correct answers
@@ -615,22 +618,16 @@ const getCorrectAnswer = (question, questionGroup) => {
     }
   }
 
-  // For matching_information: correct_answer is stored as option_key (e.g., "A"), but we need option_text
+  // For matching_information: correct_answer is stored as option_key (e.g. "A") and the answer is
+  // now ALSO stored as option_key, so we compare key-to-key and return it unchanged.
+  //
+  // Ilgari bu yerda key -> option_text ga o'girilardi va solishtirish matn bo'yicha borardi.
+  // Bir xil option_text'li ikki variant bo'lsa (prod'da 5 ta guruh) ular farqlanmasdi:
+  // kalit "C" bo'lsa-yu talaba "B" ni tanlasa ham, ikkalasining matni bir xil bo'lgani uchun
+  // javob to'g'ri deb hisoblanardi.
   if (isMatchingInformation) {
     if (question.correct_answer) {
-      const correctAnswerKey = question.correct_answer.toString().trim();
-      // Try to find option_text from group-level options that matches this option_key
-      if (questionGroup.options && questionGroup.options.length > 0) {
-        const correctOption = questionGroup.options.find(
-          (opt) => (opt.option_key || opt.letter || '').toLowerCase() === correctAnswerKey.toLowerCase()
-        );
-        if (correctOption) {
-          // Return option_text for matching
-          return correctOption.option_text || correctAnswerKey;
-        }
-      }
-      // Fallback: return the key if no matching option found
-      return correctAnswerKey;
+      return question.correct_answer.toString().trim();
     }
   }
 

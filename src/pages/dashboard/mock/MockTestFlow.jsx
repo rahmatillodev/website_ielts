@@ -13,6 +13,21 @@ import MockTestStart from './MockTestStart';
 import InstructionalVideo from '@/components/mock/InstructionalVideo';
 import { toast } from 'react-toastify';
 
+/**
+ * `mock_test_clients.status` ni 'completed' ga o'tkazish muvaffaqiyatsiz bo'lsa - buni talabadan
+ * yashirib bo'lmaydi. Ilgari faqat console.error qilinardi: talaba muvaffaqiyat ekranini ko'rardi,
+ * ish esa 'started' holatida qolib, tekshiruvchilar navbatiga umuman tushmasdi.
+ * Toast yopilmaydigan qilingan - talaba xabarni ko'rib, qayta urinishi yoki bog'lanishi kerak.
+ */
+const notifyCompletionWriteFailed = (message) => {
+  toast.error(
+    message
+      ? `Your test was not registered as completed: ${message}. Please contact support before leaving.`
+      : 'Your test was not registered as completed. Please contact support before leaving.',
+    { autoClose: false, toastId: 'mock-completion-write-failed' }
+  );
+};
+
 const MOCK_TEST_SESSION_RUN_KEY = 'mock_test_session_run';
 
 const isSectionSubmitSuccess = (result) =>
@@ -418,9 +433,12 @@ const MockTestFlow = () => {
         const updateResult = await updateClientStatus(clientIdToUpdate, 'started', mockTestIdToSet);
         if (!updateResult.success) {
           console.error('[MockTestFlow] Failed to update status to started:', updateResult.error);
+          // 'started' yozilmasa, keyingi 'completed' ham mos kelmasligi mumkin - ogohlantiramiz.
+          toast.warning('Could not register the start of your test. If results do not appear, contact support.');
         }
       } catch (err) {
         console.error('[MockTestFlow] Error updating mock test client status to started:', err);
+        toast.warning('Could not register the start of your test. If results do not appear, contact support.');
       }
     } else {
       console.warn('[MockTestFlow] Cannot update status to started: client.id or mockTest.id is not available', {
@@ -482,9 +500,13 @@ const MockTestFlow = () => {
         const updateResult = await updateClientStatus(clientIdToUpdate, 'completed');
         if (!updateResult.success) {
           console.error('[MockTestFlow] Failed to update status to completed:', updateResult.error);
+          // Bu jim o'tib ketmasligi kerak: status 'completed' bo'lmasa, ish xodimlarning
+          // tekshirish navbatiga tushmaydi - talaba esa muvaffaqiyat ekranini ko'radi.
+          notifyCompletionWriteFailed(updateResult.error);
         }
       } catch (err) {
         console.error('[MockTestFlow] Error updating mock test client status to completed:', err);
+        notifyCompletionWriteFailed(err?.message);
       }
     } else if (!clientIdToUpdate) {
       console.warn('[MockTestFlow] Cannot update status to completed: client.id is not available');
@@ -543,9 +565,11 @@ const MockTestFlow = () => {
         const updateResult = await updateClientStatus(clientIdToUpdate, 'completed');
         if (!updateResult.success) {
           console.error('[MockTestFlow] Early exit: failed to update status to completed:', updateResult.error);
+          notifyCompletionWriteFailed(updateResult.error);
         }
       } catch (err) {
         console.error('[MockTestFlow] Early exit: error updating mock test client status to completed:', err);
+        notifyCompletionWriteFailed(err?.message);
       }
     }
 

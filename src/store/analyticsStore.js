@@ -15,6 +15,19 @@ const DEFAULT_ATTEMPTS_PAGE_SIZE = 100;
 const ANSWERS_BATCH_SIZE = 100;
 
 /**
+ * Ballni normallashtiradi: FAQAT null/undefined "ma'lumot yo'q" degani.
+ *
+ * `score || null` ishlatib bo'lmaydi: 0 ham haqiqiy IELTS bali (prod'da 18 ta urinishda 0 bor),
+ * lekin JS'da falsy - shuning uchun u null'ga aylanib, band hisobidan tushib qolardi va
+ * grafiklardan yo'qolardi.
+ */
+const toScoreOrNull = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+/**
  * Mock ma'lumotlarni 10 barobar ko'paytirilgan varianti (100 ta attempt)
  */
 const generateMockData = () => {
@@ -312,9 +325,12 @@ export function calculateAnalytics(attempts, userAnswers, targetBandScore = 7.5)
     : null;
   const listeningAvg = roundToHalf(listeningAvgRaw);
 
-  // Calculate overall band (average of latest reading and listening, rounded to nearest 0.5)
-  const latestReading = readingAttempts[0]?.score || null;
-  const latestListening = listeningAttempts[0]?.score || null;
+  // Calculate overall band (average of latest reading and listening, rounded to nearest 0.5).
+  // MUHIM: `x || null` ishlatilmaydi - 0 ham haqiqiy IELTS bali va u "ma'lumot yo'q" degani emas.
+  // Ilgari 0 ball null'ga aylanib, overall faqat ikkinchi bo'lim bo'yicha hisoblanardi:
+  // reading=0, listening=6 -> 6.0 ko'rsatilardi (to'g'risi 3.0).
+  const latestReading = toScoreOrNull(readingAttempts[0]?.score);
+  const latestListening = toScoreOrNull(listeningAttempts[0]?.score);
   const overallBandRaw = (latestReading !== null && latestListening !== null)
     ? (latestReading + latestListening) / 2
     : (latestReading !== null ? latestReading : latestListening);
@@ -441,7 +457,7 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
       date: dayData?.date || null,
       dateKey: dateKey,
       dateLabel: formatDateToDayMonth(dayData?.date || dateKey),
-      score: dayData?.score || null,
+      score: toScoreOrNull(dayData?.score),
     };
   });
 
@@ -452,7 +468,7 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
       date: dayData?.date || null,
       dateKey: dateKey,
       dateLabel: formatDateToDayMonth(dayData?.date || dateKey),
-      score: dayData?.score || null,
+      score: toScoreOrNull(dayData?.score),
     };
   });
 
@@ -469,8 +485,8 @@ function getScoreTrends(readingAttempts, listeningAttempts, limit = 5) {
       date: date,
       dateKey: dateKey,
       dateLabel: formatDateToDayMonth(date),
-      reading: readingDayData?.score || null,
-      listening: listeningDayData?.score || null,
+      reading: toScoreOrNull(readingDayData?.score),
+      listening: toScoreOrNull(listeningDayData?.score),
     };
   });
 

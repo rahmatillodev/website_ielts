@@ -5,6 +5,12 @@ import { FaArrowUp, FaChartSimple } from 'react-icons/fa6';
 import {  FaExclamationTriangle } from 'react-icons/fa';
 import { useResponsiveGridCols } from '@/hooks/useResponsiveGridCols';
 
+/**
+ * Ball mavjudligini tekshiradi. `score ? ... : '—'` ishlatib bo'lmaydi: 0 ham haqiqiy IELTS bali,
+ * lekin falsy - shuning uchun haqiqiy 0 ball "ma'lumot yo'q" (—) bo'lib ko'rinardi.
+ */
+const hasScore = (value) => value !== null && value !== undefined && Number.isFinite(Number(value));
+
 const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
   const cols = useResponsiveGridCols();
 
@@ -31,18 +37,26 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
   } = analyticsData;
 
   // Calculate progress to target
-  const overallProgress = overallBand ? (overallBand / targetBandScore) * 100 : 0;
-  const needsImprovement = overallBand && overallBand < targetBandScore;
+  const overallProgress = hasScore(overallBand) ? (overallBand / targetBandScore) * 100 : 0;
+  const needsImprovement = hasScore(overallBand) && overallBand < targetBandScore;
 
 
-  // Calculate reading trend (compare last 2 tests)
+  // Calculate reading trend (compare the last 2 days that actually HAVE a reading score).
+  //
+  // scoreTrends.reading is mapped over the union of reading+listening days, so a day with only a
+  // listening test yields score: null. Ilgari shu null ustida arifmetika bajarilardi:
+  // `null - 7.0` -> -7 (null emas, 0 ham emas) va ekranda qizil "7.0 last 2 tests" paydo bo'lardi -
+  // aslida hech qanday reading testi bo'lmagan bo'lsa ham.
   const readingTrends = analyticsData.scoreTrends?.reading || [];
-  const readingTrend = readingTrends.length >= 2
-    ? readingTrends[readingTrends.length - 1]?.score - readingTrends[readingTrends.length - 2]?.score
+  const readingScored = readingTrends.filter(
+    (t) => t?.score !== null && t?.score !== undefined
+  );
+  const readingTrend = readingScored.length >= 2
+    ? readingScored[readingScored.length - 1].score - readingScored[readingScored.length - 2].score
     : null;
 
   // Determine listening status
-  const listeningStatus = listeningAvg
+  const listeningStatus = hasScore(listeningAvg)
     ? listeningAvg >= 7.0
       ? 'Consistent performance'
       : listeningAvg >= 6.0
@@ -50,7 +64,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
       : 'Needs improvement'
     : 'No data';
 
-  const listeningRecommendation = listeningAvg && listeningAvg < 7.0
+  const listeningRecommendation = hasScore(listeningAvg) && listeningAvg < 7.0
     ? 'Focus on Section 3 & 4'
     : null;
 
@@ -101,7 +115,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         </div>
         <div className="mb-4">
           <div className="text-4xl font-black text-gray-900 mb-2">
-            {overallBand ? overallBand.toFixed(1) : '—'}
+            {hasScore(overallBand) ? overallBand.toFixed(1) : '—'}
           </div>
           <div className="text-sm text-gray-500">
             Target: {targetBandScore}
@@ -141,7 +155,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         </div>
         <div className="mb-4">
           <div className="text-4xl font-black text-gray-900 mb-2">
-            {readingAvg ? readingAvg.toFixed(1) : '—'}
+            {hasScore(readingAvg) ? readingAvg.toFixed(1) : '—'}
           </div>
           {readingTrend !== null && readingTrend !== 0 && (
             <div className={`flex items-center gap-1 text-sm font-semibold ${
@@ -162,7 +176,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
           )}
         </div>
         <div className="text-xs font-semibold text-gray-500">
-          {readingAvg && readingAvg >= 7.0 ? 'Consistent performance' : 'Keep practicing'}
+          {hasScore(readingAvg) && readingAvg >= 7.0 ? 'Consistent performance' : 'Keep practicing'}
         </div>
       </motion.div>
 
@@ -185,7 +199,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         </div>
         <div className="mb-4">
           <div className="text-4xl font-black text-gray-900 mb-2">
-            {listeningAvg ? listeningAvg.toFixed(1) : '—'}
+            {hasScore(listeningAvg) ? listeningAvg.toFixed(1) : '—'}
           </div>
           {listeningRecommendation && (
             <div className="flex items-center gap-1 text-sm font-semibold text-orange-600">

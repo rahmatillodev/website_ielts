@@ -20,6 +20,23 @@ import { useMockTestClientStore } from "@/store/mockTestClientStore";
 import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
 import { autoEnterFullscreen, monitorFullscreen } from "@/utils/mockTestFullscreen";
 
+/**
+ * `mock_test_clients.status` -> 'completed' yozuvi muvaffaqiyatsiz bo'lsa talabaga aytamiz.
+ * Aks holda u muvaffaqiyat ekranini ko'radi, ish esa tekshiruvchilar navbatiga tushmaydi.
+ */
+const notifyIfCompletionFailed = (result) => {
+  if (result && result.success) return;
+  const message = result?.error;
+  console.error('Failed to mark mock test client completed:', message);
+  toast.error(
+    message
+      ? `Your test was not registered as completed: ${message}. Please contact support before leaving.`
+      : 'Your test was not registered as completed. Please contact support before leaving.',
+    { autoClose: false, toastId: 'mock-completion-write-failed' }
+  );
+};
+
+
 import {
   saveWritingPracticeData,
   loadWritingPracticeData,
@@ -663,9 +680,9 @@ const WritingPracticePageContent = () => {
             localStorage.setItem(resultKey, JSON.stringify(resultData));
 
             if (mockClientId) {
-              updateClientStatus(mockClientId, 'completed').catch(err => {
-                console.error('Error updating mock test client status to completed:', err);
-              });
+              // updateClientStatus xatoni THROW qilmaydi, {success:false} qaytaradi - shuning uchun
+              // .catch() uni umuman ushlamasdi va nosozlik butunlay e'tiborsiz qolardi.
+              notifyIfCompletionFailed(await updateClientStatus(mockClientId, 'completed'));
             }
 
             setIsSaving(false);
@@ -1041,9 +1058,7 @@ const WritingPracticePageContent = () => {
         }
 
         if (isMockTest && mockClientId) {
-          updateClientStatus(mockClientId, 'completed').catch(err => {
-            console.error('Error updating mock test client status to completed:', err);
-          });
+          notifyIfCompletionFailed(await updateClientStatus(mockClientId, 'completed'));
         }
 
         if (!isMockTest) {
@@ -1141,9 +1156,7 @@ const WritingPracticePageContent = () => {
         }
 
         if (isMockTest && mockClientId) {
-          updateClientStatus(mockClientId, 'completed').catch(err => {
-            console.error('Error updating mock test client status to completed:', err);
-          });
+          notifyIfCompletionFailed(await updateClientStatus(mockClientId, 'completed'));
         }
 
         if (!isMockTest) {

@@ -254,18 +254,42 @@ const sortedQuestions = useMemo(() => {
     return reviewData[questionNumber] || {};
   };
 
-  // Handle answer selection
-  const handleAnswerChange = (questionNumber, answerText) => {
+  // Handle answer selection.
+  // MUHIM: javob option_KEY sifatida saqlanadi (masalan "C"), option_text emas.
+  // Ilgari text saqlanardi va baholash ham text bo'yicha solishtirardi - natijada bir xil
+  // matnli ikki variant (prod'da 5 ta guruhda bor) farqlanmasdi va noto'g'ri harf ham
+  // to'g'ri deb hisoblanardi.
+  const handleAnswerChange = (questionNumber, optionKey) => {
     if (mode !== 'review') {
-      // Store answer as text (not letter)
-      onAnswerChange(questionNumber, answerText);
+      onAnswerChange(questionNumber, optionKey);
     }
   };
 
-  // Get selected answer for a question
+  /**
+   * Eski urinishlarda javob option_text sifatida saqlangan. Review rejimida ular ham
+   * ko'rinishi uchun saqlangan qiymatni key'ga o'giramiz: avval key sifatida sinaymiz,
+   * topilmasa - text bo'yicha qidiramiz.
+   */
+  const storedAnswerToKey = (stored) => {
+    if (!stored) return '';
+    const value = String(stored).trim();
+    if (!value) return '';
+
+    const byKey = optionKeyList.find(
+      (item) => String(item.key).trim().toLowerCase() === value.toLowerCase()
+    );
+    if (byKey) return String(byKey.key);
+
+    const byText = optionKeyList.find(
+      (item) => String(item.text).trim().toLowerCase() === value.toLowerCase()
+    );
+    return byText ? String(byText.key) : value;
+  };
+
+  // Get selected answer for a question (always normalised to an option_key)
   const getSelectedAnswer = (questionNumber) => {
     const review = reviewData[questionNumber] || {};
-    return review.userAnswer || answers[questionNumber] || '';
+    return storedAnswerToKey(review.userAnswer || answers[questionNumber] || '');
   };
 
 
@@ -440,13 +464,15 @@ const sortedQuestions = useMemo(() => {
                         {optionKeyList.length > 0 ? (
                           // Use actual option_key from data
                           optionKeyList.map((item, idx) => {
-                            const isSelected = selectedAnswer === item.text;
-                    
-                            
+                            // Solishtirish va saqlash - key bo'yicha. Bir xil option_text'li
+                            // variantlar ham shu tufayli farqlanadi (Radix Select ham bir xil
+                            // `value` bilan ishlay olmaydi).
+                            const isSelected = String(selectedAnswer) === String(item.key);
+
                             return (
                               <SelectItem
                                 key={idx}
-                                value={item.text}
+                                value={String(item.key)}
                                 className={cn(
                                   isSelected && showCorrect && "bg-green-50",
                                   isSelected && showWrong && "bg-red-50"
@@ -465,7 +491,6 @@ const sortedQuestions = useMemo(() => {
                         ) : (
                           // Fallback: Generate display key based on option_key_type
                           answerOptions.map((optionText, idx) => {
-                            console.log(optionText);
                             let displayKey = '';
                             if (optionKeyType === 'numeric') {
                               displayKey = String(idx + 1);
