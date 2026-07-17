@@ -118,7 +118,6 @@ const DashboardLayout = () => {
     "/speaking-practice/shadowing",
     "/speaking-practice",
     "/speaking-result",
-    "/pricing",
     "/writing-practice",
     "/own-writing",
     "/mock-test/results",
