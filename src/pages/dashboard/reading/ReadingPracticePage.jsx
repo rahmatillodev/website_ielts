@@ -24,6 +24,8 @@ import PracticeFooter from "@/components/questions/PracticeFooter";
 import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
 import MockTestExitModal from "@/components/modal/MockTestExitModal";
 import { autoEnterFullscreen, monitorFullscreen } from "@/utils/mockTestFullscreen";
+import ReportQuestionModal from "@/components/modal/ReportQuestionModal";
+import { MdOutlineFlag } from "react-icons/md";
 
 
 
@@ -88,6 +90,23 @@ const ReadingPracticePageContent = () => {
   const [isEarlyExit, setIsEarlyExit] = useState(false);
 
   const [answers, setAnswers] = useState({});
+  // Savol bo'yicha shikoyat - FAQAT review rejimida ko'rinadi.
+  const [reportContext, setReportContext] = useState(null);
+
+  /** Shikoyat kontekstini jonli test ma'lumotidan yig'adi (snapshot hisobotga yoziladi). */
+  const openReport = ({ question, questionGroup, questionNumber }) => {
+    setReportContext({
+      questionId: question?.id ?? questionGroup?.id ?? null,
+      questionNumber: questionNumber ?? question?.question_number ?? null,
+      questionType: questionGroup?.type ?? null,
+      questionText: question?.question_text || questionGroup?.question_text || null,
+      partNumber: currentPartData?.part_number ?? currentPart ?? null,
+      testId: currentTest?.id ?? null,
+      testTitle: currentTest?.title ?? null,
+      attemptId: null,
+    });
+  };
+
   const answersArchiveRef = useRef(answers);
   useEffect(() => {
     answersArchiveRef.current = answers;
@@ -1827,15 +1846,28 @@ const ReadingPracticePageContent = () => {
                                   )}
 
                                   {/* Show question number and text */}
-                                  <p
-                                    className="font-medium mb-3 w-11/12"
-                                    data-selectable="true"
-                                    data-part-id={currentPart}
-                                    data-section-type="questions"
-                                    style={{ color: themeColors.text }}
-                                  >
-                                    {questionNumber}. {questionText}
-                                  </p>
+                                  <div className="flex items-start justify-between gap-2 mb-3">
+                                    <p
+                                      className="font-medium w-11/12"
+                                      data-selectable="true"
+                                      data-part-id={currentPart}
+                                      data-section-type="questions"
+                                      style={{ color: themeColors.text }}
+                                    >
+                                      {questionNumber}. {questionText}
+                                    </p>
+                                    {status === 'reviewing' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => openReport({ question, questionGroup, questionNumber })}
+                                        title="Report a problem with this question"
+                                        aria-label={`Report a problem with question ${questionNumber}`}
+                                        className="shrink-0 text-gray-300 hover:text-red-500 transition-colors mt-0.5"
+                                      >
+                                        <MdOutlineFlag size={15} />
+                                      </button>
+                                    )}
+                                  </div>
 
                                   <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
                                     <QuestionRenderer
@@ -1935,6 +1967,12 @@ const ReadingPracticePageContent = () => {
 
       {/* Note Sidebar */}
       <NoteSidebar />
+
+      <ReportQuestionModal
+        open={!!reportContext}
+        onOpenChange={(v) => { if (!v) setReportContext(null); }}
+        context={reportContext}
+      />
     </div>
   );
 };
