@@ -27,7 +27,7 @@ const MockTestFlow = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userProfile } = useAuthStore();
-  const { fetchMockTestByUserId, fetchMockTestById, mockTest, client, loading, error, updateClientStatus, findClientForMockTest, fetchClientById, createClientForMockTest } = useMockTestClientStore();
+  const { fetchMockTestById, mockTest, client, loading, error, updateClientStatus, findClientForMockTest, fetchClientById, createClientForMockTest, hasUserCompletedMockTest } = useMockTestClientStore();
   const appliedAudioCheckDoneRef = useRef(false);
   const restorationAttemptedRef = useRef(false);
 
@@ -47,16 +47,26 @@ const MockTestFlow = () => {
   const readingVideoSrc = "/videos/readingVideo.mp4";
   const writingVideoSrc = "/videos/writingVideo.mp4";
 
-  // Load mock test data on mount
+  // Load mock test data on mount.
+  // fetchMockTestById endi sessiyadagi tasdiqlangan parolni RPC'ga uzatadi - parol bo'lmasa
+  // (ya'ni foydalanuvchi modaldan o'tmagan bo'lsa) kontent qaytmaydi va quyida /mock-tests'ga
+  // qaytariladi.
   useEffect(() => {
     if (paramMockTestId) {
-      // If mockTestId is in route params (accessed via password), fetch by ID
       fetchMockTestById(paramMockTestId);
-    } else if (userProfile?.id) {
-      // Otherwise, use the old method for backward compatibility
-      fetchMockTestByUserId(userProfile.id);
     }
-  }, [paramMockTestId, userProfile?.id, fetchMockTestById, fetchMockTestByUserId]);
+  }, [paramMockTestId, fetchMockTestById]);
+
+  // Parolsiz to'g'ridan-to'g'ri /mock-test/flow/:id ga kirishga urinish - ro'yxatga qaytaramiz.
+  useEffect(() => {
+    if (!paramMockTestId) return;
+    if (loading) return;
+    if (mockTest) return;
+    navigate('/mock-tests', {
+      replace: true,
+      state: { error: 'Please enter the mock test password to start.' },
+    });
+  }, [paramMockTestId, loading, mockTest, navigate]);
 
   // Fetch or create client when mock test is loaded (so status can be updated to 'started' when video starts)
   useEffect(() => {
@@ -104,25 +114,28 @@ const MockTestFlow = () => {
     loadClient();
   }, [mockTest?.id, userProfile?.id, userProfile?.email, userProfile?.full_name, userProfile?.phone_number, findClientForMockTest, fetchClientById, createClientForMockTest]);
 
-  // Check if user has already completed the mock test after it's loaded
-  // useEffect(() => {
-  //   const checkCompletion = async () => {
-  //     if (!userProfile?.id || !mockTest?.id) return;
-      
-  //     const hasCompleted = await hasUserCompletedMockTest(userProfile.id, mockTest.id);
-  //     if (hasCompleted) {
-  //       // User has already completed this test, redirect to mock tests page
-  //       navigate('/mock-tests', { 
-  //         replace: true,
-  //         state: { 
-  //           error: 'You have already completed this mock test. You cannot access it again.' 
-  //         }
-  //       });
-  //     }
-  //   };
-    
-  //   checkCompletion();
-  // }, [userProfile?.id, mockTest?.id, hasUserCompletedMockTest, navigate]);
+  // Check if user has already completed the mock test after it's loaded.
+  // Bu tekshiruv verifyPassword ichida ham bor, lekin /mock-test/flow/:id ga to'g'ridan-to'g'ri
+  // kirish mumkin - shuning uchun bu yerda ham kerak. Aks holda qayta topshirish clientni
+  // 'checked' -> 'started' ga qaytarib yuboradi (DB trigger ham buni bloklaydi).
+  useEffect(() => {
+    const checkCompletion = async () => {
+      if (!userProfile?.id || !mockTest?.id) return;
+
+      const hasCompleted = await hasUserCompletedMockTest(userProfile.id, mockTest.id);
+      if (hasCompleted) {
+        // User has already completed this test, redirect to mock tests page
+        navigate('/mock-tests', {
+          replace: true,
+          state: {
+            error: 'You have already completed this mock test. You cannot access it again.'
+          }
+        });
+      }
+    };
+
+    checkCompletion();
+  }, [userProfile?.id, mockTest?.id, hasUserCompletedMockTest, navigate]);
 
   // Use param mockTestId if available, otherwise use fetched mockTest
   const effectiveMockTestId = paramMockTestId || mockTest?.id;

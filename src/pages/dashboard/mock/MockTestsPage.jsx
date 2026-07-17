@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
-import { useMockTestClientStore } from "@/store/mockTestClientStore";
+import { useMockTestClientStore, setVerifiedMockPassword } from "@/store/mockTestClientStore";
 import { useMockTests } from "@/hooks/useMockTests";
 import {  MdHistory } from "react-icons/md";
 import MockTestPasswordModal from "@/components/modal/MockTestPasswordModal";
@@ -67,9 +67,14 @@ const MockTestsPage = () => {
     setPasswordError('');
 
     try {
-      const result = await verifyPassword(passwordCode.trim());
-      
+      const trimmedPassword = passwordCode.trim();
+      const result = await verifyPassword(trimmedPassword);
+
       if (result.success && result.mockTest) {
+        // Tasdiqlangan parolni shu sessiya uchun saqlaymiz: flow sahifasi (reload'dan keyin ham)
+        // uni RPC'ga uzatib, kontentni server tomonda qayta tekshiradi.
+        setVerifiedMockPassword(result.mockTest.id, trimmedPassword);
+
         // Close modal and navigate to the mock test flow
         setIsPasswordModalOpen(false);
         setPasswordCode('');

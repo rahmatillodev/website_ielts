@@ -1,6 +1,39 @@
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
 
+/**
+ * Mock test paroli: foydalanuvchi modalda kiritgandan keyin shu sessiyada saqlanadi, chunki
+ * /mock-test/flow/:id sahifasi reload'dan keyin ham parolni RPC'ga uzatishi kerak.
+ * Bu sir emas - foydalanuvchining o'zi kiritgan qiymati. Soxta qiymat foyda bermaydi:
+ * RPC uni har safar DB bilan solishtiradi.
+ */
+const mockPasswordKey = (mockTestId) => `mock_test_pw_${mockTestId}`;
+
+export const setVerifiedMockPassword = (mockTestId, password) => {
+    try {
+        if (!mockTestId || !password) return;
+        sessionStorage.setItem(mockPasswordKey(mockTestId), password);
+    } catch {
+        // sessionStorage yo'q bo'lsa (private mode) - jim o'tamiz
+    }
+};
+
+export const getVerifiedMockPassword = (mockTestId) => {
+    try {
+        return mockTestId ? sessionStorage.getItem(mockPasswordKey(mockTestId)) : null;
+    } catch {
+        return null;
+    }
+};
+
+export const clearVerifiedMockPassword = (mockTestId) => {
+    try {
+        if (mockTestId) sessionStorage.removeItem(mockPasswordKey(mockTestId));
+    } catch {
+        // ignore
+    }
+};
+
 export const useMockTestClientStore = create((set) => ({
     client: null,
     mockTest: null,
@@ -62,33 +95,24 @@ export const useMockTestClientStore = create((set) => ({
         }
     },
 
+    // Parolni RPC orqali tekshiramiz. `mock_test` jadvalini to'g'ridan-to'g'ri o'qish
+    // oddiy foydalanuvchilar uchun yopilgan - aks holda password_code brauzerga tushardi.
     fetchMockTestByPassword: async (passwordCode) => {
         set({ loading: true, error: null });
 
         try {
             const { data, error } = await supabase
-                .from("mock_test")
-                .select(`
-                    id,
-                    writing_id,
-                    listening_id,
-                    reading_id,
-                    password_code,
-                    is_active,
-                    created_at
-                `)
-                .eq("is_active", true)
-                .eq("password_code", passwordCode)
-                .single();
+                .rpc("get_mock_test_by_password", { p_password: passwordCode });
 
             if (error) throw error;
 
-            if (!data) {
+            const mockTest = Array.isArray(data) ? data[0] : data;
+            if (!mockTest) {
                 throw new Error("Mock test not found with the provided password code");
             }
 
-            set({ mockTest: data, loading: false });
-            return data;
+            set({ mockTest, loading: false });
+            return mockTest;
         } catch (err) {
             set({ error: err.message || "Failed to fetch mock test", loading: false });
             return null;
@@ -99,99 +123,44 @@ export const useMockTestClientStore = create((set) => ({
         set({ loading: true, error: null });
 
         try {
-            const { data, error } = await supabase
-                .from("mock_test")
-                .select(`
-                    id,
-                    writing_id,
-                    listening_id,
-                    reading_id,
-                    password_code,
-                    is_active,
-                    created_at
-                `)
-                .eq("id", mockTestId)
-                .eq("is_active", true)
-                .single();
+            // Parolsiz test kontentini olib bo'lmaydi. Parol foydalanuvchi modalda kiritgan
+            // qiymat bo'lib, sessionStorage'da saqlanadi - RPC uni DB bilan solishtiradi,
+            // ya'ni soxta qiymat ishlamaydi.
+            const password = getVerifiedMockPassword(mockTestId);
+            if (!password) {
+                set({
+                    mockTest: null,
+                    error: "Mock test password required",
+                    loading: false,
+                });
+                return null;
+            }
+
+            const { data, error } = await supabase.rpc("get_mock_test_for_attempt", {
+                p_mock_test_id: mockTestId,
+                p_password: password,
+            });
 
             if (error) throw error;
 
-            if (!data) {
+            const mockTest = Array.isArray(data) ? data[0] : data;
+            if (!mockTest) {
+                clearVerifiedMockPassword(mockTestId);
                 throw new Error("Mock test not found");
             }
 
-            set({ mockTest: data, loading: false });
-            return data;
+            set({ mockTest, loading: false });
+            return mockTest;
         } catch (err) {
             set({ error: err.message || "Failed to fetch mock test", loading: false });
             return null;
         }
     },
 
-    fetchMockTestByUserId: async (userId) => {
-        set({ loading: true, error: null });
-
-        try {
-            // First, get the client
-            const client = await useMockTestClientStore.getState().fetchClientById(userId);
-            if (!client) {
-                throw new Error("Client not found");
-            }
-
-            // Then, fetch the mock_test associated with this client using mock_test_id
-            if (client.mock_test_id) {
-                const { data, error } = await supabase
-                    .from("mock_test")
-                    .select(`
-                        id,
-                        writing_id,
-                        listening_id,
-                        reading_id,
-                        password_code,
-                        is_active,
-                        created_at
-                    `)
-                    .eq("id", client.mock_test_id)
-                    .maybeSingle();
-
-                if (error) throw error;
-
-                if (data) {
-                    set({ mockTest: data, loading: false });
-                    return data;
-                }
-            }
-
-            // Fallback: fetch the most recent active mock_test if client doesn't have mock_test_id
-            const { data, error } = await supabase
-                .from("mock_test")
-                .select(`
-                    id,
-                    writing_id,
-                    listening_id,
-                    reading_id,
-                    password_code,
-                    is_active,
-                    created_at
-                `)
-                .eq("is_active", true)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            if (error) throw error;
-
-            if (!data) {
-                throw new Error("No active mock test found");
-            }
-
-            set({ mockTest: data, loading: false });
-            return data;
-        } catch (err) {
-            set({ error: err.message || "Failed to fetch mock test", loading: false });
-            return null;
-        }
-    },
+    // fetchMockTestByUserId olib tashlandi: u parolsiz mock kontentini qaytarardi va
+    // mock_test_id yo'q bo'lsa ixtiyoriy aktiv mockni fallback qilib berardi - ya'ni parol
+    // darvozasini aylanib o'tish yo'li edi. Bundan tashqari o'lik kod edi: /mock-test/flow/:id
+    // marshrutida param doim mavjud, shuning uchun chaqirilmasdi.
 
     /** Valid status values for mock_test_clients */
     VALID_CLIENT_STATUSES: ['booked', 'started', 'completed', 'checked', 'notified'],
@@ -290,34 +259,22 @@ export const useMockTestClientStore = create((set) => ({
                 throw new Error('Client not found');
             }
 
-            // 2. Get the mock_test using client's mock_test_id or fallback to active mock test
-            let mockTest;
-            if (client.mock_test_id) {
-                const { data: mockTestData, error: mockTestError } = await supabase
-                    .from('mock_test')
-                    .select('id, listening_id, reading_id, writing_id, is_active')
-                    .eq('id', client.mock_test_id)
-                    .maybeSingle();
-
-                if (mockTestError) throw mockTestError;
-                mockTest = mockTestData;
+            // 2. Get the mock_test sections for this client's own mock test.
+            // RPC faqat chaqiruvchining o'z client qatori bor mock uchun ma'lumot qaytaradi.
+            // Ilgari bu yerda "eng oxirgi aktiv mock" fallback'i bor edi - u ixtiyoriy mockni
+            // tanlab, boshqa test natijalarini ko'rsatishi mumkin edi; olib tashlandi.
+            if (!client.mock_test_id) {
+                throw new Error('This booking is not linked to a mock test');
             }
 
-            // Fallback: Get the active mock_test if client doesn't have mock_test_id
-            if (!mockTest) {
-                const { data: mockTestData, error: mockTestError } = await supabase
-                    .from('mock_test')
-                    .select('id, listening_id, reading_id, writing_id, is_active')
-                    .eq('is_active', true)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+            const { data: sectionsData, error: mockTestError } = await supabase
+                .rpc('get_mock_test_sections_for_own_client', { p_mock_test_id: client.mock_test_id });
 
-                if (mockTestError) throw mockTestError;
-                if (!mockTestData) {
-                    throw new Error('Active mock test not found');
-                }
-                mockTest = mockTestData;
+            if (mockTestError) throw mockTestError;
+
+            const mockTest = Array.isArray(sectionsData) ? sectionsData[0] : sectionsData;
+            if (!mockTest) {
+                throw new Error('Mock test not found');
             }
 
             const { listening_id, reading_id, writing_id } = mockTest;
@@ -470,20 +427,9 @@ export const useMockTestClientStore = create((set) => ({
         set({ loading: true, error: null });
 
         try {
-            const { data, error } = await supabase
-                .from("mock_test")
-                .select(`
-                    id,
-                    title,
-                    password_code,
-                    is_active,
-                    created_at,
-                    writing_id,
-                    listening_id,
-                    reading_id
-                `)
-                .eq("is_active", true)
-                .order("created_at", { ascending: false });
+            // Ro'yxat uchun faqat id/title kerak. Parol ham, bo'limlar id'si ham yuborilmaydi -
+            // ularni olish uchun parol talab qilinadi (get_mock_test_for_attempt).
+            const { data, error } = await supabase.rpc("list_active_mock_tests");
 
             if (error) throw error;
 

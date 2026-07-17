@@ -63,14 +63,13 @@ export const useMockTestHistory = () => {
       const speakingIds = [...new Set(clients.map((c) => c.speaking_id).filter(Boolean))];
 
       const [
-        { data: mockTests, error: mockTestsError },
+        { data: ownMockTests, error: mockTestsError },
         { data: attempts, error: attemptsError },
         speakingRows,
       ] = await Promise.all([
-        supabase
-          .from('mock_test')
-          .select('id, listening_id, reading_id, writing_id')
-          .in('id', mockTestIds),
+        // `mock_test` jadvalini to'g'ridan-to'g'ri o'qish yopilgan (parol darvozasi, BUG #51).
+        // RPC faqat shu foydalanuvchining o'z mock testlarini qaytaradi.
+        supabase.rpc('list_own_mock_test_sections'),
         supabase
           .from('user_attempts')
           .select(MOCK_ATTEMPT_SELECT)
@@ -82,7 +81,9 @@ export const useMockTestHistory = () => {
       if (mockTestsError) throw mockTestsError;
       if (attemptsError) throw attemptsError;
 
-      const mockTestById = Object.fromEntries((mockTests || []).map((mt) => [mt.id, mt]));
+      // RPC foydalanuvchining hamma mocklarini qaytaradi - shu sahifadagilarini ajratib olamiz.
+      const mockTests = (ownMockTests || []).filter((mt) => mockTestIds.includes(mt.id));
+      const mockTestById = Object.fromEntries(mockTests.map((mt) => [mt.id, mt]));
       const speakingByTestId = buildSpeakingAttemptsByTestId(speakingRows);
       const testTypeMap = await buildTestTypeMap(supabase, [
         ...(attempts || []),

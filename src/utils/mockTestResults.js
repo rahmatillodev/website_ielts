@@ -215,15 +215,16 @@ export async function loadMockTestSectionResults(supabase, userId, client) {
   const attempts = mergeAttemptsForClient(mockAttempts, speakingAttempt);
   const testTypeMap = await buildTestTypeMap(supabase, attempts);
 
-  const { data: mockTest, error: mockTestError } = await supabase
-    .from('mock_test')
-    .select('id, listening_id, reading_id, writing_id')
-    .eq('id', client.mock_test_id)
-    .maybeSingle();
+  // `mock_test` jadvalini to'g'ridan-to'g'ri o'qish yopilgan (parol darvozasi, BUG #51).
+  // RPC faqat chaqiruvchining o'z client qatori bor mock uchun ma'lumot qaytaradi.
+  const { data: sectionsData, error: mockTestError } = await supabase
+    .rpc('get_mock_test_sections_for_own_client', { p_mock_test_id: client.mock_test_id });
 
   if (mockTestError) {
     console.warn('Error fetching mock_test for section results:', mockTestError);
   }
+
+  const mockTest = Array.isArray(sectionsData) ? sectionsData[0] : sectionsData;
 
   return organizeMockTestSectionResults(attempts, mockTest, testTypeMap);
 }
