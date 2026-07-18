@@ -25,7 +25,6 @@ import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
 import MockTestExitModal from "@/components/modal/MockTestExitModal";
 import { autoEnterFullscreen, monitorFullscreen } from "@/utils/mockTestFullscreen";
 import ReportQuestionModal from "@/components/modal/ReportQuestionModal";
-import { MdOutlineFlag } from "react-icons/md";
 
 
 
@@ -1275,17 +1274,13 @@ const ReadingPracticePageContent = () => {
         setAnswers({ ...answersObj, ...answersByNumber });
       } else {
         console.error('[handleReviewTest] Failed to fetch attempt:', result.error);
-        // Better error handling - don't use alert, use console and set state
-        setStatus('taking'); // Reset to taking mode on error
-        setShowCorrectAnswers(false);
-        // Optionally show toast notification instead of alert
-        console.warn('Failed to load review data. Please try again.');
+        // Keep the page in read-only review mode. Dropping to 'taking' here left the review
+        // chrome (shown from ?mode=review) over blank, EDITABLE questions — a broken shell.
+        toast.error('Could not load your previous answers to review. Please go back and try again.');
       }
     } catch (error) {
       console.error('[handleReviewTest] Error fetching attempt:', error);
-      setStatus('taking'); // Reset to taking mode on error
-      setShowCorrectAnswers(false);
-      console.warn('An error occurred while loading review data.');
+      toast.error('Could not load your previous answers to review. Please go back and try again.');
     }
   };
 
@@ -1333,6 +1328,7 @@ const ReadingPracticePageContent = () => {
 
   // Handle input interactions to trigger timer
   const handleInputInteraction = () => {
+    if (status === 'reviewing') return; // No timer/persistence side effects in review
     if (!hasInteracted && !isStarted) {
       const newStartTime = startTime || Date.now();
       setIsStarted(true);
@@ -1801,6 +1797,7 @@ const ReadingPracticePageContent = () => {
                                 showCorrectAnswers={showCorrectAnswers}
                                 bookmarks={bookmarks}
                                 toggleBookmark={toggleBookmark}
+                                onReport={(q) => openReport({ question: q, questionGroup, questionNumber: q?.question_number })}
                               />
 
                             </div>
@@ -1856,17 +1853,6 @@ const ReadingPracticePageContent = () => {
                                     >
                                       {questionNumber}. {questionText}
                                     </p>
-                                    {status === 'reviewing' && (
-                                      <button
-                                        type="button"
-                                        onClick={() => openReport({ question, questionGroup, questionNumber })}
-                                        title="Report a problem with this question"
-                                        aria-label={`Report a problem with question ${questionNumber}`}
-                                        className="shrink-0 text-gray-300 hover:text-red-500 transition-colors mt-0.5"
-                                      >
-                                        <MdOutlineFlag size={15} />
-                                      </button>
-                                    )}
                                   </div>
 
                                   <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
@@ -1899,6 +1885,7 @@ const ReadingPracticePageContent = () => {
                                       showCorrectAnswers={showCorrectAnswers}
                                       bookmarks={bookmarks}
                                       toggleBookmark={toggleBookmark}
+                                      onReport={(q) => openReport({ question: q, questionGroup, questionNumber: q?.question_number })}
                                     />
                                   </div>
                                 </div>

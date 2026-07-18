@@ -1,39 +1,38 @@
 import React from "react";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import QuestionActionIcons from "./QuestionActionIcons";
 
-const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {} }) => {
+const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {}, onReport = () => {} }) => {
+  const questionId = question.id;
   const questionNumber = question.question_number || question.id;
   const isReviewMode = mode === 'review';
-  const isBookmarked = bookmarks.has(questionNumber);
-  const review = reviewData[questionNumber] || {};
-  const isCorrect = review.isCorrect;
+  const isBookmarked = bookmarks.has(questionId) || bookmarks.has(questionNumber);
+  // Try both question.id (UUID) and question_number for review data lookup
+  const review = reviewData[questionId] ||
+                 reviewData[String(questionId)] ||
+                 reviewData[questionNumber] ||
+                 reviewData[String(questionNumber)] ||
+                 {};
   const correctAnswer = review.correctAnswer || '';
   const userAnswer = review.userAnswer || answer;
-  const showWrong = isReviewMode && !isCorrect;
-  const showCorrect = isReviewMode && isCorrect;
+  const showWrong = isReviewMode && Object.prototype.hasOwnProperty.call(review, 'isCorrect') && review.isCorrect === false;
+  const showCorrect = isReviewMode && review.isCorrect === true;
+  // Options are fixed uppercase strings; normalize the stored answer so casing/whitespace
+  // differences (e.g. "True", " not given") still match.
+  const normalize = (v) => (v ?? '').toString().trim().toUpperCase();
   
   return (
     <div className="space-y-2 group relative">
-      {/* Bookmark Icon */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleBookmark(questionNumber);
-        }}
-        className={`absolute right-0 -top-10 transition-all ${
-          isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-        }`}
-        title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-      >
-        {isBookmarked ? (
-          <FaBookmark className="w-5 h-5 text-red-500" />
-        ) : (
-          <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-        )}
-      </button>
+      {/* Bookmark + report actions */}
+      <QuestionActionIcons
+        className="absolute right-0 -top-10"
+        isBookmarked={isBookmarked}
+        onToggleBookmark={() => toggleBookmark(questionNumber)}
+        isReviewMode={isReviewMode}
+        onReport={() => onReport(question)}
+      />
       {["TRUE", "FALSE", "NOT GIVEN"].map((option) => {
-        const isSelected = (userAnswer || answer) === option;
-        const isCorrectOption = isReviewMode && option === correctAnswer;
+        const isSelected = normalize(userAnswer || answer) === normalize(option);
+        const isCorrectOption = isReviewMode && normalize(option) === normalize(correctAnswer);
         
         return (
           <label

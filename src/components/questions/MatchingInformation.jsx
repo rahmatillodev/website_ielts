@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import QuestionActionIcons from "./QuestionActionIcons";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import {
   Select,
@@ -40,8 +40,9 @@ const MatchingInformation = ({
   mode = 'test', 
   reviewData = {}, 
   showCorrectAnswers = true, 
-  bookmarks = new Set(), 
-  toggleBookmark = () => {} 
+  bookmarks = new Set(),
+  toggleBookmark = () => {},
+  onReport = () => {}
 }) => {
   const appearance = useAppearance();
   const themeColors = appearance.themeColors;
@@ -526,23 +527,14 @@ const sortedQuestions = useMemo(() => {
                     </Select>
                   </div>
 
-                  {/* Bookmark Icon */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleBookmark(qNumber);
-                    }}
-                    className={`transition-all shrink-0 ${
-                      isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                    }`}
-                    title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-                  >
-                    {isBookmarked ? (
-                      <FaBookmark className="w-5 h-5 text-red-500" />
-                    ) : (
-                      <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                    )}
-                  </button>
+                  {/* Bookmark + report actions */}
+                  <QuestionActionIcons
+                    className="shrink-0"
+                    isBookmarked={isBookmarked}
+                    onToggleBookmark={() => toggleBookmark(qNumber)}
+                    isReviewMode={isReviewMode}
+                    onReport={() => onReport(q)}
+                  />
             </div>
           );
         })}

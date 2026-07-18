@@ -1,6 +1,6 @@
 import React from "react";
 import { useDrag, useDrop } from "react-dnd";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import QuestionActionIcons from "./QuestionActionIcons";
 import parse from "html-react-parser"; // HTML strukturasini saqlash uchun
 import { useAppearance } from "@/contexts/AppearanceContext";
 
@@ -41,7 +41,7 @@ const DraggableWord = ({ word, isUsed }) => {
 /**
  * DropZone - Matn ichidagi tushirish maydoni
  */
-const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => { } }) => {
+const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => { }, question, onReport = () => {} }) => {
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: ItemType.WORD,
     drop: (item) => onDrop(questionId, item.word),
@@ -89,15 +89,13 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
         {answer && answer.trim() !== '' ? `[${questionNumber}] ${answer}` : `[ ${questionNumber} ]`}
       </span>
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleBookmark(questionId);
-        }}
-        className={`ml-1 transition-all ${isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-      >
-        {isBookmarked ? <FaBookmark className="w-5 h-5 text-red-500" /> : <FaRegBookmark className="w-5 h-5 text-gray-400" />}
-      </button>
+      <QuestionActionIcons
+        className="ml-1"
+        isBookmarked={isBookmarked}
+        onToggleBookmark={() => toggleBookmark(questionId)}
+        isReviewMode={isReviewMode}
+        onReport={() => onReport(question)}
+      />
 
       {/* Correct Answer - Only for drag_and_drop type, after bookmark */}
       {showWrong && correctAnswer && showCorrectAnswers && (
@@ -112,7 +110,7 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
 /**
  * Asosiy DragAndDrop Komponenti
  */
-const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInteraction, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => { } }) => {
+const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInteraction, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => { }, onReport = () => {} }) => {
 
   const questionText = question.question_text || question.content || "";
   let currentBlankIndex = 0;
@@ -174,6 +172,7 @@ const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInte
                       <DropZone
                         questionId={questionKey}
                         questionNumber={questionNumber}
+                        question={target}
                         // Try both question.id and question_number for answer lookup
                         answer={answers[questionId] || answers[questionNumber] || answers[questionKey] || ''}
                         onDrop={handleDrop}
@@ -183,6 +182,7 @@ const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInte
                         showCorrectAnswers={showCorrectAnswers}
                         bookmarks={bookmarks}
                         toggleBookmark={toggleBookmark}
+                        onReport={onReport}
                       />
                     );
                   })()

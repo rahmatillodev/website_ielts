@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { getOptionValue } from "../../store/optionUtils";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import QuestionActionIcons from "./QuestionActionIcons";
 import { useAppearance } from "@/contexts/AppearanceContext";
 
 /**
@@ -17,7 +17,7 @@ import { useAppearance } from "@/contexts/AppearanceContext";
  * - Subsequent columns: Radio buttons for options (A, B, C, etc.)
  * - Perfect vertical alignment: all Option A columns align, all Option B columns align, etc.
  */
-const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {} }) => {
+const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {}, onReport = () => {} }) => {
   // Prepare unified table structure with group-level options for column headers
   const tableData = useMemo(() => {
     if (!groupQuestions || groupQuestions.length === 0) {
@@ -50,6 +50,9 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
   }, [groupQuestions, options]);
 
   const isReviewMode = mode === 'review';
+  // Called before the early return below so hook order stays stable across renders.
+  const appearance = useAppearance();
+  const themeColors = appearance.themeColors;
 
   // Get correct answer for a question from question object's correct_answer field
   const getCorrectAnswerForQuestion = (question) => {
@@ -73,14 +76,16 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
     });
   };
 
-  // Check if an option is selected for a question (match by option_text or letter)
-  const isOptionSelected = (questionNumber, optionValue) => {
+  // Check if an option is selected for a question (match by option_text OR letter,
+  // since the stored answer may be in either format).
+  const isOptionSelected = (questionNumber, columnOption) => {
     const review = reviewData[questionNumber] || {};
-    const answer = review.userAnswer || answers[questionNumber] || '';
-    // Match by option_text or letter (case-insensitive)
-    const normalizedAnswer = (answer || '').toString().toLowerCase().trim();
-    const normalizedValue = (optionValue || '').toString().toLowerCase().trim();
-    return normalizedAnswer === normalizedValue;
+    const raw = review.userAnswer || answers[questionNumber] || '';
+    const norm = (v) => (v ?? '').toString().toLowerCase().trim();
+    const a = norm(raw);
+    if (!a) return false;
+    return a === norm(getOptionValue(columnOption)) ||
+           (columnOption.letter && a === norm(columnOption.letter));
   };
 
   // Get review info for a question
@@ -102,9 +107,6 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
   }
 
   const { questions, columnOptions } = tableData;
-
-  const appearance = useAppearance();
-  const themeColors = appearance.themeColors;
 
   return (
     <div className="overflow-x-auto mb-6">
@@ -138,14 +140,13 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
               const qNumber = q.question_number || q.id;
               const questionText = q.question_text || q.text || '';
               const review = getQuestionReview(qNumber);
-              const isCorrect = review.isCorrect;
-              
+
               // Get correct answer from review data or from question's nested options
               const correctAnswerFromReview = review.correctAnswer || '';
               const correctAnswerFromQuestion = getCorrectAnswerForQuestion(q);
               const correctAnswer = correctAnswerFromReview || correctAnswerFromQuestion;
-              const showWrong = isReviewMode && !isCorrect;
-              const showCorrect = isReviewMode && isCorrect;
+              const showWrong = isReviewMode && Object.prototype.hasOwnProperty.call(review, 'isCorrect') && review.isCorrect === false;
+              const showCorrect = isReviewMode && review.isCorrect === true;
 
               const isBookmarked = bookmarks.has(qNumber);
 
@@ -174,23 +175,14 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                           <span className="text-xs text-green-600 font-medium ml-2 flex whitespace-nowrap">Correct: {correctAnswer}</span>
                         )}
                       </div>
-                      {/* Bookmark Icon */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleBookmark(qNumber);
-                        }}
-                        className={`ml-2 transition-all ${
-                          isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                        }`}
-                        title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-                      >
-                        {isBookmarked ? (
-                          <FaBookmark className="w-5 h-5 text-red-500" />
-                        ) : (
-                          <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                        )}
-                      </button>
+                      {/* Bookmark + report actions */}
+                      <QuestionActionIcons
+                        className="ml-2"
+                        isBookmarked={isBookmarked}
+                        onToggleBookmark={() => toggleBookmark(qNumber)}
+                        isReviewMode={isReviewMode}
+                        onReport={() => onReport(q)}
+                      />
                     </div>
                   </td>
                   
@@ -200,21 +192,21 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                     // Use getOptionValue for consistency (returns option_text)
                     const optionValue = getOptionValue(columnOption);
                     const columnOptionLetter = columnOption.letter || '';
-                    const isSelected = isOptionSelected(qNumber, optionValue);
-                    
+                    const isSelected = isOptionSelected(qNumber, columnOption);
+
                     // Check if this option matches the correct answer for this question
                     // correct_answer is stored as a letter (e.g., "A"), so match by letter or option_text
-                    const isCorrectAnswerMatch = isReviewMode && 
-                      (optionValue.toLowerCase() === (correctAnswer || '').toLowerCase().trim() ||
-                       columnOptionLetter.toLowerCase() === (correctAnswer || '').toLowerCase().trim());
-                    
+                    const isCorrectAnswerMatch = isReviewMode &&
+                      (optionValue.toLowerCase().trim() === (correctAnswer || '').toLowerCase().trim() ||
+                       columnOptionLetter.toLowerCase().trim() === (correctAnswer || '').toLowerCase().trim());
+
                     return (
                       <td
-                        key={`${q.id}-${columnOption.id || columnOptionLetter || columnOptionText}`}
+                        key={`${q.id}-${columnOption.id || columnOptionLetter || optionValue}`}
                         className={`px-4 py-3 text-center ${
-                          isSelected && showCorrect ? 'bg-green-100' : 
-                          isSelected && showWrong ? 'bg-red-400' : 
-                          isCorrectAnswerMatch && isReviewMode && !isSelected ? 'bg-green-50' : ''
+                          isSelected && showCorrect ? 'bg-green-100' :
+                          isSelected && showWrong ? 'bg-red-400' :
+                          isCorrectAnswerMatch && isReviewMode && showCorrectAnswers && !isSelected ? 'bg-green-50' : ''
                         }`}
                         style={{ backgroundColor: themeColors.background, color: themeColors.text }}
                       >

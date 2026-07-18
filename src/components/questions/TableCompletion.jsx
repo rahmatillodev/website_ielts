@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import parse from "html-react-parser";
 import { Input } from "@/components/ui/input";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import QuestionActionIcons from "./QuestionActionIcons";
 import { useAppearance } from "@/contexts/AppearanceContext";
 
 const TableCompletion = ({
@@ -15,20 +15,23 @@ const TableCompletion = ({
   showCorrectAnswers = true,
   bookmarks = new Set(),
   toggleBookmark = () => {},
+  onReport = () => {},
 }) => {
   const appearance = useAppearance();
   const themeColors = appearance.themeColors;
 
-  if (!groupQuestions || groupQuestions.length === 0) return null;
-
-  // Sort questions by question_number
+  // Sort questions by question_number.
+  // NOTE: this useMemo must run before any early return so hook order stays stable
+  // across renders (groupQuestions can arrive async, empty then populated).
   const sortedQuestions = useMemo(
     () =>
-      [...groupQuestions].sort(
+      [...(groupQuestions || [])].sort(
         (a, b) => (a.question_number ?? 0) - (b.question_number ?? 0)
       ),
     [groupQuestions]
   );
+
+  if (!groupQuestions || groupQuestions.length === 0) return null;
 
   // Track blank index (resets on each render)
   let currentBlankIndex = 0;
@@ -92,21 +95,13 @@ const TableCompletion = ({
           }}
         />
         {/* Bookmark button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleBookmark(answerKey);
-          }}
-          className={`transition-all ${
-            isBookmarked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-          }`}
-        >
-          {isBookmarked ? (
-            <FaBookmark className="w-5 h-5 text-red-500" />
-          ) : (
-            <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-          )}
-        </button>
+        <QuestionActionIcons
+          className=""
+          isBookmarked={isBookmarked}
+          onToggleBookmark={() => toggleBookmark(answerKey)}
+          isReviewMode={isReviewMode}
+          onReport={() => onReport(questionItem)}
+        />
         {/* Correct Answer - Only for table_completion type, after bookmark */}
         {showWrong && correctAnswer && showCorrectAnswers && (
           <span className="ml-2 text-sm text-green-600 font-semibold whitespace-nowrap">

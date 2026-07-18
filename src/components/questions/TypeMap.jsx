@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { getOptionValue } from "../../store/optionUtils";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import QuestionActionIcons from "./QuestionActionIcons";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import parse from "html-react-parser"; 
 
@@ -33,10 +33,10 @@ const TypeMap = ({
   mode = 'test', 
   reviewData = {}, 
   showCorrectAnswers = true, 
-  bookmarks = new Set(), 
-  toggleBookmark = () => {} 
+  bookmarks = new Set(),
+  toggleBookmark = () => {},
+  onReport = () => {}
 }) => {
-  console.log(_question.opt);
   // Always use _question.options for column options
   const columnOptions = useMemo(() => {
     const qOpts = _question?.options || [];
@@ -56,7 +56,6 @@ const TypeMap = ({
   // Table questions sorted by question_number
   const questions = useMemo(() => {
     if (!Array.isArray(groupQuestions)) return [];
-    console.log(groupQuestions);
     return [...groupQuestions].sort((a, b) => {
       const aNum = a.question_number ?? 0;
       const bNum = b.question_number ?? 0;
@@ -97,7 +96,13 @@ const TypeMap = ({
     return _question.options.find(opt => {
       // console.log(opt.question_id === question.id);
       // Must match to this row (question id), and column (letter/option_key/option_text)
-      const matchesRow = opt.question_id === question.question_id;
+      // An option belongs to this row when it links to the row's id/number, or when it is a
+      // shared option (no row link) that applies to every row. (Previously compared against
+      // question.question_id, which rows don't carry, so the grid rendered empty.)
+      const matchesRow =
+        opt.question_id === question.id ||
+        (opt.question_number != null && opt.question_number === question.question_number) ||
+        (opt.question_id == null && opt.question_number == null);
       const matchesCol = (
         (colOption.letter && (opt.letter || '').toUpperCase() === (colOption.letter || '').toUpperCase()) ||
         (colOption.option_key && (opt.option_key || '').toUpperCase() === (colOption.option_key || '').toUpperCase()) ||
@@ -110,8 +115,11 @@ const TypeMap = ({
   // Is selected: answers[question_number] matches column option value
   const isOptionSelected = (questionNumber, columnOptionValue) => {
     const review = reviewData[questionNumber] || {};
-    const answer = review.userAnswer || answers[questionNumber] || '';
-    return answer === columnOptionValue || answer === (columnOptionValue || '').toLowerCase();
+    const raw = review.userAnswer || answers[questionNumber] || '';
+    const norm = (v) => (v ?? '').toString().trim().toLowerCase();
+    const a = norm(raw);
+    if (!a) return false;
+    return a === norm(columnOptionValue);
   };
 
   // Get review data for a question
@@ -214,12 +222,11 @@ const TypeMap = ({
                   const qNumber = q.question_number || q.id;
                   const questionText = q.question_text || q.text || '';
                   const review = getQuestionReview(qNumber);
-                  const isCorrect = review.isCorrect;
                   const correctAnswerFromReview = review.correctAnswer || '';
                   const correctAnswerFromQuestion = getCorrectAnswerForQuestion(q);
                   const correctAnswer = correctAnswerFromReview || correctAnswerFromQuestion;
-                  const showWrong = isReviewMode && !isCorrect;
-                  const showCorrect = isReviewMode && isCorrect;
+                  const showWrong = isReviewMode && Object.prototype.hasOwnProperty.call(review, 'isCorrect') && review.isCorrect === false;
+                  const showCorrect = isReviewMode && review.isCorrect === true;
                   const isBookmarked = bookmarks.has(qNumber);
                   return (
                     <tr
@@ -261,23 +268,14 @@ const TypeMap = ({
                               </span>
                             )}
                           </div>
-                          {/* Bookmark Icon */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleBookmark(qNumber);
-                            }}
-                            className={`ml-2 transition-all ${
-                              isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                            }`}
-                            title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-                          >
-                            {isBookmarked ? (
-                              <FaBookmark className="w-5 h-5 text-red-500" />
-                            ) : (
-                              <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                            )}
-                          </button>
+                          {/* Bookmark + report actions */}
+                          <QuestionActionIcons
+                            className="ml-2"
+                            isBookmarked={isBookmarked}
+                            onToggleBookmark={() => toggleBookmark(qNumber)}
+                            isReviewMode={isReviewMode}
+                            onReport={() => onReport(q)}
+                          />
                         </div>
                       </td>
                       {/* Options */}
@@ -301,10 +299,11 @@ const TypeMap = ({
                         }
                         const isSelected = isOptionSelected(qNumber, colValue);
                         const isCorrectOption = optInRow.is_correct === true;
+                        const ccorrect = (correctAnswer || '').toLowerCase().trim();
                         const isCorrectAnswerMatch =
                           isReviewMode &&
-                          (colValue?.toLowerCase() === (correctAnswer || '').toLowerCase().trim() ||
-                            optInRow.correct_answer?.toLowerCase() === (correctAnswer || '').toLowerCase().trim());
+                          ((colValue || '').toLowerCase().trim() === ccorrect ||
+                            (optInRow.correct_answer || '').toLowerCase().trim() === ccorrect);
                         return (
                           <td
                             key={`${q.id}-${optInRow.id || colValue}`}
@@ -313,7 +312,7 @@ const TypeMap = ({
                                 ? 'bg-green-100'
                                 : isSelected && showWrong
                                 ? 'bg-red-400'
-                                : (isCorrectOption || isCorrectAnswerMatch) && isReviewMode && !isSelected
+                                : (isCorrectOption || isCorrectAnswerMatch) && isReviewMode && showCorrectAnswers && !isSelected
                                 ? 'bg-green-50'
                                 : ''
                             }`}

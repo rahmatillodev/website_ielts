@@ -25,7 +25,6 @@ import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
 import MockTestExitModal from "@/components/modal/MockTestExitModal";
 import { autoEnterFullscreen, monitorFullscreen } from "@/utils/mockTestFullscreen";
 import ReportQuestionModal from "@/components/modal/ReportQuestionModal";
-import { MdOutlineFlag } from "react-icons/md";
 
 const ListeningPracticePageContent = () => {
   const { id } = useParams();
@@ -1109,12 +1108,13 @@ const ListeningPracticePageContent = () => {
         });
         setAnswers({ ...answersObj, ...answersByNumber });
       } else {
-        setStatus('taking');
-        setShowCorrectAnswers(false);
+        // Keep read-only review mode rather than dropping to editable 'taking' mode over
+        // blank questions; tell the user their answers could not be loaded.
+        toast.error('Could not load your previous answers to review. Please go back and try again.');
       }
     } catch (error) {
-      setStatus('taking');
-      setShowCorrectAnswers(false);
+      console.error('[handleReviewTest] Error fetching attempt:', error);
+      toast.error('Could not load your previous answers to review. Please go back and try again.');
     }
   };
 
@@ -1166,6 +1166,7 @@ const ListeningPracticePageContent = () => {
   };
 
   const handleInputInteraction = () => {
+    if (status === 'reviewing') return; // No timer/persistence side effects in review
     if (!hasInteracted && !isStarted) {
       // Start the timer when user first focuses on a question
       const newStartTime = startTime || Date.now();
@@ -1788,6 +1789,7 @@ const ListeningPracticePageContent = () => {
                                     showCorrectAnswers={showCorrectAnswers}
                                     bookmarks={bookmarks}
                                     toggleBookmark={toggleBookmark}
+                                    onReport={(q) => openReport({ question: q, questionGroup, questionNumber: q?.question_number })}
                                   />
                                 </div>
                               </div>
@@ -1834,17 +1836,6 @@ const ListeningPracticePageContent = () => {
                                         >
                                           {questionNumber}. {questionText}
                                         </p>
-                                        {status === 'reviewing' && (
-                                          <button
-                                            type="button"
-                                            onClick={() => openReport({ question, questionGroup, questionNumber })}
-                                            title="Report a problem with this question"
-                                            aria-label={`Report a problem with question ${questionNumber}`}
-                                            className="shrink-0 text-gray-300 hover:text-red-500 transition-colors mt-0.5"
-                                          >
-                                            <MdOutlineFlag size={15} />
-                                          </button>
-                                        )}
                                       </div>
 
                                       <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
@@ -1874,6 +1865,7 @@ const ListeningPracticePageContent = () => {
                                           showCorrectAnswers={showCorrectAnswers}
                                           bookmarks={bookmarks}
                                           toggleBookmark={toggleBookmark}
+                                          onReport={(q) => openReport({ question: q, questionGroup, questionNumber: q?.question_number })}
                                         />
                                       </div>
                                     </div>

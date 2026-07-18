@@ -1,7 +1,7 @@
 import React from "react";
 import parse from "html-react-parser"; // HTMLni xavfsiz va to'g'ri parse qilish uchun
 import { Input } from "@/components/ui/input";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import QuestionActionIcons from "./QuestionActionIcons";
 import { useAppearance } from "@/contexts/AppearanceContext";
 
 const CompletionGapFill = ({ 
@@ -13,8 +13,9 @@ const CompletionGapFill = ({
   mode = 'test', 
   reviewData = {}, 
   showCorrectAnswers = true, 
-  bookmarks = new Set(), 
-  toggleBookmark = () => {} 
+  bookmarks = new Set(),
+  toggleBookmark = () => {},
+  onReport = () => {}
 }) => {
 
   const appearance = useAppearance();
@@ -83,12 +84,13 @@ const CompletionGapFill = ({
           style={{ backgroundColor: themeColors.background, color: themeColors.text }}
         />
         {/* Bookmark tugmasi */}
-        <button
-          onClick={(e) => { e.stopPropagation(); toggleBookmark(answerKey); }}
-          className={`transition-all ${isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-        >
-          {isBookmarked ? <FaBookmark className="w-5 h-5 text-red-500" /> : <FaRegBookmark className="w-5 h-5 text-gray-400" />}
-        </button>
+        <QuestionActionIcons
+          className=""
+          isBookmarked={isBookmarked}
+          onToggleBookmark={() => toggleBookmark(answerKey)}
+          isReviewMode={isReviewMode}
+          onReport={() => onReport(questionItem)}
+        />
         {/* Correct Answer - Only for fill_in_blank type, after bookmark */}
         {showWrong && correctAnswer && showCorrectAnswers && (
           <span className="ml-0 mr-0.5 text-sm text-green-600 font-semibold whitespace-nowrap">

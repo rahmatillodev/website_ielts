@@ -6,7 +6,7 @@ import {
   wrapTablesInWrapper,
 } from "@/utils/htmlRenderer";
 import { Input } from "@/components/ui/input";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import QuestionActionIcons from "./QuestionActionIcons";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import styles from "./UniversalQuestionView.module.css";
 
@@ -41,8 +41,21 @@ const UniversalQuestionView = ({
   showCorrectAnswers = true,
   bookmarks = new Set(),
   toggleBookmark = () => {},
+  onReport = () => {},
 }) => {
   const { themeColors } = useAppearance();
+
+  // Must run before any early return so hook order stays stable across renders
+  // (groupQuestions/html can arrive async, empty then populated).
+  const sortedQuestions = React.useMemo(
+    () =>
+      [...(groupQuestions || [])].sort((a, b) => {
+        const aNum = a.question_number ?? 0;
+        const bNum = b.question_number ?? 0;
+        return aNum - bNum;
+      }),
+    [groupQuestions]
+  );
 
   if (!html || typeof html !== "string") {
     return (
@@ -69,16 +82,6 @@ const UniversalQuestionView = ({
   const sanitized = sanitizeEditorHTML(html);
   const withTables = ensureTableStructure(sanitized);
   const processedHtml = wrapTablesInWrapper(withTables);
-
-  const sortedQuestions = React.useMemo(
-    () =>
-      [...(groupQuestions || [])].sort((a, b) => {
-        const aNum = a.question_number ?? 0;
-        const bNum = b.question_number ?? 0;
-        return aNum - bNum;
-      }),
-    [groupQuestions]
-  );
 
   let currentBlankIndex = 0;
 
@@ -136,21 +139,13 @@ const UniversalQuestionView = ({
           } ${mode === "review" ? "cursor-not-allowed" : ""}`}
           style={{ backgroundColor: themeColors.background, color: themeColors.text }}
         />
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleBookmark(answerKey);
-          }}
-          className={`transition-all ${isBookmarked ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-          aria-label="Bookmark"
-        >
-          {isBookmarked ? (
-            <FaBookmark className="w-5 h-5 text-red-500" />
-          ) : (
-            <FaRegBookmark className="w-5 h-5 text-gray-400" />
-          )}
-        </button>
+        <QuestionActionIcons
+          className=""
+          isBookmarked={isBookmarked}
+          onToggleBookmark={() => toggleBookmark(answerKey)}
+          isReviewMode={isReviewMode}
+          onReport={() => onReport(questionItem)}
+        />
         {showWrong && correctAnswer && showCorrectAnswers && (
           <span className="ml-0 mr-0.5 text-sm text-green-600 font-semibold whitespace-nowrap">
             {correctAnswer}

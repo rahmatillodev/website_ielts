@@ -1,21 +1,28 @@
 import React from "react";
 import { sortOptionsByLetter, getOptionDisplayText, getOptionValue, isOptionSelected } from "../../store/optionUtils";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import QuestionActionIcons from "./QuestionActionIcons";
 
-const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {} }) => {
+const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {}, onReport = () => {} }) => {
   const sortedOptions = sortOptionsByLetter(options);
   
   // Get question number (use question_number from individual question)
+  const questionId = question.id;
   const questionNumber = question.question_number || question.id;
   const questionText = question.question_text || question.text || '';
   const isReviewMode = mode === 'review';
-  const isBookmarked = bookmarks.has(questionNumber);
-  const review = reviewData[questionNumber] || {};
-  const isCorrect = review.isCorrect;
+  const isBookmarked = bookmarks.has(questionId) || bookmarks.has(questionNumber);
+  // Try both question.id (UUID) and question_number for review data lookup
+  const review = reviewData[questionId] ||
+                 reviewData[String(questionId)] ||
+                 reviewData[questionNumber] ||
+                 reviewData[String(questionNumber)] ||
+                 {};
   const correctAnswer = review.correctAnswer || '';
   const userAnswer = review.userAnswer || answer;
-  const showWrong = isReviewMode && !isCorrect;
-  const showCorrect = isReviewMode && isCorrect;
+  const showWrong = isReviewMode && Object.prototype.hasOwnProperty.call(review, 'isCorrect') && review.isCorrect === false;
+  const showCorrect = isReviewMode && review.isCorrect === true;
+  // correctAnswer may be stored as the heading text OR its letter — normalize and match either.
+  const normalize = (v) => (v ?? '').toString().trim().toLowerCase();
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden group relative">
@@ -38,23 +45,14 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
               <span className="text-xs text-green-600 font-medium">Correct: {correctAnswer}</span>
             )}
           </div>
-          {/* Bookmark Icon */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleBookmark(questionNumber);
-            }}
-            className={`absolute right-2 top-1/2 -translate-y-1/2 transition-all ${
-              isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-            }`}
-            title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-          >
-            {isBookmarked ? (
-              <FaBookmark className="w-5 h-5 text-red-500" />
-            ) : (
-              <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-            )}
-          </button>
+          {/* Bookmark + report actions */}
+          <QuestionActionIcons
+            className="absolute right-2 top-1/2 -translate-y-1/2"
+            isBookmarked={isBookmarked}
+            onToggleBookmark={() => toggleBookmark(questionNumber)}
+            isReviewMode={isReviewMode}
+            onReport={() => onReport(question)}
+          />
         </div>
         
         {/* Right: Radio Buttons with letters from options */}
@@ -63,7 +61,10 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
             const radioValue = getOptionValue(option);
             const optionLetter = option.letter || '';
             const isSelected = isOptionSelected(option, userAnswer || answer);
-            const isCorrectOption = isReviewMode && radioValue.toLowerCase() === correctAnswer.toLowerCase().trim();
+            const isCorrectOption = isReviewMode && (
+              normalize(radioValue) === normalize(correctAnswer) ||
+              (optionLetter && normalize(optionLetter) === normalize(correctAnswer))
+            );
             
             return (
               <label
@@ -75,7 +76,7 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
                     ? "border-green-600 bg-green-100 text-green-900"
                     : isSelected && showWrong
                     ? "border-red-600 bg-red-100 text-red-900"
-                    : isCorrectOption && isReviewMode
+                    : isCorrectOption && isReviewMode && showCorrectAnswers
                     ? "border-green-400 bg-green-50 text-green-700"
                     : isSelected
                     ? "border-blue-600 bg-blue-50 text-blue-900"
