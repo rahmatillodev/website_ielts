@@ -15,6 +15,9 @@ import ResultBanner from "@/components/badges/ResultBanner";
 import { useSettingsStore } from "@/store/systemStore";
 import { clearListeningPracticeData } from "@/store/LocalStorage/listeningStorage";
 import { formatDateToDayMonth } from "@/store/analyticsStore";
+import { formatScore } from "@/utils/score";
+import ReportQuestionModal from "@/components/modal/ReportQuestionModal";
+import { MdOutlineFlag } from "react-icons/md";
 
 const ListeningResultPage = () => {
   const { id } = useParams();
@@ -287,6 +290,43 @@ const ListeningResultPage = () => {
 
   // Get answer display data - memoized for performance
   // Include ALL questions from the test, not just answered ones
+  // Savol bo'yicha shikoyat: qaysi savol ekani avtomatik biriktiriladi.
+  const [reportContext, setReportContext] = useState(null);
+
+  /**
+   * question_number -> savol konteksti. testForDisplay JONLI test ma'lumotidan quriladi,
+   * shuning uchun user_answers.question_id yetim bo'lsa ham (test tahrirlangach uuid o'zgaradi)
+   * kontekst to'g'ri bo'ladi. Matn/raqam hisobotga SNAPSHOT sifatida yoziladi.
+   */
+  const questionContextByNumber = useMemo(() => {
+    const map = new Map();
+    (testForDisplay?.parts || []).forEach((part) => {
+      (part.questionGroups || []).forEach((group) => {
+        (group.questions || []).forEach((question) => {
+          if (question.question_number == null) return;
+          map.set(String(question.question_number), {
+            questionId: question.id ?? null,
+            questionNumber: Number(question.question_number),
+            questionType: group.type ?? null,
+            questionText: question.question_text || group.question_text || null,
+            partNumber: part.part_number ?? null,
+          });
+        });
+      });
+    });
+    return map;
+  }, [testForDisplay]);
+
+  const openReport = (questionNumber) => {
+    const ctx = questionContextByNumber.get(String(questionNumber)) || { questionNumber };
+    setReportContext({
+      ...ctx,
+      testId: testForDisplay?.id ?? attemptData?.test_id ?? null,
+      testTitle: testForDisplay?.title ?? null,
+      attemptId: attemptData?.id ?? null,
+    });
+  };
+
   const answerDisplayData = useMemo(() => {
     if (!testForDisplay) return [];
 
@@ -489,7 +529,8 @@ const ListeningResultPage = () => {
     const correctCount = answerDisplayData.filter(a => a.isCorrect).length;
     const timeTaken = formatTime(elapsedTime);
     const avgTime = totalQuestions > 0 ? formatTime(Math.floor(elapsedTime / totalQuestions)) : "0m 0s";
-    const score = attemptData?.score?.toFixed(1) || "0.0";
+    // score DB'dan satr ("7.5") bo'lib kelishi mumkin -> .toFixed crash qilardi.
+    const score = formatScore(attemptData?.score, "0.0");
     const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
     return {
@@ -710,6 +751,9 @@ const ListeningResultPage = () => {
                         Correct Answer
                       </th>
                     )}
+                    <th className="text-right p-4 text-xs font-black text-slate-400 uppercase tracking-widest w-16">
+                      Report
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -743,11 +787,22 @@ const ListeningResultPage = () => {
 
                           </td>
                         )}
+                        <td className="p-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => openReport(answerItem.questionNumber)}
+                            title="Report a problem with this question"
+                            aria-label={`Report a problem with question ${answerItem.questionNumber}`}
+                            className="text-gray-300 hover:text-red-500 transition-colors"
+                          >
+                            <MdOutlineFlag size={16} />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={showCorrectAnswers ? 4 : 3} className="p-6 text-center text-gray-500">
+                      <td colSpan={showCorrectAnswers ? 5 : 4} className="p-6 text-center text-gray-500">
                         No answers submitted
                       </td>
                     </tr>
@@ -794,6 +849,12 @@ const ListeningResultPage = () => {
           <p>© 2026 IELTSCORE. All rights reserved.</p>
         </footer>
       </div>
+
+      <ReportQuestionModal
+        open={!!reportContext}
+        onOpenChange={(v) => { if (!v) setReportContext(null); }}
+        context={reportContext}
+      />
     </div>
   );
 };

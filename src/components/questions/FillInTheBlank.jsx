@@ -1,7 +1,7 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
-import parse from "html-react-parser"; 
+import QuestionActionIcons from "./QuestionActionIcons";
+import parse from "html-react-parser";
 const FillInTheBlank = ({ 
   question, 
   answer, 
@@ -9,8 +9,9 @@ const FillInTheBlank = ({
   mode = 'test',
   reviewData = {},
   showCorrectAnswers = true,
-  bookmarks = new Set(), 
-  toggleBookmark = () => {} 
+  bookmarks = new Set(),
+  toggleBookmark = () => {},
+  onReport = () => {}
 }) => {
   const questionId = question.id; // Use question.id as primary key (UUID)
   const questionNumber = question.question_number || question.id; // For display
@@ -47,22 +48,13 @@ const FillInTheBlank = ({
           } ${mode === 'review' ? 'cursor-not-allowed' : ''}`}
         />
         {/* Bookmark Icon */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleBookmark(questionId || questionNumber);
-          }}
-          className={`transition-all ${
-            isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-          }`}
-          title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-        >
-          {isBookmarked ? (
-            <FaBookmark className="w-5 h-5 text-red-500" />
-          ) : (
-            <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-          )}
-        </button>
+        <QuestionActionIcons
+          className=""
+          isBookmarked={isBookmarked}
+          onToggleBookmark={() => toggleBookmark(questionId || questionNumber)}
+          isReviewMode={isReviewMode}
+          onReport={() => onReport(question)}
+        />
         {/* Correct Answer - Only for fill_in_blank type, after bookmark */}
         {showWrong && correctAnswer && showCorrectAnswers && (
           <span className="text-sm text-green-600 font-semibold whitespace-nowrap">

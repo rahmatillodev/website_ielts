@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Check } from 'lucide-react';
 import { useAppearance } from '@/contexts/AppearanceContext';
-import { FaRegBookmark, FaBookmark } from 'react-icons/fa';
+import QuestionActionIcons from './QuestionActionIcons';
 import parse from 'html-react-parser';
 
 const MultipleAnswers = ({ 
@@ -13,7 +13,8 @@ const MultipleAnswers = ({
   reviewData = {},
   showCorrectAnswers = true,
   bookmarks = new Set(),
-  toggleBookmark = () => {}
+  toggleBookmark = () => {},
+  onReport = () => {}
 }) => {
   const appearance = useAppearance();
   const themeColors = appearance.themeColors;
@@ -37,47 +38,45 @@ const MultipleAnswers = ({
     return `${numbers[0]}-${numbers[numbers.length - 1]}`;
   }, [groupQuestions]);
 
-  // Get review data for the group-level question
-  // For multiple_answers, review data might be stored at group level or per individual question
-  // All questions in the group share the same userAnswer (comma-separated like "A,B")
-  const groupReview = reviewData[questionId] || 
-                      reviewData[String(questionId)] ||
-                      {};
-
-  // If group-level review data not found, check individual questions in the group
-  // (all questions in a multiple_answers group share the same answer)
-  const individualQuestionReview = useMemo(() => {
-    if (groupReview.userAnswer) return groupReview;
-    
-    // Check each question in the group for review data
-    for (const q of groupQuestions) {
-      const qId = q.id;
-      const qNum = q.question_number;
-      const review = reviewData[qId] || 
-                     reviewData[String(qId)] ||
-                     (qNum ? reviewData[qNum] : null) ||
-                     (qNum ? reviewData[String(qNum)] : null);
-      if (review && review.userAnswer) {
-        return review;
-      }
-    }
-    return null;
-  }, [reviewData, groupQuestions, groupReview]);
-
-  // Parse current answer (comma-separated option_keys like "A,B")
-  // In review mode, prioritize reviewData.userAnswer, otherwise use answers prop
-  const currentAnswer = isReviewMode && (groupReview.userAnswer || individualQuestionReview?.userAnswer)
-    ? (groupReview.userAnswer || individualQuestionReview.userAnswer)
-    : (answers[questionId] || '');
+  // Determine which option keys the user selected.
+  // In review mode the grader stores ONE option key per sub-question (keyed by the
+  // sub-question id/number), NOT one comma-joined answer at the group id — so gather
+  // every sub-question's userAnswer to reconstruct the user's full multi-selection.
   const selectedOptionKeys = useMemo(() => {
-    if (!currentAnswer) return [];
-    return currentAnswer.split(',').map(key => key.trim().toUpperCase()).filter(Boolean);
-  }, [currentAnswer]);
+    const splitKeys = (val) =>
+      (val ?? '')
+        .toString()
+        .split(',')
+        .map((k) => k.trim().toUpperCase())
+        .filter(Boolean);
+
+    if (isReviewMode) {
+      const keys = new Set();
+      for (const q of groupQuestions) {
+        const qId = q.id;
+        const qNum = q.question_number;
+        const review =
+          reviewData[qId] ||
+          reviewData[String(qId)] ||
+          (qNum != null ? reviewData[qNum] : null) ||
+          (qNum != null ? reviewData[String(qNum)] : null);
+        splitKeys(review?.userAnswer).forEach((k) => keys.add(k));
+      }
+      // Fallback: a single comma-joined answer stored at the group id, if that is the shape.
+      if (keys.size === 0) {
+        const groupReview = reviewData[questionId] || reviewData[String(questionId)] || {};
+        splitKeys(groupReview.userAnswer).forEach((k) => keys.add(k));
+      }
+      return Array.from(keys);
+    }
+
+    return splitKeys(answers[questionId]);
+  }, [isReviewMode, groupQuestions, reviewData, answers, questionId]);
 
   // Get correct answer option_keys from groupQuestions (normalized to uppercase)
   const correctOptionKeys = groupQuestions
-  .map(q => q.correct_answer?.toUpperCase())
-  .filter(Boolean);
+    .map((q) => q.correct_answer?.toString().trim().toUpperCase())
+    .filter(Boolean);
 
 
   // Create option key to option object map
@@ -138,7 +137,7 @@ const MultipleAnswers = ({
     
     const key = optionKey.toString().trim().toUpperCase();
     const wasSelected = selectedOptionKeys.includes(key);
-    const isCorrect = correctOptionKeys.includes(optionKey); // true yoki false
+    const isCorrect = correctOptionKeys.includes(key);
 
     if (wasSelected) {
       return isCorrect ? 'correct' : 'incorrect';
@@ -149,15 +148,22 @@ const MultipleAnswers = ({
     return null;
   }
 
+  const groupBookmarked = groupQuestions.some(q => {
+    const qId = q.id;
+    const qNum = q.question_number;
+    return (qId && bookmarks.has(qId)) || (qNum && bookmarks.has(qNum));
+  });
+
   return (
-    <div 
+    <div
       className="space-y-4 group relative"
       style={{ color: themeColors.text }}
     >
-      {/* Bookmark Icon - Bookmark all questions in the group */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
+      {/* Bookmark + report actions - bookmarks all questions in the group */}
+      <QuestionActionIcons
+        className="absolute right-0 -top-10"
+        isBookmarked={groupBookmarked}
+        onToggleBookmark={() => {
           // Bookmark all individual questions in the group
           groupQuestions.forEach(q => {
             const qId = q.id;
@@ -166,25 +172,9 @@ const MultipleAnswers = ({
             if (qNum && qNum !== qId) toggleBookmark(qNum);
           });
         }}
-        className={`absolute right-0 -top-10 transition-all ${
-          groupQuestions.some(q => {
-            const qId = q.id;
-            const qNum = q.question_number;
-            return (qId && bookmarks.has(qId)) || (qNum && bookmarks.has(qNum));
-          }) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-        }`}
-        title="Bookmark questions"
-      >
-        {groupQuestions.some(q => {
-          const qId = q.id;
-          const qNum = q.question_number;
-          return (qId && bookmarks.has(qId)) || (qNum && bookmarks.has(qNum));
-        }) ? (
-          <FaBookmark className="w-5 h-5 text-red-500" />
-        ) : (
-          <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-        )}
-      </button>
+        isReviewMode={isReviewMode}
+        onReport={() => onReport(question)}
+      />
 
       {/* Instruction */}
       {/* {instruction && (

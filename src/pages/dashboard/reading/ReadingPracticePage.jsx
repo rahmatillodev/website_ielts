@@ -24,6 +24,7 @@ import PracticeFooter from "@/components/questions/PracticeFooter";
 import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
 import MockTestExitModal from "@/components/modal/MockTestExitModal";
 import { autoEnterFullscreen, monitorFullscreen } from "@/utils/mockTestFullscreen";
+import ReportQuestionModal from "@/components/modal/ReportQuestionModal";
 
 
 
@@ -88,6 +89,23 @@ const ReadingPracticePageContent = () => {
   const [isEarlyExit, setIsEarlyExit] = useState(false);
 
   const [answers, setAnswers] = useState({});
+  // Savol bo'yicha shikoyat - FAQAT review rejimida ko'rinadi.
+  const [reportContext, setReportContext] = useState(null);
+
+  /** Shikoyat kontekstini jonli test ma'lumotidan yig'adi (snapshot hisobotga yoziladi). */
+  const openReport = ({ question, questionGroup, questionNumber }) => {
+    setReportContext({
+      questionId: question?.id ?? questionGroup?.id ?? null,
+      questionNumber: questionNumber ?? question?.question_number ?? null,
+      questionType: questionGroup?.type ?? null,
+      questionText: question?.question_text || questionGroup?.question_text || null,
+      partNumber: currentPartData?.part_number ?? currentPart ?? null,
+      testId: currentTest?.id ?? null,
+      testTitle: currentTest?.title ?? null,
+      attemptId: null,
+    });
+  };
+
   const answersArchiveRef = useRef(answers);
   useEffect(() => {
     answersArchiveRef.current = answers;
@@ -1256,17 +1274,13 @@ const ReadingPracticePageContent = () => {
         setAnswers({ ...answersObj, ...answersByNumber });
       } else {
         console.error('[handleReviewTest] Failed to fetch attempt:', result.error);
-        // Better error handling - don't use alert, use console and set state
-        setStatus('taking'); // Reset to taking mode on error
-        setShowCorrectAnswers(false);
-        // Optionally show toast notification instead of alert
-        console.warn('Failed to load review data. Please try again.');
+        // Keep the page in read-only review mode. Dropping to 'taking' here left the review
+        // chrome (shown from ?mode=review) over blank, EDITABLE questions — a broken shell.
+        toast.error('Could not load your previous answers to review. Please go back and try again.');
       }
     } catch (error) {
       console.error('[handleReviewTest] Error fetching attempt:', error);
-      setStatus('taking'); // Reset to taking mode on error
-      setShowCorrectAnswers(false);
-      console.warn('An error occurred while loading review data.');
+      toast.error('Could not load your previous answers to review. Please go back and try again.');
     }
   };
 
@@ -1314,6 +1328,7 @@ const ReadingPracticePageContent = () => {
 
   // Handle input interactions to trigger timer
   const handleInputInteraction = () => {
+    if (status === 'reviewing') return; // No timer/persistence side effects in review
     if (!hasInteracted && !isStarted) {
       const newStartTime = startTime || Date.now();
       setIsStarted(true);
@@ -1782,6 +1797,7 @@ const ReadingPracticePageContent = () => {
                                 showCorrectAnswers={showCorrectAnswers}
                                 bookmarks={bookmarks}
                                 toggleBookmark={toggleBookmark}
+                                onReport={(q) => openReport({ question: q, questionGroup, questionNumber: q?.question_number })}
                               />
 
                             </div>
@@ -1827,15 +1843,17 @@ const ReadingPracticePageContent = () => {
                                   )}
 
                                   {/* Show question number and text */}
-                                  <p
-                                    className="font-medium mb-3 w-11/12"
-                                    data-selectable="true"
-                                    data-part-id={currentPart}
-                                    data-section-type="questions"
-                                    style={{ color: themeColors.text }}
-                                  >
-                                    {questionNumber}. {questionText}
-                                  </p>
+                                  <div className="flex items-start justify-between gap-2 mb-3">
+                                    <p
+                                      className="font-medium w-11/12"
+                                      data-selectable="true"
+                                      data-part-id={currentPart}
+                                      data-section-type="questions"
+                                      style={{ color: themeColors.text }}
+                                    >
+                                      {questionNumber}. {questionText}
+                                    </p>
+                                  </div>
 
                                   <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
                                     <QuestionRenderer
@@ -1867,6 +1885,7 @@ const ReadingPracticePageContent = () => {
                                       showCorrectAnswers={showCorrectAnswers}
                                       bookmarks={bookmarks}
                                       toggleBookmark={toggleBookmark}
+                                      onReport={(q) => openReport({ question: q, questionGroup, questionNumber: q?.question_number })}
                                     />
                                   </div>
                                 </div>
@@ -1935,6 +1954,12 @@ const ReadingPracticePageContent = () => {
 
       {/* Note Sidebar */}
       <NoteSidebar />
+
+      <ReportQuestionModal
+        open={!!reportContext}
+        onOpenChange={(v) => { if (!v) setReportContext(null); }}
+        context={reportContext}
+      />
     </div>
   );
 };

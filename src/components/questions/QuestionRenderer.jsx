@@ -29,7 +29,8 @@ const QuestionRenderer = ({
   reviewData = {},
   showCorrectAnswers = true,
   bookmarks = new Set(),
-  toggleBookmark = () => {}
+  toggleBookmark = () => {},
+  onReport = () => {}
 }) => {
   const questionType = question.type;
   const normalizedType = questionType.toLowerCase().trim();
@@ -54,6 +55,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -75,6 +77,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -98,6 +101,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -116,6 +120,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -134,6 +139,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -151,6 +157,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -171,6 +178,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -189,6 +197,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -209,6 +218,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -216,8 +226,6 @@ const QuestionRenderer = ({
   // Map - with image_url, instruction, and table matching interface
   
   if (normalizedType.includes('map')) {
-    console.log(question)
-    console.log(groupQuestions)
     return (
       <TypeMap
         question={question}
@@ -230,6 +238,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -248,6 +257,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -266,6 +276,7 @@ const QuestionRenderer = ({
         showCorrectAnswers={showCorrectAnswers}
         bookmarks={bookmarks}
         toggleBookmark={toggleBookmark}
+        onReport={onReport}
       />
     );
   }
@@ -281,6 +292,7 @@ const QuestionRenderer = ({
       showCorrectAnswers={showCorrectAnswers}
       bookmarks={bookmarks}
       toggleBookmark={toggleBookmark}
+      onReport={onReport}
     />
   );
 };

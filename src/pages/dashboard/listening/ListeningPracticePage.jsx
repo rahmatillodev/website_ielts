@@ -24,6 +24,7 @@ import { applyHighlight, applyNote, getTextOffsets } from "@/utils/annotationRen
 import { useMockTestSecurity } from "@/hooks/useMockTestSecurity";
 import MockTestExitModal from "@/components/modal/MockTestExitModal";
 import { autoEnterFullscreen, monitorFullscreen } from "@/utils/mockTestFullscreen";
+import ReportQuestionModal from "@/components/modal/ReportQuestionModal";
 
 const ListeningPracticePageContent = () => {
   const { id } = useParams();
@@ -100,6 +101,23 @@ const ListeningPracticePageContent = () => {
 
 
   const [answers, setAnswers] = useState({});
+  // Savol bo'yicha shikoyat - FAQAT review rejimida ko'rinadi.
+  const [reportContext, setReportContext] = useState(null);
+
+  /** Shikoyat kontekstini jonli test ma'lumotidan yig'adi (snapshot hisobotga yoziladi). */
+  const openReport = ({ question, questionGroup, questionNumber }) => {
+    setReportContext({
+      questionId: question?.id ?? questionGroup?.id ?? null,
+      questionNumber: questionNumber ?? question?.question_number ?? null,
+      questionType: questionGroup?.type ?? null,
+      questionText: question?.question_text || questionGroup?.question_text || null,
+      partNumber: currentPartData?.part_number ?? currentPart ?? null,
+      testId: currentTest?.id ?? null,
+      testTitle: currentTest?.title ?? null,
+      attemptId: null,
+    });
+  };
+
   /** IndexedDB archive: always read latest answers on submit (mock force-submit). */
   const answersArchiveRef = useRef(answers);
   useEffect(() => {
@@ -1090,12 +1108,13 @@ const ListeningPracticePageContent = () => {
         });
         setAnswers({ ...answersObj, ...answersByNumber });
       } else {
-        setStatus('taking');
-        setShowCorrectAnswers(false);
+        // Keep read-only review mode rather than dropping to editable 'taking' mode over
+        // blank questions; tell the user their answers could not be loaded.
+        toast.error('Could not load your previous answers to review. Please go back and try again.');
       }
     } catch (error) {
-      setStatus('taking');
-      setShowCorrectAnswers(false);
+      console.error('[handleReviewTest] Error fetching attempt:', error);
+      toast.error('Could not load your previous answers to review. Please go back and try again.');
     }
   };
 
@@ -1147,6 +1166,7 @@ const ListeningPracticePageContent = () => {
   };
 
   const handleInputInteraction = () => {
+    if (status === 'reviewing') return; // No timer/persistence side effects in review
     if (!hasInteracted && !isStarted) {
       // Start the timer when user first focuses on a question
       const newStartTime = startTime || Date.now();
@@ -1769,6 +1789,7 @@ const ListeningPracticePageContent = () => {
                                     showCorrectAnswers={showCorrectAnswers}
                                     bookmarks={bookmarks}
                                     toggleBookmark={toggleBookmark}
+                                    onReport={(q) => openReport({ question: q, questionGroup, questionNumber: q?.question_number })}
                                   />
                                 </div>
                               </div>
@@ -1805,15 +1826,17 @@ const ListeningPracticePageContent = () => {
                                         </div>
                                       )}
 
-                                      <p
-                                        className="font-medium mb-3 w-11/12"
-                                        data-selectable="true"
-                                        data-part-id={currentPart}
-                                        data-section-type="questions"
-                                        style={{ color: themeColors.text }}
-                                      >
-                                        {questionNumber}. {questionText}
-                                      </p>
+                                      <div className="flex items-start justify-between gap-2 mb-3">
+                                        <p
+                                          className="font-medium w-11/12"
+                                          data-selectable="true"
+                                          data-part-id={currentPart}
+                                          data-section-type="questions"
+                                          style={{ color: themeColors.text }}
+                                        >
+                                          {questionNumber}. {questionText}
+                                        </p>
+                                      </div>
 
                                       <div onClick={handleInputInteraction} onFocus={handleInputInteraction}>
                                         <QuestionRenderer
@@ -1842,6 +1865,7 @@ const ListeningPracticePageContent = () => {
                                           showCorrectAnswers={showCorrectAnswers}
                                           bookmarks={bookmarks}
                                           toggleBookmark={toggleBookmark}
+                                          onReport={(q) => openReport({ question: q, questionGroup, questionNumber: q?.question_number })}
                                         />
                                       </div>
                                     </div>
@@ -1910,6 +1934,12 @@ const ListeningPracticePageContent = () => {
       />
 
       <NoteSidebar />
+
+      <ReportQuestionModal
+        open={!!reportContext}
+        onOpenChange={(v) => { if (!v) setReportContext(null); }}
+        context={reportContext}
+      />
     </div>
   );
 };

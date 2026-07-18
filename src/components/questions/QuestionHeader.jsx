@@ -41,9 +41,8 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
     toggleSidebar = annotation.toggleSidebar;
     notes = annotation.notes;
     isSidebarOpen = annotation.isSidebarOpen;
-  } catch (e) {
-    console.log('annotation context not available', e);
-    // Context not available, sidebar toggle won't work
+  } catch {
+    // Annotation context not available, sidebar toggle won't work
   }
 
   const [isFullscreen, setIsFullscreen] = useState(false);

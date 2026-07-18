@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { sortOptionsByLetter, getOptionDisplayText, getOptionValue, isOptionSelected } from "../../store/optionUtils";
-import { FaRegBookmark, FaBookmark } from "react-icons/fa";
+import QuestionActionIcons from "./QuestionActionIcons";
 
-const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, useTableFormat = false, bookmarks = new Set(), toggleBookmark = () => {} }) => {
+const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, useTableFormat = false, bookmarks = new Set(), toggleBookmark = () => {}, onReport = () => {} }) => {
   // Use questions.id as the answer key (from questions table), fallback to question_number for display
   const questionId = question.id; // This is questions.id from the nested structure
   const questionNumber = question.question_number || question.id;
@@ -40,12 +40,11 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
   const isReviewMode = mode === 'review';
   // Check review data by questionId first, then fallback to questionNumber for backward compatibility
   const review = reviewData[questionId] || reviewData[questionNumber] || {};
-  const isCorrect = review.isCorrect;
   // Use correct answer from review data if available, otherwise from options
   const correctAnswer = review.correctAnswer || correctAnswerFromOptions;
   const userAnswer = review.userAnswer || answer;
-  const showWrong = isReviewMode && !isCorrect;
-  const showCorrect = isReviewMode && isCorrect;
+  const showWrong = isReviewMode && Object.prototype.hasOwnProperty.call(review, 'isCorrect') && review.isCorrect === false;
+  const showCorrect = isReviewMode && review.isCorrect === true;
   
 
   // Table format rendering (like Figure 1)
@@ -93,29 +92,20 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                     <span className="text-xs text-green-600 font-medium ml-2">Correct: {correctAnswer}</span>
                   )}
                 </div>
-                {/* Bookmark Icon */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleBookmark(questionId);
-                  }}
-                  className={`absolute right-10 top-1/2 -translate-y-1/2 transition-all ${
-                    isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                  }`}
-                  title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-                >
-                  {isBookmarked ? (
-                    <FaBookmark className="w-5 h-5 text-red-500" />
-                  ) : (
-                    <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                  )}
-                </button>
+                {/* Bookmark + report actions */}
+                <QuestionActionIcons
+                  className="absolute right-10 top-1/2 -translate-y-1/2"
+                  isBookmarked={isBookmarked}
+                  onToggleBookmark={() => toggleBookmark(questionId)}
+                  isReviewMode={isReviewMode}
+                  onReport={() => onReport(question)}
+                />
               </td>
               {/* Option Columns with Radio Buttons */}
               {sortedOptions.map((option, index) => {
                 const optionValue = getOptionValue(option);
                 const isSelected = isOptionSelected(option, answer || userAnswer);
-                const isCorrectOption = isReviewMode && optionValue.toLowerCase() === correctAnswer.toLowerCase().trim();
+                const isCorrectOption = isReviewMode && optionValue.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
                 const uniqueKey = option.id || `option-${index}-${option.letter || ''}-${(option.option_text || '').substring(0, 10)}`;
                 
                 return (
@@ -159,29 +149,20 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
   // Default list format
   return (
     <div className="space-y-2 group relative">
-      {/* Bookmark Icon */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleBookmark(questionId);
-        }}
-        className={`absolute right-0 -top-10 transition-all ${
-          isBookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-        }`}
-        title={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-      >
-        {isBookmarked ? (
-          <FaBookmark className="w-5 h-5 text-red-500" />
-        ) : (
-          <FaRegBookmark className="w-5 h-5 text-gray-400 hover:text-red-500" />
-        )}
-      </button>
+      {/* Bookmark + report actions */}
+      <QuestionActionIcons
+        className="absolute right-0 -top-10"
+        isBookmarked={isBookmarked}
+        onToggleBookmark={() => toggleBookmark(questionId)}
+        isReviewMode={isReviewMode}
+        onReport={() => onReport(question)}
+      />
       {sortedOptions.map((option, index) => {
         const displayText = getOptionDisplayText(option);
         const optionValue = getOptionValue(option); // Use option_text as value
         const isSelected = isOptionSelected(option, answer || userAnswer);
         // Compare by option_text (not letter)
-        const isCorrectOption = isReviewMode && optionValue.toLowerCase() === correctAnswer.toLowerCase().trim();
+        const isCorrectOption = isReviewMode && optionValue.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
         const uniqueKey = option.id || `option-${index}-${option.letter || ''}-${(option.option_text || '').substring(0, 10)}`;
         
         return (

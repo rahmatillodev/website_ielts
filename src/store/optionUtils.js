@@ -41,11 +41,13 @@ export const getOptionValue = (option) => {
  * For multiple_choice and table: match by option_text
  */
 export const isOptionSelected = (option, answer) => {
+  const norm = (v) => (v ?? '').toString().trim().toLowerCase();
+  const a = norm(answer);
+  if (!a) return false;
   const optionValue = getOptionValue(option);
-  // Match by option_text (primary) or letter (fallback for other types)
-  return answer === optionValue || 
-         answer === optionValue.toLowerCase() ||
-         (option.letter && answer === option.letter) ||
-         (option.letter && answer === option.letter.toLowerCase());
+  // Match by option_text (primary) or letter (fallback for other types),
+  // normalized so casing/whitespace differences still match.
+  return a === norm(optionValue) ||
+         (option.letter && a === norm(option.letter));
 };
 

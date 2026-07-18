@@ -23,6 +23,7 @@ import { generateMockTestPDF } from '@/utils/mockTestPdf';
 import { formatBandScore } from '@/utils/mockTestResults';
 import { useSettingsStore } from "@/store/systemStore";
 import { toast } from 'sonner';
+import { formatScore } from "@/utils/score";
 
 const MockTestClientResults = ({
   client,
@@ -186,7 +187,7 @@ const MockTestClientResults = ({
                 <div>
                   <p className="text-xs font-bold text-gray-400 uppercase">Overall Score</p>
                   <p className="text-2xl font-black text-indigo-600">
-                    {client.total_score.toFixed(1)}
+                    {formatScore(client.total_score)}
                   </p>
                 </div>
               </div>
