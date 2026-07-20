@@ -71,7 +71,10 @@ textarea {
   --danger-300: oklch(0.818 0.103 32);
   --danger-400: oklch(0.736 0.162 29);
   --danger-500: oklch(0.664 0.202 28);
-  --danger-600: oklch(0.596 0.212 27);
+  /* L tuned to 0.586, not 0.596: at 0.596 white-on-fill was 4.455:1 and missed
+     AA by a hair, which mattered because the destructive BUTTON puts white on
+     this exact step. 0.586 gives 4.65:1. */
+  --danger-600: oklch(0.586 0.212 27);
   --danger-700: oklch(0.522 0.192 26);
   --danger-800: oklch(0.45 0.162 26);
   --danger-900: oklch(0.396 0.136 25);
@@ -135,8 +138,9 @@ textarea {
   --accent-foreground: var(--brand-700);
 
   /* -- danger semantics --------------------------------------------------- */
-  /* danger-600 on white is 4.45:1, a hair under AA for body copy, so error
-     TEXT uses danger-700 (6.03:1) while solid fills use danger-600. */
+  /* Fills use danger-600 (white on it = 4.65:1). Error TEXT still steps to
+     danger-700 (6.03:1): small red type on white is the hardest case to read,
+     and 600 only just clears AA. */
   --destructive: var(--danger-600);
   --destructive-hover: var(--danger-700);
   --destructive-active: var(--danger-800);
