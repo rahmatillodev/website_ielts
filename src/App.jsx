@@ -440,7 +440,7 @@
           />
 
         </Routes>
-        <ToastContainer duration={2000} />
+        <ToastContainer autoClose={2000} />
         <FeedbackModal isOpen={feedbackOpen} setFeedbackOpen={setFeedbackOpen} />
         {!isPracticePage && <div className='fixed_bottom_right_container'>
 
