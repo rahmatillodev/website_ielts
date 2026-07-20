@@ -259,7 +259,10 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                         backgroundColor: themeColors.background,
                                         color: themeColors.text,
                                         borderColor: themeColors.border,
-                                        ...(active ? { boxShadow: `0 0 0 2px ${"dodgerblue"}` } : {})
+                                        // Selected question in the navigator. Reads from the
+                                        // brand token rather than a CSS colour keyword so it
+                                        // tracks the palette and the practice-page themes.
+                                        ...(active ? { boxShadow: '0 0 0 2px var(--primary)' } : {})
                                       }}
                                       onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = themeColors.text === '#000000' ? '#f3f4f6' : 'rgba(255,255,255,0.1)';

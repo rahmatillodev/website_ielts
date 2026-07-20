@@ -563,7 +563,7 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-brand-50/30 to-slate-50 min-h-full">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-white to-slate-50 min-h-full">
       {/* Welcome */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
