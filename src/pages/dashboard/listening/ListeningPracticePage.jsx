@@ -847,13 +847,9 @@ const ListeningPracticePageContent = () => {
       clearAudioPosition(id);
       clearAudioPlaybackCompleted(id);
     }
-    // Navigate based on accessMode to prevent redirect loops
-    const accessMode = sessionStorage.getItem('accessMode');
-    if (accessMode === 'mockTest') {
-      navigate("/mock-tests");
-    } else {
-      navigate("/dashboard");
-    }
+    // A mock run returns early above (it shows the exit modal instead), so
+    // reaching here means this is a regular practice session.
+    navigate("/dashboard");
   };
 
   const handleExitConfirm = async () => {
@@ -1545,13 +1541,7 @@ const ListeningPracticePageContent = () => {
                     <button
                       onClick={() => {
                         toast.error(fetchError);
-                        // Navigate based on accessMode to prevent redirect loops
-                        const accessMode = sessionStorage.getItem('accessMode');
-                        if (accessMode === 'mockTest') {
-                          navigate("/mock-tests");
-                        } else {
-                          navigate("/dashboard");
-                        }
+                        navigate(isMockTest ? "/mock-tests" : "/dashboard");
                       }}
                       className="px-4 py-2 rounded-lg text-sm border transition-all hover:scale-[1.02]"
                       style={{

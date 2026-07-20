@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,7 @@ import { toast } from "react-toastify";
 import LogoDesign from "@/components/LogoDesign";
 import { motion } from "framer-motion";
 import AnimatedPolygonDecoration from "@/components/AnimatedPolygonDecoration";
-
-// Helper function to check if a route is a mock test route
-const isMockTestRoute = (path) => {
-  return path.startsWith("/mock-test") || 
-         path.startsWith("/mock-tests") || 
-         path.startsWith("/mock/") || 
-         path === "/mock";
-}
+import { isMockTestRoute, getPostAuthTarget } from "@/lib/routeContext";
 
 // Public Login page
 function LoginPage() {
@@ -28,43 +21,12 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // Set access mode when page loads based on redirect parameter
-  // This ensures sessionStorage is set BEFORE login so it's preserved
-  useEffect(() => {
-    const redirectPath = searchParams.get("redirect");
-    
-    if (redirectPath) {
-      const redirectPathname = redirectPath.split('?')[0];
-      const isMockRoute = isMockTestRoute(redirectPathname);
-      
-      // Set access mode based on redirect route - this determines the platform
-      if (isMockRoute) {
-        sessionStorage.setItem('accessMode', 'mockTest');
-      } else {
-        // Regular dashboard route
-        sessionStorage.setItem('accessMode', 'regular');
-      }
-    } else {
-      // If no redirect parameter, check if there's an existing mode
-      // If not, default to regular (for direct login page access)
-      const existingMode = sessionStorage.getItem('accessMode');
-      if (!existingMode) {
-        sessionStorage.setItem('accessMode', 'regular');
-      }
-      // If existing mode is set, preserve it (user might have come from a mock test link)
-    }
-  }, [searchParams]);
-
-  // Hide back button when in mock test flow (from session or redirect)
-  const isMockTestMode =
-    (() => {
-      const redirectPath = searchParams.get("redirect");
-      if (redirectPath) {
-        const pathname = redirectPath.split("?")[0];
-        if (isMockTestRoute(pathname)) return true;
-      }
-      return sessionStorage.getItem("accessMode") === "mockTest";
-    })();
+  // Hide the back button when the user was sent here from the mock test flow.
+  // Derived from the redirect param only - the old session-flag fallback made
+  // this sticky across unrelated later logins.
+  const isMockTestMode = isMockTestRoute(
+    (searchParams.get("redirect") || "").split("?")[0]
+  );
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -85,24 +47,7 @@ function LoginPage() {
     const result = await signIn(email, password);
 
     if (result?.success) {
-      const accessMode = sessionStorage.getItem("accessMode") || "regular";
-      sessionStorage.setItem("accessMode", accessMode);
-
-      const redirectParam = searchParams.get("redirect");
-      const isValidRedirect =
-        typeof redirectParam === "string" &&
-        redirectParam.startsWith("/") &&
-        !redirectParam.startsWith("//");
-      const defaultPath =
-        accessMode === "mockTest" ? "/mock-tests" : "/dashboard";
-      let targetPath = (redirectParam && isValidRedirect)
-        ? redirectParam
-        : defaultPath;
-      // Normalize /mock-test to /mock-tests (no exact route for /mock-test)
-      const redirectPathname = targetPath.split("?")[0];
-      if (redirectPathname === "/mock-test") {
-        targetPath = targetPath === "/mock-test" ? "/mock-tests" : "/mock-tests" + (targetPath.slice("/mock-test".length) || "");
-      }
+      const targetPath = getPostAuthTarget(searchParams.get("redirect"));
 
       navigate(targetPath, { replace: true });
       toast.success("Welcome back!");

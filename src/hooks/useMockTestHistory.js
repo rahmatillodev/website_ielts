@@ -3,22 +3,24 @@ import { useAuthStore } from '@/store/authStore';
 import supabase from '@/lib/supabase';
 import {
   MOCK_ATTEMPT_SELECT,
+  MOCK_HISTORY_STATUSES,
   buildSpeakingAttemptsByTestId,
   buildTestTypeMap,
   fetchSpeakingAttemptsByTestIds,
   mergeAttemptsForClient,
   organizeMockTestSectionResults,
+  ownMockClientFilter,
   resolveSpeakingAttemptForClient,
 } from '@/utils/mockTestResults';
-
-const COMPLETED_STATUSES = ['completed', 'checked', 'notified'];
 
 /**
  * Custom hook for managing mock test history
  * Separates business logic from UI components
  */
 export const useMockTestHistory = () => {
-  const { userProfile } = useAuthStore();
+  const { userProfile, authUser } = useAuthStore();
+  // RLS matches unlinked bookings against the JWT email, so use that one here.
+  const authEmail = authUser?.email;
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,8 +48,8 @@ export const useMockTestHistory = () => {
           mock_test_id,
           speaking_id
         `)
-        .eq('user_id', userProfile.id)
-        .in('status', COMPLETED_STATUSES)
+        .or(ownMockClientFilter(userProfile.id, authEmail))
+        .in('status', MOCK_HISTORY_STATUSES)
         .not('mock_test_id', 'is', null)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -137,7 +139,7 @@ export const useMockTestHistory = () => {
     } finally {
       setLoading(false);
     }
-  }, [userProfile?.id]);
+  }, [userProfile?.id, authEmail]);
 
   useEffect(() => {
     loadHistory();

@@ -1,5 +1,6 @@
-  import { useEffect, useState, useRef } from "react";
-  import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+  import { useEffect, useState } from "react";
+  import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+  import { isMockTestRoute, isSafeRedirect, getPostAuthTarget } from "@/lib/routeContext";
   import { DndProvider } from "react-dnd";
   import { HTML5Backend } from "react-dnd-html5-backend";
   import PublicLayout from "./layouts/LandingLayout";
@@ -87,230 +88,19 @@
     const checkUserIsMockTestClient = useMockTestClientStore((state) => state.checkUserIsMockTestClient);
     useEffect(() => {
       if (isInitialized && user?.id) {
-        checkUserIsMockTestClient(user.id);
+        checkUserIsMockTestClient(user.id, user.email);
       }
-    }, [isInitialized, user?.id, checkUserIsMockTestClient]);
+    }, [isInitialized, user?.id, user?.email, checkUserIsMockTestClient]);
 
-    // Helper function to check if a route is a mock test route
-    const isMockTestRoute = (path) => {
-      return path.startsWith("/mock-test") || 
-            path.startsWith("/mock-tests") || 
-            path.startsWith("/mock/") || 
-            path === "/mock";
-    }
-
-    // History and client results: do not change session accessMode; user returns to context they came from
-    const isHistoryOrResultsPath = (path) => {
-      return path === '/mock-test/history' ||
-            path === '/mock-test/history-regular' ||
-            path.startsWith('/mock-test/results/') ||
-            path.startsWith('/mock-test/results-regular/');
-    }
-
-    // Helper function to check if a route is a practice page
-    const isPracticePageRoute = (path) => {
-      return path.includes('/reading-practice') || 
-            path.includes('/listening-practice') || 
-            path.includes('/writing-practice') ||
-            path.includes('/speaking-practice') ||
-            path.includes('/equipment-check') ||
-            path.includes('/reading-result') ||
-            path.includes('/listening-result') ||
-            path.includes('/speaking-result');
-    }
-
-    // Set access mode in sessionStorage based on current route
-    // This works for both logged in and logged out users
-    useEffect(() => {
-      // Don't set access mode for login/signup pages (preserve existing mode)
-      if (location.pathname === '/login' || location.pathname === '/signup') {
-        return;
-      }
-
-      // Mock test routes: always set mockTest first so nothing can overwrite it
-      if (isMockTestRoute(location.pathname)) {
-        sessionStorage.setItem('accessMode', 'mockTest');
-        return;
-      }
-
-      // Landing page (/) - always set to regular
-      if (location.pathname === '/' ||  location.pathname === '/dashboard') {
-        if (!user) {
-          sessionStorage.setItem('accessMode', 'regular');
-        }
-        return;
-      }
-
-      // Profile page is accessible from both platforms - preserve current accessMode
-      // if (location.pathname === '/profile') {
-      //   return;
-      // }
-
-      // If user is not authenticated, set accessMode based on route type
-      // This ensures users have the correct accessMode set before login
-      if (!user) {
-        if (isMockTestRoute(location.pathname)) {
-          sessionStorage.setItem('accessMode', 'mockTest');
-        } else if (isPracticePageRoute(location.pathname)) {
-          // Practice pages - check URL params or preserve existing
-          const currentAccessMode = sessionStorage.getItem('accessMode');
-          if (!currentAccessMode) {
-            const isMockTestParam = searchParams.get('mockTest') === 'true';
-            sessionStorage.setItem('accessMode', isMockTestParam ? 'mockTest' : 'regular');
-          }
-        } else if (location.pathname === '/dashboard' ||
-                  location.pathname === '/reading' ||
-                  location.pathname === '/listening' ||
-                  location.pathname === '/writing' ||
-                  location.pathname === '/speaking' ||
-                  location.pathname === '/speaking-library' ||
-                  location.pathname === '/shadowing-library' ||
-                  location.pathname.startsWith('/speaking/') ||
-                  location.pathname.startsWith('/dashboard/speaking/') ||
-                  location.pathname === '/analytics' ||
-                  location.pathname === '/own-writing') {
-          // Regular dashboard routes - set to regular
-          sessionStorage.setItem('accessMode', 'regular');
-        }
-        return;
-      }
-
-      // For authenticated users, set access mode based on route type
-      // Practice pages accessed from mock test routes should preserve mockTest mode
-      if (isPracticePageRoute(location.pathname)) {
-        // If accessMode is not set, try to infer from URL params or set based on context
-        const currentAccessMode = sessionStorage.getItem('accessMode');
-        if (!currentAccessMode) {
-          // Check if there's a mockTest param in the URL
-          const isMockTestParam = searchParams.get('mockTest') === 'true';
-          if (isMockTestParam) {
-            sessionStorage.setItem('accessMode', 'mockTest');
-          } else {
-            // Default to regular if no indication of mock test
-            sessionStorage.setItem('accessMode', 'regular');
-          }
-        }
-        // Otherwise preserve existing accessMode
-        return;
-      }
-
-      // Do not change accessMode on history/results – preserve so user returns to same context
-      if (isHistoryOrResultsPath(location.pathname)) {
-        return;
-      }
-
-      // Set access mode based on route type
-      if (isMockTestRoute(location.pathname)) {
-        // Always set mockTest for mock test routes
-        sessionStorage.setItem('accessMode', 'mockTest');
-      } else {
-        // Set regular mode for regular dashboard routes
-        sessionStorage.setItem('accessMode', 'regular');
-      }
-    }, [location.pathname, location.search, user]);
-
-    // Helper function to check if a route is a practice page (for UI display)
-    const isPracticePage = 
-      location.pathname.includes("/reading-practice") || 
-      location.pathname.includes("/listening-practice") || 
-      location.pathname.includes("/writing-practice") || 
-      location.pathname.includes("/speaking-practice") || 
+    // Practice pages hide the surrounding dashboard chrome.
+    const isPracticePage =
+      location.pathname.includes("/reading-practice") ||
+      location.pathname.includes("/listening-practice") ||
+      location.pathname.includes("/writing-practice") ||
+      location.pathname.includes("/speaking-practice") ||
       location.pathname.includes("/own-writing") ||
-      location.pathname.includes("/mock-test/flow") || 
+      location.pathname.includes("/mock-test/flow") ||
       location.pathname.includes("/speaking-result");
-
-    // Centralized redirect logic based on accessMode
-    // Use useEffect to handle redirects to prevent infinite loops
-    const navigate = useNavigate();
-    const lastRedirectRef = useRef(null);
-    const isMockTestClient = useMockTestClientStore((state) => state.isMockTestClient);
-
-    useEffect(() => {
-      if (!user || loading || !isInitialized) {
-        return;
-      }
-      
-      let accessMode = sessionStorage.getItem('accessMode');
-      const pathname = location.pathname;
-      
-      // If accessMode is not set, try to infer from route
-      if (!accessMode) {
-        if (isMockTestRoute(pathname)) {
-          accessMode = 'mockTest';
-          sessionStorage.setItem('accessMode', 'mockTest');
-        } else if (isPracticePageRoute(pathname)) {
-          // Check URL params for mockTest indicator
-          const isMockTestParam = searchParams.get('mockTest') === 'true';
-          accessMode = isMockTestParam ? 'mockTest' : 'regular';
-          sessionStorage.setItem('accessMode', accessMode);
-        } else {
-          // Default to regular for other routes
-          accessMode = 'regular';
-          sessionStorage.setItem('accessMode', 'regular');
-        }
-      }
-      
-      // Allow practice pages and profile from both platforms
-      // if (pathname === '/profile' || isPracticePageRoute(pathname)) {
-      //   lastRedirectRef.current = null;
-      //   return;
-      // }
-      
-      // Allow public pages
-      if (pathname === '/' || pathname === '/login' || pathname === '/signup') {
-        lastRedirectRef.current = null;
-        return;
-      }
-      
-      let target = null;
-      
-      // Mock test history and client results: accessible from both contexts; do not redirect (session store unchanged)
-      const isHistoryOrResultsRoute =
-        pathname === '/mock-test/history' ||
-        pathname === '/mock-test/history-regular' ||
-        pathname.startsWith('/mock-test/results/') ||
-        pathname.startsWith('/mock-test/results-regular/');
-      
-      // If accessMode is mockTest, redirect away from regular dashboard routes
-      if (accessMode === 'mockTest') {
-        const isRegularDashboardRoute = pathname === '/dashboard' ||
-                                        pathname === '/reading' ||
-                                        pathname === '/listening' ||
-                                        pathname === '/writing' ||
-                                        pathname === '/speaking' ||
-                                        pathname === '/speaking-library' ||
-                                        pathname === '/shadowing-library' ||
-                                        pathname.startsWith('/speaking/') ||
-                                        pathname.startsWith('/dashboard/speaking/') ||
-                                        pathname === '/analytics' ||
-                                        pathname === '/own-writing' ||
-                                        pathname.startsWith('/writing/writing-history');
-
-        if (isRegularDashboardRoute) {
-          target = '/mock-tests';
-        }
-      }
-      
-      // If accessMode is regular, redirect away from mock test routes (except history/results when user is a mock test client)
-      if (accessMode === 'regular') {
-        if (isMockTestRoute(pathname)) {
-          if (isHistoryOrResultsRoute && isMockTestClient === true) {
-            // Allow: user is in mock_test_clients
-          } else {
-            target = '/dashboard';
-          }
-        }
-      }
-      
-      // Only redirect if we have a target, it's different from current path, and we haven't already redirected to this target
-      if (target && target !== pathname && lastRedirectRef.current !== `${pathname}->${target}`) {
-        lastRedirectRef.current = `${pathname}->${target}`;
-        navigate(target, { replace: true });
-      } else if (!target) {
-        // Reset the ref if no redirect is needed
-        lastRedirectRef.current = null;
-      }
-    }, [location.pathname, location.search, user, loading, isInitialized, navigate, isMockTestClient]);
 
     // Show loading state while initializing authentication
     if (loading && !isInitialized) {
@@ -403,40 +193,28 @@
             path="*"
             element={user ? (() => {
               const pathname = location.pathname;
-              const searchParams = new URLSearchParams(location.search);
 
-              // Just logged in: we're still on /login or /signup with redirect param — use it so we don't rely on sessionStorage timing
+              // Just logged in and still sitting on /login or /signup: honour the
+              // redirect the user originally asked for.
               if (pathname === '/login' || pathname === '/signup') {
                 const redirectParam = searchParams.get('redirect');
-                const isValidRedirect =
-                  typeof redirectParam === 'string' &&
-                  redirectParam.startsWith('/') &&
-                  !redirectParam.startsWith('//');
-                if (redirectParam && isValidRedirect) {
-                  const redirectPathname = redirectParam.split('?')[0];
-                  const mode = isMockTestRoute(redirectPathname) ? 'mockTest' : 'regular';
-                  sessionStorage.setItem('accessMode', mode);
-                  // Normalize /mock-test to /mock-tests (no exact route for /mock-test)
-                  const target = redirectPathname === '/mock-test' ? '/mock-tests' : redirectParam;
-                  return <Navigate to={target} replace />;
+                if (isSafeRedirect(redirectParam)) {
+                  return <Navigate to={getPostAuthTarget(redirectParam)} replace />;
                 }
               }
 
-              // Unmatched path while logged in: use access mode (e.g. /mock-test → /mock-tests)
-              const accessMode = sessionStorage.getItem('accessMode');
-              if (accessMode === 'mockTest') {
+              // Unmatched path. /mock-test has no exact route of its own, so send
+              // it to the list rather than bouncing the user to the dashboard.
+              if (isMockTestRoute(pathname)) {
                 return <Navigate to="/mock-tests" replace />;
               }
               return <Navigate to="/dashboard" replace />;
-            })() : (() => {
-              const redirectPath = location.pathname + location.search;
-              if (isMockTestRoute(location.pathname)) {
-                sessionStorage.setItem('accessMode', 'mockTest');
-              } else {
-                sessionStorage.setItem('accessMode', 'regular');
-              }
-              return <Navigate to={`/login?redirect=${encodeURIComponent(redirectPath)}`} replace />;
-            })()}
+            })() : (
+              <Navigate
+                to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
+                replace
+              />
+            )}
           />
 
         </Routes>
