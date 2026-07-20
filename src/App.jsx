@@ -88,9 +88,9 @@
     const checkUserIsMockTestClient = useMockTestClientStore((state) => state.checkUserIsMockTestClient);
     useEffect(() => {
       if (isInitialized && user?.id) {
-        checkUserIsMockTestClient(user.id);
+        checkUserIsMockTestClient(user.id, user.email);
       }
-    }, [isInitialized, user?.id, checkUserIsMockTestClient]);
+    }, [isInitialized, user?.id, user?.email, checkUserIsMockTestClient]);
 
     // Practice pages hide the surrounding dashboard chrome.
     const isPracticePage =

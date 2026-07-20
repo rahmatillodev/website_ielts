@@ -67,6 +67,7 @@ const DashboardSidebar = ({ onNavigate }) => {
   const userProfile = useAuthStore((state) => state.userProfile);
   const signOut = useAuthStore((state) => state.signOut);
   const isMockTestClient = useMockTestClientStore((state) => state.isMockTestClient);
+  const hasMockTestHistory = useMockTestClientStore((state) => state.hasMockTestHistory);
   const isSmallScreen = useSmallScreen();
 
   // Load collapsed state from localStorage, default to false
@@ -229,7 +230,7 @@ const DashboardSidebar = ({ onNavigate }) => {
             isCollapsed={effectiveIsCollapsed}
           />
         )}
-        {isMockTestClient === true && (
+        {hasMockTestHistory === true && (
           <SidebarItem
             icon={IoDocumentAttachOutline}
             label="Mock Tests History"

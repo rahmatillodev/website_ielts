@@ -43,7 +43,7 @@ const MockTestsPage = () => {
     fetchClientById,
     fetchClientAttempts,
     loading,
-    isMockTestClient,
+    hasMockTestHistory,
     client,
   } = useMockTestClientStore();
   const { userProfile } = useAuthStore();
@@ -227,7 +227,7 @@ const MockTestsPage = () => {
               Local answer archive
             </Button>
           )}
-          {isMockTestClient === true && (
+          {hasMockTestHistory === true && (
             <Link
               to="/mock-test/history"
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-semibold"
