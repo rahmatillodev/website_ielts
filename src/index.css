@@ -30,7 +30,80 @@ input {
 textarea {
   outline: none;
 }
+
+/* ============================================================================
+   1. PALETTE — raw ramps
+   ----------------------------------------------------------------------------
+   These are fixed pigments. They never change between light and dark; only the
+   SEMANTIC tokens in section 2 re-point at different steps per mode.
+
+   BRAND  (ruby)      hue ~12   — identity: primary actions, selection, nav,
+                                  tabs, pagination, focus, active/selected state
+   DANGER (true red)  hue ~27   — alarm only: errors, destructive actions,
+                                  validation, overdue, failed
+
+   The two ramps sit ~15 deg apart, are additionally offset in lightness, and
+   carry a hue TWIST at the tint end (brand leans pink, danger leans orange) so
+   near-white surfaces do not collapse onto each other. Measured OKLab dE between
+   matching steps: 8.6 at 600, 7.6 at 500, 6.0 at 300, 4.0 at 200. Because the
+   50/100 tints are inherently near-white in both ramps (dE ~1-2), a tinted
+   surface must never carry meaning alone — always pair it with the matching
+   600/700 border, icon or text, which is where the ramps clearly diverge.
+   ========================================================================== */
 :root {
+  /* -- brand (ruby) ------------------------------------------------------- */
+  --brand-50: oklch(0.968 0.017 4);
+  --brand-100: oklch(0.928 0.038 5);
+  --brand-200: oklch(0.868 0.074 7);
+  --brand-300: oklch(0.788 0.127 9);
+  --brand-400: oklch(0.694 0.176 11);
+  --brand-500: oklch(0.612 0.2 12);
+  --brand-600: oklch(0.53 0.195 12);
+  --brand-700: oklch(0.462 0.172 13);
+  --brand-800: oklch(0.402 0.146 13);
+  --brand-900: oklch(0.356 0.124 14);
+  --brand-950: oklch(0.242 0.084 14);
+
+  /* -- danger (true red) -------------------------------------------------- */
+  --danger-50: oklch(0.974 0.013 40);
+  --danger-100: oklch(0.94 0.031 38);
+  --danger-200: oklch(0.888 0.06 35);
+  --danger-300: oklch(0.818 0.103 32);
+  --danger-400: oklch(0.736 0.162 29);
+  --danger-500: oklch(0.664 0.202 28);
+  --danger-600: oklch(0.596 0.212 27);
+  --danger-700: oklch(0.522 0.192 26);
+  --danger-800: oklch(0.45 0.162 26);
+  --danger-900: oklch(0.396 0.136 25);
+  --danger-950: oklch(0.266 0.092 25);
+
+  /* -- supporting status ramps (kept well clear of both reds) ------------- */
+  --success-50: oklch(0.972 0.021 155);
+  --success-100: oklch(0.94 0.048 155);
+  --success-500: oklch(0.686 0.164 155);
+  --success-600: oklch(0.596 0.145 155);
+  --success-700: oklch(0.512 0.123 156);
+  --success-900: oklch(0.376 0.088 157);
+
+  --warning-50: oklch(0.976 0.024 85);
+  --warning-100: oklch(0.948 0.058 85);
+  --warning-500: oklch(0.762 0.152 76);
+  --warning-600: oklch(0.678 0.148 66);
+  --warning-700: oklch(0.578 0.132 56);
+  --warning-900: oklch(0.406 0.09 50);
+
+  /* Informational, non-brand. Deliberately desaturated so it reads as
+     "neutral notice" and never competes with the ruby brand. */
+  --info-50: oklch(0.972 0.012 250);
+  --info-100: oklch(0.938 0.028 250);
+  --info-500: oklch(0.62 0.128 252);
+  --info-600: oklch(0.545 0.132 254);
+  --info-700: oklch(0.475 0.118 255);
+  --info-900: oklch(0.36 0.082 258);
+
+  /* ==========================================================================
+     2. SEMANTIC TOKENS — light mode
+     ======================================================================== */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -38,41 +111,118 @@ textarea {
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
 
-  --primary: #1990e6;
-  --primary-dark: #157abd;
+  /* -- brand semantics ---------------------------------------------------- */
+  /* Solid fill. White on brand-600 = 5.87:1 (AA). */
+  --primary: var(--brand-600);
+  --primary-hover: var(--brand-700);
+  --primary-active: var(--brand-800);
+  --primary-disabled: var(--brand-200);
+  --primary-foreground: #ffffff;
+  --primary-dark: var(--brand-700);
+  /* Brand-coloured TEXT on a light surface. brand-700 = 7.77:1 (AAA). */
+  --primary-text: var(--brand-700);
+  /* Tinted brand surfaces (selected rows, active tabs, badges). */
+  --primary-subtle: var(--brand-50);
+  --primary-subtle-hover: var(--brand-100);
+  --primary-border: var(--brand-200);
+  --primary-border-strong: var(--brand-600);
 
-  --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --accent: var(--brand-50);
+  --accent-foreground: var(--brand-700);
+
+  /* -- danger semantics --------------------------------------------------- */
+  /* danger-600 on white is 4.45:1, a hair under AA for body copy, so error
+     TEXT uses danger-700 (6.03:1) while solid fills use danger-600. */
+  --destructive: var(--danger-600);
+  --destructive-hover: var(--danger-700);
+  --destructive-active: var(--danger-800);
+  --destructive-foreground: #ffffff;
+  --destructive-text: var(--danger-700);
+  --destructive-subtle: var(--danger-50);
+  --destructive-subtle-hover: var(--danger-100);
+  --destructive-border: var(--danger-200);
+  --destructive-border-strong: var(--danger-600);
+
+  --success: var(--success-600);
+  --success-text: var(--success-700);
+  --success-subtle: var(--success-50);
+  --success-border: var(--success-100);
+  --warning: var(--warning-600);
+  --warning-text: var(--warning-700);
+  --warning-subtle: var(--warning-50);
+  --warning-border: var(--warning-100);
+  --info: var(--info-600);
+  --info-text: var(--info-700);
+  --info-subtle: var(--info-50);
+  --info-border: var(--info-100);
 
   --border: #dce1e5;
   --border-light: #dce1e5;
   --border-dark: #2d3b45;
 
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* Focus ring is brand-tinted so keyboard focus reads as "you are here",
+     not as an error. Destructive controls override this locally. */
+  --ring: var(--brand-500);
+  --ring-destructive: var(--danger-500);
+
+  /* -- charts (light) ----------------------------------------------------- */
+  /* Validated: lightness band, chroma floor, CVD separation (worst adjacent
+     dE 12.5 protan), normal-vision floor (24.3) and >=3:1 vs a white surface.
+     Slot 1 is the brand; the rest rotate away from red so no series can be
+     mistaken for a danger state. */
+  --chart-1: #c81e4a; /* ruby   - brand anchor */
+  --chart-2: #7c3aed; /* violet */
+  --chart-3: #0d9488; /* teal   */
+  --chart-4: #d97706; /* amber  */
+  --chart-5: #2563eb; /* blue   */
+
+  /* Performance/status scale for charts. RESERVED — never reused as a series
+     colour. Severity is encoded in lightness as well as hue so the ranking
+     survives colour-vision deficiency; call sites always print the numeric
+     value beside the mark, which is the required secondary encoding.
+     `critical` is the danger red, deliberately NOT the brand ruby. */
+  --chart-good: #0e9f6e;
+  --chart-warning: #c67c0a;
+  --chart-critical: #c4331d;
+  --chart-empty: #9ca3af; /* no data */
+
+  --chart-grid: #f3f4f6;
+  --chart-tick: #9ca3af;
+
+  /* -- skill categories --------------------------------------------------- */
+  /* The four IELTS skills are a CATEGORY axis, not a status axis, so they draw
+     from the categorical chart hues and never from danger. Previously Reading
+     was green in one component and blue in another while Listening and Speaking
+     both used the error red; with a red brand that collision became unreadable.
+     The `-text` steps are darkened where needed to clear 4.5:1 on white. */
+  --skill-reading: var(--chart-1);
+  --skill-reading-text: #c81e4a; /* 5.6:1 on white */
+  --skill-reading-subtle: #fff0f3;
+  --skill-listening: var(--chart-3);
+  --skill-listening-text: #0f766e; /* teal-600 is only 3.9:1, so step down */
+  --skill-listening-subtle: #ecfdf6;
+  --skill-writing: var(--chart-2);
+  --skill-writing-text: #7c3aed; /* 5.6:1 */
+  --skill-writing-subtle: #f4f1fe;
+  --skill-speaking: var(--chart-4);
+  --skill-speaking-text: #b45309; /* amber-600 is 3.1:1, so step down */
+  --skill-speaking-subtle: #fef6ec;
 
   --radius: 0.625rem;
 
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-primary: var(--brand-600);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--brand-50);
+  --sidebar-accent-foreground: var(--brand-700);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: var(--brand-500);
 
   --background-light: #f6f7f8;
   --background-dark: #111a21;
@@ -83,85 +233,124 @@ textarea {
   --text-secondary-light: #637888;
   --text-secondary-dark: #9ca3af;
 
-  --login-blue: #1990e6;
   --orange-500: #f97316;
-  --gray-50: #f9fafb;
-  --gray-200: #e5e7eb;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-
-  --reading-header-bg: #ffffff;
-  --reading-panel-bg: #ffffff;
-  --reading-text: #111518;
-  --reading-border: #dce1e5;
-  --pagination-active: #1990e6;
-  --pagination-hover: #f6f7f8;
-  --timer-text: #111518;
-  --start-button: #dc2626;
-  --start-button-hover: #b91c1c;
-
-  --blue-100: #dbeafe;
-  --blue-400: #60a5fa;
-  --blue-600: #2563eb;
-  --blue-900: #1e3a8a;
-  --indigo-100: #e0e7ff;
-  --indigo-400: #818cf8;
-  --indigo-900: #312e81;
-  --green-100: #dcfce7;
-  --green-400: #4ade80;
-  --green-700: #15803d;
-  --green-900: #14532d;
-  --amber-200: #fde68a;
-  --amber-900: #78350f;
-  --yellow-400: #facc15;
-  --white: #ffffff;
-  --success: #22c55e;
-  --error: #ef4444;
 }
 
+/* ============================================================================
+   3. SEMANTIC TOKENS — dark mode
+   ----------------------------------------------------------------------------
+   Dark is SELECTED, not flipped. Saturated 600-step reds vibrate badly on a
+   near-black surface, so brand/danger text and icons step UP the ramp (400) to
+   stay legible, while solid fills stay at 600 (they carry their own white
+   foreground) and tinted surfaces drop to the 950 end.
+
+   NOTE: nothing in the app currently puts a `.dark` class on the document —
+   AppearanceContext themes the practice pages with inline styles instead — so
+   this block is correct but dormant until dark mode is wired up globally.
+   ========================================================================== */
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
+  --card: oklch(0.185 0 0);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
+  --popover: oklch(0.185 0 0);
   --popover-foreground: oklch(0.985 0 0);
 
-  --primary: #1990e6;
-  --primary-dark: #157abd;
+  /* -- brand semantics ---------------------------------------------------- */
+  /* Fill stays at 600 so white foreground keeps its 5.87:1. */
+  --primary: var(--brand-600);
+  --primary-hover: var(--brand-500);
+  --primary-active: var(--brand-400);
+  --primary-disabled: var(--brand-900);
+  --primary-foreground: #ffffff;
+  --primary-dark: var(--brand-500);
+  /* Brand-coloured TEXT on the dark canvas. brand-400 = 5.92:1 on #111a21. */
+  --primary-text: var(--brand-400);
+  --primary-subtle: color-mix(in oklab, var(--brand-500) 16%, transparent);
+  --primary-subtle-hover: color-mix(in oklab, var(--brand-500) 26%, transparent);
+  --primary-border: color-mix(in oklab, var(--brand-500) 38%, transparent);
+  --primary-border-strong: var(--brand-500);
 
-  --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --accent: color-mix(in oklab, var(--brand-500) 16%, transparent);
+  --accent-foreground: var(--brand-300);
+
+  /* -- danger semantics --------------------------------------------------- */
+  --destructive: var(--danger-600);
+  --destructive-hover: var(--danger-500);
+  --destructive-active: var(--danger-400);
+  --destructive-foreground: #ffffff;
+  /* danger-400 = 7.03:1 on #111a21. */
+  --destructive-text: var(--danger-400);
+  --destructive-subtle: color-mix(in oklab, var(--danger-500) 16%, transparent);
+  --destructive-subtle-hover: color-mix(in oklab, var(--danger-500) 26%, transparent);
+  --destructive-border: color-mix(in oklab, var(--danger-500) 38%, transparent);
+  --destructive-border-strong: var(--danger-500);
+
+  --success: var(--success-500);
+  --success-text: oklch(0.78 0.15 155);
+  --success-subtle: color-mix(in oklab, var(--success-500) 16%, transparent);
+  --success-border: color-mix(in oklab, var(--success-500) 38%, transparent);
+  --warning: var(--warning-500);
+  --warning-text: oklch(0.82 0.14 80);
+  --warning-subtle: color-mix(in oklab, var(--warning-500) 16%, transparent);
+  --warning-border: color-mix(in oklab, var(--warning-500) 38%, transparent);
+  --info: var(--info-500);
+  --info-text: oklch(0.76 0.11 252);
+  --info-subtle: color-mix(in oklab, var(--info-500) 16%, transparent);
+  --info-border: color-mix(in oklab, var(--info-500) 38%, transparent);
 
   --border: #2d3b45;
   --border-light: #dce1e5;
   --border-dark: #2d3b45;
 
   --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --ring: var(--brand-400);
+  --ring-destructive: var(--danger-400);
+
+  /* -- charts (dark) ------------------------------------------------------ */
+  /* Re-stepped for the dark surface (#1a2632) and re-validated: lightness band
+     0.48-0.67, chroma floor, worst adjacent CVD dE 14.9 (protan), normal-vision
+     floor 21.3, all >=3:1 vs surface. Same hue order as light so a series keeps
+     its identity when the user switches modes. */
+  --chart-1: #e05070; /* ruby   - brand anchor */
+  --chart-2: #9174f5; /* violet */
+  --chart-3: #1fa99d; /* teal   */
+  --chart-4: #c98209; /* amber  */
+  --chart-5: #4e93ee; /* blue   */
+
+  --chart-good: #22b184;
+  --chart-warning: #e3ac48;
+  --chart-critical: #d6412f;
+  --chart-empty: #6b7a88;
+
+  --chart-grid: #263340;
+  --chart-tick: #7f8c9b;
+
+  --skill-reading: var(--chart-1);
+  --skill-reading-text: #f46681;
+  --skill-reading-subtle: color-mix(in oklab, var(--chart-1) 18%, transparent);
+  --skill-listening: var(--chart-3);
+  --skill-listening-text: #2dd4bf;
+  --skill-listening-subtle: color-mix(in oklab, var(--chart-3) 18%, transparent);
+  --skill-writing: var(--chart-2);
+  --skill-writing-text: #a78bfa;
+  --skill-writing-subtle: color-mix(in oklab, var(--chart-2) 18%, transparent);
+  --skill-speaking: var(--chart-4);
+  --skill-speaking-text: #f0a93a;
+  --skill-speaking-subtle: color-mix(in oklab, var(--chart-4) 18%, transparent);
 
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-primary: var(--brand-500);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: color-mix(in oklab, var(--brand-500) 16%, transparent);
+  --sidebar-accent-foreground: var(--brand-300);
   --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar-ring: var(--brand-400);
 
   --background-light: #f6f7f8;
   --background-dark: #111a21;
@@ -172,40 +361,7 @@ textarea {
   --text-secondary-light: #637888;
   --text-secondary-dark: #9ca3af;
 
-  --login-blue: #1990e6;
   --orange-500: #f97316;
-  --gray-50: #f9fafb;
-  --gray-200: #e5e7eb;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-
-  --reading-header-bg: #1a2632;
-  --reading-panel-bg: #1a2632;
-  --reading-text: #ffffff;
-  --reading-border: #2d3b45;
-  --pagination-active: #1990e6;
-  --pagination-hover: #2d3b45;
-  --timer-text: #ffffff;
-  --start-button: #dc2626;
-  --start-button-hover: #b91c1c;
-
-  --blue-100: #1e3a8a;
-  --blue-400: #60a5fa;
-  --blue-600: #3b82f6;
-  --blue-900: #1e3a8a;
-  --indigo-100: #312e81;
-  --indigo-400: #818cf8;
-  --indigo-900: #312e81;
-  --green-100: #14532d;
-  --green-400: #4ade80;
-  --green-700: #16a34a;
-  --green-900: #14532d;
-  --amber-200: #fbbf24;
-  --amber-900: #78350f;
-  --yellow-400: #facc15;
-  --white: #ffffff;
 }
 
 @theme inline {
@@ -215,17 +371,113 @@ textarea {
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+
+  /* -- brand + danger ramps, exposed as utilities ------------------------- */
+  /* Use these for anything expressing IDENTITY (bg-brand-600, text-brand-700,
+     ring-brand-500, border-brand-200). */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+
+  /* Use these ONLY for errors, destructive actions, validation failures,
+     overdue and failed states (bg-danger-600, text-danger-700). */
+  --color-danger-50: var(--danger-50);
+  --color-danger-100: var(--danger-100);
+  --color-danger-200: var(--danger-200);
+  --color-danger-300: var(--danger-300);
+  --color-danger-400: var(--danger-400);
+  --color-danger-500: var(--danger-500);
+  --color-danger-600: var(--danger-600);
+  --color-danger-700: var(--danger-700);
+  --color-danger-800: var(--danger-800);
+  --color-danger-900: var(--danger-900);
+  --color-danger-950: var(--danger-950);
+
+  --color-success-50: var(--success-50);
+  --color-success-100: var(--success-100);
+  --color-success-500: var(--success-500);
+  --color-success-600: var(--success-600);
+  --color-success-700: var(--success-700);
+  --color-success-900: var(--success-900);
+  --color-warning-50: var(--warning-50);
+  --color-warning-100: var(--warning-100);
+  --color-warning-500: var(--warning-500);
+  --color-warning-600: var(--warning-600);
+  --color-warning-700: var(--warning-700);
+  --color-warning-900: var(--warning-900);
+  --color-info-50: var(--info-50);
+  --color-info-100: var(--info-100);
+  --color-info-500: var(--info-500);
+  --color-info-600: var(--info-600);
+  --color-info-700: var(--info-700);
+  --color-info-900: var(--info-900);
+
+  /* -- semantic aliases (preferred in app code) --------------------------- */
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-disabled: var(--primary-disabled);
   --color-primary-dark: var(--primary-dark);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-text: var(--primary-text);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-subtle-hover: var(--primary-subtle-hover);
+  --color-primary-border: var(--primary-border);
+  --color-primary-border-strong: var(--primary-border-strong);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-active: var(--destructive-active);
+  --color-destructive-text: var(--destructive-text);
+  --color-destructive-subtle: var(--destructive-subtle);
+  --color-destructive-subtle-hover: var(--destructive-subtle-hover);
+  --color-destructive-border: var(--destructive-border);
+  --color-destructive-border-strong: var(--destructive-border-strong);
+
+  --color-success: var(--success);
+  --color-success-text: var(--success-text);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-text: var(--warning-text);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-border: var(--warning-border);
+  --color-info: var(--info);
+  --color-info-text: var(--info-text);
+  --color-info-subtle: var(--info-subtle);
+  --color-info-border: var(--info-border);
+
+  --color-ring-destructive: var(--ring-destructive);
+
+  /* -- skill categories --------------------------------------------------- */
+  --color-skill-reading: var(--skill-reading);
+  --color-skill-reading-text: var(--skill-reading-text);
+  --color-skill-reading-subtle: var(--skill-reading-subtle);
+  --color-skill-listening: var(--skill-listening);
+  --color-skill-listening-text: var(--skill-listening-text);
+  --color-skill-listening-subtle: var(--skill-listening-subtle);
+  --color-skill-writing: var(--skill-writing);
+  --color-skill-writing-text: var(--skill-writing-text);
+  --color-skill-writing-subtle: var(--skill-writing-subtle);
+  --color-skill-speaking: var(--skill-speaking);
+  --color-skill-speaking-text: var(--skill-speaking-text);
+  --color-skill-speaking-subtle: var(--skill-speaking-subtle);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-border-light: var(--border-light);
   --color-border-dark: var(--border-dark);
@@ -258,41 +510,16 @@ textarea {
   --color-text-secondary-light: var(--text-secondary-light);
   --color-text-secondary-dark: var(--text-secondary-dark);
 
-  --color-login-blue: var(--login-blue);
   --color-orange-500: var(--orange-500);
-  --color-gray-50: var(--gray-50);
-  --color-gray-200: var(--gray-200);
-  --color-gray-400: var(--gray-400);
-  --color-gray-500: var(--gray-500);
-  --color-gray-600: var(--gray-600);
-  --color-gray-700: var(--gray-700);
-
-  --color-reading-header-bg: var(--reading-header-bg);
-  --color-reading-panel-bg: var(--reading-panel-bg);
-  --color-reading-text: var(--reading-text);
-  --color-reading-border: var(--reading-border);
-  --color-pagination-active: var(--pagination-active);
-  --color-pagination-hover: var(--pagination-hover);
-  --color-timer-text: var(--timer-text);
-  --color-start-button: var(--start-button);
-  --color-start-button-hover: var(--start-button-hover);
-
-  --color-blue-100: var(--blue-100);
-  --color-blue-400: var(--blue-400);
-  --color-blue-600: var(--blue-600);
-  --color-blue-900: var(--blue-900);
-  --color-indigo-100: var(--indigo-100);
-  --color-indigo-400: var(--indigo-400);
-  --color-indigo-900: var(--indigo-900);
-  --color-green-100: var(--green-100);
-  --color-green-400: var(--green-400);
-  --color-green-700: var(--green-700);
-  --color-green-900: var(--green-900);
-  --color-amber-200: var(--amber-200);
-  --color-amber-900: var(--amber-900);
-  --color-yellow-400: var(--yellow-400);
-  --color-white: var(--white);
 }
+/* NOTE: the previous partial overrides of Tailwind's blue/indigo/green/amber/
+   yellow/gray scales were removed. In light mode every one of them restated the
+   stock Tailwind value verbatim, so dropping them is a no-op there; their only
+   real effect was a dark-mode value flip that has never run, because nothing in
+   the app puts a `.dark` class on the document (see AppearanceContext, which
+   themes practice pages via inline styles instead). Keeping them would have
+   meant `bg-brand-100` and `bg-green-100` silently disagreeing about whether a
+   ramp step is a fixed pigment or a mode-dependent one. */
 
 @keyframes marquee {
   0% {
