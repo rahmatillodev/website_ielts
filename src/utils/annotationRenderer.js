@@ -120,9 +120,9 @@ function wrapTextSegmentInNoteSpan(node, startInNode, endInNode, noteId) {
 
   const span = document.createElement('span');
   span.setAttribute('data-note-id', noteId);
-  span.className = 'annotation-note border-b-2 border-blue-500';
+  span.className = 'annotation-note border-b-2 border-brand-500';
   span.style.cursor = 'pointer';
-  span.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
+  span.style.backgroundColor = 'rgba(193,30,77, 0.3)';
 
   const parent = toWrap.parentNode;
   parent.insertBefore(span, toWrap);

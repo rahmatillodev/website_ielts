@@ -125,7 +125,7 @@ const TimeSlotSelector = ({
                 placeholder="e.g., 14:30"
                 onFocus={handleCustomFocus}
                 onBlur={handleCustomBlur}
-                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400"
               />
 
               {showCustomNote && (

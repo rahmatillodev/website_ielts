@@ -98,8 +98,8 @@ const ComplatedCard = ({
 
   // Container classes with green border for completed tests
   const containerClass = isGridView
-    ? `bg-white border ${isCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-blue-500'} rounded-2xl p-4 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
-    : `bg-white border border-l-4 ${isCompleted ? 'border-l-green-500' : is_premium ? 'border-l-amber-400' : 'border-l-blue-500'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 mb-4 relative`;
+    ? `bg-white border ${isCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-brand-500'} rounded-2xl p-4 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
+    : `bg-white border border-l-4 ${isCompleted ? 'border-l-green-500' : is_premium ? 'border-l-amber-400' : 'border-l-brand-500'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 mb-4 relative`;
 
   // Animation variants for hover effect
   const cardVariants = {
@@ -191,7 +191,7 @@ const ComplatedCard = ({
             {!isOwnWriting && (
               <button
                 onClick={handleRetake}
-                className="flex-1 py-2.5 px-3 bg-blue-500 hover:bg-blue-600 text-white text-xs font-black rounded-lg flex items-center justify-center gap-2 transition-all"
+                className="flex-1 py-2.5 px-3 bg-brand-500 hover:bg-brand-600 text-white text-xs font-black rounded-lg flex items-center justify-center gap-2 transition-all"
               >
                 Retake <HiOutlinePlay className="text-sm" />
               </button>
@@ -200,7 +200,7 @@ const ComplatedCard = ({
         ) : (
           <button
             onClick={handleStartTest}
-            className="mt-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-black rounded-lg flex items-center justify-center gap-2 w-full transition-all"
+            className="mt-4 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-black rounded-lg flex items-center justify-center gap-2 w-full transition-all"
           >
             Start Practice <HiOutlinePlay className="text-sm" />
           </button>
@@ -218,7 +218,7 @@ const ComplatedCard = ({
         {/* Icon */}
         <div className={`size-10 md:size-14 rounded-xl md:rounded-2xl ${isCompleted
           ? 'bg-green-50 text-green-500'
-          : 'bg-blue-50 text-blue-400'
+          : 'bg-brand-50 text-brand-400'
           } flex items-center justify-center shrink-0`}>
           {isCompleted ? (
             <MdCheckCircle className="text-2xl md:text-3xl" />
@@ -289,7 +289,7 @@ const ComplatedCard = ({
                 {!isOwnWriting && (
                   <button
                     onClick={handleRetake}
-                    className="py-1 text-xs md:text-sm font-semibold text-blue-400 hover:text-blue-700 transition-all text-left"
+                    className="py-1 text-xs md:text-sm font-semibold text-brand-400 hover:text-brand-700 transition-all text-left"
                   >
                     Retake Test
                   </button>
@@ -299,7 +299,7 @@ const ComplatedCard = ({
           ) : (
             <button
               onClick={handleStartTest}
-              className="py-2 md:py-3 px-4 md:px-6 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
+              className="py-2 md:py-3 px-4 md:px-6 bg-brand-500 hover:bg-brand-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
             >
               Start Practice <HiOutlinePlay className="text-sm md:text-base" />
             </button>

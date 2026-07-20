@@ -135,7 +135,7 @@ const UniversalQuestionView = ({
               ? "border-red-500 bg-red-50 text-red-600 focus-visible:ring-red-500"
               : showCorrect
                 ? "border-green-500 bg-green-50 text-green-700 focus-visible:ring-green-500"
-                : "border-gray-400 focus-visible:ring-blue-500"
+                : "border-gray-400 focus-visible:ring-brand-500"
           } ${mode === "review" ? "cursor-not-allowed" : ""}`}
           style={{ backgroundColor: themeColors.background, color: themeColors.text }}
         />

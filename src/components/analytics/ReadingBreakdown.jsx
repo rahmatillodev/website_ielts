@@ -27,7 +27,7 @@ const ReadingBreakdown = ({ readingBreakdown }) => {
     }
 
     const colors = [
-      '#3b82f6', // blue
+      '#c11e4d', // blue
       '#10b981', // green
       '#f59e0b', // yellow
       '#ef4444', // red
@@ -82,7 +82,7 @@ const ReadingBreakdown = ({ readingBreakdown }) => {
         transition={{ duration: 0.5 }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <LuBookOpen className="text-blue-600 text-xl" />
+          <LuBookOpen className="text-brand-600 text-xl" />
           <h3 className="text-lg font-semibold text-gray-900">Reading Breakdown</h3>
         </div>
         <div className="text-gray-500 text-sm">Loading...</div>
@@ -98,7 +98,7 @@ const ReadingBreakdown = ({ readingBreakdown }) => {
       transition={{ duration: 0.5 }}
     >
       <div className="flex items-center gap-2 mb-6">
-        <LuBookOpen className="text-blue-600 text-xl" />
+        <LuBookOpen className="text-brand-600 text-xl" />
         <h3 className="text-lg font-semibold text-gray-900">Reading Breakdown</h3>
       </div>
       

@@ -28,9 +28,9 @@ const DraggableWord = ({ word, isUsed }) => {
         px-4 py-2 rounded-md text-sm font-medium transition-all
         ${isUsed
           ? 'bg-gray-600 text-gray-300 line-through cursor-not-allowed'
-          : 'bg-blue-100 text-blue-900 hover:bg-blue-200 cursor-move shadow-sm border border-blue-200'
+          : 'bg-brand-100 text-brand-900 hover:bg-brand-200 cursor-move shadow-sm border border-brand-200'
         }
-        ${isDragging ? 'opacity-50 border-2 border-blue-400' : ''}
+        ${isDragging ? 'opacity-50 border-2 border-brand-400' : ''}
       `}
     >
       {word}

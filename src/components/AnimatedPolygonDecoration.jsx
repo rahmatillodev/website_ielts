@@ -32,9 +32,9 @@ const AnimatedPolygonDecoration = () => {
   const glowpoint = {
     width: "8px",
     height: "8px",
-    background: "#136dec",
+    background: "#c11e4d",
     borderRadius: "50%",
-    boxShadow: "0 0 15px #136dec, 0 0 30px #136dec",
+    boxShadow: "0 0 15px #c11e4d, 0 0 30px #c11e4d",
     position: "absolute",
   };
   return (
@@ -46,9 +46,9 @@ const AnimatedPolygonDecoration = () => {
           initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           whileHover={{ x: -5 }}
-          className="absolute top-8 left-8 z-50 flex items-center space-x-2 text-blue-200/70 hover:text-white transition-colors group"
+          className="absolute top-8 left-8 z-50 flex items-center space-x-2 text-brand-200/70 hover:text-white transition-colors group"
         >
-          <div className="p-2 rounded-full bg-white/5 border border-white/10 group-hover:bg-[#136dec]/20 group-hover:border-[#136dec]/50 transition-all">
+          <div className="p-2 rounded-full bg-white/5 border border-white/10 group-hover:bg-brand-600/20 group-hover:border-brand-600/50 transition-all">
             <HiArrowLeft className="text-xl" />
           </div>
           <span className="text-sm font-medium tracking-wide uppercase">Back</span>
@@ -56,8 +56,8 @@ const AnimatedPolygonDecoration = () => {
       )}
 
       <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#136dec] blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400 blur-[120px]"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-brand-600 blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-brand-400 blur-[120px]"></div>
       </div>
       {/* <!-- 3D Polygram Illustration --> */}
       <div className="relative z-10 flex flex-col items-center text-center h-full justify-evenly">
@@ -66,7 +66,7 @@ const AnimatedPolygonDecoration = () => {
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="absolute inset-0 bg-[#136dec]/25"
+              className="absolute inset-0 bg-brand-600/25"
               style={polygramshape}
               initial={{ scale: 1, opacity: 0 }} 
               animate={{
@@ -83,7 +83,7 @@ const AnimatedPolygonDecoration = () => {
           ))}
 
           <div
-            className="absolute inset-10 bg-[#136dec] opacity-80 shadow-lg shadow-[#136dec]/50"
+            className="absolute inset-10 bg-brand-600 opacity-80 shadow-lg shadow-brand-600/50"
             style={polygramshape}
           ></div>
           <div className="glow-point top-0 left-1/2 -translate-x-1/2" style={glowpoint} ></div>
@@ -93,13 +93,13 @@ const AnimatedPolygonDecoration = () => {
           <div className="glow-point bottom-1/4 left-0" style={glowpoint} ></div>
           <div className="glow-point top-1/4 left-0" style={glowpoint} ></div>
           {/* <!-- Center Core --> */}
-          <div className="w-16 h-16 rounded-full bg-[#136dec]/40 backdrop-blur-xl border border-white/20 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-brand-600/40 backdrop-blur-xl border border-white/20 flex items-center justify-center">
             <MdInsights className="text-white text-3xl" />
           </div>
         </div>
         <div>
         <h2 className="text-4xl font-bold text-white mb-4 tracking-tight mt-16">Master Your Core Skills</h2>
-        <p className="text-blue-200/70 text-lg max-w-md leading-relaxed">
+        <p className="text-brand-200/70 text-lg max-w-md leading-relaxed">
           Advanced analytics and personalized paths to help you achieve your target IELTS score with confidence.
         </p>
         </div>
@@ -111,7 +111,7 @@ const AnimatedPolygonDecoration = () => {
           <img loading="lazy" className="w-10 h-10 rounded-full border-2 border-[#0a192f] object-cover" data-alt="User avatar 2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBk6YHLz02zeC9OvwuzLN3af3_DRYktBhRX0faFBhE5W18krcX7sjpmxBQ246JZ9o0MPhjKGuDvMGIor08a1SGq_gLg4EXhk07DraAldj8wkQOCxHP-4TkxQ2r-PNhM_S7gaYf6b5mb2_IISnWBGcDH0SpcuGp7moB1-gK7e_Ea7oFVyRvfD7MMYfAxKGDzVrm6MzwwW5AkM8p5qGR6uahYHghiwYHJXDWJlp3bYzoA2gbmOuMNPJxE5Qbnbc1mXVQDuHByQNLYJRE" />
           <img loading="lazy" className="w-10 h-10 rounded-full border-2 border-[#0a192f] object-cover" data-alt="User avatar 3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0sEgoxApKfBkl7FoPNIRDItpEC5fswX7qbZWXpQDAY7ihq7fDc2CcuJXVj9b-0hddzBgyEL5AuDPv6j-yrcIBDBAi_G1hZq2RYWUI2ZdlgD7NpBrJovtqX-IJPg5STRx2HUDGd2u7GULf2y7SVQeFBpm1y_8vDq1zHDQhpjSz18EYfSwP2eJOf7RFdCNGAO5-h-Bd-29grZlIYYIKc6PMMgw4QV2zEpPvq6rH_6CJ7s-b_VY7XgFG_ceKlzv3PoiMVhseUjOJ1Y0" />
         </div>
-        <p className="text-blue-100/50 text-sm">Joined by 20,000+ students worldwide</p>
+        <p className="text-brand-100/50 text-sm">Joined by 20,000+ students worldwide</p>
       </div>
     </div>
   );

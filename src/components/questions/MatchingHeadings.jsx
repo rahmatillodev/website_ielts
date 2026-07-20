@@ -79,8 +79,8 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
                     : isCorrectOption && isReviewMode && showCorrectAnswers
                     ? "border-green-400 bg-green-50 text-green-700"
                     : isSelected
-                    ? "border-blue-600 bg-blue-50 text-blue-900"
-                    : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50"
+                    ? "border-brand-600 bg-brand-50 text-brand-900"
+                    : "border-gray-300 bg-white text-gray-700 hover:border-brand-400 hover:bg-brand-50"
                   }
                 `}
                 title={getOptionDisplayText(option)}

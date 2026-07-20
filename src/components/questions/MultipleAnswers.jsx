@@ -227,9 +227,9 @@ const MultipleAnswers = ({
         checkIconColor = 'text-green-600';
       }
     } else if (isSelected) {
-      borderColor = '#3b82f6'; // Tanlangan (test paytida)
+      borderColor = '#c11e4d'; // Tanlangan (test paytida)
       backgroundColor = 'rgba(99, 102, 241, 0.1)';
-      iconBg = 'bg-indigo-600 border-indigo-600';
+      iconBg = 'bg-brand-700 border-brand-700';
     }
 
     return (
@@ -254,7 +254,7 @@ const MultipleAnswers = ({
           <span className={`font-semibold text-sm ${
             reviewStatus === 'correct' ? 'text-green-700' : 
             reviewStatus === 'incorrect' ? 'text-red-700' : 
-            isSelected ? 'text-blue-700' : 'text-gray-500'
+            isSelected ? 'text-brand-700' : 'text-gray-500'
           }`}>
             {optionKey}.
           </span>
@@ -285,7 +285,7 @@ const MultipleAnswers = ({
       }}>
         <div className="flex items-center gap-2">
           <p className="text-sm">
-            <span className="font-bold" style={{ color: '#3b82f6' }}>
+            <span className="font-bold" style={{ color: '#c11e4d' }}>
               {selectedOptionKeys.length}
             </span>
             <span className="text-gray-500 mx-1">out of</span>

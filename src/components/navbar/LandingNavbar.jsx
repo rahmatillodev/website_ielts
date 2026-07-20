@@ -33,13 +33,13 @@ const LandingNavbar = () => {
         <div className="hidden md:flex items-center gap-6 lg:gap-8 shrink-0">
           <a
             href="#why-choose"
-            className="font-medium text-gray-700 hover:text-[#4A90E2] transition-colors whitespace-nowrap"
+            className="font-medium text-gray-700 hover:text-brand-600 transition-colors whitespace-nowrap"
           >
             Why choose us?
           </a>
           <a
             href="#stories"
-            className="font-medium text-gray-700 hover:text-[#4A90E2] transition-colors whitespace-nowrap"
+            className="font-medium text-gray-700 hover:text-brand-600 transition-colors whitespace-nowrap"
           >
             Stories
           </a>
@@ -51,7 +51,7 @@ const LandingNavbar = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs sm:text-sm font-medium text-gray-700 hover:text-[#4A90E2] hover:bg-transparent h-8 sm:h-9 px-2.5 sm:px-3"
+              className="text-xs sm:text-sm font-medium text-gray-700 hover:text-brand-600 hover:bg-transparent h-8 sm:h-9 px-2.5 sm:px-3"
             >
               Login
             </Button>
@@ -59,7 +59,7 @@ const LandingNavbar = () => {
           <Link to="/signup">
             <Button
               size="sm"
-              className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white font-medium h-8 sm:h-9 px-3 sm:px-5 rounded-full shadow-[0_4px_20px_rgba(74,144,226,0.4)] text-xs sm:text-sm"
+              className="bg-brand-600 hover:bg-brand-700 text-white font-medium h-8 sm:h-9 px-3 sm:px-5 rounded-full shadow-[0_4px_20px_rgba(193,30,77,0.4)] text-xs sm:text-sm"
             >
               Get Started
             </Button>
@@ -96,14 +96,14 @@ const LandingNavbar = () => {
               <a
                 href="#why-choose"
                 onClick={closeMenu}
-                className="block py-3 px-3 rounded-lg font-medium text-gray-700 hover:text-[#4A90E2] hover:bg-blue-50 transition-all"
+                className="block py-3 px-3 rounded-lg font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 transition-all"
               >
                 Why choose us?
               </a>
               <a
                 href="#stories"
                 onClick={closeMenu}
-                className="block py-3 px-3 rounded-lg font-medium text-gray-700 hover:text-[#4A90E2] hover:bg-blue-50 transition-all"
+                className="block py-3 px-3 rounded-lg font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 transition-all"
               >
                 Stories
               </a>
@@ -115,7 +115,7 @@ const LandingNavbar = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start text-sm font-medium text-gray-700 hover:text-[#4A90E2] hover:bg-blue-50 h-10 rounded-lg"
+                      className="w-full justify-start text-sm font-medium text-gray-700 hover:text-brand-600 hover:bg-brand-50 h-10 rounded-lg"
                     >
                       Login
                     </Button>
@@ -123,7 +123,7 @@ const LandingNavbar = () => {
                   <Link to="/signup" onClick={closeMenu} className="block">
                     <Button
                       size="sm"
-                      className="w-full bg-[#4A90E2] hover:bg-[#3A7BC8] text-white font-medium h-10 rounded-lg shadow-[0_4px_20px_rgba(74,144,226,0.4)] text-sm"
+                      className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium h-10 rounded-lg shadow-[0_4px_20px_rgba(193,30,77,0.4)] text-sm"
                     >
                       Get Started
                     </Button>
@@ -139,7 +139,7 @@ const LandingNavbar = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={closeMenu}
-                    className="flex items-center gap-2 text-gray-700 hover:text-[#4A90E2] transition-colors"
+                    className="flex items-center gap-2 text-gray-700 hover:text-brand-600 transition-colors"
                     aria-label="Telegram"
                   >
                     <FaTelegramPlane size={18} />
@@ -150,7 +150,7 @@ const LandingNavbar = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={closeMenu}
-                    className="flex items-center gap-2 text-gray-700 hover:text-[#4A90E2] transition-colors"
+                    className="flex items-center gap-2 text-gray-700 hover:text-brand-600 transition-colors"
                     aria-label="Instagram"
                   >
                     <FaInstagram size={18} />

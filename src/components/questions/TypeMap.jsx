@@ -338,7 +338,7 @@ const TypeMap = ({
                                     ? 'accent-green-600'
                                     : isSelected && showWrong
                                     ? 'accent-red-600'
-                                    : 'accent-blue-500'
+                                    : 'accent-brand-500'
                                 } ${mode === 'review' ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                               />
                             </label>

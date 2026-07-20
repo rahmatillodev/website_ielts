@@ -98,7 +98,7 @@ const NoteSidebar = () => {
                 className={
                   "p-4 rounded-lg border shadow-sm transition-all duration-200" +
                   (focusedNoteId === note.id
-                    ? " border-blue-500 ring-2 ring-blue-100"
+                    ? " border-brand-500 ring-2 ring-brand-100"
                     : "")
                 }
                 style={{
@@ -106,7 +106,7 @@ const NoteSidebar = () => {
                     ? '#f9fafb'
                     : 'rgba(255, 255, 255, 0.05)',
                   borderColor: focusedNoteId === note.id
-                    ? '#3b82f6'
+                    ? '#c11e4d'
                     : themeColors.border,
                   borderWidth: focusedNoteId === note.id ? '2px' : '1px'
                 }}
@@ -118,10 +118,10 @@ const NoteSidebar = () => {
                     style={{
                       color: themeColors.text,
                       opacity: 0.8,
-                      borderLeftColor: '#3b82f6',
+                      borderLeftColor: '#c11e4d',
                       backgroundColor: theme === 'light'
                         ? '#eff6ff'
-                        : 'rgba(59, 130, 246, 0.1)'
+                        : 'rgba(193,30,77, 0.1)'
                     }}
                   >
                     &quot;{note.text}&quot;
@@ -135,7 +135,7 @@ const NoteSidebar = () => {
                   value={note.note || ''}
                   onChange={(e) => handleNoteChange(note.id, e.target.value)}
                   placeholder="Add your note here..."
-                  className="w-full p-2 rounded text-sm resize-none border transition-all focus:ring-1 focus:ring-blue-200"
+                  className="w-full p-2 rounded text-sm resize-none border transition-all focus:ring-1 focus:ring-brand-200"
                   rows={4}
                   style={{
                     backgroundColor: themeColors.background,
@@ -143,7 +143,7 @@ const NoteSidebar = () => {
                     border: `1px solid ${themeColors.border}`,
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.borderColor = '#c11e4d';
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = themeColors.border;

@@ -6,7 +6,7 @@ const LogoDesign = ({
   className = "",
   iconSize,
   textSize,
-  color = "#1990e6",
+  color = "#c11e4d",
   iconColor = "text-white",
   compact = false,
 }) => {

@@ -11,7 +11,7 @@ const SECTION_GAP = 6; // Sarlavha va kontent orasidagi masofa
 const QUESTION_ANSWER_GAP = 8; // Savol va Javob bloklari orasidagi masofa
 
 // Ranglar palitrasi
-const primaryColor = [59, 130, 246]; // #3B82F6
+const primaryColor = [59, 130, 246]; // #c11e4d
 const darkGray = [31, 41, 55]; // #1F2937
 const lightGray = [248, 249, 250]; // #F8F9FA
 const accentGray = [229, 231, 235]; // #E5E7EB

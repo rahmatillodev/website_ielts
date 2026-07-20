@@ -34,7 +34,7 @@ const ShadowingCard = ({ testId, title, image, duration, videoUrl, date, isPremi
 
   const buttonClass = isLocked
     ? "w-full py-3 text-white bg-amber-500 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-amber-500 shadow-sm hover:bg-amber-600"
-    : "w-full py-3 bg-blue-600 text-white rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-blue-600 shadow-sm group-hover:bg-blue-700 group-hover:border-blue-700";
+    : "w-full py-3 bg-brand-600 text-white rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-brand-600 shadow-sm group-hover:bg-brand-700 group-hover:border-brand-700";
 
   return (
     <>
@@ -48,7 +48,7 @@ const ShadowingCard = ({ testId, title, image, duration, videoUrl, date, isPremi
             handleOpen();
           }
         }}
-        className="group bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-[0_20px_50px_rgba(8,112,184,0.08)] hover:-translate-y-1 transition-all duration-500 flex flex-col h-full overflow-hidden cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        className="group bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-[0_20px_50px_rgba(162,21,60,0.08)] hover:-translate-y-1 transition-all duration-500 flex flex-col h-full overflow-hidden cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
       >
         <div className="relative aspect-video overflow-hidden pointer-events-none">
           {thumbSrc ? (
@@ -64,7 +64,7 @@ const ShadowingCard = ({ testId, title, image, duration, videoUrl, date, isPremi
           )}
           <div className="absolute inset-0 bg-black/5 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100 transition-all duration-300">
-              <Play className="w-4 h-4 text-blue-600 fill-blue-600 ml-0.5" aria-hidden />
+              <Play className="w-4 h-4 text-brand-600 fill-brand-600 ml-0.5" aria-hidden />
             </div>
           </div>
           {isPremium ? (
@@ -88,7 +88,7 @@ const ShadowingCard = ({ testId, title, image, duration, videoUrl, date, isPremi
               <span className="min-w-0 leading-tight">{date}</span>
             </div>
           ) : null}
-          <h2 className="text-lg font-extrabold text-gray-900 mb-3 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors pointer-events-none md:text-xl">
+          <h2 className="text-lg font-extrabold text-gray-900 mb-3 line-clamp-2 leading-snug group-hover:text-brand-600 transition-colors pointer-events-none md:text-xl">
             {title}
           </h2>
           <div className="mt-auto pointer-events-none">

@@ -115,7 +115,7 @@ const MockTestClientResultsPage = () => {
           <p className="text-red-500 mb-4">{error || 'Client not found'}</p>
           <button
             onClick={handleBack}
-            className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+            className="px-6 py-3 bg-brand-500 text-white rounded-lg font-semibold hover:bg-brand-600 transition-colors"
           >
             Back to History
           </button>

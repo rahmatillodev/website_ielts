@@ -141,8 +141,8 @@ const LandingPage = () => {
 
       {/* ================= HERO ================= */}
       <section className="min-h-[90vh] lg:min-h-screen bg-linear-to-br from-[#F8FAFC] via-[#F0F7FF] to-[#EEF5FF] flex items-center py-6 sm:py-8 md:py-8 lg:py-12 px-4 sm:px-6 md:px-8 lg:px-8 overflow-hidden relative">
-        <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-linear-to-br from-[#E0F2FF] via-[#CFE8FF] to-transparent blur-3xl opacity-70" />
-        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-linear-to-br from-[#E7F5FF] via-[#D6EBFF] to-transparent blur-3xl opacity-60" />
+        <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-linear-to-br from-brand-50 via-brand-100 to-transparent blur-3xl opacity-70" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-linear-to-br from-[#E7F5FF] via-brand-100 to-transparent blur-3xl opacity-60" />
         <div className="max-w-full lg:max-w-10/12 flex flex-col md:flex-col lg:flex-row justify-between gap-4 sm:gap-6 md:gap-6 lg:gap-12 items-center w-full mx-auto">
 
           {/* LEFT */}
@@ -154,10 +154,10 @@ const LandingPage = () => {
           >
             <motion.div 
               variants={fadeInUp}
-              className="inline-flex items-center mt-12 lg:mt-0 gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-100 border border-blue-300 rounded-full"
+              className="inline-flex items-center mt-12 lg:mt-0 gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-brand-100 border border-brand-300 rounded-full"
             >
-              <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
-              <span className="text-[10px] sm:text-xs font-semibold text-blue-600 uppercase whitespace-nowrap">
+              <span className="w-2 h-2 bg-brand-600 rounded-full animate-pulse"></span>
+              <span className="text-[10px] sm:text-xs font-semibold text-brand-600 uppercase whitespace-nowrap">
                 NEW: AI Evaluated Mock Tests
               </span>
             </motion.div>
@@ -168,7 +168,7 @@ const LandingPage = () => {
             >
               Build Skills,<br />
               Boost Scores,<br />
-              Master <span className="text-[#4A90E2]">IELTS.</span>
+              Master <span className="text-brand-600">IELTS.</span>
             </motion.h1>
 
             <motion.p 
@@ -183,8 +183,8 @@ const LandingPage = () => {
               <Link to="/signup" className="block w-full md:block lg:inline-block lg:w-auto">
               <Button
                 size="lg"
-                className="bg-[#4A90E2] hover:bg-[#3a7ac8d3] text-white px-6 sm:px-8 py-3 sm:py-4 md:py-6 rounded-full font-semibold text-sm 
-                sm:text-base w-full sm:w-auto group transition-all shadow-[0px_20px_25px_-5px_#2D9CDB4D]"
+                className="bg-brand-600 hover:bg-[#3a7ac8d3] text-white px-6 sm:px-8 py-3 sm:py-4 md:py-6 rounded-full font-semibold text-sm 
+                sm:text-base w-full sm:w-auto group transition-all shadow-[0px_20px_25px_-5px_#c11e4d4D]"
                 >
                 Start Free Practice <LuArrowRight className="ml-0 inline transition-transform group-hover:translate-x-2" />
               </Button>
@@ -243,7 +243,7 @@ const LandingPage = () => {
 
             <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-4 mb-4 sm:mb-5 md:mb-6 xl:mb-8">
               {[
-                { name: "Listening", score: "8.5", icon: LuHeadphones, color: "text-blue-500", delay: 0.4 },
+                { name: "Listening", score: "8.5", icon: LuHeadphones, color: "text-brand-500", delay: 0.4 },
                 { name: "Reading", score: "7.5", icon: LuBookOpen, color: "text-orange-500", delay: 0.5 },
                 { name: "Writing", score: "7.0", icon: LuPenTool, color: "text-purple-500", delay: 0.6 },
                 { name: "Speaking", score: "8.0", icon: LuMic, color: "text-green-500", delay: 0.7 },
@@ -272,7 +272,7 @@ const LandingPage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
-              className="bg-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-5 xl:p-6 2xl:p-8 flex items-center justify-between"
+              className="bg-brand-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-5 xl:p-6 2xl:p-8 flex items-center justify-between"
             >
               <div>
                 <p className="text-[10px] sm:text-xs md:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase">
@@ -289,7 +289,7 @@ const LandingPage = () => {
                     cy="18"
                     r="16"
                     fill="none"
-                    stroke="#3B82F6"
+                    stroke="#c11e4d"
                     strokeWidth="3"
                     strokeLinecap="round"
                     initial={{ strokeDasharray: "0 100" }}
@@ -297,7 +297,7 @@ const LandingPage = () => {
                     transition={{ duration: 1.5, ease: "easeOut" }}
                   />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-blue-600">
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-brand-600">
                   {Math.round(progress)}%
                 </span>
               </div> */}
@@ -323,7 +323,7 @@ const LandingPage = () => {
               <motion.span
                 key={name}
                 variants={fadeInUp}
-                whileHover={{ scale: 1.1, color: "#4A90E2" }}
+                whileHover={{ scale: 1.1, color: "#c11e4d" }}
                 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-400 transition-colors cursor-pointer"
               >
                 {name}
@@ -339,7 +339,7 @@ const LandingPage = () => {
 
           <motion.p 
             variants={fadeInUp}
-            className="text-center text-[10px] sm:text-xs font-semibold tracking-widest text-blue-500 uppercase mb-3 sm:mb-4"
+            className="text-center text-[10px] sm:text-xs font-semibold tracking-widest text-brand-500 uppercase mb-3 sm:mb-4"
           >
             Why choose IELTSCORE?
           </motion.p>
@@ -363,9 +363,9 @@ const LandingPage = () => {
             >
               <motion.div 
                 whileHover={{ rotate: 5, scale: 1.1 }}
-                className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-5 md:mb-6"
+                className="w-12 h-12 sm:w-14 sm:h-14 bg-brand-50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-5 md:mb-6"
               >
-                <LuFileText className="text-blue-600 text-xl sm:text-2xl" />
+                <LuFileText className="text-brand-600 text-xl sm:text-2xl" />
               </motion.div>
               <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-gray-900">Full Mock Tests</h3>
               <p className="text-xs sm:text-sm text-gray-500 leading-relaxed mb-3 sm:mb-4">
@@ -417,7 +417,7 @@ const LandingPage = () => {
         <div 
           className="absolute top-1/2 left-[37.5%] md:left-[37.5%] w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2"
           style={{
-            background: 'radial-gradient(circle, rgba(96, 165, 250, 0.5) 0%, rgba(59, 130, 246, 0.3) 50%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(244,102,129, 0.5) 0%, rgba(193,30,77, 0.3) 50%, transparent 70%)',
             filter: 'blur(50px)',
           }}
         />
@@ -425,7 +425,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.p 
             variants={fadeInUp}
-            className="text-center text-[10px] sm:text-xs font-semibold tracking-widest text-blue-400 uppercase mb-8 sm:mb-12"
+            className="text-center text-[10px] sm:text-xs font-semibold tracking-widest text-brand-400 uppercase mb-8 sm:mb-12"
           >
             Our Impact
           </motion.p>
@@ -453,7 +453,7 @@ const LandingPage = () => {
                     <AnimatedCounter value={stat.value} suffix={stat.value.includes("+") ? "+" : ""} />
                   )}
                 </h3>
-                <p className="text-xs sm:text-sm text-blue-200">{stat.label}</p>
+                <p className="text-xs sm:text-sm text-brand-200">{stat.label}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -465,7 +465,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto w-full">
           <motion.p 
             variants={fadeInUp}
-            className="text-center text-[10px] sm:text-xs font-semibold tracking-widest text-blue-500 uppercase mb-3 sm:mb-4"
+            className="text-center text-[10px] sm:text-xs font-semibold tracking-widest text-brand-500 uppercase mb-3 sm:mb-4"
           >
             Success Stories
           </motion.p>
@@ -562,7 +562,7 @@ const LandingPage = () => {
         <div 
           className="absolute bottom-0 left-0 w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full -translate-x-1/4 translate-y-1/4 pointer-events-none"
           style={{
-            background: 'radial-gradient(circle, rgba(96, 165, 250, 0.6) 0%, rgba(59, 130, 246, 0.4) 50%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(244,102,129, 0.6) 0%, rgba(193,30,77, 0.4) 50%, transparent 70%)',
             filter: 'blur(60px)',
           }}
         />
@@ -579,7 +579,7 @@ const LandingPage = () => {
         <div className="max-w-4xl mx-auto relative z-10">
           <motion.p 
             variants={fadeInUp}
-            className="text-[10px] sm:text-xs font-semibold tracking-widest text-blue-300 uppercase mb-3 sm:mb-4"
+            className="text-[10px] sm:text-xs font-semibold tracking-widest text-brand-300 uppercase mb-3 sm:mb-4"
           >
             Ready to start?
           </motion.p>
@@ -591,7 +591,7 @@ const LandingPage = () => {
           </motion.h2>
           <motion.p 
             variants={fadeInUp}
-            className="text-blue-100 text-xs sm:text-sm mb-6 sm:mb-7 md:mb-8 max-w-2xl mx-auto px-2 text-center"
+            className="text-brand-100 text-xs sm:text-sm mb-6 sm:mb-7 md:mb-8 max-w-2xl mx-auto px-2 text-center"
           >
             Join 1,000+ students who turned IELTS stress into confidence with IELTSCORE
           </motion.p>
@@ -599,7 +599,7 @@ const LandingPage = () => {
             <Link to="/signup" className="block w-full sm:w-auto md:block lg:inline-block mx-auto">
                 <Button
               size="lg"
-              className="bg-[#4A90E2] hover:bg-[#3A7BC8] text-white px-6 sm:px-8 py-2.5 sm:py-3 md:py-3 rounded-full font-semibold transition-all text-sm sm:text-base w-full md:w-full lg:w-auto group shadow-[0_4px_20px_rgba(74,144,226,0.4)]"
+              className="bg-brand-600 hover:bg-brand-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 md:py-3 rounded-full font-semibold transition-all text-sm sm:text-base w-full md:w-full lg:w-auto group shadow-[0_4px_20px_rgba(193,30,77,0.4)]"
             >
               Get Started Now <LuArrowRight className="ml-2 inline transition-transform group-hover:translate-x-1" />
             </Button>

@@ -71,7 +71,7 @@ const SpeakingPage = () => {
                   Coming soon
                 </span>
               )}
-                <span className="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center text-blue-600 bg-gray-100 border border-gray-200">
+                <span className="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center text-brand-600 bg-gray-100 border border-gray-200">
                   <Icon className="w-6 h-6 md:w-7 md:h-7" />
                 </span>
                 <h2 className="text-xl md:text-2xl font-semibold text-gray-900">{card.title}</h2>
@@ -94,7 +94,7 @@ const SpeakingPage = () => {
                 key={card.id}
                 type="button"
                 onClick={() => navigate(card.to)}
-                className="text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-2xl md:rounded-3xl"
+                className="text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 rounded-2xl md:rounded-3xl"
               >
                 {content}
               </button>

@@ -258,7 +258,7 @@ const OwnWritingPageContent = () => {
           <button
             onClick={() => setIsRunning((p) => !p)}
             disabled={isSubmitted}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-brand-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRunning ? "Pause" : "Start"}
           </button>
@@ -312,7 +312,7 @@ const OwnWritingPageContent = () => {
             <textarea
               spellCheck="false"
               ref={questionTextareaRef}
-              className="w-full border border-gray-300 bg-amber-500 rounded-lg p-2 focus:ring-0 focus:border-blue-500 resize-none min-h-[10px] shrink-0"
+              className="w-full border border-gray-300 bg-amber-500 rounded-lg p-2 focus:ring-0 focus:border-brand-500 resize-none min-h-[10px] shrink-0"
               placeholder={
                 activeTask === "task1"
                   ? "Type your writing task question here...\n\nTip: You can drag & drop or paste image"
@@ -379,7 +379,7 @@ const OwnWritingPageContent = () => {
 
         {/* ===== RIGHT (FULL HEIGHT) ===== */}
         <div
-          className="flex flex-col border border-[color:var(--panel-border)] rounded-2xl overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 relative z-0"
+          className="flex flex-col border border-[color:var(--panel-border)] rounded-2xl overflow-hidden focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-200 relative z-0"
           style={{
             width: `${100 - leftWidth}%`,
             "--panel-border": themeColors.border,
@@ -387,7 +387,7 @@ const OwnWritingPageContent = () => {
         >
           <textarea
             spellCheck="false"
-            className="flex-1 p-5 resize-none outline-none bg-transparent focus:ring-0 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 p-5 resize-none outline-none bg-transparent focus:ring-0 focus:border-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Write your answer here..."
             value={currentTask.answer}
             disabled={isSubmitted}

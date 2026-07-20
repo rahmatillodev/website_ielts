@@ -60,7 +60,7 @@ function SectionBlock({ title, section, listMaxHeightClass }) {
                 {row.questionText}
               </div>
             )}
-            <div className="mt-1 text-blue-900">
+            <div className="mt-1 text-brand-900">
               <span className="font-medium">Your answer: </span>
               <span className={userAnswer ? '' : 'text-gray-400 italic'}>
                 {userAnswer ?? 'No answer'}

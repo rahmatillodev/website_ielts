@@ -132,7 +132,7 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                         className={`w-5 h-5 ${
                           isSelected && showCorrect ? 'accent-green-600' :
                           isSelected && showWrong ? 'accent-red-600' :
-                          'accent-blue-500'
+                          'accent-brand-500'
                         } ${mode === 'review' ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                       />
                     </label>
@@ -178,8 +178,8 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                 : isCorrectOption && isReviewMode && showCorrectAnswers
                 ? "bg-green-50 border border-green-300 text-green-700"
                 : isSelected
-                ? "bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-300"
-                : "hover:bg-blue-100 dark:hover:bg-blue-800 hover:text-blue-800 dark:hover:text-blue-200"
+                ? "bg-brand-200 dark:bg-brand-900 text-brand-900 dark:text-brand-300"
+                : "hover:bg-brand-100 dark:hover:bg-brand-800 hover:text-brand-800 dark:hover:text-brand-200"
             }`}
           >
             <input
@@ -193,7 +193,7 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                 }
               }}
               disabled={mode === 'review'}
-              className="accent-blue-500"
+              className="accent-brand-500"
             />
             <span className="flex-1" data-selectable="true">{displayText}</span>
             {isSelected && showCorrect && (

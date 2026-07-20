@@ -52,9 +52,9 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
           {results && (
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
               {results.listening && (
-                <div className="bg-blue-50 rounded-lg p-3">
+                <div className="bg-brand-50 rounded-lg p-3">
                   <p className="text-xs text-gray-600 mb-1">Listening</p>
-                  <p className="text-lg font-bold text-blue-600">
+                  <p className="text-lg font-bold text-brand-600">
                     {formatBandScore(results.listening.score)}
                   </p>
                   <p className="text-xs text-gray-500">
@@ -147,7 +147,7 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
               </p>
               <button
                 onClick={handleViewResults}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 View Results
               </button>

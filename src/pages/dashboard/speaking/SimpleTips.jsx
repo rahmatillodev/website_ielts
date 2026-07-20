@@ -108,7 +108,7 @@ export default function SimpleTips({ activeTab, setActiveTab, searchQuery, setSe
             <button
               type="button"
               onClick={() => navigate("/speaking/tips")}
-              className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-blue-500 transition-colors hover:text-blue-600"
+              className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-brand-500 transition-colors hover:text-brand-600"
             >
               <FaArrowLeft size={12} />
               Back to tips
@@ -123,7 +123,7 @@ export default function SimpleTips({ activeTab, setActiveTab, searchQuery, setSe
         <button
           type="button"
           onClick={() => navigate("/speaking/tips")}
-          className="mb-6 flex max-w-max items-center gap-2 text-sm font-semibold uppercase tracking-wider text-blue-500 transition-colors hover:text-blue-600"
+          className="mb-6 flex max-w-max items-center gap-2 text-sm font-semibold uppercase tracking-wider text-brand-500 transition-colors hover:text-brand-600"
         >
           <FaArrowLeft size={14} className="shrink-0" aria-hidden />
           <span>Back to tips</span>
@@ -155,7 +155,7 @@ export default function SimpleTips({ activeTab, setActiveTab, searchQuery, setSe
               </ul>
             </section>
 
-            <section className="rounded-3xl border border-blue-400/40 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-6 shadow-lg sm:p-8">
+            <section className="rounded-3xl border border-brand-400/40 bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 p-6 shadow-lg sm:p-8">
               <h2 className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-white sm:text-sm">
                 <MessageSquare className="size-5 shrink-0 text-white/95" aria-hidden />
                 Model Answer
@@ -164,11 +164,11 @@ export default function SimpleTips({ activeTab, setActiveTab, searchQuery, setSe
                 {tip.examples.map((ex) => (
                   <div key={ex.q} className="space-y-3">
                     <div>
-                      <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-blue-100">Question</p>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-brand-100">Question</p>
                       <p className="text-base font-semibold leading-snug text-white">{ex.q}</p>
                     </div>
                     <div>
-                      <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-blue-100">Answer</p>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-brand-100">Answer</p>
                       <p className="rounded-2xl border border-white/35 bg-black/25 p-4 text-base font-medium leading-relaxed text-white shadow-inner">{`"${ex.a}"`}</p>
                     </div>
                   </div>
@@ -192,7 +192,7 @@ export default function SimpleTips({ activeTab, setActiveTab, searchQuery, setSe
             type="button"
             onClick={() => setActiveTab(tab)}
             className={`rounded-xl px-5 py-2 text-sm font-semibold transition-all md:px-7 ${
-              activeTab === tab ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:text-blue-600"
+              activeTab === tab ? "bg-brand-600 text-white shadow-sm" : "text-slate-600 hover:text-brand-600"
             }`}
           >
             {tab}
@@ -206,7 +206,7 @@ export default function SimpleTips({ activeTab, setActiveTab, searchQuery, setSe
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-10 rounded-xl border-gray-200 bg-white pl-10 text-sm shadow-sm transition-all focus:ring-2 focus:ring-blue-100 md:h-12 md:rounded-2xl md:pl-12 md:text-base"
+            className="h-10 rounded-xl border-gray-200 bg-white pl-10 text-sm shadow-sm transition-all focus:ring-2 focus:ring-brand-100 md:h-12 md:rounded-2xl md:pl-12 md:text-base"
             placeholder="Search tips..."
           />
         </div>

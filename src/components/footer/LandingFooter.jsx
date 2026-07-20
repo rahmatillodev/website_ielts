@@ -30,7 +30,7 @@ const LandingFooter = () => {
                 href={`https://t.me/${settings?.telegram_channel || "#"}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-600 transition"
+                className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-brand-600 hover:border-brand-600 transition"
                 aria-label="Telegram"
               >
                 <FaTelegramPlane size={14} />
@@ -39,7 +39,7 @@ const LandingFooter = () => {
                 href={`https://www.instagram.com/${settings?.instagram_channel || "#"}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-600 transition"
+                className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-brand-600 hover:border-brand-600 transition"
                 aria-label="Instagram"
               >
                 <FaInstagram size={14} />
@@ -54,12 +54,12 @@ const LandingFooter = () => {
             </span>
             <ul className="space-y-3 text-sm text-gray-500">
               <li>
-                <a href="#why-choose" className="hover:text-blue-600 transition">
+                <a href="#why-choose" className="hover:text-brand-600 transition">
                   Why choose us?
                 </a>
               </li>
               <li>
-                <a href="#stories" className="hover:text-blue-600 transition">
+                <a href="#stories" className="hover:text-brand-600 transition">
                   Stories
                 </a>
               </li>

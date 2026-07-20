@@ -370,7 +370,7 @@ const SimpleCalendar = ({ userAttempts = [] }) => {
                 }}
                 whileHover={c.hasActivity ? { scale: 1.05 } : { scale: 1.02 }}
                 className={`aspect-square min-w-0 flex flex-col items-center justify-center text-xs sm:text-sm md:text-base font-semibold rounded-lg relative transition-all duration-200 group ${c.isToday
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md shadow-blue-200'
+                    ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-md shadow-brand-200'
                     : c.hasActivity
                       ? c.activityLevel === 'light'
                         ? 'bg-[#FFF7ED] text-gray-800 hover:bg-[#FFEDD5]'
@@ -518,9 +518,9 @@ const DashboardPage = () => {
         label: 'Listening',
         value: scores.listening ? scores.listening : '0.0',
         icon: LuHeadphones,
-        iconColor: 'text-blue-500',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-200',
+        iconColor: 'text-brand-500',
+        bgColor: 'bg-brand-50',
+        borderColor: 'border-brand-200',
         isActive: true,
       },
       {
@@ -563,7 +563,7 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 min-h-full">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-brand-50/30 to-slate-50 min-h-full">
       {/* Welcome */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -644,7 +644,7 @@ const DashboardPage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
-              className="bg-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 xl:p-6 2xl:p-8 flex items-center justify-between"
+              className="bg-brand-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 xl:p-6 2xl:p-8 flex items-center justify-between"
             >
               <div>
                 <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase">

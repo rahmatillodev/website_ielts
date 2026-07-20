@@ -62,8 +62,8 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
         {/* ===== LEFT ===== */}
         {flow === 'mockTest' && (
             <div className="flex items-center gap-3">
-                {/* <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
-                  <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
+                {/* <div className="size-10 2xl:size-12 bg-brand-50 rounded-xl flex items-center justify-center">
+                  <GraduationCap className="text-brand-600 size-6 2xl:size-7" />
                 </div>
                 <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
                   IELTSCORE

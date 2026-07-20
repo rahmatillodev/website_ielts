@@ -50,7 +50,7 @@ export const ShimmerCircle = ({
 export const LibraryCardShimmer = ({ isGridView = true }) => {
   if (isGridView) {
     return (
-      <div className="bg-white border border-t-4 border-t-blue-500 rounded-2xl md:rounded-[32px] p-4 md:p-7 shadow-none flex flex-col relative h-full">
+      <div className="bg-white border border-t-4 border-t-brand-500 rounded-2xl md:rounded-[32px] p-4 md:p-7 shadow-none flex flex-col relative h-full">
         <div className="absolute top-3 md:top-5 right-3 md:right-5 z-10">
           <ShimmerBox height="1.5rem" width="4rem" rounded="lg" />
         </div>
@@ -74,7 +74,7 @@ export const LibraryCardShimmer = ({ isGridView = true }) => {
     );
   } else {
     return (
-      <div className="bg-white border border-l-4 border-l-blue-500 rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-none flex items-center gap-3 md:gap-4 mb-4 relative">
+      <div className="bg-white border border-l-4 border-l-brand-500 rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-none flex items-center gap-3 md:gap-4 mb-4 relative">
         <div className="size-10 md:size-14 rounded-xl md:rounded-2xl bg-gray-200 flex items-center justify-center shrink-0">
           <ShimmerCircle size="1.5rem" />
         </div>

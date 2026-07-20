@@ -1898,7 +1898,7 @@ const WritingPracticePageContent = () => {
           {status === 'reviewing' && (
             <button
               onClick={handleRetakeTask}
-              className="bg-blue-600 p-2 px-4 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-lg"
+              className="bg-brand-600 p-2 px-4 text-white rounded-lg font-bold hover:bg-brand-700 transition-all shadow-lg"
               style={{
                 border: `2px solid ${themeColors.border}`,
               }}
@@ -1933,11 +1933,11 @@ const WritingPracticePageContent = () => {
                 className="animate-spin rounded-full h-24 w-24 border-4"
                 style={{
                   borderColor: `${themeColors.border}40`,
-                  borderTopColor: '#3b82f6',
+                  borderTopColor: '#c11e4d',
                 }}
               ></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-10 h-10 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -1984,7 +1984,7 @@ const WritingPracticePageContent = () => {
                 className="h-2.5 rounded-full animate-pulse"
                 style={{
                   width: '100%',
-                  backgroundColor: '#3b82f6',
+                  backgroundColor: '#c11e4d',
                 }}
               ></div>
             </div>

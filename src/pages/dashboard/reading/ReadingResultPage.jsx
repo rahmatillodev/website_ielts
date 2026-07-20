@@ -606,7 +606,7 @@ const ReadingResultPage = () => {
         {/* Back Link */}
         <Link
           to="/reading"
-          className="flex max-w-max items-center gap-2 text-blue-500 font-semibold text-sm mb-6 cursor-pointer uppercase tracking-wider hover:text-blue-600 transition-colors"
+          className="flex max-w-max items-center gap-2 text-brand-500 font-semibold text-sm mb-6 cursor-pointer uppercase tracking-wider hover:text-brand-600 transition-colors"
         >
           <FaArrowLeft size={12} />
           <span>Back to Reading</span>
@@ -650,27 +650,27 @@ const ReadingResultPage = () => {
         {/* Stats Cards - Redesigned */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
           {/* Overall Score Card */}
-          <div className="border-2 border-blue-200 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
+          <div className="border-2 border-brand-200 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
             <div className="relative z-10">
               <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest mb-3">
                 Overall Band Score
               </h3>
               <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-4xl sm:text-5xl font-black text-blue-600">
+                <span className="text-4xl sm:text-5xl font-black text-brand-600">
                   {stats.score}
                 </span>
                 <span className="text-gray-500 font-semibold text-lg">/ 9.0</span>
               </div>
               {/* Progress Bar */}
-              <div className="w-full bg-blue-200 h-2.5 rounded-full overflow-hidden">
+              <div className="w-full bg-brand-200 h-2.5 rounded-full overflow-hidden">
                 <div
-                  className="bg-blue-600 h-full rounded-full transition-all duration-500"
+                  className="bg-brand-600 h-full rounded-full transition-all duration-500"
                   style={{ width: `${(parseFloat(stats.score) / 9.0) * 100}%` }}
                 ></div>
               </div>
             </div>
             {/* Background Checkmark Icon */}
-            <div className="absolute -right-4 -top-4 text-blue-200/30">
+            <div className="absolute -right-4 -top-4 text-brand-200/30">
               <FaCheckCircle size={80} />
             </div>
           </div>
@@ -744,7 +744,7 @@ const ReadingResultPage = () => {
                 </span>
                 <span className="text-slate-500">
                   Questions{" "}
-                  <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full ml-1">
+                  <span className="bg-brand-100 text-brand-600 px-2 py-0.5 rounded-full ml-1">
                     {stats.totalQuestions}
                   </span>
                 </span>
@@ -838,7 +838,7 @@ const ReadingResultPage = () => {
             <Link to="/dashboard">
               <Button
                 variant="ghost"
-                className="text-slate-500 w-full sm:w-auto hover:text-black bg-blue-100 hover:bg-blue-200 font-semibold transition-all flex items-center gap-2 px-6 h-12 rounded-xl"
+                className="text-slate-500 w-full sm:w-auto hover:text-black bg-brand-100 hover:bg-brand-200 font-semibold transition-all flex items-center gap-2 px-6 h-12 rounded-xl"
               >
                 <HiOutlineHome className="text-xl" />
                 Go Home
@@ -849,13 +849,13 @@ const ReadingResultPage = () => {
               <Link to={"/reading-practice/" + (attemptData?.test_id ?? '') + "?mode=review"} className="w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  className="border-blue-600 text-blue-600 w-full sm:w-auto hover:bg-blue-50 font-semibold px-8 h-12 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95"
+                  className="border-brand-600 text-brand-600 w-full sm:w-auto hover:bg-brand-50 font-semibold px-8 h-12 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95"
                 >
                   Review Test
                 </Button>
               </Link>
               <Button
-                className="bg-blue-600 w-full sm:w-auto hover:bg-blue-700 text-white font-semibold px-8 h-12 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                className="bg-brand-600 w-full sm:w-auto hover:bg-brand-700 text-white font-semibold px-8 h-12 rounded-xl shadow-lg shadow-brand-200 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                 onClick={handleRetake}
                 disabled={isDeleting}
               >

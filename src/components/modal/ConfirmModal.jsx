@@ -66,7 +66,7 @@ const ConfirmModal = ({
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="flex-1 rounded-xl font-semibold bg-blue-500 hover:bg-blue-600 text-white border-none h-12"
+            className="flex-1 rounded-xl font-semibold bg-brand-500 hover:bg-brand-600 text-white border-none h-12"
 
           >
             {confirmLabel}

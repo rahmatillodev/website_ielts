@@ -13,7 +13,7 @@ const CenterInfoCard = ({ centerInfo }) => {
       <Card className="rounded-2xl shadow-sm">
         <CardContent className="p-6">
           <div className="flex items-center gap-3 mb-6">
-            <Building2 className="w-6 h-6 text-blue-600" />
+            <Building2 className="w-6 h-6 text-brand-600" />
             <h2 className="text-2xl font-semibold">{centerInfo.name}</h2>
           </div>
           <div className="space-y-4">

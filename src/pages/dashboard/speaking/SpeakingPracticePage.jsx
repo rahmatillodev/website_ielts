@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSpeakingDetailStore } from "@/store/testStore";
 
-const COLOR = "#2D9CDB";
-const COLOR_DARK = "#1a7ab8";
+const COLOR = "#c11e4d";
+const COLOR_DARK = "#a2153c";
 const COLOR_LIGHT = "#e8f4fd";
 
 const QUESTION_DURATION = {

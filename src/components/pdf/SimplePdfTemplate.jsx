@@ -22,7 +22,7 @@ const SimplePdfTemplate = ({ tasks, timer }) => {
       title: {
         fontSize: '28px',
         fontWeight: 'bold',
-        color: '#2563eb'
+        color: '#c11e4d'
       },
       task: {
         marginBottom: '40px'
@@ -39,7 +39,7 @@ const SimplePdfTemplate = ({ tasks, timer }) => {
         color: '#374151',
         backgroundColor: '#f8f9fa',
         padding: '15px',
-        borderLeft: '4px solid #3498db',
+        borderLeft: '4px solid #c11e4d',
         borderRadius: '4px',
         margin: '10px 0'
       },

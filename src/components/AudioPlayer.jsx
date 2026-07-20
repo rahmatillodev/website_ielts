@@ -356,7 +356,7 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
                 <div className="flex items-center gap-4">
                     <button
                         onClick={togglePlayPause}
-                        className="p-3 rounded-full transition-colors bg-blue-600 hover:bg-blue-700 text-white"
+                        className="p-3 rounded-full transition-colors bg-brand-600 hover:bg-brand-700 text-white"
                         title={isPlaying ? "Pause" : "Play"}
                     >
                         {isPlaying ? <FaPause size={16} style={{ color: themeColors.text }} /> : <FaPlay size={16} style={{ color: themeColors.text }} />}
@@ -369,7 +369,7 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
                             onClick={handleSeek}
                         >
                             <div
-                                className="h-full bg-blue-600 rounded-full transition-all"
+                                className="h-full bg-brand-600 rounded-full transition-all"
                                 style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                             />
                         </div>

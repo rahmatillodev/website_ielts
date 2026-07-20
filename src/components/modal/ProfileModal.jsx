@@ -226,7 +226,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
               <button
                 type="button"
                 onClick={handleAvatarClick}
-                className="absolute bottom-0 right-0 p-2 bg-blue-500 text-white rounded-full border-3 border-white shadow-sm hover:bg-blue-600 transition-all"
+                className="absolute bottom-0 right-0 p-2 bg-brand-500 text-white rounded-full border-3 border-white shadow-sm hover:bg-brand-600 transition-all"
               >
                 <HiOutlineCamera size={14} />
               </button>
@@ -304,7 +304,7 @@ const ProfileModal = ({ open, onOpenChange }) => {
             <Button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-blue-500 hover:bg-blue-600"
+              className="rounded-xl bg-brand-500 hover:bg-brand-600"
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>

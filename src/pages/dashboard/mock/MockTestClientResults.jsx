@@ -77,7 +77,7 @@ const MockTestClientResults = ({
       <AccordionItem value={value} className="border-none mb-4 bg-white rounded-xl shadow-sm overflow-hidden">
         <AccordionTrigger className="px-6 hover:no-underline hover:bg-gray-50/50 transition-all">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+            <div className="p-2 bg-brand-100 text-brand-700 rounded-lg">
               <Icon size={20} />
             </div>
             <span className="font-bold text-gray-700 text-lg">{title}</span>
@@ -96,7 +96,7 @@ const MockTestClientResults = ({
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="p-3 bg-gray-50 rounded-lg">
                       <p className="text-xs text-gray-500 uppercase font-bold mb-1">Score</p>
-                      <p className="text-xl font-black text-indigo-600">
+                      <p className="text-xl font-black text-brand-700">
                         {formatBandScore(item.score)}
                       </p>
                     </div>
@@ -132,8 +132,8 @@ const MockTestClientResults = ({
 
                   {/* Feedback Section */}
                   {item.feedback && (
-                    <div className="relative mt-4 p-5 bg-blue-50/50 border-l-4 border-blue-500 rounded-r-xl">
-                      <h4 className="text-blue-800 font-bold flex items-center gap-2 mb-2">
+                    <div className="relative mt-4 p-5 bg-brand-50/50 border-l-4 border-brand-500 rounded-r-xl">
+                      <h4 className="text-brand-800 font-bold flex items-center gap-2 mb-2">
                         Feedback
                       </h4>
                       <div
@@ -165,7 +165,7 @@ const MockTestClientResults = ({
   const getStatusBadgeClass = (status) => {
     return status === 'completed'
       ? 'bg-green-100 text-green-700'
-      : 'bg-blue-100 text-blue-700';
+      : 'bg-brand-100 text-brand-700';
   };
 
   return (
@@ -180,13 +180,13 @@ const MockTestClientResults = ({
           </div>
           <div className="flex items-center gap-4">
             {client?.total_score && (
-              <div className="bg-white shadow-sm border border-indigo-100 p-4 rounded-2xl flex items-center gap-4">
-                <div className="bg-indigo-600 p-2 rounded-lg text-white">
+              <div className="bg-white shadow-sm border border-brand-200 p-4 rounded-2xl flex items-center gap-4">
+                <div className="bg-brand-700 p-2 rounded-lg text-white">
                   <Trophy size={24} />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-400 uppercase">Overall Score</p>
-                  <p className="text-2xl font-black text-indigo-600">
+                  <p className="text-2xl font-black text-brand-700">
                     {formatScore(client.total_score)}
                   </p>
                 </div>

@@ -122,7 +122,7 @@ const MockOnlinePage = () => {
             className={`w-full py-6 text-lg font-medium rounded-xl ${
               status === "pending"
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600"
+                : "bg-brand-500 hover:bg-brand-600"
             } text-white`}
           >
             {status === "pending" ? "Request Pending" : "Request Online Mock"}

@@ -39,7 +39,7 @@ const PolygonChart = ({ data = [] }) => {
 
   // Use the most common color or average-based color
   const fillColor = useMemo(() => {
-    if (data.length === 0) return '#3b82f6';
+    if (data.length === 0) return '#c11e4d';
     
     // Count colors
     const colorCounts = {};

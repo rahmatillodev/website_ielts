@@ -66,7 +66,7 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
         <h3 className="text-lg font-semibold text-gray-900">Score Progression</h3>
         <div className='flex gap-3'>
         <div className='flex items-center gap-1'>
-          <div className='w-2 h-2 rounded-full' style={{ backgroundColor: '#3b82f6' }}></div>
+          <div className='w-2 h-2 rounded-full' style={{ backgroundColor: '#c11e4d' }}></div>
          <p>Reading</p>
          </div>
          <div className='flex items-center gap-1'>
@@ -111,7 +111,7 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
               {/* <Legend verticalAlign="top" align="left" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }} /> */}
               <Bar
                 dataKey="Reading"
-                fill="#3b82f6"
+                fill="#c11e4d"
                 radius={[4, 4, 0, 0]}
                 barSize={testLimit === 'all' ? 20 : 35} // "All" bo'lganda ustunlarni ingichka qilamiz
               />

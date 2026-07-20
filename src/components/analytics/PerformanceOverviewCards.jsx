@@ -104,7 +104,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <FaChartSimple className="text-blue-600 text-xl" />
+            <FaChartSimple className="text-brand-600 text-xl" />
             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
               Est. Overall Band
             </h3>
@@ -121,7 +121,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2 overflow-hidden">
           <motion.div
             className={`h-2.5 rounded-full ${
-              needsImprovement ? 'bg-orange-500' : 'bg-blue-600'
+              needsImprovement ? 'bg-orange-500' : 'bg-brand-600'
             }`}
             variants={progressBarVariants}
             initial="hidden"

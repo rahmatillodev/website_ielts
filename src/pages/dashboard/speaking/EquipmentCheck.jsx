@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-const EQUIPMENT_BLUE = "#2D9CDB";
+const EQUIPMENT_BLUE = "#c11e4d";
 
 const EquipmentCheck = () => {
   const { id } = useParams();
@@ -153,11 +153,11 @@ const EquipmentCheck = () => {
     const h = canvas.height;
 
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "rgba(45,156,219,0.08)";
+    ctx.fillStyle = "rgba(193,30,77,0.08)";
     ctx.fillRect(0, 0, w, h);
 
     if (!analyser || !dataArrayRef.current) {
-      ctx.strokeStyle = "rgba(45,156,219,0.55)";
+      ctx.strokeStyle = "rgba(193,30,77,0.55)";
       ctx.lineWidth = Math.max(1, Math.floor(w * 0.002));
       ctx.beginPath();
       ctx.moveTo(0, h * 0.62);
@@ -181,7 +181,7 @@ const EquipmentCheck = () => {
       const x = i * (barW + gap);
       const y = h - barH;
 
-      ctx.fillStyle = "rgba(45,156,219,0.95)";
+      ctx.fillStyle = "rgba(193,30,77,0.95)";
       const r = Math.min(8, Math.floor(barW / 2));
       ctx.beginPath();
       ctx.moveTo(x + r, y);
@@ -431,7 +431,7 @@ const EquipmentCheck = () => {
                     setIsSpeakerMenuOpen(false);
                     setIsMicMenuOpen((v) => !v);
                   }}
-                  className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-left outline-none focus:ring-2 focus:ring-[rgba(45,156,219,0.25)] focus:border-[rgba(45,156,219,0.55)] flex items-center justify-between gap-3"
+                  className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-left outline-none focus:ring-2 focus:ring-[rgba(193,30,77,0.25)] focus:border-[rgba(193,30,77,0.55)] flex items-center justify-between gap-3"
                 >
                   <span className="truncate text-gray-900">{selectedMicLabel}</span>
                   <span className="text-gray-400 text-xs">▾</span>
@@ -457,8 +457,8 @@ const EquipmentCheck = () => {
                               setSelectedMicId(d.deviceId);
                               setIsMicMenuOpen(false);
                             }}
-                            className={`w-full px-3 py-2 text-left text-sm hover:bg-[rgba(45,156,219,0.08)] ${
-                              d.deviceId === selectedMicId ? "bg-[rgba(45,156,219,0.12)]" : ""
+                            className={`w-full px-3 py-2 text-left text-sm hover:bg-[rgba(193,30,77,0.08)] ${
+                              d.deviceId === selectedMicId ? "bg-[rgba(193,30,77,0.12)]" : ""
                             }`}
                           >
                             <span className="block truncate text-gray-900">
@@ -483,7 +483,7 @@ const EquipmentCheck = () => {
                     setIsMicMenuOpen(false);
                     setIsSpeakerMenuOpen((v) => !v);
                   }}
-                  className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-left outline-none focus:ring-2 focus:ring-[rgba(45,156,219,0.25)] focus:border-[rgba(45,156,219,0.55)] flex items-center justify-between gap-3"
+                  className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-left outline-none focus:ring-2 focus:ring-[rgba(193,30,77,0.25)] focus:border-[rgba(193,30,77,0.55)] flex items-center justify-between gap-3"
                 >
                   <span className="truncate text-gray-900">{selectedSpeakerLabel}</span>
                   <span className="text-gray-400 text-xs">▾</span>
@@ -509,8 +509,8 @@ const EquipmentCheck = () => {
                               setSelectedSpeakerId(d.deviceId);
                               setIsSpeakerMenuOpen(false);
                             }}
-                            className={`w-full px-3 py-2 text-left text-sm hover:bg-[rgba(45,156,219,0.08)] ${
-                              d.deviceId === selectedSpeakerId ? "bg-[rgba(45,156,219,0.12)]" : ""
+                            className={`w-full px-3 py-2 text-left text-sm hover:bg-[rgba(193,30,77,0.08)] ${
+                              d.deviceId === selectedSpeakerId ? "bg-[rgba(193,30,77,0.12)]" : ""
                             }`}
                           >
                             <span className="block truncate text-gray-900">
@@ -575,7 +575,7 @@ const EquipmentCheck = () => {
                       type="checkbox"
                       checked={readyChecked}
                       onChange={(e) => setReadyChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-[rgb(45,156,219)] focus:ring-[rgba(45,156,219,0.25)]"
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-[rgb(45,156,219)] focus:ring-[rgba(193,30,77,0.25)]"
                     />
                     <span className="text-sm text-gray-700 leading-snug">
                       I&apos;m sure that microphone and speakers are ready.

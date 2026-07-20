@@ -461,8 +461,8 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
         cancelLabel="Cancel"
         confirmLabel="Yes, Start Test"
         icon={FaRedo}
-        iconBgColor="bg-blue-50"
-        iconColor="text-blue-500"
+        iconBgColor="bg-brand-50"
+        iconColor="text-brand-500"
       />
 
     </footer>

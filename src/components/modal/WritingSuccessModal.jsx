@@ -73,7 +73,7 @@ export default function WritingSuccessModal({
           {/* Asosiy harakat tugmasi */}
           <AlertDialogAction 
             onClick={handleGoToWriting}
-            className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white border-none"
+            className="flex-1 h-11 bg-brand-600 hover:bg-brand-700 text-white border-none"
           >
             Go to Writing
           </AlertDialogAction>

@@ -339,7 +339,7 @@ const MockCenterPage = () => {
           transition={{ delay: 0.2 }}
           className="mb-8"
         >
-          <Card className="rounded-2xl shadow-sm border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <Card className="rounded-2xl shadow-sm border-2 border-brand-200 bg-gradient-to-r from-brand-50 to-brand-100">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 
@@ -347,12 +347,12 @@ const MockCenterPage = () => {
                   <div className="flex gap-2 justify-between">
                   <h3 className="text-xl font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <span>Flexible Scheduling Feature</span>
-                    <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
+                    <span className="px-2 py-1 bg-brand-600 text-white text-xs font-bold rounded-full">
                       NEW
                     </span>
                   </h3>
                   <div className="shrink-0">
-                  <Info className="w-6 h-6 text-blue-600" />
+                  <Info className="w-6 h-6 text-brand-600" />
                 </div>
                   </div>
                   <div className="space-y-3">
@@ -360,7 +360,7 @@ const MockCenterPage = () => {
                       With a <strong className="text-gray-900">single payment</strong>, you have the flexibility to complete your mock test in two parts:
                     </p>
                     <div className="grid md:grid-cols-2 gap-4 mt-4">
-                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-blue-100">
+                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-brand-100">
                         <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
                         <div>
                           <p className="font-semibold text-gray-900 mb-1">Part 1: Reading, Writing & Listening</p>
@@ -369,7 +369,7 @@ const MockCenterPage = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-blue-100">
+                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-brand-100">
                         <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
                         <div>
                           <p className="font-semibold text-gray-900 mb-1">Part 2: Speaking Test</p>

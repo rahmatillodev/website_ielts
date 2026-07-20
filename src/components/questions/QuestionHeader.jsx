@@ -171,7 +171,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             // Writing: Show "Try practice" button when not in practice mode
             <button
               onClick={handleStart}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+              className="px-4 py-2 bg-brand-600 text-white rounded hover:bg-brand-700 transition-colors font-medium"
             >
               Try Your Self
             </button>
@@ -193,14 +193,14 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
                   (!isStarted && formatTime(timeRemaining).slice(0, -3) == currentTest?.duration) ? (
                     <button
                       onClick={handleStart}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                      className="px-4 py-2 bg-brand-600 text-white rounded hover:bg-brand-700 transition-colors font-medium"
                     >
                       Start
                     </button>
                   ) : (
                     <button
                       onClick={handlePause}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                      className="px-4 py-2 bg-brand-600 text-white rounded hover:bg-brand-700 transition-colors font-medium"
                     >
                       {isPaused ? "Resume" : "Pause"}
                     </button>
@@ -285,7 +285,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             {(notes.length > 0 || isSidebarOpen) && (
               <span 
                 className="absolute top-0 right-0 w-2 h-2 rounded-full"
-                style={{ backgroundColor: '#3b82f6' }}
+                style={{ backgroundColor: '#c11e4d' }}
               />
             )}
           </button>

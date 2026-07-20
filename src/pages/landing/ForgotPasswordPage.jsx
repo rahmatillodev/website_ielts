@@ -53,14 +53,14 @@ function ForgotPasswordPage() {
             <LogoDesign
               className="w-fit"
               iconColor="text-white"
-              color="#1990e6"
+              color="#c11e4d"
             />
           </div>
           <div className="hidden lg:flex items-center gap-2 mb-8">
             <LogoDesign
               className="w-fit"
               iconColor="text-white"
-              color="#1990e6"
+              color="#c11e4d"
             />
           </div>
           <h1 className="text-3xl font-semibold mb-2 text-gray-900">
@@ -95,7 +95,7 @@ function ForgotPasswordPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-[#136dec] hover:bg-[#136dec]-dark text-white h-11 text-base font-medium"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white h-11 text-base font-medium"
                 disabled={loading}
               >
                 {loading ? "Sending..." : "Send reset link"}
@@ -108,7 +108,7 @@ function ForgotPasswordPage() {
                 Back to{" "}
                 <Link
                   to="/login"
-                  className="text-[#136dec] hover:text-[#136dec]-dark font-medium"
+                  className="text-brand-600 hover:text-brand-700 font-medium"
                 >
                   Sign in
                 </Link>

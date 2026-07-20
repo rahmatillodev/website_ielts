@@ -221,7 +221,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                             className={`w-5 h-5 ${
                               isSelected && showCorrect ? 'accent-green-600' :
                               isSelected && showWrong ? 'accent-red-600' :
-                              'accent-blue-500'
+                              'accent-brand-500'
                             } ${mode === 'review' ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                           />
                         </label>

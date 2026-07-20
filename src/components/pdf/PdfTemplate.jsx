@@ -17,10 +17,10 @@ const PdfTemplate = ({ tasks, timer }) => {
             <span style={{ 
               fontSize: '24px', 
               marginRight: '10px',
-              color: '#2563eb'
+              color: '#c11e4d'
             }}>📘</span>
           </div>
-          <span className="pdf-title" style={{ color: '#2563eb' }}>
+          <span className="pdf-title" style={{ color: '#c11e4d' }}>
             IELTSCORE
           </span>
         </div>
@@ -65,7 +65,7 @@ const PdfTemplate = ({ tasks, timer }) => {
                   color: '#374151',
                   backgroundColor: '#f9fafb',
                   padding: '15px',
-                  borderLeft: '4px solid #3b82f6',
+                  borderLeft: '4px solid #c11e4d',
                   borderRadius: '4px',
                   margin: '10px 0'
                 }}

@@ -139,7 +139,7 @@ function LoginPage() {
             <LogoDesign
               className="w-fit"
               iconColor="text-white"
-              color="#1990e6"
+              color="#c11e4d"
             />
           </div>
           {/* Logo - Desktop */}
@@ -147,7 +147,7 @@ function LoginPage() {
             <LogoDesign
               className="w-fit"
               iconColor="text-white"
-              color="#1990e6"
+              color="#c11e4d"
             />
           </div>
           <h1 className="text-3xl font-semibold mb-2 text-gray-900">
@@ -206,7 +206,7 @@ function LoginPage() {
                   </label>
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-[#136dec] hover:text-[#136dec]/90 font-medium"
+                    className="text-sm text-brand-600 hover:text-brand-600/90 font-medium"
                   >
                     Forgot password?
                   </Link>
@@ -238,7 +238,7 @@ function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-[#136dec] hover:bg-[#136dec]-dark text-white h-11 text-base font-medium"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white h-11 text-base font-medium"
                 disabled={loading}
               >
                 {loading ? "Signing in..." : "Sign In"}
@@ -252,7 +252,7 @@ function LoginPage() {
                 Don't have an account?{" "}
                 <Link
                   to={searchParams.get("redirect") ? `/signup?redirect=${encodeURIComponent(searchParams.get("redirect"))}` : "/signup"}
-                  className="text-[#136dec] hover:text-[#136dec]-dark font-medium"
+                  className="text-brand-600 hover:text-brand-700 font-medium"
                 >
                   Sign Up
                 </Link>
