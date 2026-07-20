@@ -10,6 +10,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { toScore } from '@/utils/score';
+import { AXIS } from '@/lib/chartPalette';
+import { SKILL } from '@/lib/skillColors';
 
 const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
   if (!scoreTrends || scoreTrends.length === 0) {
@@ -66,11 +68,11 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
         <h3 className="text-lg font-semibold text-gray-900">Score Progression</h3>
         <div className='flex gap-3'>
         <div className='flex items-center gap-1'>
-          <div className='w-2 h-2 rounded-full' style={{ backgroundColor: '#c11e4d' }}></div>
+          <div className='w-2 h-2 rounded-full' style={{ backgroundColor: SKILL.reading.mark }}></div>
          <p>Reading</p>
          </div>
          <div className='flex items-center gap-1'>
-          <div className='w-2 h-2 rounded-full' style={{ backgroundColor: '#ef4444' }}></div>
+          <div className='w-2 h-2 rounded-full' style={{ backgroundColor: SKILL.listening.mark }}></div>
          <p>Listening</p>
         </div>
         </div>
@@ -90,13 +92,13 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
               data={chartData}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={AXIS.grid} />
               <XAxis
                 dataKey="test"
                 axisLine={false}
                 tickLine={false}
                 fontSize={11}
-                tick={{ fill: '#9ca3af' }}
+                tick={{ fill: AXIS.tick }}
                 interval={0} // Barcha test raqamlarini majburan ko'rsatish
               />
               <YAxis
@@ -105,19 +107,19 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
                 axisLine={false}
                 tickLine={false}
                 fontSize={11}
-                tick={{ fill: '#9ca3af' }}
+                tick={{ fill: AXIS.tick }}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f9fafb' }} />
               {/* <Legend verticalAlign="top" align="left" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }} /> */}
               <Bar
                 dataKey="Reading"
-                fill="#c11e4d"
+                fill={SKILL.reading.mark}
                 radius={[4, 4, 0, 0]}
                 barSize={testLimit === 'all' ? 20 : 35} // "All" bo'lganda ustunlarni ingichka qilamiz
               />
               <Bar
                 dataKey="Listening"
-                fill="#ef4444"
+                fill={SKILL.listening.mark}
                 radius={[4, 4, 0, 0]}
                 barSize={testLimit === 'all' ? 20 : 35}
               />

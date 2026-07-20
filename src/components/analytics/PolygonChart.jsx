@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { accuracyColor, SERIES, AXIS } from '@/lib/chartPalette';
 import {
   RadarChart,
   PolarGrid,
@@ -32,14 +33,12 @@ const PolygonChart = ({ data = [] }) => {
   }, [data]);
 
   const getGradientColor = (value) => {
-    if (value >= 80) return '#10b981'; // green
-    if (value >= 60) return '#f59e0b'; // yellow
-    return '#ef4444'; // red
+    return accuracyColor(value);
   };
 
   // Use the most common color or average-based color
   const fillColor = useMemo(() => {
-    if (data.length === 0) return '#c11e4d';
+    if (data.length === 0) return SERIES[0];
     
     // Count colors
     const colorCounts = {};
@@ -69,14 +68,14 @@ const PolygonChart = ({ data = [] }) => {
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={chartData} margin={{ top: 50, right: 70, bottom: 50, left: 70 }}>
           <PolarGrid 
-            stroke="#e5e7eb" 
+            stroke={AXIS.grid} 
             strokeWidth={1}
             gridType="polygon"
           />
           <PolarAngleAxis
             dataKey="subject"
             tick={{ 
-              fill: '#6b7280', 
+              fill: AXIS.tick, 
               fontSize: 10,
               fontWeight: 600,
             }}

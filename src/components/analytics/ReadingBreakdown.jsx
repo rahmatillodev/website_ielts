@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { LuBookOpen } from 'react-icons/lu';
 import PolygonChart from './PolygonChart';
+import { accuracyColor } from '@/lib/chartPalette';
 
 const ReadingBreakdown = ({ readingBreakdown }) => {
   // Format question type names (maps enum values to display names)
@@ -26,35 +27,14 @@ const ReadingBreakdown = ({ readingBreakdown }) => {
       return [];
     }
 
-    const colors = [
-      '#c11e4d', // blue
-      '#10b981', // green
-      '#f59e0b', // yellow
-      '#ef4444', // red
-      '#8b5cf6', // purple
-      '#ec4899', // pink
-      '#06b6d4', // cyan
-      '#f97316', // orange
-      '#6366f1', // indigo
-    ];
 
     return Object.entries(readingBreakdown)
-      .map(([type, stats], index) => {
+      .map(([type, stats]) => {
         const accuracy = stats?.accuracy || 0;
         const total = stats?.total || 0;
         const correct = stats?.correct || 0;
         
-        let color = colors[index % colors.length];
-        
-        // Color based on performance (only if there's data)
-        if (total > 0) {
-          if (accuracy >= 80) color = '#10b981'; // green
-          else if (accuracy >= 60) color = '#f59e0b'; // yellow
-          else color = '#ef4444'; // red
-        } else {
-          // Gray for no data
-          color = '#9ca3af';
-        }
+        const color = accuracyColor(accuracy, total);
 
         return {
           label: formatQuestionType(type),
