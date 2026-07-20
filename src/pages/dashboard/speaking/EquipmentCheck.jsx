@@ -530,7 +530,7 @@ const EquipmentCheck = () => {
               <div className="text-sm font-semibold text-gray-900">Recording</div>
 
               {permissionError ? (
-                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <div className="mt-3 rounded-lg border border-danger-200 bg-danger-50 px-3 py-2 text-sm text-danger-700">
                   {permissionError}
                 </div>
               ) : null}

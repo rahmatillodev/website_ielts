@@ -638,7 +638,7 @@ const TestsLibraryPage = ({
                                 <Button
                                   onClick={handleFilterClear}
                                   variant="ghost"
-                                  className="text-sm text-red-600  hover:text-red-900 p-0 h-auto border-none hover:bg-transparent"
+                                  className="text-sm text-danger-700  hover:text-danger-900 p-0 h-auto border-none hover:bg-transparent"
                                 >
                                   Clear All
                                 </Button>

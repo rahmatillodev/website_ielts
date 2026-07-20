@@ -16,9 +16,9 @@ const statusConfig = {
   busy: {
     label: "Busy",
     icon: AlertCircle,
-    color: "text-red-600",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
+    color: "text-danger-700",
+    bgColor: "bg-danger-50",
+    borderColor: "border-danger-200",
   },
   pending: {
     label: "Pending Approval",

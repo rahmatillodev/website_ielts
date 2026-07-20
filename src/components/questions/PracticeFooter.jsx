@@ -247,7 +247,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                 return (
                                   <div key={questionNumber} className="relative flex flex-col items-center shrink-0">
                                     {isBookmarked && (
-                                      <FaBookmark className="absolute -top-2 text-red-500 text-xs z-10" />
+                                      <FaBookmark className="absolute -top-2 text-brand-600 text-xs z-10" />
                                     )}
                                     <button
                                       onClick={() => scrollToQuestion(questionNumber)}

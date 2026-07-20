@@ -144,7 +144,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <LuBookOpen className="text-green-600 text-xl" />
+            <LuBookOpen className="text-skill-reading-text text-xl" />
             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
               Reading Avg
             </h3>
@@ -156,7 +156,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
           </div>
           {readingTrend !== null && readingTrend !== 0 && (
             <div className={`flex items-center gap-1 text-sm font-semibold ${
-              readingTrend > 0 ? 'text-green-600' : 'text-red-600'
+              readingTrend > 0 ? 'text-green-600' : 'text-danger-700'
             }`}>
               {readingTrend > 0 ? (
                 <>
@@ -188,7 +188,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <LuHeadphones className="text-red-600 text-xl" />
+            <LuHeadphones className="text-skill-listening-text text-xl" />
             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
               Listening Avg
             </h3>
@@ -221,7 +221,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <LuClock className="text-purple-600 text-xl" />
+            <LuClock className="text-muted-foreground text-xl" />
             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
               Total Practice
             </h3>

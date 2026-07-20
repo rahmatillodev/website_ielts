@@ -81,7 +81,7 @@ const ListeningBreakdown = ({ listeningBreakdown }) => {
         transition={{ duration: 0.5 }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <LuHeadphones className="text-red-600 text-xl" />
+          <LuHeadphones className="text-danger-700 text-xl" />
           <h3 className="text-lg font-semibold text-gray-900">Listening Breakdown</h3>
         </div>
         <div className="text-gray-500 text-sm">Loading...</div>
@@ -97,7 +97,7 @@ const ListeningBreakdown = ({ listeningBreakdown }) => {
       transition={{ duration: 0.5 }}
     >
       <div className="flex items-center gap-2 mb-6">
-        <LuHeadphones className="text-red-600 text-xl" />
+        <LuHeadphones className="text-danger-700 text-xl" />
         <h3 className="text-lg font-semibold text-gray-900">Listening Breakdown</h3>
       </div>
       

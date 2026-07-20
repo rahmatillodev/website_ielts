@@ -219,7 +219,7 @@ const MultipleAnswers = ({
       } else if (reviewStatus === 'incorrect') {
         borderColor = '#ef4444'; // Qizil
         backgroundColor = 'rgba(239, 68, 68, 0.1)';
-        iconBg = 'bg-red-500 border-red-500';
+        iconBg = 'bg-danger-500 border-danger-500';
       } else if (reviewStatus === 'missed') {
         borderColor = '#22c55e'; // To'g'ri lekin tanlanmagan
         backgroundColor = 'transparent';
@@ -253,7 +253,7 @@ const MultipleAnswers = ({
         <div className="flex gap-2 flex-1">
           <span className={`font-semibold text-sm ${
             reviewStatus === 'correct' ? 'text-green-700' : 
-            reviewStatus === 'incorrect' ? 'text-red-700' : 
+            reviewStatus === 'incorrect' ? 'text-danger-700' : 
             isSelected ? 'text-brand-700' : 'text-gray-500'
           }`}>
             {optionKey}.
@@ -269,7 +269,7 @@ const MultipleAnswers = ({
         {isReviewMode && (
           <div className="flex flex-col items-end">
             {reviewStatus === 'correct' && <span className="text-[10px] text-green-700 font-bold uppercase">Correct</span>}
-            {reviewStatus === 'incorrect' && <span className="text-[10px] text-red-700 font-bold uppercase">Your Answer</span>}
+            {reviewStatus === 'incorrect' && <span className="text-[10px] text-danger-700 font-bold uppercase">Your Answer</span>}
             {reviewStatus === 'missed' && <span className="text-[10px] text-green-600 font-bold uppercase italic">Correct Answer</span>}
           </div>
         )}

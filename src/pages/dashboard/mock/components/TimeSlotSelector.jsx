@@ -10,7 +10,7 @@ const getSlotStatusColor = (status) => {
     case "available":
       return "bg-green-100 border-green-300 text-green-700 hover:bg-green-200";
     case "booked":
-      return "bg-red-100 border-red-300 text-red-700 cursor-not-allowed opacity-60";
+      return "bg-danger-100 border-danger-300 text-danger-700 cursor-not-allowed opacity-60";
     case "pending":
       return "bg-yellow-100 border-yellow-300 text-yellow-700 hover:bg-yellow-200";
     default:

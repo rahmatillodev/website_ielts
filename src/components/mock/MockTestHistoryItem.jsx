@@ -52,9 +52,9 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
           {results && (
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
               {results.listening && (
-                <div className="bg-brand-50 rounded-lg p-3">
+                <div className="bg-skill-listening-subtle rounded-lg p-3">
                   <p className="text-xs text-gray-600 mb-1">Listening</p>
-                  <p className="text-lg font-bold text-brand-600">
+                  <p className="text-lg font-bold text-skill-listening-text">
                     {formatBandScore(results.listening.score)}
                   </p>
                   <p className="text-xs text-gray-500">
@@ -63,9 +63,9 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
                 </div>
               )}
               {results.reading && (
-                <div className="bg-green-50 rounded-lg p-3">
+                <div className="bg-skill-reading-subtle rounded-lg p-3">
                   <p className="text-xs text-gray-600 mb-1">Reading</p>
-                  <p className="text-lg font-bold text-green-600">
+                  <p className="text-lg font-bold text-skill-reading-text">
                     {formatBandScore(results.reading.score)}
                   </p>
                   <p className="text-xs text-gray-500">
@@ -74,9 +74,9 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
                 </div>
               )}
               {results.writing && (
-                <div className="bg-purple-50 rounded-lg p-3">
+                <div className="bg-skill-writing-subtle rounded-lg p-3">
                   <p className="text-xs text-gray-600 mb-1">Writing</p>
-                  <p className="text-lg font-bold text-purple-600">
+                  <p className="text-lg font-bold text-skill-writing-text">
                     {formatBandScore(results.writing.score)}
                   </p>
                   <p className="text-xs text-gray-500">
@@ -85,9 +85,9 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
                 </div>
               )}
               {results.speaking && (
-                <div className="bg-red-50 rounded-lg p-3">
+                <div className="bg-skill-speaking-subtle rounded-lg p-3">
                   <p className="text-xs text-gray-600 mb-1">Speaking</p>
-                  <p className="text-lg font-bold text-red-600">
+                  <p className="text-lg font-bold text-skill-speaking-text">
                     {formatBandScore(results.speaking.score)}
                   </p>
                   <p className="text-xs text-gray-500">

@@ -43,7 +43,7 @@ const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', re
               isSelected && showCorrect
                 ? "bg-green-100 border-2 border-green-500 text-green-900"
                 : isSelected && showWrong
-                ? "bg-red-100 border-2 border-red-500 text-red-900"
+                ? "bg-danger-100 border-2 border-danger-500 text-danger-900"
                 : isCorrectOption && isReviewMode && showCorrectAnswers
                 ? "bg-green-50 border border-green-300 text-green-700"
                 : isSelected
@@ -68,7 +68,7 @@ const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', re
               <span className="text-xs text-green-700 font-medium">Correct</span>
             )}
             {isSelected && showWrong && (
-              <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-sm">
+              <span className="text-[10px] bg-danger-500 text-white px-2 py-0.5 rounded-sm">
                 Wrong
               </span>
             )}

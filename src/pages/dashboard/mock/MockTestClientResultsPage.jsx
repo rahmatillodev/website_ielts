@@ -112,7 +112,7 @@ const MockTestClientResultsPage = () => {
     return (
       <div className="w-full h-full max-w-7xl mx-auto p-4 md:p-6 bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-500 mb-4">{error || 'Client not found'}</p>
+          <p className="text-danger-700 mb-4">{error || 'Client not found'}</p>
           <button
             onClick={handleBack}
             className="px-6 py-3 bg-brand-500 text-white rounded-lg font-semibold hover:bg-brand-600 transition-colors"

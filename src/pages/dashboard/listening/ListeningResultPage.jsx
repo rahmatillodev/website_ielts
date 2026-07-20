@@ -770,11 +770,11 @@ const ListeningResultPage = () => {
                           {answerItem.isCorrect ? (
                             <FaCheckCircle className="text-green-500 text-xl" />
                           ) : (
-                            <FaTimesCircle className="text-red-500 text-xl" />
+                            <FaTimesCircle className="text-danger-700 text-xl" />
                           )}
                         </td>
                         <td className="p-4">
-                          <span className={answerItem.isCorrect ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                          <span className={answerItem.isCorrect ? "text-green-600 font-semibold" : "text-danger-700 font-semibold"}>
                             {answerItem.yourAnswer || "N/A"}
                           </span>
                         </td>
@@ -793,7 +793,7 @@ const ListeningResultPage = () => {
                             onClick={() => openReport(answerItem.questionNumber)}
                             title="Report a problem with this question"
                             aria-label={`Report a problem with question ${answerItem.questionNumber}`}
-                            className="text-gray-300 hover:text-red-500 transition-colors"
+                            className="text-gray-300 hover:text-danger-700 transition-colors"
                           >
                             <MdOutlineFlag size={16} />
                           </button>

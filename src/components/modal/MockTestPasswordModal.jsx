@@ -44,7 +44,7 @@ const MockTestPasswordModal = ({
               disabled={isSubmitting}
             />
             {passwordError && (
-              <p className="mt-2 text-sm text-red-600">{passwordError}</p>
+              <p className="mt-2 text-sm text-danger-700">{passwordError}</p>
             )}
           </div>
           <div className="flex gap-3">

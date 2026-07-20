@@ -414,7 +414,7 @@ const OwnWritingPageContent = () => {
             </span>
             <span
               className={
-                wordCount >= minWords ? "text-green-600" : "text-red-600"
+                wordCount >= minWords ? "text-green-600" : "text-danger-700"
               }
             >
               Minimum: {minWords}

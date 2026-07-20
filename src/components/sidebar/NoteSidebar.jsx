@@ -156,7 +156,7 @@ const NoteSidebar = () => {
                     type="button"
                     size="sm"
                     variant="ghost"
-                    className="flex items-center gap-2 text-red-600 font-medium px-3 py-1.5 rounded hover:bg-red-50"
+                    className="flex items-center gap-2 text-danger-700 font-medium px-3 py-1.5 rounded hover:bg-danger-50"
                     style={{
                       backgroundColor: 'transparent'
                     }}

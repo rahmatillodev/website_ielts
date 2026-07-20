@@ -1519,7 +1519,7 @@ const ListeningPracticePageContent = () => {
                     backgroundColor: theme === "light" ? "#fff5f5" : "rgba(255,0,0,0.05)",
                   }}
                 >
-                  <div className="text-red-500 text-lg font-semibold mb-2">
+                  <div className="text-danger-700 text-lg font-semibold mb-2">
                     ⚠️ Xatolik yuz berdi
                   </div>
 

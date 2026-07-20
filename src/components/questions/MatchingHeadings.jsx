@@ -28,7 +28,7 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
     <div className="border border-gray-200 rounded-lg overflow-hidden group relative">
       <div className="grid grid-cols-[1fr_auto] divide-x divide-gray-200">
         {/* Left: Question Text */}
-        <div className={`p-4 relative ${showWrong ? 'bg-red-50 border-red-500' : showCorrect ? 'bg-green-50 border-green-500' : 'bg-white'} ${showWrong || showCorrect ? 'border-2' : ''}`}>
+        <div className={`p-4 relative ${showWrong ? 'bg-danger-50 border-danger-500' : showCorrect ? 'bg-green-50 border-green-500' : 'bg-white'} ${showWrong || showCorrect ? 'border-2' : ''}`}>
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-gray-900 font-medium" data-selectable="true">
               {questionText}
@@ -37,7 +37,7 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
               <span className="text-xs text-green-700 font-medium">Correct</span>
             )}
             {showWrong && (
-              <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-sm">
+              <span className="text-[10px] bg-danger-500 text-white px-2 py-0.5 rounded-sm">
                 Wrong
               </span>
             )}
@@ -75,7 +75,7 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
                   ${isSelected && showCorrect
                     ? "border-green-600 bg-green-100 text-green-900"
                     : isSelected && showWrong
-                    ? "border-red-600 bg-red-100 text-red-900"
+                    ? "border-danger-600 bg-danger-100 text-danger-900"
                     : isCorrectOption && isReviewMode && showCorrectAnswers
                     ? "border-green-400 bg-green-50 text-green-700"
                     : isSelected

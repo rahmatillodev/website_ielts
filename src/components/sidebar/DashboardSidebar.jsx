@@ -118,7 +118,7 @@ const DashboardSidebar = ({ onNavigate }) => {
                   IELTSCORE
                 </span> */}
                 <LogoDesign />
-                <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full font-bold">
                   Beta
                 </span>
               </div>
@@ -279,12 +279,12 @@ const DashboardSidebar = ({ onNavigate }) => {
         <LogoutModal onConfirm={handleLogout}>
           {effectiveIsCollapsed ? (
 
-            <button className="flex items-center justify-center p-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95]">
+            <button className="flex items-center justify-center p-3 w-full bg-danger-50 hover:bg-danger-100 text-danger-700 font-bold rounded-xl transition-all active:scale-[0.95]">
               <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" />
 
             </button>
           ) : (
-            <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
+            <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-danger-50 hover:bg-danger-100 text-danger-700 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
               <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" /> Log out
             </button>
           )}

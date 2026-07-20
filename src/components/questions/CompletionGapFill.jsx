@@ -76,7 +76,7 @@ const CompletionGapFill = ({
           disabled={mode === 'review'}
           className={`w-30 h-7 px-2 text-base rounded-md focus-visible:ring-1 bg-gray-50/50 placeholder:text-gray-400  ${
             showWrong 
-              ? 'border-red-500 bg-red-50 text-red-600 focus-visible:ring-red-500' 
+              ? 'border-danger-500 bg-danger-50 text-danger-700 focus-visible:ring-danger-500' 
               : showCorrect
               ? 'border-green-500 bg-green-50 text-green-700 focus-visible:ring-green-500'
               : 'border-gray-400 focus-visible:ring-brand-500'

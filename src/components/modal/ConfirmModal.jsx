@@ -43,7 +43,7 @@ const ConfirmModal = ({
           <AlertDialogDescription className="text-gray-500 font-medium pt-2 text-center" style={{ color: themeColors.text }}>
             {testType === "Writing" ? (
               <p>{description}  <br />
-              <span className="font-semibold text-red-600 ">
+              <span className="font-semibold text-danger-700 ">
                  You can still extract the information in PDF format before finishing.
               </span>
               </p>

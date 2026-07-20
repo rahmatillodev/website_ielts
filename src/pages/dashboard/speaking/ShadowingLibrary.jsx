@@ -139,7 +139,7 @@ const ShadowingLibrary = () => {
 
       <div className="flex-1 overflow-y-auto pb-8 pt-2 -mx-3 md:-mx-8 px-3 md:px-8">
         {fetchError && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div className="mb-6 rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-800">
             {fetchError}
           </div>
         )}

@@ -1441,7 +1441,7 @@ const WritingPracticePageContent = () => {
                     backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
                   }}
                 >
-                  <p className="text-sm font-semibold text-red-500 mb-2">
+                  <p className="text-sm font-semibold text-danger-700 mb-2">
                     ⚠️ Writing loading error
                   </p>
                   <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
@@ -1464,7 +1464,7 @@ const WritingPracticePageContent = () => {
                     backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
                   }}
                 >
-                  <p className="text-sm font-semibold text-red-500 mb-2">
+                  <p className="text-sm font-semibold text-danger-700 mb-2">
                     ⚠️ No tasks found
                   </p>
                   <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
@@ -1634,7 +1634,7 @@ const WritingPracticePageContent = () => {
                     backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
                   }}
                 >
-                  <p className="text-sm font-semibold text-red-500 mb-2">
+                  <p className="text-sm font-semibold text-danger-700 mb-2">
                     ⚠️ Writing loading error
                   </p>
                   <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
@@ -1657,7 +1657,7 @@ const WritingPracticePageContent = () => {
                     backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
                   }}
                 >
-                  <p className="text-sm font-semibold text-red-500 mb-2">
+                  <p className="text-sm font-semibold text-danger-700 mb-2">
                     ⚠️ No tasks found
                   </p>
                   <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
@@ -1957,7 +1957,7 @@ const WritingPracticePageContent = () => {
               </p>
               <div className="space-y-2 mt-4">
                 <p
-                  className="text-sm font-semibold text-red-500"
+                  className="text-sm font-semibold text-danger-700"
                   style={{ color: '#ef4444' }}
                 >
                   ⚠️ Do not close or refresh this page!
