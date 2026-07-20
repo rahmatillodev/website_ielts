@@ -17,7 +17,7 @@ export const useFeedbacksStore = create((set, get) => ({
       }
 
       if (!feedbackData?.message?.trim()) {
-        return { success: false, error: "Xabar bo'sh bo'lishi mumkin emas." };
+        return { success: false, error: "Please enter a message before sending." };
       }
 
       set({ loading: true, error: null });
@@ -56,23 +56,25 @@ export const useFeedbacksStore = create((set, get) => ({
         }
 
         if (!data) {
-          const noDataError = 'Feedback was not created. No data returned from database.';
-          console.error('[addFeedback] No data returned:', noDataError);
-          set({ error: noDataError, loading: false });
-          return { success: false, error: noDataError };
+          console.error('[addFeedback] No data returned from insert for user:', userId);
+          const userMessage = 'Could not send your message. Please try again later.';
+          set({ error: userMessage, loading: false });
+          return { success: false, error: userMessage };
         }
 
         set({ feedbacks: [data, ...get().feedbacks], loading: false });
         return { success: true, data };
       } catch (error) {
-        const errorMessage = error?.message || 'An unexpected error occurred while submitting feedback.';
+        // Log the real cause, but surface a generic message - raw DB/network errors
+        // leak internal details and mean nothing to the user.
         console.error('[addFeedback] Exception caught:', {
-          error: errorMessage,
+          error: error?.message,
           stack: error?.stack,
           userId: userId
         });
-        set({ error: errorMessage, loading: false });
-        return { success: false, error: errorMessage };
+        const userMessage = 'Could not send your message. Please try again later.';
+        set({ error: userMessage, loading: false });
+        return { success: false, error: userMessage };
       }
     },
 
