@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import DashboardNavbar from '@/components/navbar/DashboardNavbar';
 import React, { useState, useEffect } from 'react'
@@ -6,54 +6,20 @@ import RotationModal, { DISMISS_KEY } from '@/components/modal/RotationModal'
 import { useSmallScreen } from '@/hooks/useSmallScreen'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Outlet } from 'react-router-dom'
-import { useAuthStore } from '@/store/authStore'
 
 const MockTestLayout = () => {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const isSmallScreen = useSmallScreen();
   const [showModal, setShowModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const authUser = useAuthStore((state) => state.authUser)
 
-  // Set access mode to mock test when accessing mock test routes
-  useEffect(() => {
-    // Profile page is accessible from both platforms - preserve current accessMode
-    if (pathname === '/profile') {
-      return;
-    }
-    sessionStorage.setItem('accessMode', 'mockTest');
-  }, [pathname])
-  
-  // Redirect regular users away from mock test layout
-  useEffect(() => {
-    if (authUser) {
-      const accessMode = sessionStorage.getItem('accessMode');
-      // Profile page is accessible from both platforms - don't redirect
-      if (pathname === '/profile') {
-        return;
-      }
-      
-      // Practice pages are accessible from both platforms - preserve accessMode, don't redirect
-      const isPracticePage = pathname.includes('/reading-practice') || 
-                            pathname.includes('/listening-practice') || 
-                            pathname.includes('/writing-practice') ||
-                            pathname.includes('/speaking-practice') ||
-                            pathname.includes('/reading-result') ||
-                            pathname.includes('/listening-result') ||
-                            pathname.includes('/speaking-result');
-      
-      if (isPracticePage) {
-        return;
-      }
-      
-      if (accessMode === 'regular') {
-        console.log('[MockTestLayout] Regular user detected in mock test layout, redirecting to dashboard');
-        navigate('/dashboard', { replace: true });
-      }
-    }
-  }, [pathname, authUser, navigate])
-  
+  // No accessMode bookkeeping here any more. This layout used to write
+  // accessMode='mockTest' in one effect and then, in the next, redirect to
+  // /dashboard if accessMode was 'regular' - a check that could never fire,
+  // because the first effect had already overwritten the value it read.
+  // Being on a mock route *is* the mock context; there is nothing to reconcile.
+
+
   useEffect(() => {
     // Check if modal was previously dismissed
     const wasDismissed = localStorage.getItem(DISMISS_KEY) === "true"

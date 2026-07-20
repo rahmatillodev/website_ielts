@@ -1,13 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-
-// Helper function to check if a route is a mock test route
-const isMockTestRoute = (path) => {
-  return path.startsWith("/mock-test") || 
-         path.startsWith("/mock-tests") || 
-         path.startsWith("/mock/") || 
-         path === "/mock";
-}
+import { isMockTestRoute } from '@/lib/routeContext'
 
 // Dashboard Route component - allows access to public pages
 // For public pages, we don't need to redirect based on auth status
@@ -25,12 +18,9 @@ export default function DashboardRoute({ children }) {
     return children
   }
 
-  // Check access mode - don't redirect mock test users to dashboard
-  const accessMode = sessionStorage.getItem('accessMode');
-  if (authUser && accessMode === 'mockTest') {
-    // User is in mock test mode, redirect to mock tests
-    return <Navigate to="/mock-tests" replace />
-  }
+  // Mock routes already returned above, so there is no stored mode left to
+  // consult here - a signed-in user landing on a public page goes to the
+  // dashboard, and reaches mock tests from the sidebar.
 
   // Only redirect if user is authenticated AND not already on dashboard
   if (authUser && location.pathname !== '/dashboard') {

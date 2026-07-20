@@ -2,25 +2,17 @@ import { MdInsights } from "react-icons/md";
 import { motion } from "framer-motion";
 import { HiArrowLeft } from "react-icons/hi2";
 import { useNavigate, useSearchParams } from "react-router-dom";
-
-const isMockTestRoute = (path) =>
-  path?.startsWith("/mock-test") ||
-  path?.startsWith("/mock-tests") ||
-  path?.startsWith("/mock/") ||
-  path === "/mock";
+import { isMockTestRoute } from "@/lib/routeContext";
 
 const AnimatedPolygonDecoration = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const isMockTestMode = (() => {
-    const redirectPath = searchParams.get("redirect");
-    if (redirectPath) {
-      const pathname = redirectPath.split("?")[0];
-      if (isMockTestRoute(pathname)) return true;
-    }
-    return typeof sessionStorage !== "undefined" && sessionStorage.getItem("accessMode") === "mockTest";
-  })();
+  // Derived from the redirect param alone. The old sessionStorage fallback kept
+  // the back button hidden on later, unrelated visits to the login page.
+  const isMockTestMode = isMockTestRoute(
+    (searchParams.get("redirect") || "").split("?")[0]
+  );
   // Animation variants for the main hexagon
   const polygramshape = {
     clipPath: "polygon(50% 0%, 90% 20%, 100% 60%, 75% 100%, 25% 100%, 0% 60%, 10% 20%)",

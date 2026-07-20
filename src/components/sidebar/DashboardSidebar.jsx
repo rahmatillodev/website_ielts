@@ -9,6 +9,7 @@ import {
   LuLogOut,
   LuChevronLeft,
   LuChevronRight,
+  LuClipboardCheck,
 } from "react-icons/lu";
 import { FaChartSimple } from "react-icons/fa6";
 import { Button } from "../ui/button";
@@ -215,6 +216,19 @@ const DashboardSidebar = ({ onNavigate }) => {
           onNavigate={onNavigate}
           isCollapsed={effectiveIsCollapsed}
         />
+        {/* Until now the only mock entry point here was the history link, so a
+            student with an upcoming booking had no way to reach /mock-tests and
+            had to know the URL. */}
+        {isMockTestClient === true && (
+          <SidebarItem
+            icon={LuClipboardCheck}
+            label="Mock Test"
+            link="/mock-tests"
+            isActive={pathname === "/mock-tests" || pathname === "/mock" || pathname.startsWith("/mock/")}
+            onNavigate={onNavigate}
+            isCollapsed={effectiveIsCollapsed}
+          />
+        )}
         {isMockTestClient === true && (
           <SidebarItem
             icon={IoDocumentAttachOutline}

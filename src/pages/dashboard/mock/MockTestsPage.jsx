@@ -8,13 +8,43 @@ import MockTestPasswordModal from "@/components/modal/MockTestPasswordModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
 import { listAllRuns } from "@/lib/mockTestIndexedArchive";
+import { format } from "date-fns";
+import { MdEventAvailable, MdSchedule } from "react-icons/md";
+
+/**
+ * `date` is a plain YYYY-MM-DD column and `time` a Postgres `time` (HH:mm:ss).
+ * Parse the date parts explicitly - `new Date("2026-07-22")` is read as UTC
+ * midnight and renders as the previous day west of Greenwich. Times lose the
+ * always-zero seconds.
+ */
+const formatBookingDate = (value) => {
+  if (!value) return null;
+  const [y, m, d] = String(value).slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return format(new Date(y, m - 1, d), "EEEE, d MMMM yyyy");
+};
+
+const formatBookingTime = (value) => {
+  if (!value) return null;
+  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})/);
+  return match ? `${match[1].padStart(2, "0")}:${match[2]}` : String(value).trim();
+};
+
+const BOOKING_STATUS_LABEL = {
+  booked: { text: "Booked", className: "bg-blue-50 text-blue-700 border-blue-200" },
+  started: { text: "In progress", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  completed: { text: "Awaiting review", className: "bg-purple-50 text-purple-700 border-purple-200" },
+  checked: { text: "Result ready", className: "bg-green-50 text-green-700 border-green-200" },
+  notified: { text: "Result sent", className: "bg-gray-100 text-gray-700 border-gray-200" },
+};
 
 const MockTestsPage = () => {
-  const { 
-    fetchClientById, 
-    fetchClientAttempts, 
+  const {
+    fetchClientById,
+    fetchClientAttempts,
     loading,
     isMockTestClient,
+    client,
   } = useMockTestClientStore();
   const { userProfile } = useAuthStore();
   
@@ -158,6 +188,10 @@ const MockTestsPage = () => {
   // The "Wait for Result" message is now shown in the card itself
   // Users can see all mock tests and their status in the list/grid view
 
+  const bookingDate = formatBookingDate(client?.date);
+  const bookingTime = formatBookingTime(client?.time);
+  const bookingStatus = client?.status ? BOOKING_STATUS_LABEL[client.status] : null;
+
   if ((loading || mockTestsLoading) && mockTests.length === 0) {
     return (
       <div className="text-center py-10 w-full h-full max-w-7xl mx-auto">
@@ -212,9 +246,59 @@ const MockTestsPage = () => {
           <p className="text-gray-400 text-sm">Check back later for new mock tests.</p>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center mt-24">
-          {/* // view password modal */}
-          <Button onClick={() => setIsPasswordModalOpen(true)} className="w-full max-w-md px-4 py-6 text-lg">
+        <div className="flex flex-col items-center justify-center mt-12 px-4">
+          {/* The booking used to be invisible here: a student with a scheduled
+              test saw exactly the same bare password button as anyone else, with
+              no confirmation of when their test actually was. */}
+          {bookingDate || bookingTime || bookingStatus ? (
+            <div className="w-full max-w-md mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    Your mock test
+                  </p>
+                  {client?.full_name && (
+                    <p className="mt-1 font-semibold text-gray-900">{client.full_name}</p>
+                  )}
+                </div>
+                {bookingStatus && (
+                  <span
+                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${bookingStatus.className}`}
+                  >
+                    {bookingStatus.text}
+                  </span>
+                )}
+              </div>
+
+              {bookingDate ? (
+                <div className="space-y-2 text-sm text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <MdEventAvailable className="text-lg text-gray-400 shrink-0" />
+                    <span className="font-medium">{bookingDate}</span>
+                  </div>
+                  {bookingTime && (
+                    <div className="flex items-center gap-2">
+                      <MdSchedule className="text-lg text-gray-400 shrink-0" />
+                      <span className="font-medium">{bookingTime}</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No date has been scheduled yet. Your centre will confirm it with you.
+                </p>
+              )}
+
+              <p className="mt-4 border-t border-gray-100 pt-4 text-xs leading-relaxed text-gray-500">
+                Your invigilator gives you the password on the day. Enter it below to begin.
+              </p>
+            </div>
+          ) : null}
+
+          <Button
+            onClick={() => setIsPasswordModalOpen(true)}
+            className="w-full max-w-md px-4 py-6 text-lg"
+          >
             Enter Password to Start Test
           </Button>
         </div>

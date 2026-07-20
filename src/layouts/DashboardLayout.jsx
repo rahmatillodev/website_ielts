@@ -1,4 +1,4 @@
-import { useLocation, useNavigate, matchPath } from 'react-router-dom'
+import { useLocation, matchPath } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import DashboardNavbar from '@/components/navbar/DashboardNavbar';
 import DashboardSidebar from '@/components/sidebar/DashboardSidebar';
@@ -7,90 +7,22 @@ import RotationModal, { DISMISS_KEY } from '@/components/modal/RotationModal'
 import { useSmallScreen } from '@/hooks/useSmallScreen'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Outlet } from 'react-router-dom'
-import { useAuthStore } from '@/store/authStore'
 
 
 const DashboardLayout = () => {
   const { pathname, search } = useLocation();
-  const navigate = useNavigate();
   const isSmallScreen = useSmallScreen();
   const [showModal, setShowModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const authUser = useAuthStore((state) => state.authUser)
 
-  // Set access mode to regular only when actually on a regular dashboard route
-  // (This layout only mounts for dashboard routes; we only set regular here to avoid overwriting mockTest)
-  useEffect(() => {
-    if (pathname === '/profile') return;
+  // The accessMode writer and the "redirect mock users away from the dashboard"
+  // effect that used to live here are gone. Together with the mirrored pair in
+  // MockTestLayout they formed the trap this page was reported for: a user with
+  // a booking could be bounced off the regular dashboard, and a user without the
+  // flag set could be bounced off /mock-tests, with no way to reach the other
+  // side. Both dashboards are now reachable; paid content stays gated by
+  // subscription_status via isPremiumSubscriber, which never consulted this flag.
 
-    const isPracticePage = pathname.includes('/reading-practice') ||
-                          pathname.includes('/listening-practice') ||
-                          pathname.includes('/writing-practice') ||
-                          pathname.includes('/speaking-practice') ||
-                          pathname.includes('/equipment-check') ||
-                          pathname.includes('/reading-result') ||
-                          pathname.includes('/listening-result') ||
-                          pathname.includes('/speaking-result');
-
-    const isDashboardRoute = pathname === '/dashboard' ||
-                             pathname === '/reading' ||
-                             pathname === '/listening' ||
-                             pathname === '/writing' ||
-                             pathname === '/speaking' ||
-                             pathname === '/speaking-library' ||
-                             pathname === '/shadowing-library' ||
-                             pathname.startsWith('/speaking/') ||
-                             pathname.startsWith('/dashboard/speaking/') ||
-                             pathname === '/analytics' ||
-                             pathname === '/own-writing' ||
-                             pathname.startsWith('/writing/writing-history');
-
-    if (!isPracticePage && isDashboardRoute) {
-      sessionStorage.setItem('accessMode', 'regular');
-    }
-  }, [pathname])
-
-  // Redirect mock test users away from regular dashboard routes
-  useEffect(() => {
-    if (authUser) {
-      const accessMode = sessionStorage.getItem('accessMode');
-      // Profile page is accessible from both platforms - don't redirect
-      if (pathname === '/profile') {
-        return;
-      }
-      
-      // Practice pages are accessible from both platforms - preserve accessMode, don't redirect
-      const isPracticePage = pathname.includes('/reading-practice') || 
-                            pathname.includes('/listening-practice') || 
-                            pathname.includes('/writing-practice') ||
-                            pathname.includes('/speaking-practice') ||
-                            pathname.includes('/reading-result') ||
-                            pathname.includes('/listening-result') ||
-                            pathname.includes('/speaking-result');
-      
-      if (isPracticePage) {
-        return;
-      }
-      
-      // Only redirect if they're trying to access dashboard routes (not practice pages)
-      const isDashboardRoute = pathname === '/dashboard' ||
-                               pathname === '/reading' ||
-                               pathname === '/listening' ||
-                               pathname === '/writing' ||
-                               pathname === '/speaking' ||
-                               pathname === '/speaking-library' ||
-                               pathname === '/shadowing-library' ||
-                               pathname.startsWith('/speaking/') ||
-                               pathname.startsWith('/dashboard/speaking/') ||
-                               pathname === '/analytics';
-      
-      if (accessMode === 'mockTest' && isDashboardRoute) {
-        console.log('[DashboardLayout] Mock test user detected in regular dashboard, redirecting to mock-tests');
-        navigate('/mock-tests', { replace: true });
-      }
-    }
-  }, [pathname, navigate, authUser])
-  
   useEffect(() => {
     // Check if modal was previously dismissed
     const wasDismissed = localStorage.getItem(DISMISS_KEY) === "true"
