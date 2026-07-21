@@ -1,8 +1,12 @@
 
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
+import { MdReplay5, MdForward5 } from "react-icons/md";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { saveAudioPosition, loadAudioPosition, clearAudioPosition } from "@/store/LocalStorage/listeningStorage";
+
+/** Seconds moved by one press of the skip-back / skip-forward controls. */
+const SKIP_SECONDS = 5;
 
 const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded, onPlay, autoPlay = false, testId = null, disableReplay = false }, ref) => {
     const { themeColors } = useAppearance();
@@ -319,6 +323,27 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
         },
     }), [isPlaying, testId, disableReplay]);
 
+    /**
+     * Jump the playhead by `delta` seconds, clamped to [0, duration].
+     *
+     * Gated on `!isTestMode` for the same reason as `handleSeek` and the range
+     * input below: during a live test the audio plays once and the position must
+     * not be steerable. This keeps the control additive - it grants review mode a
+     * precise alternative to scrubbing without opening a new way to move the
+     * playhead in test mode (see AUDIT_REPORT #78).
+     */
+    const skipBy = (delta) => {
+        const audio = audioRef.current;
+        if (isTestMode || !audio) return;
+
+        const total = duration || audio.duration;
+        if (!total || isNaN(total)) return;
+
+        const next = Math.min(Math.max(audio.currentTime + delta, 0), total);
+        audio.currentTime = next;
+        setCurrentTime(next);
+    };
+
     const handleSeek = (e) => {
         if (!isTestMode && audioRef.current) {
             const rect = e.currentTarget.getBoundingClientRect();
@@ -344,7 +369,10 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
     if (!audioUrl) return null;
 
     return (
-        <div className="sticky top-2 z-10 border border-gray-200 p-4 shadow-sm w-7/12 mx-auto rounded-2xl" style={{ backgroundColor: themeColors.background, borderColor: themeColors.border }}>
+        // Positioning (incl. stickiness) is the page's job - this element's parent
+        // wraps it tightly, so `position: sticky` here had no room to travel and
+        // silently did nothing. See ListeningPracticePage's player wrapper.
+        <div className="border border-gray-200 p-4 shadow-sm w-7/12 mx-auto rounded-2xl" style={{ backgroundColor: themeColors.background, borderColor: themeColors.border }}>
             <audio ref={audioRef} src={audioUrl} preload="metadata" />
             <div className="space-y-3">
                 {playError && (
@@ -354,6 +382,20 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
                 )}
                 {/* Main Controls */}
                 <div className="flex items-center gap-4">
+                    {/* Skip back - review only, mirrors the seek restrictions above */}
+                    {!isTestMode && (
+                        <button
+                            type="button"
+                            onClick={() => skipBy(-SKIP_SECONDS)}
+                            disabled={!duration}
+                            className="p-2 rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={`Back ${SKIP_SECONDS} seconds`}
+                            aria-label={`Skip back ${SKIP_SECONDS} seconds`}
+                        >
+                            <MdReplay5 size={22} style={{ color: themeColors.text }} />
+                        </button>
+                    )}
+
                     <button
                         onClick={togglePlayPause}
                         className="p-3 rounded-full transition-colors bg-blue-600 hover:bg-blue-700 text-white"
@@ -361,6 +403,20 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
                     >
                         {isPlaying ? <FaPause size={16} style={{ color: themeColors.text }} /> : <FaPlay size={16} style={{ color: themeColors.text }} />}
                     </button>
+
+                    {/* Skip forward - review only */}
+                    {!isTestMode && (
+                        <button
+                            type="button"
+                            onClick={() => skipBy(SKIP_SECONDS)}
+                            disabled={!duration}
+                            className="p-2 rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={`Forward ${SKIP_SECONDS} seconds`}
+                            aria-label={`Skip forward ${SKIP_SECONDS} seconds`}
+                        >
+                            <MdForward5 size={22} style={{ color: themeColors.text }} />
+                        </button>
+                    )}
 
                     {/* Progress Bar */}
                     <div className="flex-1 relative">

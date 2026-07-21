@@ -13,12 +13,8 @@ dist-ssr
 *.local
 
 # Environment variables
-.env
-.env.local
-.env.dev
-.env.prod
-.env.dev.local
-.env.prod.local
+# Catch-all: any .env* variant holds secrets and must never be committed.
+.env*
 
 # Editor directories and files
 .vscode/*
@@ -41,3 +37,7 @@ phaseB_findings.json
 content_audit_changes.json
 coverage_plan.csv
 DELETED_*.json
+TRANSCRIPTION_PROGRESS.md
+scripts/transcribe/transcription_state.json
+scripts/transcribe/audio_inventory.json
+scripts/transcribe/transcripts/
