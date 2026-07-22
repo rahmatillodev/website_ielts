@@ -1677,6 +1677,7 @@ const ListeningPracticePageContent = () => {
                           ref={audioPlayerRef}
                           audioUrl={audioUrl}
                           isTestMode={status === 'taking'}
+                          modeLabel={status === 'reviewing' ? 'Review' : 'Practice'}
                           playbackRate={playbackRate}
                           onPlaybackRateChange={setPlaybackRate}
                           volume={volume}
