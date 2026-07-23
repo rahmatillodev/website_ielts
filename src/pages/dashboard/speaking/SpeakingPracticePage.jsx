@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSpeakingDetailStore } from "@/store/testStore";
 
-const COLOR = "#c11e4d";
-const COLOR_DARK = "#a2153c";
-const COLOR_LIGHT = "#e8f4fd";
+const COLOR = "var(--primary)";
+const COLOR_DARK = "var(--primary-hover)";
+const COLOR_LIGHT = "var(--brand-100)";
 
 const QUESTION_DURATION = {
   "Part 1": 30,
@@ -651,10 +651,10 @@ export default function SpeakingPracticePage() {
         }}>
           <div style={{
             width: 76, height: 76, borderRadius: "50%",
-            background: status === "recording" ? COLOR_LIGHT : "#f3f4f6",
+            background: status === "recording" ? "var(--destructive-subtle)" : "#f3f4f6",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            <svg width="34" height="34" viewBox="0 0 24 24" fill={status === "recording" ? COLOR : "#9ca3af"}>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill={status === "recording" ? "var(--destructive)" : "#9ca3af"}>
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
               <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
             </svg>
@@ -709,13 +709,13 @@ export default function SpeakingPracticePage() {
           <button
             onClick={() => setModal("finish")}
             style={{
-              width: "100%", background: "#b91c1c", color: "#fff",
+              width: "100%", background: "var(--destructive)", color: "#fff",
               border: "none", borderRadius: 12, padding: "13px 0",
               fontWeight: 600, fontSize: 13, cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#991b1b"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "#b91c1c"}
+            onMouseEnter={(e) => e.currentTarget.style.background = "var(--destructive-hover)"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "var(--destructive)"}
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2" />
@@ -737,7 +737,7 @@ export default function SpeakingPracticePage() {
         <div style={{ margin: "auto", color: "#6b7280", fontSize: 16 }}>Loading speaking test...</div>
       )}
       {!isLoading && loadError && (
-        <div style={{ margin: "auto", textAlign: "center", color: "#b91c1c" }}>
+        <div style={{ margin: "auto", textAlign: "center", color: "var(--destructive-text)" }}>
           <p>{loadError}</p>
           <button
             type="button"

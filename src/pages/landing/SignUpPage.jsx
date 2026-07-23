@@ -130,7 +130,7 @@ function SignUpPage() {
             <LogoDesign
               className="w-fit"
               iconColor="text-white"
-              color="#c11e4d"
+              color="var(--primary)"
             />
           </div>
           {/* Logo - Desktop */}
@@ -138,7 +138,7 @@ function SignUpPage() {
             <LogoDesign
               className="w-fit"
               iconColor="text-white"
-              color="#c11e4d"
+              color="var(--primary)"
             />
           </div>
 

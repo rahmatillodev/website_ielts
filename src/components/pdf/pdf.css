@@ -24,17 +24,18 @@
   .pdf-logo {
     width: 40px;
     height: 40px;
-    background-color: #EBF5FF !important;
-    border-radius: 12px;
     display: flex;
     justify-content: center;
     align-items: center;
   }
-  
-  .pdf-logo-icon {
-    color: #4A90E2 !important;
-    width: 24px;
-    height: 24px;
+
+  /* The logo asset carries its own colour, so the tile behind it is no longer
+     tinted — it used to be a blue chip left over from an earlier brand. */
+  .pdf-logo img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: contain;
   }
   
   .pdf-title {

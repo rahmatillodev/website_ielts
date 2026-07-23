@@ -445,7 +445,7 @@ const sortedQuestions = useMemo(() => {
                           backgroundColor: themeColors.background,
                           color: themeColors.text,
                           borderColor: selectedAnswer && !isReviewMode ? '#dce1e5' : 
-                                     showWrong ? '#ef4444' : 
+                                     showWrong ? 'var(--destructive)' :
                                      showCorrect ? '#22c55e' : 
                                      themeColors.border
                         }}
@@ -480,7 +480,7 @@ const sortedQuestions = useMemo(() => {
                                 )}
                                 style={{
                                   backgroundColor: isSelected && showCorrect ? 'rgba(220, 252, 231, 0.5)' : 
-                                                isSelected && showWrong ? 'rgba(254, 226, 226, 0.5)' : 
+                                                isSelected && showWrong ? 'rgba(255, 223, 220, 0.5)' :
                                                 'transparent',
                                   color: themeColors.text
                                 }}
@@ -513,7 +513,7 @@ const sortedQuestions = useMemo(() => {
                                 )}
                                 style={{
                                   backgroundColor: isSelected && showCorrect ? 'rgba(220, 252, 231, 0.5)' : 
-                                                isSelected && showWrong ? 'rgba(254, 226, 226, 0.5)' : 
+                                                isSelected && showWrong ? 'rgba(255, 223, 220, 0.5)' :
                                                 'transparent',
                                   color: themeColors.text
                                 }}

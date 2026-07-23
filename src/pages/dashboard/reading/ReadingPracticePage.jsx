@@ -1567,7 +1567,7 @@ const ReadingPracticePageContent = () => {
                   <div className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                     style={{
                       borderColor: themeColors.border,
-                      backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                      backgroundColor: theme === 'light' ? 'var(--destructive-subtle)' : 'rgba(185, 2, 29, 0.05)'
                     }}
                   >
                     <p className="text-sm font-semibold text-danger-700 mb-2">

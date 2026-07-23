@@ -114,7 +114,7 @@ const MockTestSidebar = ({ onNavigate }) => {
             </>
           ) : (
             <div className="flex flex-col items-center gap-2 w-full">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#c11e4d" }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--primary)" }}>
                 <MdAutoStories className="text-white" size={24} />
               </div>
             </div>

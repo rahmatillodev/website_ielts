@@ -126,7 +126,7 @@ const DashboardSidebar = ({ onNavigate }) => {
             </>
           ) : (
             <div className="flex flex-col items-center gap-2 w-full">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#c11e4d" }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--primary)" }}>
                 <MdAutoStories className="text-white" size={24} />
               </div>
 
@@ -245,22 +245,20 @@ const DashboardSidebar = ({ onNavigate }) => {
         {userProfile?.subscription_status !== "premium" && (
           <>
             {!effectiveIsCollapsed ? (
-              /* Expanded holatdagi Upgrade Card */
+              /* Expanded holatdagi Upgrade Card.
+                 Compact by design: the icon, title and Free Plan badge share one
+                 row so the card costs two rows of sidebar height instead of five.
+                 Same brand fill and rounded corners, just a smaller footprint. */
               <UpgradeModal>
-                <div className="p-5 bg-brand-600 rounded-[24px] relative overflow-hidden shadow-lg shadow-brand-100 cursor-pointer active:scale-[0.98] transition-all group">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-white/20 rounded-xl text-white">
-                      <LuStar size={20} fill="currentColor" />
-                    </div>
-                    <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black text-white uppercase tracking-wider">
+                <div className="p-3.5 bg-brand-600 rounded-2xl relative overflow-hidden shadow-sm shadow-brand-100 cursor-pointer active:scale-[0.98] transition-all group">
+                  <div className="flex items-center gap-2 mb-3">
+                    <LuStar size={15} fill="currentColor" className="text-white shrink-0" />
+                    <span className="text-[13px] font-bold text-white truncate">Upgrade to Pro</span>
+                    <span className="ml-auto shrink-0 px-2 py-0.5 bg-white/20 rounded-full text-[9px] font-bold text-white uppercase tracking-wider">
                       Free Plan
                     </span>
                   </div>
-                  <div className="text-[17px] font-black text-white mb-1">Upgrade to Pro</div>
-                  <p className="text-[12px] text-white/80 font-medium leading-tight mb-5">
-                    Unlock unlimited tests and AI scoring.
-                  </p>
-                  <Button className="w-full bg-white hover:bg-brand-50 text-brand-600 font-semibold py-5 rounded-xl border-none shadow-sm transition-all text-[13px]">
+                  <Button className="w-full h-8 py-0 bg-white hover:bg-brand-50 text-brand-600 font-semibold rounded-lg border-none shadow-sm transition-all text-[12px]">
                     View Plans
                   </Button>
                 </div>

@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useTestStore } from "@/store/testStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
-import TestsLibraryPage from "@/components/TestsLibraryPage";
+import LibraryPage from "@/components/library/LibraryPage";
 
 const ListeningPage = () => {
   // Get store state and actions
@@ -24,9 +24,7 @@ const ListeningPage = () => {
   }, [authUser?.id, fetchDashboardData]);
 
   return (
-    <TestsLibraryPage
-      title="Listening Library"
-      description="Boost your band score with our extensive library of listening tests. Each test is designed to mirror the real exam format with instant AI scoring and detailed answer keys."
+    <LibraryPage
       testData={testListening}
       testType="listening"
       loading={loading}

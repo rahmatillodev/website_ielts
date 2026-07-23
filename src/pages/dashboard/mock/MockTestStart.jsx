@@ -36,8 +36,8 @@ const GradientAudioVisualizer = ({ stream, width = 350, height = 100 }) => {
 
     // Create gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, "#ec4899"); // Pink
-    gradient.addColorStop(0.5, "#a855f7"); // Purple-Pink mix
+    gradient.addColorStop(0, "#ff6457"); // brand-400 (canvas needs a literal, var() won't resolve here)
+    gradient.addColorStop(0.5, "#a855f7"); // Purple mid-stop
     gradient.addColorStop(1, "#8b5cf6"); // Purple
 
     const centerY = height / 2;
@@ -448,8 +448,8 @@ const MockTestStart = ({ onStart, mockTestId }) => {
           >
             {/* Icon */}
             <div className="shrink-0">
-              <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center">
-                <MdVolumeUp className="w-6 h-6 text-pink-600" />
+              <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center">
+                <MdVolumeUp className="w-6 h-6 text-brand-700" />
               </div>
             </div>
 

@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LabelList,
+} from 'recharts';
+import { AXIS, SERIES } from '@/lib/chartPalette';
+import { normalizeDate, getDateKey, buildActivityMap, calcStreak } from '@/utils/streak';
 import { useAuthStore } from '@/store/authStore';
 import { useDashboardStore } from '@/store/dashboardStore';
 import DashboardShimmer from '@/components/shimmer/DashboardShimmer';
@@ -13,56 +25,72 @@ import {
   LuChevronRight,
   LuTarget,
   LuTrophy,
-  LuSparkles,
+  LuArrowRight,
 } from 'react-icons/lu';
+
+/**
+ * The dashboard.
+ *
+ * Laid out on one 12-column grid so every block snaps to the same rhythm, with
+ * spacing on an 8px step (gap-4 / p-4 / p-6). Cards share a single surface
+ * recipe — white, hairline border, one very soft shadow — and a single hover
+ * recipe: border and halo turn brand red, nothing moves. That is deliberately
+ * the same treatment the library cards use, so the two screens read as one
+ * product.
+ *
+ * The decorative rotating blobs, page gradient and per-card scale/lift that the
+ * previous version carried are gone. They were what made the page feel busy and
+ * unbalanced, and they were the only thing several cards had in common.
+ *
+ * Nothing about the data changed. Every figure comes from the same
+ * dashboardStore fields as before, and the streak algorithm is carried over
+ * verbatim — it just moved out of the calendar so the stat card, the streak card
+ * and the calendar can all read one value.
+ */
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-// Circular Progress Component
-const CircularProgress = ({ progress, size = 80, strokeWidth = 8 }) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (progress / 100) * circumference;
+const SKILLS = [
+  { key: 'reading', label: 'Reading', icon: LuBookOpen, path: '/reading' },
+  { key: 'listening', label: 'Listening', icon: LuHeadphones, path: '/listening' },
+  { key: 'writing', label: 'Writing', icon: LuPenTool, path: '/writing' },
+  { key: 'speaking', label: 'Speaking', icon: LuMic, path: '/speaking' },
+];
 
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg
-        className="transform -rotate-90"
-        width={size}
-        height={size}
-      >
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#E5E7EB"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#F97316"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          className="transition-all duration-500 ease-out"
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-lg sm:text-xl font-bold text-gray-900">
-          {Math.round(progress)}%
-        </span>
-      </div>
-    </div>
-  );
+/* One surface, one hover. Every card on the page uses these two strings. */
+const CARD =
+  'rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
+const CARD_HOVER =
+  'transition-[border-color,box-shadow] duration-200 hover:border-brand-300 hover:shadow-[0_0_0_3px_var(--primary-subtle),0_1px_2px_rgba(16,24,40,0.04)]';
+
+const LABEL = 'text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-500';
+const CARD_TITLE = 'text-sm font-semibold tracking-tight text-gray-900';
+/* Hero figures share one treatment: tight tracking, tabular so digits do not
+   jitter between renders, and a flat baseline via leading-none. */
+const HERO = 'font-semibold tracking-tight tabular-nums text-gray-900';
+/* Icon chip. Brand-tinted, small, and the only place a stat tile carries hue —
+   the numbers themselves stay in ink, never the series colour. */
+const CHIP = 'flex shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600';
+
+/* ------------------------------------------------------------------ helpers */
+
+
+const relativeTime = (dateInput) => {
+  if (!dateInput) return '';
+  const then = new Date(dateInput);
+  if (isNaN(then.getTime())) return '';
+  const diffMs = Date.now() - then.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffDays > 0) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  if (diffHours > 0) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  if (diffMinutes > 0) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+  return 'Just now';
 };
 
-// Custom hook to fetch and share user attempts data
 const useUserAttempts = () => {
   const authUser = useAuthStore((state) => state.authUser);
   const attempts = useDashboardStore((state) => state.attempts);
@@ -70,40 +98,136 @@ const useUserAttempts = () => {
   const loading = useDashboardStore((state) => state.loading);
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
 
-  // Trigger fetch only once on mount (with smart caching in store)
   useEffect(() => {
     if (authUser?.id) {
-      fetchDashboardData(authUser.id, false); // false = don't force refresh, use cache if valid
+      fetchDashboardData(authUser.id, false); // use cache if valid
     }
   }, [authUser?.id, fetchDashboardData]);
 
   return { attempts, loading, scores };
 };
 
-// Helper function to normalize date to YYYY-MM-DD string (timezone-safe)
-const normalizeDate = (date) => {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+/* -------------------------------------------------------------- small parts */
+
+const WeeklyTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  const day = payload[0].payload;
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg">
+      <p className="text-[11px] font-medium text-gray-500">{day.label}</p>
+      <p className="text-[13px] font-semibold tabular-nums text-gray-900">
+        {day.count} test{day.count !== 1 ? 's' : ''}
+      </p>
+    </div>
+  );
 };
 
-// Helper function to get YYYY-MM-DD from a date string or Date object
-const getDateKey = (dateInput) => {
-  if (!dateInput) return null;
-  const date = new Date(dateInput);
-  if (isNaN(date.getTime())) return null;
-  return normalizeDate(date);
+const StatCard = ({ label, value, meta, icon: Icon }) => (
+  <div className={`${CARD} ${CARD_HOVER} col-span-12 sm:col-span-6 xl:col-span-3 flex min-w-0 flex-col p-5`}>
+    <div className="flex items-center gap-2.5">
+      <span className={`${CHIP} size-8`}>
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <p className={`${LABEL} truncate`}>{label}</p>
+    </div>
+    <p className={`${HERO} mt-4 truncate text-[28px] leading-none`}>{value}</p>
+    {meta && <p className="mt-2 truncate text-xs text-gray-500">{meta}</p>}
+  </div>
+);
+
+/**
+ * A band meter. The track is notched into the nine IELTS bands, so the scale is
+ * legible from the mark itself instead of needing an axis or a caption, while
+ * the fill underneath stays continuous and can land on a half band.
+ *
+ * The notches are surface-coloured, drawn over the whole track rather than only
+ * the filled part — so the nine bands stay countable ahead of the fill, not just
+ * behind it.
+ */
+const SkillRow = ({ skill, band, muted, note }) => {
+  const pct = muted || band == null ? 0 : Math.max(0, Math.min(100, (band / 9) * 100));
+  return (
+    <div className="group/skill flex min-w-0 items-center gap-3">
+      <span className={`${CHIP} size-9 transition-colors group-hover/skill:bg-brand-100`}>
+        <skill.icon className="text-[16px]" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="truncate text-[13px] font-medium text-gray-900">{skill.label}</span>
+          <span className={`shrink-0 text-[15px] font-semibold tabular-nums tracking-tight ${muted ? 'text-gray-300' : 'text-gray-900'}`}>
+            {note}
+          </span>
+        </div>
+        <div
+          className="relative mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100"
+          role="progressbar"
+          aria-label={`${skill.label} band`}
+          aria-valuenow={muted || band == null ? undefined : band}
+          aria-valuemin={0}
+          aria-valuemax={9}
+        >
+          <div
+            className={`h-full rounded-full transition-[width] duration-700 ease-out ${muted ? 'bg-gray-200' : 'bg-brand-600'}`}
+            style={{ width: `${pct}%` }}
+          />
+          <div className="pointer-events-none absolute inset-0 flex" aria-hidden="true">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <span key={i} className="flex-1 border-r-2 border-card last:border-r-0" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
-const SimpleCalendar = ({ userAttempts = [] }) => {
+/**
+ * A ring cut into one arc per required test rather than a single sweep. At a
+ * target of three, a continuous arc at 33% reads as an abstract percentage,
+ * whereas one filled segment of three reads as "one done, two to go" — the
+ * quantity the card is actually about. Segments count, so no percentage label.
+ */
+const SegmentedRing = ({ value, total, size = 76, strokeWidth = 7 }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  // Round caps extend each arc by half the stroke at both ends, so the drawn gap
+  // has to exceed strokeWidth for any gap to survive visually.
+  const gap = strokeWidth * 2;
+  const segment = circumference / total - gap;
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg className="-rotate-90" width={size} height={size} aria-hidden="true">
+        {Array.from({ length: total }).map((_, i) => (
+          <circle
+            key={i}
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            className={`transition-[stroke] duration-500 ${i < value ? 'stroke-brand-600' : 'stroke-gray-100'}`}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={`${segment} ${circumference - segment}`}
+            strokeDashoffset={-((i * circumference) / total)}
+          />
+        ))}
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className={`${HERO} text-xl leading-none`}>{value}</span>
+      </div>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ calendar */
+
+const SimpleCalendar = ({ activityMap }) => {
   const now = new Date();
   const userProfile = useAuthStore((state) => state.userProfile);
   const [currentMonth, setCurrentMonth] = useState(now.getMonth());
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
 
-  // Get enrollment date from user profile (joined_at or created_at)
   const enrollmentDate = useMemo(() => {
     if (userProfile?.joined_at) {
       const date = new Date(userProfile.joined_at);
@@ -114,6 +238,7 @@ const SimpleCalendar = ({ userAttempts = [] }) => {
       return { month: date.getMonth(), year: date.getFullYear() };
     }
     return { month: now.getMonth(), year: now.getFullYear() };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
 
   const minMonth = enrollmentDate.month;
@@ -121,717 +246,492 @@ const SimpleCalendar = ({ userAttempts = [] }) => {
   const maxMonth = now.getMonth();
   const maxYear = now.getFullYear();
 
-  // Build activity map: dateKey -> count of attempts
-  const activityMap = useMemo(() => {
-    const map = new Map();
-    userAttempts.forEach((attempt) => {
-      const attemptDate = attempt.completed_at || attempt.created_at;
-      if (!attemptDate) return;
-      const dateKey = getDateKey(attemptDate);
-      if (dateKey) {
-        map.set(dateKey, (map.get(dateKey) || 0) + 1);
-      }
-    });
-    return map;
-  }, [userAttempts]);
+  const canGoPrevious = !(currentMonth === minMonth && currentYear === minYear);
+  const canGoNext = !(currentMonth === maxMonth && currentYear === maxYear);
 
-  // Get activity data for a specific day in the current month view
-  // Memoized to prevent recreation on every render
-  const getDayActivity = useMemo(() => {
-    return (dayNum, month, year) => {
-      const date = new Date(year, month, dayNum);
-      const dateKey = normalizeDate(date);
-      const count = activityMap.get(dateKey) || 0;
-      return {
-        count,
-        hasActivity: count > 0,
-        activityLevel: count === 0 ? 'none' : count <= 2 ? 'light' : 'medium',
-      };
-    };
-  }, [activityMap]);
-
-  // Calculate streak (consecutive days with attempts) - enhanced logic
-  // Use normalized date strings for stable dependencies
-  const todayKey = normalizeDate(now);
-  const yesterdayKey = normalizeDate(new Date(now.getTime() - 24 * 60 * 60 * 1000));
-
-  const streakDays = useMemo(() => {
-    if (userAttempts.length === 0 || activityMap.size === 0) return 0;
-
-    const today = todayKey;
-    const yesterday = yesterdayKey;
-
-    // Get all date keys sorted in descending order
-    const dateKeys = Array.from(activityMap.keys()).sort().reverse();
-
-    if (dateKeys.length === 0) return 0;
-
-    // Find the most recent date with activity
-    const mostRecentDateKey = dateKeys[0];
-
-    // Check if user has activity today or yesterday
-    const hasToday = activityMap.has(today);
-    const hasYesterday = activityMap.has(yesterday);
-
-    // If no activity today or yesterday, check days since last activity
-    if (!hasToday && !hasYesterday) {
-      const mostRecentDate = new Date(mostRecentDateKey + 'T00:00:00');
-      const todayDate = new Date(today + 'T00:00:00');
-      const daysDiff = Math.floor((todayDate - mostRecentDate) / (1000 * 60 * 60 * 24));
-
-      // If more than 1 day has passed, streak is broken
-      if (daysDiff > 1) return 0;
-    }
-
-    // Start counting from today if today has activity, otherwise from yesterday
-    // If neither has activity but streak should continue, start from most recent
-    let startDateKey;
-    if (hasToday) {
-      startDateKey = today;
-    } else if (hasYesterday) {
-      startDateKey = yesterday;
-    } else {
-      // Check if most recent was yesterday (streak continues)
-      const mostRecentDate = new Date(mostRecentDateKey + 'T00:00:00');
-      const todayDate = new Date(today + 'T00:00:00');
-      const daysDiff = Math.floor((todayDate - mostRecentDate) / (1000 * 60 * 60 * 24));
-      if (daysDiff <= 1) {
-        startDateKey = mostRecentDateKey;
-      } else {
-        return 0;
-      }
-    }
-
-    // Count consecutive days backwards
-    let streak = 0;
-    let checkDate = new Date(startDateKey + 'T00:00:00');
-
-    while (true) {
-      const checkDateKey = normalizeDate(checkDate);
-      if (!activityMap.has(checkDateKey)) break;
-
-      streak++;
-      checkDate.setDate(checkDate.getDate() - 1);
-    }
-
-    return streak;
-  }, [userAttempts, activityMap, todayKey, yesterdayKey]);
-
-  // Check if current view is at minimum month (enrollment month)
-  const isAtMinMonth = currentMonth === minMonth && currentYear === minYear;
-  // Check if current view is at maximum month (current month)
-  const isAtMaxMonth = currentMonth === maxMonth && currentYear === maxYear;
-
-  const canGoPrevious = !isAtMinMonth;
-  const canGoNext = !isAtMaxMonth;
-
-  // Ensure calendar stays within bounds
   useEffect(() => {
     const currentDate = new Date(currentYear, currentMonth);
     const minDate = new Date(minYear, minMonth);
     const maxDate = new Date(maxYear, maxMonth);
 
-    // If current view is before enrollment date, clamp to enrollment date
     if (currentDate < minDate) {
       setCurrentMonth(minMonth);
       setCurrentYear(minYear);
-    }
-    // If current view is after current month, clamp to current month
-    else if (currentDate > maxDate) {
+    } else if (currentDate > maxDate) {
       setCurrentMonth(maxMonth);
       setCurrentYear(maxYear);
     }
   }, [userProfile, minMonth, minYear, maxMonth, maxYear, currentMonth, currentYear]);
 
   const handlePreviousMonth = () => {
-    if (canGoPrevious) {
-      if (currentMonth === 0) {
-        setCurrentMonth(11);
-        setCurrentYear(currentYear - 1);
-      } else {
-        setCurrentMonth(currentMonth - 1);
-      }
+    if (!canGoPrevious) return;
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
     }
   };
 
   const handleNextMonth = () => {
-    if (canGoNext) {
-      if (currentMonth === 11) {
-        setCurrentMonth(0);
-        setCurrentYear(currentYear + 1);
-      } else {
-        setCurrentMonth(currentMonth + 1);
-      }
+    if (!canGoNext) return;
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
     }
   };
 
-  // Memoize calendar cell calculations to prevent recalculation on every render
   const calendarCells = useMemo(() => {
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    const leadingBlanks = firstDay;
-    const totalCells = 42;
-    const trailingBlanks = totalCells - leadingBlanks - daysInMonth;
-
-    // Check if currently viewed month is the current real-time month
+    const leadingBlanks = new Date(currentYear, currentMonth, 1).getDay();
+    // 6 rows would leave a permanently empty trailing row most months; size the
+    // grid to the content instead, which is what keeps the card compact.
     const isCurrentMonth = currentMonth === now.getMonth() && currentYear === now.getFullYear();
     const today = now.getDate();
 
-    const leading = Array.from({ length: leadingBlanks }, (_, i) => ({
-      key: `b-${i}`,
-      blank: true,
-    }));
+    const leading = Array.from({ length: leadingBlanks }, (_, i) => ({ key: `b-${i}`, blank: true }));
     const days = Array.from({ length: daysInMonth }, (_, i) => {
       const dayNum = i + 1;
-      const activity = getDayActivity(dayNum, currentMonth, currentYear);
+      const dateKey = normalizeDate(new Date(currentYear, currentMonth, dayNum));
+      const count = activityMap.get(dateKey) || 0;
       return {
         key: `d-${i}`,
         num: dayNum,
         isToday: isCurrentMonth && dayNum === today,
-        ...activity,
+        count,
+        hasActivity: count > 0,
+        activityLevel: count === 0 ? 'none' : count <= 2 ? 'light' : 'medium',
       };
     });
-    const trailing = Array.from(
-      { length: Math.max(0, trailingBlanks) },
-      (_, i) => ({ key: `t-${i}`, blank: true })
-    );
-    return [...leading, ...days, ...trailing];
-  }, [currentMonth, currentYear, getDayActivity, now]);
+    return [...leading, ...days];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonth, currentYear, activityMap]);
+
+  const navBtn =
+    'inline-flex size-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-30';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="bg-white rounded-3xl shadow-md border border-gray-200 overflow-hidden px-3 sm:px-4 md:px-5 pt-3 sm:pt-4 pb-4 sm:pb-5 w-full h-full flex flex-col transition-all duration-300 ease-out hover:shadow-lg hover:border-gray-300"
-    >
-      {/* Month header with navigation */}
-      <div className="flex items-center justify-between mb-2 sm:mb-3">
-        {canGoPrevious ? (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handlePreviousMonth}
-            className="p-1.5 sm:p-2 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
-            aria-label="Previous month"
-          >
-            <LuChevronLeft className="size-4 sm:size-5 text-gray-600" />
-          </motion.button>
-        ) : (
-          <div className="w-8 sm:w-10" />
-        )}
-        <motion.p
-          key={`${currentMonth}-${currentYear}`}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2 }}
-          className="text-sm sm:text-base md:text-lg font-bold text-gray-900 leading-snug"
-        >
+    <div className={`${CARD} ${CARD_HOVER} col-span-12 lg:col-span-4 flex min-w-0 flex-col p-5`}>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <p className={CARD_TITLE}>
           {MONTH_NAMES[currentMonth]} {currentYear}
-        </motion.p>
-        {canGoNext ? (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleNextMonth}
-            className="p-1.5 sm:p-2 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
-            aria-label="Next month"
-          >
-            <LuChevronRight className="size-4 sm:size-5 text-gray-600" />
-          </motion.button>
-        ) : (
-          <div className="w-8 sm:w-10" />
-        )}
+        </p>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button type="button" onClick={handlePreviousMonth} disabled={!canGoPrevious} className={navBtn} aria-label="Previous month">
+            <LuChevronLeft className="size-3.5" />
+          </button>
+          <button type="button" onClick={handleNextMonth} disabled={!canGoNext} className={navBtn} aria-label="Next month">
+            <LuChevronRight className="size-3.5" />
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-0.5 sm:gap-1 md:gap-1.5 flex-1 mb-3 sm:mb-4">
+      {/* Two activity levels on one hue, so density reads as depth of colour
+          rather than as four different categories. */}
+      <div className="grid grid-cols-7 gap-0.5">
         {DAY_NAMES.map((d) => (
-          <div
-            key={d}
-            className="text-center text-[10px] sm:text-xs font-bold text-gray-500 py-1 sm:py-1.5"
-          >
-            {d}
+          <div key={d} className="pb-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-gray-300">
+            {d.slice(0, 1)}
           </div>
         ))}
-        <AnimatePresence mode="popLayout">
-          {calendarCells.map((c, index) =>
-            c.blank ? (
-              <div key={c.key} className="aspect-square min-w-0" />
-            ) : (
-              <motion.div
-                key={`${currentMonth}-${currentYear}-${c.key}`}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{
-                  duration: 0.3,
-                  ease: 'easeOut',
-                  delay: index * 0.01,
-                }}
-                whileHover={c.hasActivity ? { scale: 1.05 } : { scale: 1.02 }}
-                className={`aspect-square min-w-0 flex flex-col items-center justify-center text-xs sm:text-sm md:text-base font-semibold rounded-lg relative transition-all duration-200 group ${c.isToday
-                    ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-md shadow-brand-200'
-                    : c.hasActivity
-                      ? c.activityLevel === 'light'
-                        ? 'bg-[#FFF7ED] text-gray-800 hover:bg-[#FFEDD5]'
-                        : 'bg-[#FFEDD5] text-gray-800 hover:bg-[#FED7AA]'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-              >
-                <span className="leading-none z-10">{c.num}</span>
-                {c.hasActivity && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0, rotate: -180 }}
-                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                    transition={{
-                      delay: 0.2 + index * 0.01,
-                      duration: 0.4,
-                      type: 'spring',
-                      stiffness: 200,
-                      damping: 10,
-                    }}
-                    className="absolute -top-0.5 -right-0.5"
-                  >
-                    <LuFlame className="size-3 sm:size-3.5 md:size-4 text-orange-500 drop-shadow-sm" />
-                  </motion.div>
-                )}
-                {/* Hover tooltip */}
-                {c.hasActivity && (
-                  <div className="absolute bottom-full left-1/2 z-50 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ">
-                    {c.count} test{c.count !== 1 ? 's' : ''} completed
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
-                  </div>
-                )}
-              </motion.div>
-            )
-          )}
-        </AnimatePresence>
+        {calendarCells.map((c) =>
+          c.blank ? (
+            <div key={c.key} className="aspect-square min-w-0" />
+          ) : (
+            <div
+              key={`${currentMonth}-${currentYear}-${c.key}`}
+              className={`group relative flex aspect-square min-w-0 items-center justify-center rounded-lg text-[11px] tabular-nums transition-colors ${
+                c.isToday
+                  ? 'bg-brand-600 font-semibold text-white'
+                  : c.hasActivity
+                    ? c.activityLevel === 'light'
+                      ? 'bg-brand-50 font-medium text-brand-700'
+                      : 'bg-brand-100 font-medium text-brand-700'
+                    : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {c.num}
+              {c.hasActivity && (
+                <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  {c.count} test{c.count !== 1 ? 's' : ''} completed
+                </span>
+              )}
+            </div>
+          )
+        )}
       </div>
-      {/* Streak information at bottom of calendar */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="border-t border-gray-100 pt-2 sm:pt-3 pb-1 flex flex-col items-center gap-1 sm:gap-1.5"
-      >
-        <div className="flex items-center gap-2">
-          <motion.div
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          >
-            <LuFlame className="size-4 sm:size-5 text-orange-500" />
-          </motion.div>
-          <p className="text-sm sm:text-base md:text-lg font-bold text-gray-900">
-            {streakDays} Day{streakDays !== 1 ? 's' : ''} Streak
-          </p>
-        </div>
-        <p className="text-[10px] sm:text-xs font-medium text-gray-500">
-          Keep it up! 🔥
-        </p>
-      </motion.div>
-    </motion.div>
+    </div>
   );
 };
+
+/* ----------------------------------------------------------------- the page */
 
 const DashboardPage = () => {
   const userProfile = useAuthStore((state) => state.userProfile);
   const authUser = useAuthStore((state) => state.authUser);
-  const displayName =
-    userProfile?.full_name || authUser?.email?.split('@')[0] || 'User';
+  const displayName = userProfile?.full_name || authUser?.email?.split('@')[0] || 'User';
   const firstName = displayName.split(' ')[0] || displayName;
 
-  // Use shared hook for attempts data
   const { attempts, scores, loading } = useUserAttempts();
 
-  // Calculate statistics
+  const activityMap = useMemo(() => buildActivityMap(attempts), [attempts]);
+  const streakDays = useMemo(() => calcStreak(activityMap, new Date()), [activityMap]);
+
   const testsCompleted = attempts.length;
-  const studyTimeSeconds = attempts.reduce(
-    (s, r) => s + (Number(r.time_taken) || 0),
-    0
-  );
+
   const studyTimeDisplay = useMemo(() => {
-    if (!studyTimeSeconds) return '0m';
-    const totalMinutes = Math.round(studyTimeSeconds / 60);
+    const seconds = attempts.reduce((s, r) => s + (Number(r.time_taken) || 0), 0);
+    if (!seconds) return '0m';
+    const totalMinutes = Math.round(seconds / 60);
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  }, [attempts]);
 
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
-  }, [studyTimeSeconds]);
-
-  // Format last session time
   const lastSessionTime = useMemo(() => {
     if (attempts.length === 0) return 'No sessions yet';
-    const lastAttempt = attempts[0];
-    const lastDate = new Date(
-      lastAttempt.completed_at || lastAttempt.created_at
-    );
-    const now = new Date();
-    const diffMs = now - lastDate;
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffDays > 0) {
-      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-    }
-    if (diffHours > 0) {
-      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-    }
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    if (diffMinutes > 0) {
-      return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-    }
-    return 'Just now';
+    return relativeTime(attempts[0].completed_at || attempts[0].created_at);
   }, [attempts]);
 
-  // Calculate total questions answered
-  const totalQuestionsAnswered = useMemo(() => {
-    return attempts.reduce((sum, attempt) => {
-      return sum + (Number(attempt.total_questions) || 0);
-    }, 0);
-  }, [attempts]);
-
-  // Calculate today's test count
-  const todayTestsCount = useMemo(() => {
-    const today = normalizeDate(new Date());
-    return attempts.filter((attempt) => {
-      const attemptDate = attempt.completed_at || attempt.created_at;
-      if (!attemptDate) return false;
-      const dateKey = getDateKey(attemptDate);
-      return dateKey === today;
-    }).length;
-  }, [attempts]);
-
-  const dailyTarget = 3; // Target tests per day
-  const dailyProgress = Math.min((todayTestsCount / dailyTarget) * 100, 100);
-
-  // Create scores array with actual data
-  const SCORES = useMemo(
-    () => [
-      {
-        label: 'Listening',
-        value: scores.listening ? scores.listening : '0.0',
-        icon: LuHeadphones,
-        iconColor: 'text-brand-500',
-        bgColor: 'bg-brand-50',
-        borderColor: 'border-brand-200',
-        isActive: true,
-      },
-      {
-        label: 'Reading',
-        value: scores.reading ? scores.reading : '0.0',
-        icon: LuBookOpen,
-        iconColor: 'text-orange-500',
-        bgColor: 'bg-orange-50',
-        borderColor: 'border-orange-200',
-        isActive: true,
-      },
-      {
-        label: 'Writing',
-        value: scores.writing ? scores.writing : '0.0',
-        icon: LuPenTool,
-        iconColor: 'text-purple-500',
-        bgColor: 'bg-purple-50',
-        borderColor: 'border-purple-200',
-        isActive: true,
-      },
-      {
-        label: 'Speaking',
-        value: 'Coming Soon',
-        icon: LuMic,
-        iconColor: 'text-gray-400',
-        bgColor: 'bg-gray-50',
-        borderColor: 'border-gray-200',
-        isActive: false,
-      },
-    ],
-    [scores]
+  const totalQuestionsAnswered = useMemo(
+    () => attempts.reduce((sum, a) => sum + (Number(a.total_questions) || 0), 0),
+    [attempts]
   );
 
-  // Show shimmer ONLY when we have no cached data AND are loading
-  // This prevents layout shifts when we have cached data
+  const todayTestsCount = useMemo(() => {
+    const today = normalizeDate(new Date());
+    return attempts.filter((a) => getDateKey(a.completed_at || a.created_at) === today).length;
+  }, [attempts]);
+
+  const dailyTarget = 3;
+
+  // Last 7 days including today.
+  const weeklyActivity = useMemo(() => {
+    const base = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() - (6 - i));
+      const key = normalizeDate(d);
+      return {
+        key,
+        label: DAY_NAMES[d.getDay()],
+        count: activityMap.get(key) || 0,
+        isToday: i === 6,
+      };
+    });
+  }, [activityMap]);
+
+  const weeklyTotal = weeklyActivity.reduce((s, d) => s + d.count, 0);
+
+  // Most recent attempt per skill, used for both recommendations and the
+  // Continue Practice target.
+  const lastPracticed = useMemo(() => {
+    const map = {};
+    attempts.forEach((a) => {
+      if (!a.testType) return;
+      const when = a.completed_at || a.created_at;
+      if (!when) return;
+      if (!map[a.testType] || new Date(when) > new Date(map[a.testType])) {
+        map[a.testType] = when;
+      }
+    });
+    return map;
+  }, [attempts]);
+
+  // Never-practised skills first, then whichever was practised longest ago.
+  const recommendations = useMemo(
+    () =>
+      [...SKILLS]
+        .sort((a, b) => {
+          const aDate = lastPracticed[a.key] ? new Date(lastPracticed[a.key]).getTime() : -1;
+          const bDate = lastPracticed[b.key] ? new Date(lastPracticed[b.key]).getTime() : -1;
+          return aDate - bDate;
+        })
+        .slice(0, 3),
+    [lastPracticed]
+  );
+
+  // Two, so the card sits at the same natural height as Recommended Practice
+  // beside it and neither has to stretch to meet the other.
+  const recentActivity = useMemo(() => attempts.slice(0, 2), [attempts]);
+
+  // Bands come from the store exactly as the previous version read them:
+  // listening and reading are computed there, writing has no entry (so it shows
+  // 0.0, as before) and speaking is not scored yet.
+  const skillBands = {
+    reading: { band: scores.reading, note: scores.reading ? scores.reading.toFixed(1) : '0.0' },
+    listening: { band: scores.listening, note: scores.listening ? scores.listening.toFixed(1) : '0.0' },
+    writing: { band: scores.writing ?? null, note: scores.writing ? scores.writing.toFixed(1) : '0.0' },
+    speaking: { band: null, note: 'Coming soon', muted: true },
+  };
+
   const shouldShowShimmer = loading && attempts.length === 0;
-  
-  if (shouldShowShimmer) {
-    return <DashboardShimmer />;
-  }
+  if (shouldShowShimmer) return <DashboardShimmer />;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-white to-slate-50 min-h-full">
-      {/* Welcome */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-4 sm:mb-6"
-      >
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
-          Welcome {firstName} 👋
+    <div className="min-h-full bg-gray-50 p-4 sm:p-6">
+      {/* 1 — compact header */}
+      <header className="mb-6 min-w-0">
+        <h1 className="truncate text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
+          Welcome back, {firstName}
         </h1>
-        <p className="text-sm sm:text-base font-medium text-gray-600 mt-1">
-          Let&apos;s improve your band score today.
+        <p className="mt-0.5 text-[13px] text-gray-500">
+          {testsCompleted > 0
+            ? `${testsCompleted} test${testsCompleted !== 1 ? 's' : ''} completed · last session ${lastSessionTime}`
+            : "Let's get your first practice test done."}
         </p>
-      </motion.div>
+      </header>
 
-      {/* Responsive grid layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2  xl:grid-cols-[4fr_2fr_3fr] gap-4 sm:gap-5 md:gap-6 lg:items-stretch">
-        {/* Left Column: My Progress */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="md:col-span-2 lg:col-span-1 h-full flex"
-        >
-          <div className="bg-white/95 backdrop-blur rounded-2xl sm:rounded-3xl shadow-[0_25px_60px_rgba(15,23,42,0.12)] p-4 sm:p-6 xl:p-8 2xl:p-10 
-            max-w-md xl:max-w-lg 2xl:max-w-2xl w-full mx-auto lg:mx-0 hover:shadow-[0_30px_70px_rgba(15,23,42,0.18)] transition-shadow duration-300 border border-white/60"
-          >
-            <div className="flex items-start justify-between mb-4 sm:mb-6 xl:mb-8">
-              <div>
-                <h3 className="text-lg sm:text-xl xl:text-2xl 2xl:text-3xl font-semibold text-gray-900">My Progress</h3>
-              </div>
-              <motion.span 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.6, type: "spring" }}
-                className="px-2 sm:px-3 xl:px-4 py-1 xl:py-1.5 text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold rounded-full bg-green-100 text-green-600 whitespace-nowrap"
-              >
-                Active Session
-              </motion.span>
-            </div>
+      <div className="grid grid-cols-12 gap-4">
+        {/* 2 — four compact statistics */}
+        <StatCard
+          label="Overall Band"
+          value={scores.average ? scores.average.toFixed(1) : '0.0'}
+          meta="Average of latest scores"
+          icon={LuTrophy}
+        />
+        <StatCard
+          label="Tests Completed"
+          value={testsCompleted}
+          meta={`${totalQuestionsAnswered} questions answered`}
+          icon={LuBookOpen}
+        />
+        <StatCard
+          label="Study Time"
+          value={studyTimeDisplay}
+          meta={`Last session ${lastSessionTime}`}
+          icon={LuTarget}
+        />
+        <StatCard
+          label="Study Streak"
+          value={`${streakDays} day${streakDays !== 1 ? 's' : ''}`}
+          meta={streakDays > 0 ? 'Keep it going' : 'Practice today to start'}
+          icon={LuFlame}
+        />
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6 xl:mb-8">
-              {SCORES.map((s, index) => {
-                const isDisabled = !s.isActive;
-                return (
-                <motion.div 
-                  key={s.label} 
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.2 + index * 0.1, duration: 0.4 }}
-                  whileHover={isDisabled ? undefined : { scale: 1.05 }}
-                  className={`rounded-2xl sm:rounded-3xl p-3.5 border shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition-all ${
-                    isDisabled
-                      ? "bg-gray-50 border-gray-200 opacity-70 cursor-not-allowed"
-                      : "bg-linear-to-br from-white via-[#F7FBFF] to-[#ECF4FF] border-white/70 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12)] cursor-pointer"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 sm:gap-2.5 xl:gap-3 mb-2 sm:mb-2.5 xl:mb-3">
-                    <span className="w-8 h-8 sm:w-9 sm:h-9 xl:w-10 xl:h-10 2xl:w-12 2xl:h-12 rounded-xl sm:rounded-2xl bg-white/80 shadow-[0_6px_16px_rgba(15,23,42,0.08)] flex items-center justify-center">
-                      <s.icon className={`${s.iconColor} text-base sm:text-lg xl:text-xl 2xl:text-2xl`} />
-                    </span>
-                    <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase tracking-wide">{s.label}</p>
-                  </div>
-                  <p
-                    className={`font-semibold ${
-                      isDisabled
-                        ? "text-sm sm:text-base xl:text-lg text-gray-400 leading-snug"
-                        : "text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl text-gray-900"
-                    }`}
-                  >
-                    {s.value}
-                  </p>
-                </motion.div>
-              )})}
-            </div>
-
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="bg-brand-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 xl:p-6 2xl:p-8 flex items-center justify-between"
-            >
-              <div>
-                <p className="text-[10px] sm:text-xs xl:text-sm 2xl:text-base font-semibold text-gray-500 uppercase">
-                  Average Score
-                </p>
-                <p className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-semibold">
-                  {scores.average ? `Band ${scores.average.toFixed(1)}` : '0.0'}
-                </p>
-              </div>
-            </motion.div>
+        {/* 3 — skill progress */}
+        <section className={`${CARD} ${CARD_HOVER} col-span-12 flex min-w-0 flex-col p-6 lg:col-span-8`}>
+          <div className="mb-5 flex items-center justify-between gap-2">
+            <h2 className={CARD_TITLE}>Skill Progress</h2>
+            <span className="text-[11px] text-gray-400">Band scale 0–9</span>
           </div>
-        </motion.div>
+          <div className="flex flex-col gap-4">
+            {SKILLS.map((skill) => (
+              <SkillRow
+                key={skill.key}
+                skill={skill}
+                band={skillBands[skill.key].band}
+                note={skillBands[skill.key].note}
+                muted={skillBands[skill.key].muted}
+              />
+            ))}
+          </div>
+        </section>
 
-        {/* Middle Column: Tests Completed + Study Time + Daily Target */}
-        <div className="flex flex-col gap-4 sm:gap-5 h-full">
-          {/* Tests Completed Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            whileHover={{ scale: 1.02, y: -4 }}
-            className="relative overflow-hidden bg-white rounded-3xl shadow-md border border-gray-200 px-4 sm:px-5 md:px-6 py-5 sm:py-6 flex flex-col transition-all duration-300 ease-out hover:shadow-lg hover:border-gray-300"
-          >
-            <motion.div
-              animate={{ rotate: [0, 5, -5, 0] }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-              className="absolute -top-10 -right-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full opacity-60"
-              style={{ backgroundColor: '#F5F3FF' }}
-            />
-            <div className="relative flex flex-col justify-center min-h-[100px] sm:min-h-[120px]">
-              <p className="text-xs sm:text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide">
-                Tests Completed
-              </p>
-              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 leading-tight mb-2">
-                {testsCompleted}
-              </p>
-              <p className="text-[10px] sm:text-xs font-medium text-gray-500">
-                Total questions: {totalQuestionsAnswered}
-              </p>
-            </div>
-          </motion.div>
-
-          {/* Study Time Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            whileHover={{ scale: 1.02, y: -4 }}
-            className="relative overflow-hidden bg-white rounded-3xl shadow-md border border-gray-200 px-4 sm:px-5 md:px-6 py-5 sm:py-6 flex flex-col transition-all duration-300 ease-out hover:shadow-lg hover:border-gray-300"
-          >
-            <motion.div
-              animate={{ rotate: [0, 5, -5, 0] }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-              className="absolute -top-10 -right-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full opacity-60"
-              style={{ backgroundColor: '#FEFCE8' }}
-            />
-            <div className="relative flex flex-col justify-center min-h-[100px] sm:min-h-[120px]">
-              <p className="text-xs sm:text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide">
-                Study Time
-              </p>
-              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 leading-tight mb-2">
-                {studyTimeDisplay}
-              </p>
-              <p className="text-[10px] sm:text-xs font-medium text-gray-500">
-                Last session: {lastSessionTime}
-              </p>
-            </div>
-          </motion.div>
-
-          {/* Daily Target Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.4 }}
-            whileHover={{ scale: 1.02, y: -4 }}
-            className="relative overflow-hidden bg-white rounded-3xl shadow-md border border-gray-200 px-4 sm:px-5 md:px-6 py-5 sm:py-6 flex flex-col flex-1 transition-all duration-300 ease-out hover:shadow-lg hover:border-gray-300"
-          >
-            <motion.div
-              animate={{ rotate: [0, 5, -5, 0] }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-              className="absolute -top-10 -right-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full opacity-60"
-              style={{ backgroundColor: '#FEF3C7' }}
-            />
-            <div className="relative flex flex-col justify-center items-center flex-1 min-h-[140px] sm:min-h-[160px] overflow-visible">
-              <div className="flex items-center gap-2 mb-3 sm:mb-4 z-10">
+        {/* 5 + 6 — daily target and streak, stacked beside skill progress */}
+        <div className="col-span-12 flex min-w-0 flex-col gap-4 lg:col-span-4">
+          <div className={`${CARD} ${CARD_HOVER} group/target flex min-w-0 flex-1 items-center gap-5 p-5`}>
+            <SegmentedRing value={Math.min(todayTestsCount, dailyTarget)} total={dailyTarget} />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
                 {todayTestsCount >= dailyTarget ? (
-                  <motion.div
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 200,
-                      damping: 15,
-                      delay: 0.1,
-                    }}
-                  >
-                    <LuTrophy className="size-5 sm:size-6 text-yellow-500" />
-                  </motion.div>
+                  <LuTrophy className="size-4 shrink-0 text-brand-600" aria-hidden="true" />
                 ) : (
-                  <LuTarget className="size-5 sm:size-6 text-orange-500" />
+                  <LuTarget className="size-4 shrink-0 text-gray-400" aria-hidden="true" />
                 )}
-                <p className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wide">
-                  Daily Target
-                </p>
+                <p className={`${LABEL} truncate`}>Daily Target</p>
               </div>
-              <div className="relative overflow-visible">
-                <CircularProgress progress={dailyProgress} size={100} strokeWidth={10} />
-                {/* Celebration sparkles when target is reached */}
-                {todayTestsCount >= dailyTarget && (
-                  <>
-                    {[...Array(8)].map((_, i) => {
-                      const angle = (i * 360) / 8;
-                      const radius = 70;
-                      const x = Math.cos((angle * Math.PI) / 180) * radius;
-                      const y = Math.sin((angle * Math.PI) / 180) * radius;
-                      return (
-                        <motion.div
-                          key={i}
-                          initial={{ scale: 0, opacity: 0, x: 0, y: 0 }}
-                          animate={{
-                            scale: [0, 1.2, 1],
-                            opacity: [0, 1, 1, 0],
-                            x: [0, x, x * 1.2],
-                            y: [0, y, y * 1.2],
-                          }}
-                          transition={{
-                            duration: 1.5,
-                            delay: 0.2 + i * 0.05,
-                            repeat: Infinity,
-                            repeatDelay: 2,
-                            ease: 'easeOut',
-                          }}
-                          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                        >
-                          <LuSparkles className="size-4 text-yellow-400" />
-                        </motion.div>
-                      );
-                    })}
-                    {/* Pulsing glow effect */}
-                    <motion.div
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{
-                        scale: [0.8, 1.2, 0.8],
-                        opacity: [0.3, 0.6, 0.3],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: 'easeInOut',
-                      }}
-                      className="absolute inset-0 rounded-full bg-yellow-200 blur-xl -z-10"
-                    />
-                  </>
-                )}
-              </div>
-              <p className="text-sm sm:text-base font-bold text-gray-900 mt-4 sm:mt-5">
-                {todayTestsCount}/{dailyTarget} Tests Done
+              <p className="mt-2 truncate text-[13px] text-gray-500">
+                {todayTestsCount >= dailyTarget ? 'Target reached' : `of ${dailyTarget} today`}
               </p>
-              <p className="text-[10px] sm:text-xs font-medium text-gray-500 mt-1">
-                {todayTestsCount >= dailyTarget ? 'Target achieved! 🎉' : 'Keep going! 💪'}
-              </p>
-
             </div>
-          </motion.div>
+          </div>
+
+          <div className={`${CARD} ${CARD_HOVER} group/streak flex min-w-0 flex-1 items-center gap-5 p-5`}>
+            {/* The ring echoes the target card's geometry so the two stack as a
+                matched pair rather than two unrelated widgets. */}
+            <span
+              className={`relative flex size-[76px] shrink-0 items-center justify-center rounded-full transition-colors duration-300 ${
+                streakDays > 0 ? 'bg-brand-50 group-hover/streak:bg-brand-100' : 'bg-gray-50'
+              }`}
+            >
+              <LuFlame
+                className={`size-7 transition-colors ${streakDays > 0 ? 'text-brand-600' : 'text-gray-300'}`}
+                aria-hidden="true"
+              />
+            </span>
+            <div className="min-w-0">
+              <p className={`${LABEL} truncate`}>Study Streak</p>
+              <p className={`${HERO} mt-2 text-2xl leading-none`}>{streakDays}</p>
+              <p className="mt-1.5 truncate text-[13px] text-gray-500">
+                {streakDays === 1 ? 'day in a row' : 'days in a row'}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Right Column: Calendar */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="h-full min-w-0 flex"
-        >
-          <SimpleCalendar userAttempts={attempts} />
-        </motion.div>
+        {/* 4 — weekly activity */}
+        <section className={`${CARD} ${CARD_HOVER} col-span-12 flex min-w-0 flex-col p-6 lg:col-span-8`}>
+          <div className="mb-5 flex items-center justify-between gap-2">
+            <h2 className={CARD_TITLE}>Weekly Activity</h2>
+            <span className="text-[11px] text-gray-400">
+              {weeklyTotal} test{weeklyTotal !== 1 ? 's' : ''} this week
+            </span>
+          </div>
+          {/* One series, so one hue and no legend — the card title names it.
+              A flat week of zeros is a real line but an unreadable one, so zero
+              activity gets a stated empty state instead of a line pinned to the
+              floor.
+
+              Colour comes from the shared chartPalette rather than a literal hex:
+              --chart-1 is #E30613 in light mode and re-steps to #ff6457 for the
+              dark canvas, so the token stays on brand in both. */}
+          {weeklyTotal === 0 ? (
+            <div className="flex h-32 flex-col items-center justify-center rounded-xl border border-dashed border-gray-200">
+              <p className="text-[13px] font-medium text-gray-900">No activity this week</p>
+              <p className="mt-1 text-xs text-gray-500">Completed tests will appear here.</p>
+            </div>
+          ) : (
+            <div className="h-32 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={weeklyActivity} margin={{ top: 18, right: 12, left: 12, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="weeklyAreaFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={SERIES[0]} stopOpacity={0.18} />
+                      <stop offset="100%" stopColor={SERIES[0]} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={AXIS.grid} />
+
+                  <XAxis
+                    dataKey="label"
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                    fontSize={11}
+                    tick={{ fill: AXIS.tick }}
+                    tickFormatter={(v) => v.slice(0, 2)}
+                  />
+                  {/* Hidden, so the grid has a scale to sit on without the axis
+                      itself adding furniture. The floor is pinned at 0 — letting
+                      recharts pick it would rescale a quiet week to look busy —
+                      and the ceiling never drops below 1, so a single-test week
+                      cannot collapse the domain to zero height. */}
+                  <YAxis hide domain={[0, (dataMax) => Math.max(1, dataMax)]} allowDecimals={false} />
+
+                  <Tooltip
+                    content={<WeeklyTooltip />}
+                    cursor={{ stroke: AXIS.grid, strokeWidth: 1 }}
+                  />
+
+                  <Area
+                    type="monotone"
+                    dataKey="count"
+                    stroke={SERIES[0]}
+                    strokeWidth={3}
+                    fill="url(#weeklyAreaFill)"
+                    dot={{ r: 3, fill: SERIES[0], stroke: 'var(--card)', strokeWidth: 2 }}
+                    activeDot={{ r: 5, fill: SERIES[0], stroke: 'var(--card)', strokeWidth: 2 }}
+                  >
+                    <LabelList
+                      dataKey="count"
+                      position="top"
+                      offset={10}
+                      fontSize={11}
+                      fill={AXIS.tick}
+                    />
+                  </Area>
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </section>
+
+        {/* 9 — calendar, no longer the largest thing on the page */}
+        <SimpleCalendar activityMap={activityMap} />
+
+        {/* 7 — recommended practice */}
+        <section className={`${CARD} ${CARD_HOVER} col-span-12 flex min-w-0 flex-col p-6 lg:col-span-7`}>
+          <h2 className={`${CARD_TITLE} mb-4`}>Recommended Practice</h2>
+          {/* Each recommendation is its own target, so each gets its own hit area
+              and its own affordance rather than being a row in a list. */}
+          <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
+            {recommendations.map((skill) => (
+              <Link
+                key={skill.key}
+                to={skill.path}
+                className="group/rec flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-card p-4 transition-[border-color,box-shadow] duration-200 hover:border-brand-300 hover:shadow-[0_0_0_3px_var(--primary-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+              >
+                {/* The arrow rides up beside the chip rather than sitting on its
+                    own line — same affordance, one row less height, which is what
+                    lets this card match Recent Activity without either stretching. */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`${CHIP} size-8 transition-colors group-hover/rec:bg-brand-100`}>
+                    <skill.icon className="text-[15px]" aria-hidden="true" />
+                  </span>
+                  <LuArrowRight
+                    className="size-4 shrink-0 text-gray-300 transition-[color,transform] duration-200 group-hover/rec:translate-x-0.5 group-hover/rec:text-brand-600"
+                    aria-hidden="true"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-semibold text-gray-900">{skill.label}</p>
+                  <p className="mt-1 truncate text-xs text-gray-500">
+                    {lastPracticed[skill.key]
+                      ? relativeTime(lastPracticed[skill.key])
+                      : 'Not started'}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* 8 — recent activity */}
+        <section className={`${CARD} ${CARD_HOVER} col-span-12 flex min-w-0 flex-col p-6 lg:col-span-5`}>
+          <h2 className={`${CARD_TITLE} mb-4`}>Recent Activity</h2>
+          {recentActivity.length === 0 ? (
+            <p className="py-6 text-center text-[13px] text-gray-500">No activity yet.</p>
+          ) : (
+            /* A rail behind the markers turns five separate rows into one
+               sequence, which is what a history actually is. The rail is inset
+               to the marker's centre and stops at the first and last marker so
+               it never dangles past the ends. */
+            <ol className="relative flex flex-col">
+              <span
+                className="absolute left-4 top-4 bottom-4 w-px bg-gray-100"
+                aria-hidden="true"
+              />
+              {recentActivity.map((a) => {
+                const skill = SKILLS.find((s) => s.key === a.testType);
+                const Icon = skill?.icon || LuBookOpen;
+                return (
+                  <li key={a.id} className="group/act relative flex min-w-0 items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <span className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full bg-card text-gray-500 ring-1 ring-gray-200 transition-colors group-hover/act:text-brand-600 group-hover/act:ring-brand-200">
+                      <Icon className="text-[13px]" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium text-gray-900">
+                        {a.testTitle || `${skill?.label || 'Practice'} test`}
+                      </p>
+                      <p className="truncate text-xs text-gray-500">
+                        {relativeTime(a.completed_at || a.created_at)}
+                      </p>
+                    </div>
+                    {a.score != null && (
+                      <span className="shrink-0 rounded-md bg-gray-50 px-2 py-1 text-[12px] font-semibold tabular-nums text-gray-900">
+                        {Number(a.score).toFixed(1)}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </section>
       </div>
     </div>
   );

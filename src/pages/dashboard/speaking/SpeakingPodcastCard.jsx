@@ -47,7 +47,7 @@ const SpeakingPodcastCard = ({ testId, title, image, duration, videoUrl, date, i
             handleOpen();
           }
         }}
-        className="group bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-[0_20px_50px_rgba(162,21,60,0.08)] hover:-translate-y-1 transition-all duration-500 flex flex-col h-full overflow-hidden cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+        className="group bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-[0_20px_50px_rgba(227,6,19,0.08)] hover:-translate-y-1 transition-all duration-500 flex flex-col h-full overflow-hidden cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
       >
         <div className="relative aspect-video overflow-hidden pointer-events-none">
           {thumbSrc ? (

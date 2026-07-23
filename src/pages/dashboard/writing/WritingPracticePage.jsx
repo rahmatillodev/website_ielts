@@ -1438,7 +1438,7 @@ const WritingPracticePageContent = () => {
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
-                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                    backgroundColor: theme === 'light' ? 'var(--destructive-subtle)' : 'rgba(185, 2, 29, 0.05)'
                   }}
                 >
                   <p className="text-sm font-semibold text-danger-700 mb-2">
@@ -1461,7 +1461,7 @@ const WritingPracticePageContent = () => {
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
-                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                    backgroundColor: theme === 'light' ? 'var(--destructive-subtle)' : 'rgba(185, 2, 29, 0.05)'
                   }}
                 >
                   <p className="text-sm font-semibold text-danger-700 mb-2">
@@ -1631,7 +1631,7 @@ const WritingPracticePageContent = () => {
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
-                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                    backgroundColor: theme === 'light' ? 'var(--destructive-subtle)' : 'rgba(185, 2, 29, 0.05)'
                   }}
                 >
                   <p className="text-sm font-semibold text-danger-700 mb-2">
@@ -1654,7 +1654,7 @@ const WritingPracticePageContent = () => {
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
-                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                    backgroundColor: theme === 'light' ? 'var(--destructive-subtle)' : 'rgba(185, 2, 29, 0.05)'
                   }}
                 >
                   <p className="text-sm font-semibold text-danger-700 mb-2">
@@ -1749,7 +1749,7 @@ const WritingPracticePageContent = () => {
                         ? countWords(answers[effectiveTaskType] || "")
                         : countWords(taskToDisplay?.sample || "")
                   }</span>
-                  <span style={{ color: '#ef4444' }}>
+                  <span style={{ color: 'var(--destructive-text)' }}>
                     MINIMUM: {effectiveTaskType === "Task 1" ? 150 : 250} WORDS
                   </span>
                 </div>
@@ -1933,7 +1933,7 @@ const WritingPracticePageContent = () => {
                 className="animate-spin rounded-full h-24 w-24 border-4"
                 style={{
                   borderColor: `${themeColors.border}40`,
-                  borderTopColor: '#c11e4d',
+                  borderTopColor: 'var(--primary)',
                 }}
               ></div>
               <div className="absolute inset-0 flex items-center justify-center">
@@ -1958,7 +1958,7 @@ const WritingPracticePageContent = () => {
               <div className="space-y-2 mt-4">
                 <p
                   className="text-sm font-semibold text-danger-700"
-                  style={{ color: '#ef4444' }}
+                  style={{ color: 'var(--destructive-text)' }}
                 >
                   ⚠️ Do not close or refresh this page!
                 </p>
@@ -1984,7 +1984,7 @@ const WritingPracticePageContent = () => {
                 className="h-2.5 rounded-full animate-pulse"
                 style={{
                   width: '100%',
-                  backgroundColor: '#c11e4d',
+                  backgroundColor: 'var(--primary)',
                 }}
               ></div>
             </div>

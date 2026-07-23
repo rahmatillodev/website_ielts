@@ -78,7 +78,9 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
     let yPos = margin;
     const logoSize = 24;
     const iconSize = 2; // Size for social media icons
-    const primaryColor = [59, 130, 246]; // #c11e4d - Primary blue
+    // The brand red, #e30613. jsPDF takes 0-255 components, not CSS, so this
+    // cannot be a token — keep it in step with --brand-600 by hand.
+    const primaryColor = [227, 6, 19];
     const darkGray = [31, 41, 55]; // #1F2937 - Dark gray for text
     const lightGray = [243, 244, 246]; // #F3F4F6 - Light gray for backgrounds
   

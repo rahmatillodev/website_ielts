@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const COLOR = "#c11e4d";
+const COLOR = "var(--primary)";
 
 const SpeakingResultPage = () => {
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ const SpeakingResultPage = () => {
               fontWeight: 600, fontSize: 13, cursor: "pointer",
               display: "flex", alignItems: "center", gap: 6,
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#a2153c"}
+            onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-hover)"}
             onMouseLeave={(e) => e.currentTarget.style.background = COLOR}
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">

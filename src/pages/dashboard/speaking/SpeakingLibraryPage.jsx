@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import TestsLibraryPage from "@/components/TestsLibraryPage";
+import LibraryPage from "@/components/library/LibraryPage";
 import { useTestStore } from "@/store/testStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/authStore";
@@ -21,9 +21,7 @@ const SpeakingLibraryPage = () => {
   }, [authUser?.id, fetchDashboardData]);
 
   return (
-    <TestsLibraryPage
-      title="Speaking Library"
-      description="Boost your band score with our extensive library of speaking tests. Each test is designed to mirror the real exam format with instant AI scoring and detailed feedback."
+    <LibraryPage
       testData={testSpeaking}
       testType="speaking"
       loading={loading}

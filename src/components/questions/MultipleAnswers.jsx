@@ -217,8 +217,8 @@ const MultipleAnswers = ({
         backgroundColor = 'rgba(34, 197, 94, 0.1)'; 
         iconBg = 'bg-green-500 border-green-500';
       } else if (reviewStatus === 'incorrect') {
-        borderColor = '#ef4444'; // Qizil
-        backgroundColor = 'rgba(239, 68, 68, 0.1)';
+        borderColor = 'var(--destructive)'; // Qizil
+        backgroundColor = 'rgba(185, 2, 29, 0.1)';
         iconBg = 'bg-danger-500 border-danger-500';
       } else if (reviewStatus === 'missed') {
         borderColor = '#22c55e'; // To'g'ri lekin tanlanmagan
@@ -227,8 +227,8 @@ const MultipleAnswers = ({
         checkIconColor = 'text-green-600';
       }
     } else if (isSelected) {
-      borderColor = '#c11e4d'; // Tanlangan (test paytida)
-      backgroundColor = 'rgba(99, 102, 241, 0.1)';
+      borderColor = 'var(--primary)'; // Tanlangan (test paytida)
+      backgroundColor = 'rgba(227, 6, 19, 0.1)';
       iconBg = 'bg-brand-700 border-brand-700';
     }
 
@@ -285,7 +285,7 @@ const MultipleAnswers = ({
       }}>
         <div className="flex items-center gap-2">
           <p className="text-sm">
-            <span className="font-bold" style={{ color: '#c11e4d' }}>
+            <span className="font-bold" style={{ color: 'var(--primary-text)' }}>
               {selectedOptionKeys.length}
             </span>
             <span className="text-gray-500 mx-1">out of</span>

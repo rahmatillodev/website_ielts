@@ -77,14 +77,14 @@ function ResetPasswordPage() {
             <LogoDesign
               className="w-fit"
               iconColor="text-white"
-              color="#c11e4d"
+              color="var(--primary)"
             />
           </div>
           <div className="hidden lg:flex items-center gap-2 mb-8">
             <LogoDesign
               className="w-fit"
               iconColor="text-white"
-              color="#c11e4d"
+              color="var(--primary)"
             />
           </div>
 

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import TestsLibraryPage from "@/components/TestsLibraryPage";
+import LibraryPage from "@/components/library/LibraryPage";
 import { useWritingStore } from "@/store/testStore/writingStore";
 
 const WritingPage = () => {
@@ -12,9 +12,7 @@ const WritingPage = () => {
 
 
   return (
-    <TestsLibraryPage
-      title="Writing Library"
-      description="Boost your band score with our extensive library of writing tests."
+    <LibraryPage
       testData={writings}
       testType="writing"
       loading={loading}

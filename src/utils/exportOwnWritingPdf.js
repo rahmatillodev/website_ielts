@@ -10,8 +10,9 @@ const TASK_GAP = 12; // Tasklar orasidagi masofa
 const SECTION_GAP = 6; // Sarlavha va kontent orasidagi masofa
 const QUESTION_ANSWER_GAP = 8; // Savol va Javob bloklari orasidagi masofa
 
-// Ranglar palitrasi
-const primaryColor = [59, 130, 246]; // #c11e4d
+// Ranglar palitrasi. jsPDF 0-255 komponentlarni oladi, shuning uchun bu yerda
+// token ishlatib bo'lmaydi — src/index.css dagi --brand-600 bilan mos tuting.
+const primaryColor = [227, 6, 19]; // #e30613 brand
 const darkGray = [31, 41, 55]; // #1F2937
 const lightGray = [248, 249, 250]; // #F8F9FA
 const accentGray = [229, 231, 235]; // #E5E7EB

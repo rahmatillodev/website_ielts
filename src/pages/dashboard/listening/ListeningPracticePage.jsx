@@ -1516,7 +1516,7 @@ const ListeningPracticePageContent = () => {
                   className="max-w-md w-full border rounded-2xl p-6 text-center shadow-sm"
                   style={{
                     borderColor: themeColors.border,
-                    backgroundColor: theme === "light" ? "#fff5f5" : "rgba(255,0,0,0.05)",
+                    backgroundColor: theme === "light" ? "var(--destructive-subtle)" : "rgba(185, 2, 29, 0.05)",
                   }}
                 >
                   <div className="text-danger-700 text-lg font-semibold mb-2">

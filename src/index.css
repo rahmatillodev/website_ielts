@@ -37,48 +37,64 @@ textarea {
    These are fixed pigments. They never change between light and dark; only the
    SEMANTIC tokens in section 2 re-point at different steps per mode.
 
-   BRAND  (ruby)      hue ~12   — identity: primary actions, selection, nav,
-                                  tabs, pagination, focus, active/selected state
-   DANGER (true red)  hue ~27   — alarm only: errors, destructive actions,
-                                  validation, overdue, failed
+   BRAND  hue 28  — identity: primary actions, selection, nav, tabs,
+                    pagination, focus, active/selected state
+   DANGER hue 25  — alarm only: errors, destructive actions, validation,
+                    overdue, failed
 
-   The two ramps sit ~15 deg apart, are additionally offset in lightness, and
-   carry a hue TWIST at the tint end (brand leans pink, danger leans orange) so
-   near-white surfaces do not collapse onto each other. Measured OKLab dE between
-   matching steps: 8.6 at 600, 7.6 at 500, 6.0 at 300, 4.0 at 200. Because the
-   50/100 tints are inherently near-white in both ramps (dE ~1-2), a tinted
-   surface must never carry meaning alone — always pair it with the matching
-   600/700 border, icon or text, which is where the ramps clearly diverge.
+   The brand is sampled directly from the EDU logo: #E30613, which is
+   oklch(0.577 0.234 28) and round-trips back to that exact hex at 8-bit. It is
+   a true fire red — the hue sits at 28, well clear of the pink/magenta/rose
+   region (hue 0-15), which is where the previous "ruby" brand lived and why the
+   UI read as pink. Step 600 IS the logo; do not retune it. Every other step
+   holds hue 28 and moves only in lightness and chroma, so the whole ramp is the
+   same pigment at different intensities rather than a family of related reds.
+
+   Because the brand is itself red, danger cannot separate from it by hue —
+   anything cooler drifts to pink (forbidden) and anything warmer collides with
+   the amber warning ramp. Both were measured and rejected. Danger instead
+   separates by DEPTH: it is the same red family pushed down the lightness axis,
+   so the brand reads bright/confident and danger reads deep/severe. At the two
+   steps that actually carry meaning the gap is comfortable — OKLab dE 8.9
+   between the 600 fills and 5.3 between the 700 text steps.
+
+   Where the ramps do converge (the 50/100/200 tints, dE 1-3), a tinted surface
+   must never carry meaning alone — always pair it with the matching 600/700
+   border, icon or text. That rule predates this change and matters more now.
    ========================================================================== */
 :root {
-  /* -- brand (ruby) ------------------------------------------------------- */
-  --brand-50: oklch(0.968 0.017 4);
-  --brand-100: oklch(0.928 0.038 5);
-  --brand-200: oklch(0.868 0.074 7);
-  --brand-300: oklch(0.788 0.127 9);
-  --brand-400: oklch(0.694 0.176 11);
-  --brand-500: oklch(0.612 0.2 12);
-  --brand-600: oklch(0.53 0.195 12);
-  --brand-700: oklch(0.462 0.172 13);
-  --brand-800: oklch(0.402 0.146 13);
-  --brand-900: oklch(0.356 0.124 14);
-  --brand-950: oklch(0.242 0.084 14);
+  /* -- brand (EDU logo red) ----------------------------------------------- */
+  --brand-50: oklch(0.977 0.011 28);
+  --brand-100: oklch(0.944 0.028 28);
+  --brand-200: oklch(0.886 0.06 28);
+  --brand-300: oklch(0.8 0.114 28);
+  --brand-400: oklch(0.7 0.191 28);
+  --brand-500: oklch(0.62 0.234 28);
+  /* THE logo red, #E30613, sampled from public/logo-icon.png. White on it is
+     4.88:1 and it is 4.88:1 as text on white — the rare step that clears AA in
+     both directions, which is why it can anchor fills and links alike. */
+  --brand-600: oklch(0.577 0.234 28);
+  --brand-700: oklch(0.48 0.196 28);
+  --brand-800: oklch(0.411 0.168 28);
+  --brand-900: oklch(0.349 0.142 28);
+  --brand-950: oklch(0.255 0.104 28);
 
-  /* -- danger (true red) -------------------------------------------------- */
-  --danger-50: oklch(0.974 0.013 40);
-  --danger-100: oklch(0.94 0.031 38);
-  --danger-200: oklch(0.888 0.06 35);
-  --danger-300: oklch(0.818 0.103 32);
-  --danger-400: oklch(0.736 0.162 29);
-  --danger-500: oklch(0.664 0.202 28);
-  /* L tuned to 0.586, not 0.596: at 0.596 white-on-fill was 4.455:1 and missed
-     AA by a hair, which mattered because the destructive BUTTON puts white on
-     this exact step. 0.586 gives 4.65:1. */
-  --danger-600: oklch(0.586 0.212 27);
-  --danger-700: oklch(0.522 0.192 26);
-  --danger-800: oklch(0.45 0.162 26);
-  --danger-900: oklch(0.396 0.136 25);
-  --danger-950: oklch(0.266 0.092 25);
+  /* -- danger (deep severity red) ----------------------------------------- */
+  --danger-50: oklch(0.969 0.015 25);
+  --danger-100: oklch(0.929 0.036 25);
+  --danger-200: oklch(0.861 0.075 25);
+  --danger-300: oklch(0.769 0.136 25);
+  /* 400 is the dark-mode error text step. L is 0.672, not the 0.655 the ramp
+     geometry wanted: 0.655 gave 4.41:1 on the dark card and missed AA. */
+  --danger-400: oklch(0.672 0.195 25);
+  --danger-500: oklch(0.566 0.205 25);
+  /* White on this fill is 6.80:1 — deliberately stronger than the brand's
+     4.88:1, so a destructive button reads heavier than a primary one. */
+  --danger-600: oklch(0.495 0.2 25);
+  --danger-700: oklch(0.432 0.175 25);
+  --danger-800: oklch(0.376 0.152 25);
+  --danger-900: oklch(0.326 0.132 25);
+  --danger-950: oklch(0.239 0.097 25);
 
   /* -- supporting status ramps (kept well clear of both reds) ------------- */
   --success-50: oklch(0.972 0.021 155);
@@ -115,14 +131,16 @@ textarea {
   --popover-foreground: oklch(0.145 0 0);
 
   /* -- brand semantics ---------------------------------------------------- */
-  /* Solid fill. White on brand-600 = 5.87:1 (AA). */
+  /* Solid fill. White on brand-600 (the logo red) = 4.88:1 (AA). */
   --primary: var(--brand-600);
   --primary-hover: var(--brand-700);
   --primary-active: var(--brand-800);
   --primary-disabled: var(--brand-200);
   --primary-foreground: #ffffff;
   --primary-dark: var(--brand-700);
-  /* Brand-coloured TEXT on a light surface. brand-700 = 7.77:1 (AAA). */
+  /* Brand-coloured TEXT on a light surface. brand-700 = 7.25:1 (AAA). The logo
+     red itself clears AA as text (4.88:1), but small type sits better one step
+     down, and 700 keeps brand links clear of the danger ramp. */
   --primary-text: var(--brand-700);
   /* Tinted brand surfaces (selected rows, active tabs, badges). */
   --primary-subtle: var(--brand-50);
@@ -138,9 +156,9 @@ textarea {
   --accent-foreground: var(--brand-700);
 
   /* -- danger semantics --------------------------------------------------- */
-  /* Fills use danger-600 (white on it = 4.65:1). Error TEXT still steps to
-     danger-700 (6.03:1): small red type on white is the hardest case to read,
-     and 600 only just clears AA. */
+  /* Fills use danger-600 (white on it = 6.80:1). Error TEXT steps to danger-700
+     (8.80:1): small red type on white is the hardest case to read, and the
+     extra depth also widens the gap from brand-700 links on the same page. */
   --destructive: var(--danger-600);
   --destructive-hover: var(--danger-700);
   --destructive-active: var(--danger-800);
@@ -172,27 +190,32 @@ textarea {
   /* Focus ring is brand-tinted so keyboard focus reads as "you are here",
      not as an error. Destructive controls override this locally. */
   --ring: var(--brand-500);
-  --ring-destructive: var(--danger-500);
+  /* danger-600, not -500: against a brand-500 focus ring the 500 step was only
+     dE 6.3 away, and a "this failed" ring must not be mistaken for a plain one. */
+  --ring-destructive: var(--danger-600);
 
   /* -- charts (light) ----------------------------------------------------- */
-  /* Validated: lightness band, chroma floor, CVD separation (worst adjacent
-     dE 12.5 protan), normal-vision floor (24.3) and >=3:1 vs a white surface.
-     Slot 1 is the brand; the rest rotate away from red so no series can be
-     mistaken for a danger state. */
-  --chart-1: #c81e4a; /* ruby   - brand anchor */
-  --chart-2: #7c3aed; /* violet */
-  --chart-3: #0d9488; /* teal   */
-  --chart-4: #d97706; /* amber  */
-  --chart-5: #2563eb; /* blue   */
+  /* Slot 1 is the logo red itself; slots 2-5 were re-solved against it rather
+     than carried over. That was necessary, not cosmetic: with a true red in
+     slot 1 the old violet/blue/amber picks collapsed under simulated colour
+     blindness (worst pair dE 2.7, effectively identical). Re-solving for
+     maximum dichromat separation across all ten pairs lifted the worst case to
+     8.8, with a normal-vision floor of 18.7 and every slot >=3:1 on white. */
+  --chart-1: #e30613; /* red    - the logo, brand anchor */
+  --chart-2: #61429c; /* violet */
+  --chart-3: #006756; /* teal   */
+  --chart-4: #ba7f00; /* amber  */
+  --chart-5: #3f90dd; /* blue   */
 
   /* Performance/status scale for charts. RESERVED — never reused as a series
      colour. Severity is encoded in lightness as well as hue so the ranking
      survives colour-vision deficiency; call sites always print the numeric
      value beside the mark, which is the required secondary encoding.
-     `critical` is the danger red, deliberately NOT the brand ruby. */
+     `critical` is the DEEP danger red, deliberately not the brand red, so a
+     failing metric reads as a problem rather than as product identity. */
   --chart-good: #0e9f6e;
   --chart-warning: #c67c0a;
-  --chart-critical: #c4331d;
+  --chart-critical: #b9021d; /* = danger-600 */
   --chart-empty: #9ca3af; /* no data */
 
   --chart-grid: #f3f4f6;
@@ -205,16 +228,16 @@ textarea {
      both used the error red; with a red brand that collision became unreadable.
      The `-text` steps are darkened where needed to clear 4.5:1 on white. */
   --skill-reading: var(--chart-1);
-  --skill-reading-text: #c81e4a; /* 5.6:1 on white */
-  --skill-reading-subtle: #fff0f3;
+  --skill-reading-text: #b2000a; /* = brand-700, 7.25:1 on white */
+  --skill-reading-subtle: #fff5f3; /* = brand-50 */
   --skill-listening: var(--chart-3);
   --skill-listening-text: #0f766e; /* teal-600 is only 3.9:1, so step down */
   --skill-listening-subtle: #ecfdf6;
   --skill-writing: var(--chart-2);
-  --skill-writing-text: #7c3aed; /* 5.6:1 */
+  --skill-writing-text: #61429c; /* 7.6:1 */
   --skill-writing-subtle: #f4f1fe;
   --skill-speaking: var(--chart-4);
-  --skill-speaking-text: #b45309; /* amber-600 is 3.1:1, so step down */
+  --skill-speaking-text: #8a5f00; /* the chart amber is 3.4:1, so step down */
   --skill-speaking-subtle: #fef6ec;
 
   --radius: 0.625rem;
@@ -244,9 +267,17 @@ textarea {
    3. SEMANTIC TOKENS — dark mode
    ----------------------------------------------------------------------------
    Dark is SELECTED, not flipped. Saturated 600-step reds vibrate badly on a
-   near-black surface, so brand/danger text and icons step UP the ramp (400) to
-   stay legible, while solid fills stay at 600 (they carry their own white
-   foreground) and tinted surfaces drop to the 950 end.
+   near-black surface, so brand/danger text and icons step UP the ramp to stay
+   legible, while solid fills stay at 600 (they carry their own white
+   foreground) and tinted surfaces are mixed down toward the canvas.
+
+   Dark mode cannot reuse light mode's depth trick. Stepping BOTH ramps up for
+   legibility would land brand and danger on 400/400, which measured dE 2.9 —
+   brand links and error text would be the same colour. So the roles invert on
+   the lightness axis instead: brand text takes brand-300, a softer coral that
+   recedes, and error text takes the hotter, heavier danger-400. That reads
+   correctly (alarm is the more intense of the two) and measures dE 15.1, with
+   brand-300 at 9.03:1 and danger-400 at 5.43:1 on the canvas.
 
    NOTE: nothing in the app currently puts a `.dark` class on the document —
    AppearanceContext themes the practice pages with inline styles instead — so
@@ -261,37 +292,39 @@ textarea {
   --popover-foreground: oklch(0.985 0 0);
 
   /* -- brand semantics ---------------------------------------------------- */
-  /* Fill stays at 600 so white foreground keeps its 5.87:1. */
+  /* Fill stays at 600 so white foreground keeps its 4.88:1. */
   --primary: var(--brand-600);
   --primary-hover: var(--brand-500);
   --primary-active: var(--brand-400);
   --primary-disabled: var(--brand-900);
   --primary-foreground: #ffffff;
   --primary-dark: var(--brand-500);
-  /* Brand-coloured TEXT on the dark canvas. brand-400 = 5.92:1 on #111a21. */
-  --primary-text: var(--brand-400);
+  /* Brand-coloured TEXT on the dark canvas. brand-300 = 9.03:1 on #111a21 and
+     7.88:1 on the card, and stays dE 15.1 clear of the error red (see above). */
+  --primary-text: var(--brand-300);
   --primary-subtle: color-mix(in oklab, var(--brand-500) 16%, transparent);
   --primary-subtle-hover: color-mix(in oklab, var(--brand-500) 26%, transparent);
   --primary-border: color-mix(in oklab, var(--brand-500) 38%, transparent);
-  --primary-border-strong: var(--brand-500);
+  --primary-border-strong: var(--brand-400);
 
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: color-mix(in oklab, var(--brand-500) 16%, transparent);
-  --accent-foreground: var(--brand-300);
+  --accent-foreground: var(--brand-200);
 
   /* -- danger semantics --------------------------------------------------- */
   --destructive: var(--danger-600);
   --destructive-hover: var(--danger-500);
   --destructive-active: var(--danger-400);
   --destructive-foreground: #ffffff;
-  /* danger-400 = 7.03:1 on #111a21. */
+  /* danger-400 = 5.43:1 on #111a21, 4.74:1 on the card. Hotter and heavier
+     than --primary-text on purpose: alarm should out-weigh identity. */
   --destructive-text: var(--danger-400);
-  --destructive-subtle: color-mix(in oklab, var(--danger-500) 16%, transparent);
-  --destructive-subtle-hover: color-mix(in oklab, var(--danger-500) 26%, transparent);
-  --destructive-border: color-mix(in oklab, var(--danger-500) 38%, transparent);
+  --destructive-subtle: color-mix(in oklab, var(--danger-500) 20%, transparent);
+  --destructive-subtle-hover: color-mix(in oklab, var(--danger-500) 30%, transparent);
+  --destructive-border: color-mix(in oklab, var(--danger-500) 44%, transparent);
   --destructive-border-strong: var(--danger-500);
 
   --success: var(--success-500);
@@ -312,30 +345,32 @@ textarea {
   --border-dark: #2d3b45;
 
   --input: oklch(0.269 0 0);
-  --ring: var(--brand-400);
+  /* Same split as the text tokens: a calm brand ring, a hot error ring. */
+  --ring: var(--brand-300);
   --ring-destructive: var(--danger-400);
 
   /* -- charts (dark) ------------------------------------------------------ */
-  /* Re-stepped for the dark surface (#1a2632) and re-validated: lightness band
-     0.48-0.67, chroma floor, worst adjacent CVD dE 14.9 (protan), normal-vision
-     floor 21.3, all >=3:1 vs surface. Same hue order as light so a series keeps
-     its identity when the user switches modes. */
-  --chart-1: #e05070; /* ruby   - brand anchor */
-  --chart-2: #9174f5; /* violet */
-  --chart-3: #1fa99d; /* teal   */
-  --chart-4: #c98209; /* amber  */
-  --chart-5: #4e93ee; /* blue   */
+  /* Re-solved for the dark surface (#1a2632) exactly as the light set was, with
+     slot 1 pinned to brand-400 (the logo red is too dark to hold 3:1 here).
+     Worst dichromat pair dE 9.8, normal-vision floor 18.6, all >=3:1 vs the
+     surface. Same hue order as light so a series keeps its identity across
+     modes. */
+  --chart-1: #ff6457; /* red    - brand anchor (= brand-400) */
+  --chart-2: #8857e0; /* violet */
+  --chart-3: #12cdae; /* teal   */
+  --chart-4: #a36e00; /* amber  */
+  --chart-5: #3fa3ff; /* blue   */
 
   --chart-good: #22b184;
   --chart-warning: #e3ac48;
-  --chart-critical: #d6412f;
+  --chart-critical: #f75855; /* = danger-400 */
   --chart-empty: #6b7a88;
 
   --chart-grid: #263340;
   --chart-tick: #7f8c9b;
 
   --skill-reading: var(--chart-1);
-  --skill-reading-text: #f46681;
+  --skill-reading-text: #ffa194; /* = brand-300 */
   --skill-reading-subtle: color-mix(in oklab, var(--chart-1) 18%, transparent);
   --skill-listening: var(--chart-3);
   --skill-listening-text: #2dd4bf;
@@ -352,9 +387,9 @@ textarea {
   --sidebar-primary: var(--brand-500);
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: color-mix(in oklab, var(--brand-500) 16%, transparent);
-  --sidebar-accent-foreground: var(--brand-300);
+  --sidebar-accent-foreground: var(--brand-200);
   --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: var(--brand-400);
+  --sidebar-ring: var(--brand-300);
 
   --background-light: #f6f7f8;
   --background-dark: #111a21;

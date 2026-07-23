@@ -22,7 +22,7 @@ const SimplePdfTemplate = ({ tasks, timer }) => {
       title: {
         fontSize: '28px',
         fontWeight: 'bold',
-        color: '#c11e4d'
+        color: '#e30613'
       },
       task: {
         marginBottom: '40px'
@@ -39,7 +39,7 @@ const SimplePdfTemplate = ({ tasks, timer }) => {
         color: '#374151',
         backgroundColor: '#f8f9fa',
         padding: '15px',
-        borderLeft: '4px solid #c11e4d',
+        borderLeft: '4px solid #e30613',
         borderRadius: '4px',
         margin: '10px 0'
       },
@@ -68,7 +68,7 @@ const SimplePdfTemplate = ({ tasks, timer }) => {
         paddingTop: '20px',
         borderTop: '2px solid #333',
         fontSize: '18px',
-        color: '#e74c3c'
+        color: '#9a0016'
       }
     };
   

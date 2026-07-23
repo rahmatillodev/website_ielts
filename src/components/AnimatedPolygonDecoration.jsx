@@ -32,9 +32,9 @@ const AnimatedPolygonDecoration = () => {
   const glowpoint = {
     width: "8px",
     height: "8px",
-    background: "#c11e4d",
+    background: "var(--brand-600)",
     borderRadius: "50%",
-    boxShadow: "0 0 15px #c11e4d, 0 0 30px #c11e4d",
+    boxShadow: "0 0 15px var(--brand-600), 0 0 30px var(--brand-600)",
     position: "absolute",
   };
   return (

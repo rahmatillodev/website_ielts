@@ -19,11 +19,13 @@ export const generateTestResultsPDF = async ({
   const margin = 20;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const primaryColor = [59, 130, 246]; // #c11e4d
+  // jsPDF takes 0-255 components, not CSS, so these cannot be tokens — keep
+  // them in step with --brand-600 / --danger-600 in src/index.css by hand.
+  const primaryColor = [227, 6, 19]; // #e30613 brand
   const darkGray = [31, 41, 55]; // #1F2937
   const lightGray = [243, 244, 246]; // #F3F4F6
   const successColor = [34, 197, 94]; // #22C55E
-  const errorColor = [239, 68, 68]; // #EF4444
+  const errorColor = [185, 2, 29]; // #b9021d danger
   
   let yPos = await addBrandHeader(doc, pageWidth, testType, settings);
 

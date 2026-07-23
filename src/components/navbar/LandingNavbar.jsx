@@ -59,7 +59,7 @@ const LandingNavbar = () => {
           <Link to="/signup">
             <Button
               size="sm"
-              className="bg-brand-600 hover:bg-brand-700 text-white font-medium h-8 sm:h-9 px-3 sm:px-5 rounded-full shadow-[0_4px_20px_rgba(193,30,77,0.4)] text-xs sm:text-sm"
+              className="bg-brand-600 hover:bg-brand-700 text-white font-medium h-8 sm:h-9 px-3 sm:px-5 rounded-full shadow-[0_4px_20px_rgba(227,6,19,0.4)] text-xs sm:text-sm"
             >
               Get Started
             </Button>
@@ -123,7 +123,7 @@ const LandingNavbar = () => {
                   <Link to="/signup" onClick={closeMenu} className="block">
                     <Button
                       size="sm"
-                      className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium h-10 rounded-lg shadow-[0_4px_20px_rgba(193,30,77,0.4)] text-sm"
+                      className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium h-10 rounded-lg shadow-[0_4px_20px_rgba(227,6,19,0.4)] text-sm"
                     >
                       Get Started
                     </Button>

@@ -183,8 +183,8 @@ const LandingPage = () => {
               <Link to="/signup" className="block w-full md:block lg:inline-block lg:w-auto">
               <Button
                 size="lg"
-                className="bg-brand-600 hover:bg-[#3a7ac8d3] text-white px-6 sm:px-8 py-3 sm:py-4 md:py-6 rounded-full font-semibold text-sm 
-                sm:text-base w-full sm:w-auto group transition-all shadow-[0px_20px_25px_-5px_#c11e4d4D]"
+                className="bg-brand-600 hover:bg-brand-700 text-white px-6 sm:px-8 py-3 sm:py-4 md:py-6 rounded-full font-semibold text-sm
+                sm:text-base w-full sm:w-auto group transition-all shadow-[0px_20px_25px_-5px_#e306134D]"
                 >
                 Start Free Practice <LuArrowRight className="ml-0 inline transition-transform group-hover:translate-x-2" />
               </Button>
@@ -289,7 +289,7 @@ const LandingPage = () => {
                     cy="18"
                     r="16"
                     fill="none"
-                    stroke="#c11e4d"
+                    stroke="#e30613"
                     strokeWidth="3"
                     strokeLinecap="round"
                     initial={{ strokeDasharray: "0 100" }}
@@ -323,7 +323,7 @@ const LandingPage = () => {
               <motion.span
                 key={name}
                 variants={fadeInUp}
-                whileHover={{ scale: 1.1, color: "#c11e4d" }}
+                whileHover={{ scale: 1.1, color: "#e30613" }}
                 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-400 transition-colors cursor-pointer"
               >
                 {name}
@@ -417,7 +417,7 @@ const LandingPage = () => {
         <div 
           className="absolute top-1/2 left-[37.5%] md:left-[37.5%] w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2"
           style={{
-            background: 'radial-gradient(circle, rgba(244,102,129, 0.5) 0%, rgba(193,30,77, 0.3) 50%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(255,100,87, 0.5) 0%, rgba(227,6,19, 0.3) 50%, transparent 70%)',
             filter: 'blur(50px)',
           }}
         />
@@ -562,7 +562,7 @@ const LandingPage = () => {
         <div 
           className="absolute bottom-0 left-0 w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full -translate-x-1/4 translate-y-1/4 pointer-events-none"
           style={{
-            background: 'radial-gradient(circle, rgba(244,102,129, 0.6) 0%, rgba(193,30,77, 0.4) 50%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(255,100,87, 0.6) 0%, rgba(227,6,19, 0.4) 50%, transparent 70%)',
             filter: 'blur(60px)',
           }}
         />
@@ -599,7 +599,7 @@ const LandingPage = () => {
             <Link to="/signup" className="block w-full sm:w-auto md:block lg:inline-block mx-auto">
                 <Button
               size="lg"
-              className="bg-brand-600 hover:bg-brand-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 md:py-3 rounded-full font-semibold transition-all text-sm sm:text-base w-full md:w-full lg:w-auto group shadow-[0_4px_20px_rgba(193,30,77,0.4)]"
+              className="bg-brand-600 hover:bg-brand-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 md:py-3 rounded-full font-semibold transition-all text-sm sm:text-base w-full md:w-full lg:w-auto group shadow-[0_4px_20px_rgba(227,6,19,0.4)]"
             >
               Get Started Now <LuArrowRight className="ml-2 inline transition-transform group-hover:translate-x-1" />
             </Button>

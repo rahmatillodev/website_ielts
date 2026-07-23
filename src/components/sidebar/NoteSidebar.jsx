@@ -106,7 +106,7 @@ const NoteSidebar = () => {
                     ? '#f9fafb'
                     : 'rgba(255, 255, 255, 0.05)',
                   borderColor: focusedNoteId === note.id
-                    ? '#c11e4d'
+                    ? 'var(--primary)'
                     : themeColors.border,
                   borderWidth: focusedNoteId === note.id ? '2px' : '1px'
                 }}
@@ -118,10 +118,10 @@ const NoteSidebar = () => {
                     style={{
                       color: themeColors.text,
                       opacity: 0.8,
-                      borderLeftColor: '#c11e4d',
+                      borderLeftColor: 'var(--primary)',
                       backgroundColor: theme === 'light'
-                        ? '#eff6ff'
-                        : 'rgba(193,30,77, 0.1)'
+                        ? 'var(--primary-subtle)'
+                        : 'rgba(227, 6, 19, 0.1)'
                     }}
                   >
                     &quot;{note.text}&quot;
@@ -143,7 +143,7 @@ const NoteSidebar = () => {
                     border: `1px solid ${themeColors.border}`,
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#c11e4d';
+                    e.target.style.borderColor = 'var(--primary)';
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = themeColors.border;
@@ -163,8 +163,8 @@ const NoteSidebar = () => {
                     onClick={() => handleDeleteNote(note.id)}
                     onMouseEnter={e => {
                       e.currentTarget.style.backgroundColor = theme === 'light'
-                        ? '#fee2e2'
-                        : 'rgba(239, 68, 68, 0.1)';
+                        ? 'var(--destructive-subtle)'
+                        : 'rgba(185, 2, 29, 0.1)';
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.backgroundColor = 'transparent';

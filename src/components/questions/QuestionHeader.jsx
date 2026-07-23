@@ -183,7 +183,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
                   className="text-lg font-semibold transition-colors"
                   style={{ 
                     color: timeRemaining != null && timeRemaining < 60 
-                      ? '#dc2626' 
+                      ? 'var(--destructive-text)'
                       : themeColors.text 
                   }}
                 >
@@ -285,7 +285,7 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
             {(notes.length > 0 || isSidebarOpen) && (
               <span 
                 className="absolute top-0 right-0 w-2 h-2 rounded-full"
-                style={{ backgroundColor: '#c11e4d' }}
+                style={{ backgroundColor: 'var(--primary)' }}
               />
             )}
           </button>

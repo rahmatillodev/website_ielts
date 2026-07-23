@@ -14,13 +14,11 @@ const PdfTemplate = ({ tasks, timer }) => {
       }}>
         <div className="pdf-header-left">
           <div className="pdf-logo">
-            <span style={{ 
-              fontSize: '24px', 
-              marginRight: '10px',
-              color: '#c11e4d'
-            }}>📘</span>
+            {/* The square badge, not the wordmark: this slot is 40x40 and the
+                wordmark is 2.26:1, so it would be squashed. */}
+            <img src="/logo-icon.png" alt="EDU" />
           </div>
-          <span className="pdf-title" style={{ color: '#c11e4d' }}>
+          <span className="pdf-title" style={{ color: '#e30613' }}>
             IELTSCORE
           </span>
         </div>
@@ -65,7 +63,7 @@ const PdfTemplate = ({ tasks, timer }) => {
                   color: '#374151',
                   backgroundColor: '#f9fafb',
                   padding: '15px',
-                  borderLeft: '4px solid #c11e4d',
+                  borderLeft: '4px solid #e30613',
                   borderRadius: '4px',
                   margin: '10px 0'
                 }}
@@ -109,7 +107,7 @@ const PdfTemplate = ({ tasks, timer }) => {
         <h3 
           className="pdf-timer"
           style={{
-            color: '#dc2626',
+            color: '#9a0016',
             textAlign: 'center',
             marginTop: '40px',
             paddingTop: '20px',

@@ -139,7 +139,7 @@ function LoginPage() {
             <LogoDesign
               className="w-fit"
               iconColor="text-white"
-              color="#c11e4d"
+              color="var(--primary)"
             />
           </div>
           {/* Logo - Desktop */}
@@ -147,7 +147,7 @@ function LoginPage() {
             <LogoDesign
               className="w-fit"
               iconColor="text-white"
-              color="#c11e4d"
+              color="var(--primary)"
             />
           </div>
           <h1 className="text-3xl font-semibold mb-2 text-gray-900">
