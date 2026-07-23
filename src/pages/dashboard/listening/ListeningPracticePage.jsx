@@ -151,6 +151,8 @@ const ListeningPracticePageContent = () => {
 
   const questionRefs = useRef({});
   const questionsContainerRef = useRef(null);
+  // Sticky audio-player wrapper; measured so scroll targets clear it.
+  const playerWrapperRef = useRef(null);
   const [activeQuestion, setActiveQuestion] = useState(null);
   const hasAutoSubmittedRef = useRef(false); // Prevent multiple auto-submissions
   const isSubmittingRef = useRef(false); // Track submission state to prevent race conditions
@@ -847,13 +849,9 @@ const ListeningPracticePageContent = () => {
       clearAudioPosition(id);
       clearAudioPlaybackCompleted(id);
     }
-    // Navigate based on accessMode to prevent redirect loops
-    const accessMode = sessionStorage.getItem('accessMode');
-    if (accessMode === 'mockTest') {
-      navigate("/mock-tests");
-    } else {
-      navigate("/dashboard");
-    }
+    // A mock run returns early above (it shows the exit modal instead), so
+    // reaching here means this is a regular practice session.
+    navigate("/dashboard");
   };
 
   const handleExitConfirm = async () => {
@@ -1344,8 +1342,13 @@ const ListeningPracticePageContent = () => {
     const el = questionRefs.current[questionNumber];
     if (!el || !questionsContainerRef.current) return;
     const container = questionsContainerRef.current;
+    // The player is pinned to the top of this pane outside test mode, so clear its
+    // height as well - otherwise jumping to a question parks it behind the player.
+    // Measured rather than hardcoded: the player's height varies with theme,
+    // font size and whether the error line is showing.
+    const stickyOffset = playerWrapperRef.current?.offsetHeight ?? 0;
     container.scrollTo({
-      top: el.offsetTop - container.offsetTop - 20,
+      top: el.offsetTop - container.offsetTop - stickyOffset - 20,
       behavior: "smooth",
     });
     setActiveQuestion(questionNumber);
@@ -1545,13 +1548,7 @@ const ListeningPracticePageContent = () => {
                     <button
                       onClick={() => {
                         toast.error(fetchError);
-                        // Navigate based on accessMode to prevent redirect loops
-                        const accessMode = sessionStorage.getItem('accessMode');
-                        if (accessMode === 'mockTest') {
-                          navigate("/mock-tests");
-                        } else {
-                          navigate("/dashboard");
-                        }
+                        navigate(isMockTest ? "/mock-tests" : "/dashboard");
                       }}
                       className="px-4 py-2 rounded-lg text-sm border transition-all hover:scale-[1.02]"
                       style={{
@@ -1662,12 +1659,25 @@ const ListeningPracticePageContent = () => {
                     }}
                   >
                     {/* During taking, player is visually hidden but still controls the single listening playback (same as IELTS: one play, then answers only). */}
+                    {/*
+                      The sticky lives here, not on AudioPlayer's root: a sticky element can only
+                      travel within its own parent's box, and this wrapper hugs the player, so
+                      sticking it inside the component did nothing. As a direct child of the
+                      scrolling questions pane its containing block is the full question list, which
+                      is what lets it pin while the user scrolls. Opaque background so questions
+                      scroll underneath rather than showing through the player's margins.
+                    */}
                     {audioUrl && (
-                      <div className={status === 'taking' ? 'hidden' : ''}>
+                      <div
+                        ref={playerWrapperRef}
+                        className={status === 'taking' ? 'hidden' : 'sticky top-0 z-20 pt-1 pb-3'}
+                        style={status === 'taking' ? undefined : { backgroundColor: themeColors.background }}
+                      >
                         <AudioPlayer
                           ref={audioPlayerRef}
                           audioUrl={audioUrl}
                           isTestMode={status === 'taking'}
+                          modeLabel={status === 'reviewing' ? 'Review' : 'Practice'}
                           playbackRate={playbackRate}
                           onPlaybackRateChange={setPlaybackRate}
                           volume={volume}

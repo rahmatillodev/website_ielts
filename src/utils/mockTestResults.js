@@ -1,4 +1,29 @@
 /**
+ * Statuses whose results actually exist - only these show up in history.
+ */
+export const MOCK_HISTORY_STATUSES = ['completed', 'checked', 'notified'];
+
+/**
+ * PostgREST `.or()` filter for mock_test_clients, mirroring the table's RLS
+ * select policy.
+ *
+ * Matching on `user_id` alone is not enough: admin-created bookings land with
+ * `user_id = NULL` and are linked to an account only during sign-in/sign-up, so
+ * a student who was already registered when their booking was created stays
+ * unlinked. RLS lets them read that row by email, but `.eq('user_id', ...)`
+ * filters it back out.
+ *
+ * The email is double-quoted because a comma in the value would break the
+ * `and(...)` logic tree (PGRST100).
+ */
+export function ownMockClientFilter(userId, email) {
+  const normalizedEmail = email?.trim().toLowerCase();
+  const ownedByUser = `user_id.eq.${userId}`;
+  if (!normalizedEmail) return ownedByUser;
+  return `${ownedByUser},and(user_id.is.null,email.ilike."${normalizedEmail}")`;
+}
+
+/**
  * Shared mock test attempt fields (history + results pages).
  */
 export const MOCK_ATTEMPT_SELECT = `

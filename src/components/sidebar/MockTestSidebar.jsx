@@ -56,7 +56,7 @@ const MockTestSidebar = ({ onNavigate }) => {
   const navigate = useNavigate();
   const authUser = useAuthStore((state) => state.authUser);
   const signOut = useAuthStore((state) => state.signOut);
-  const isMockTestClient = useMockTestClientStore((state) => state.isMockTestClient);
+  const hasMockTestHistory = useMockTestClientStore((state) => state.hasMockTestHistory);
   const isSmallScreen = useSmallScreen();
 
   // Load collapsed state from localStorage, default to false
@@ -147,7 +147,7 @@ const MockTestSidebar = ({ onNavigate }) => {
           onNavigate={onNavigate}
           isCollapsed={effectiveIsCollapsed}
         />
-        {isMockTestClient === true && (
+        {hasMockTestHistory === true && (
           <SidebarItem
             icon={MdHistory}
             label="Mock Test History"

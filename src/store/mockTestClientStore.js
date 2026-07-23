@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
+import { MOCK_HISTORY_STATUSES, ownMockClientFilter } from "@/utils/mockTestResults";
 
 /**
  * Mock test paroli: foydalanuvchi modalda kiritgandan keyin shu sessiyada saqlanadi, chunki
@@ -41,34 +42,45 @@ export const useMockTestClientStore = create((set) => ({
     error: null,
     /** True if current user has at least one row in mock_test_clients; false if not; null before checked */
     isMockTestClient: null,
+    /** True if at least one of those rows reached a status history can render; null before checked */
+    hasMockTestHistory: null,
 
     /**
-     * Check if the given user ID exists in mock_test_clients table.
-     * Sets isMockTestClient and returns the result.
+     * Check the user's rows in mock_test_clients.
+     *
+     * Two distinct flags come out of this, and they gate different things:
+     * `isMockTestClient` (any row) keeps the mock test entry point reachable for
+     * a student with an upcoming booking, while `hasMockTestHistory` (a row in
+     * MOCK_HISTORY_STATUSES) gates the history links - it mirrors what
+     * useMockTestHistory actually queries, so a booked student no longer follows
+     * a history link into an empty page.
+     *
      * @param {string} userId - The user ID to check
-     * @returns {Promise<boolean>}
+     * @param {string} [email] - The user's email, to also match unlinked bookings
+     * @returns {Promise<{isClient: boolean, hasHistory: boolean}>}
      */
-    checkUserIsMockTestClient: async (userId) => {
+    checkUserIsMockTestClient: async (userId, email) => {
         if (!userId) {
-            set({ isMockTestClient: false });
-            return false;
+            set({ isMockTestClient: false, hasMockTestHistory: false });
+            return { isClient: false, hasHistory: false };
         }
         try {
             const { data, error } = await supabase
                 .from("mock_test_clients")
-                .select("id")
-                .eq("user_id", userId)
-                .limit(1)
-                .maybeSingle();
+                .select("id, status")
+                .or(ownMockClientFilter(userId, email));
 
             if (error) throw error;
-            const isClient = !!data;
-            set({ isMockTestClient: isClient });
-            return isClient;
+
+            const rows = data || [];
+            const isClient = rows.length > 0;
+            const hasHistory = rows.some((row) => MOCK_HISTORY_STATUSES.includes(row.status));
+            set({ isMockTestClient: isClient, hasMockTestHistory: hasHistory });
+            return { isClient, hasHistory };
         } catch (err) {
             console.error("Error checking mock test client:", err);
-            set({ isMockTestClient: false });
-            return false;
+            set({ isMockTestClient: false, hasMockTestHistory: false });
+            return { isClient: false, hasHistory: false };
         }
     },
 

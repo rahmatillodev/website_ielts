@@ -1,11 +1,34 @@
 
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
+import { MdReplay5, MdForward5 } from "react-icons/md";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { saveAudioPosition, loadAudioPosition, clearAudioPosition } from "@/store/LocalStorage/listeningStorage";
 
-const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded, onPlay, autoPlay = false, testId = null, disableReplay = false }, ref) => {
-    const { themeColors } = useAppearance();
+/** Seconds moved by one press of the skip-back / skip-forward controls. */
+const SKIP_SECONDS = 5;
+
+const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlaybackRateChange, volume, onVolumeChange, onAudioEnded, onPlay, autoPlay = false, testId = null, disableReplay = false, label = "Full recording", modeLabel = null }, ref) => {
+    const { theme, themeColors } = useAppearance();
+
+    // Every colour below is derived from the active theme's tokens rather than
+    // hardcoded, so the black+gold `high-contrast` palette is honoured instead of
+    // being overridden by fixed blues and grays.
+    //
+    // `high-contrast` is a black canvas whose single accent is the gold already
+    // used for text and borders; the other themes use the design system's
+    // `--primary`. `onAccent` is whatever stays legible on top of that fill.
+    const isHighContrast = theme === 'high-contrast';
+    const accent = isHighContrast ? themeColors.text : 'var(--primary)';
+    const onAccent = isHighContrast ? themeColors.background : '#ffffff';
+
+    /**
+     * Muted shade of the foreground colour, for secondary text, the scrubber
+     * track and the badge fill. Mixing the token keeps these tied to the theme
+     * (gold-tinted in high-contrast, neutral elsewhere) instead of introducing
+     * separate grays that would clash with the gold palette.
+     */
+    const subtle = (alpha) => `color-mix(in srgb, ${themeColors.text} ${Math.round(alpha * 100)}%, transparent)`;
     const audioRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -319,6 +342,27 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
         },
     }), [isPlaying, testId, disableReplay]);
 
+    /**
+     * Jump the playhead by `delta` seconds, clamped to [0, duration].
+     *
+     * Gated on `!isTestMode` for the same reason as `handleSeek` and the range
+     * input below: during a live test the audio plays once and the position must
+     * not be steerable. This keeps the control additive - it grants review mode a
+     * precise alternative to scrubbing without opening a new way to move the
+     * playhead in test mode (see AUDIT_REPORT #78).
+     */
+    const skipBy = (delta) => {
+        const audio = audioRef.current;
+        if (isTestMode || !audio) return;
+
+        const total = duration || audio.duration;
+        if (!total || isNaN(total)) return;
+
+        const next = Math.min(Math.max(audio.currentTime + delta, 0), total);
+        audio.currentTime = next;
+        setCurrentTime(next);
+    };
+
     const handleSeek = (e) => {
         if (!isTestMode && audioRef.current) {
             const rect = e.currentTarget.getBoundingClientRect();
@@ -343,101 +387,183 @@ const AudioPlayer = forwardRef(({ audioUrl, isTestMode, playbackRate, onPlayback
 
     if (!audioUrl) return null;
 
+    const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
+
     return (
-        <div className="sticky top-2 z-10 border border-gray-200 p-4 shadow-sm w-7/12 mx-auto rounded-2xl" style={{ backgroundColor: themeColors.background, borderColor: themeColors.border }}>
+        // Positioning (incl. stickiness) is the page's job - this element's parent
+        // wraps it tightly, so `position: sticky` here had no room to travel and
+        // silently did nothing. See ListeningPracticePage's player wrapper.
+        <div
+            className="w-full border shadow-sm rounded-2xl px-5 py-4"
+            style={{ backgroundColor: themeColors.background, borderColor: themeColors.border }}
+        >
             <audio ref={audioRef} src={audioUrl} preload="metadata" />
-            <div className="space-y-3">
-                {playError && (
-                    <div className="text-xs text-gray-600">
-                        {playError}
-                    </div>
-                )}
-                {/* Main Controls */}
-                <div className="flex items-center gap-4">
+
+            {playError && (
+                <div className="text-xs mb-3" style={{ color: subtle(0.75) }}>
+                    {playError}
+                </div>
+            )}
+
+            {/* Row 1 - label + mode badge on the left, elapsed / total on the right */}
+            <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-semibold truncate" style={{ color: themeColors.text }}>
+                        {label}
+                    </span>
+                    {modeLabel && (
+                        <span
+                            className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                            style={{ backgroundColor: subtle(0.1), color: subtle(0.75) }}
+                        >
+                            {modeLabel}
+                        </span>
+                    )}
+                </div>
+                <span
+                    className="shrink-0 text-sm font-medium tabular-nums"
+                    style={{ color: subtle(0.75) }}
+                >
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                </span>
+            </div>
+
+            {/* Row 2 - transport, scrubber, volume. Wraps rather than overflowing
+                in the narrow review pane, where width is a % of a resizable split. */}
+            <div className="flex items-center gap-4 flex-wrap">
+                {/* Transport. Play is filled and large; skip buttons are outlined and
+                    smaller, so the primary action reads first. */}
+                <div className="flex items-center gap-2 shrink-0">
+                    {!isTestMode && (
+                        <button
+                            type="button"
+                            onClick={() => skipBy(-SKIP_SECONDS)}
+                            disabled={!duration}
+                            className="grid place-items-center h-10 w-10 rounded-full border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ borderColor: themeColors.border, color: themeColors.text }}
+                            title={`Back ${SKIP_SECONDS} seconds`}
+                            aria-label={`Skip back ${SKIP_SECONDS} seconds`}
+                        >
+                            <MdReplay5 size={20} />
+                        </button>
+                    )}
+
                     <button
+                        type="button"
                         onClick={togglePlayPause}
-                        className="p-3 rounded-full transition-colors bg-brand-600 hover:bg-brand-700 text-white"
+                        className="grid place-items-center h-14 w-14 rounded-full shadow-sm transition-transform hover:scale-105 active:scale-95"
+                        style={{ backgroundColor: accent, color: onAccent }}
                         title={isPlaying ? "Pause" : "Play"}
+                        aria-label={isPlaying ? "Pause" : "Play"}
                     >
-                        {isPlaying ? <FaPause size={16} style={{ color: themeColors.text }} /> : <FaPlay size={16} style={{ color: themeColors.text }} />}
+                        {/* Nudge the play triangle so it looks optically centred in the circle */}
+                        {isPlaying ? <FaPause size={20} /> : <FaPlay size={20} className="ml-0.5" />}
                     </button>
 
-                    {/* Progress Bar */}
-                    <div className="flex-1 relative">
-                        <div
-                            className="h-2 bg-gray-200 rounded-full cursor-pointer"
-                            onClick={handleSeek}
+                    {!isTestMode && (
+                        <button
+                            type="button"
+                            onClick={() => skipBy(SKIP_SECONDS)}
+                            disabled={!duration}
+                            className="grid place-items-center h-10 w-10 rounded-full border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ borderColor: themeColors.border, color: themeColors.text }}
+                            title={`Forward ${SKIP_SECONDS} seconds`}
+                            aria-label={`Skip forward ${SKIP_SECONDS} seconds`}
                         >
-                            <div
-                                className="h-full bg-brand-600 rounded-full transition-all"
-                                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-                            />
-                        </div>
-                        {!isTestMode && (
-                            <input
-                                type="range"
-                                min="0"
-                                max={duration || 0}
-                                value={currentTime}
-                                onChange={(e) => {
-                                    const newTime = parseFloat(e.target.value);
-                                    if (audioRef.current) {
-                                        audioRef.current.currentTime = newTime;
-                                        setCurrentTime(newTime);
-                                    }
-                                }}
-                                className="absolute inset-0 w-full h-2 opacity-0 cursor-pointer"
-                            />
-                        )}
-                    </div>
-
-                    {/* Time Display */}
-                    <div className="text-sm font-medium text-gray-700 min-w-[80px] text-right">
-                        {formatTime(currentTime)} / {formatTime(duration)}
-                    </div>
+                            <MdForward5 size={20} />
+                        </button>
+                    )}
                 </div>
 
-                {/* Secondary Controls */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        {/* Volume Control */}
-                        <button
-                            onClick={toggleMute}
-                            className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
-                            title={isMuted ? "Unmute" : "Mute"}
-                        >
-                            {isMuted ? <FaVolumeMute size={18} /> : <FaVolumeUp size={18} />}
-                        </button>
+                {/* Scrubber - takes the remaining width, min-w-0 so it can shrink */}
+                <div className="relative flex items-center flex-1 min-w-[7rem] h-5">
+                    <div
+                        className="h-1.5 w-full rounded-full cursor-pointer"
+                        style={{ backgroundColor: subtle(0.18) }}
+                        onClick={handleSeek}
+                    >
+                        <div
+                            className="h-full rounded-full"
+                            style={{ width: `${progressPct}%`, backgroundColor: accent }}
+                        />
+                    </div>
+                    {/* Round handle. Purely decorative - the transparent range input
+                        above it does the interaction, which avoids per-browser
+                        ::-webkit-slider-thumb / ::-moz-range-thumb styling. */}
+                    <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute h-3.5 w-3.5 rounded-full -translate-x-1/2 shadow-sm"
+                        style={{
+                            left: `${progressPct}%`,
+                            backgroundColor: accent,
+                            border: `2px solid ${themeColors.background}`,
+                        }}
+                    />
+                    {!isTestMode && (
                         <input
                             type="range"
                             min="0"
-                            max="1"
-                            step="0.1"
-                            value={isMuted ? 0 : volume}
+                            max={duration || 0}
+                            value={currentTime}
+                            aria-label="Seek"
                             onChange={(e) => {
-                                setIsMuted(false);
-                                onVolumeChange(parseFloat(e.target.value));
+                                const newTime = parseFloat(e.target.value);
+                                if (audioRef.current) {
+                                    audioRef.current.currentTime = newTime;
+                                    setCurrentTime(newTime);
+                                }
                             }}
-                            className="w-24"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
-                    </div>
-
-                    {/* Playback Speed - only in review mode */}
-                    {!isTestMode && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">Speed:</span>
-                            <select
-                                value={playbackRate}
-                                onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
-                                className="px-2 py-1 border border-gray-300 rounded text-sm"
-                            >
-                                <option value={1.0}>1x</option>
-                                <option value={1.2}>1.2x</option>
-                                <option value={1.5}>1.5x</option>
-                            </select>
-                        </div>
                     )}
                 </div>
+
+                {/* Volume */}
+                <div className="flex items-center gap-2 shrink-0">
+                    <button
+                        type="button"
+                        onClick={toggleMute}
+                        className="transition-opacity hover:opacity-70"
+                        style={{ color: subtle(0.75) }}
+                        title={isMuted ? "Unmute" : "Mute"}
+                        aria-label={isMuted ? "Unmute" : "Mute"}
+                    >
+                        {isMuted ? <FaVolumeMute size={18} /> : <FaVolumeUp size={18} />}
+                    </button>
+                    <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={isMuted ? 0 : volume}
+                        aria-label="Volume"
+                        onChange={(e) => {
+                            setIsMuted(false);
+                            onVolumeChange(parseFloat(e.target.value));
+                        }}
+                        className="w-20 cursor-pointer"
+                        style={{ accentColor: accent }}
+                    />
+                </div>
+
+                {/* Playback speed - review only, as before */}
+                {!isTestMode && (
+                    <select
+                        value={playbackRate}
+                        onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
+                        aria-label="Playback speed"
+                        className="shrink-0 rounded-lg border px-2 py-1 text-sm cursor-pointer"
+                        style={{
+                            borderColor: themeColors.border,
+                            color: themeColors.text,
+                            backgroundColor: themeColors.background,
+                        }}
+                    >
+                        <option value={1.0}>1x</option>
+                        <option value={1.2}>1.2x</option>
+                        <option value={1.5}>1.5x</option>
+                    </select>
+                )}
             </div>
         </div>
     );
