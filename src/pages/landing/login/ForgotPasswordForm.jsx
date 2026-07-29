@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail } from "lucide-react";
+import { ChevronLeft, Mail } from "lucide-react";
 import LogoDesign from "@/components/LogoDesign";
 import { cn } from "@/lib/utils";
 import AuthInput from "./AuthInput";
@@ -96,15 +96,30 @@ function ForgotPasswordForm({
         />
       </form>
 
-      <motion.p variants={formItem} className="mt-8 text-center text-sm text-gray-600">
-        Remembered it?{" "}
+      {/*
+        The way back was easy to miss: 14px, the same weight as the sentence
+        carrying it, and the only route out of this screen for someone who
+        landed here by mistake.
+
+        It is now its own line rather than the tail of one — 15px, semibold, with
+        a chevron that nudges on hover and a permanent underline so it reads as a
+        control rather than as emphasis. Deliberately still a text link: no fill,
+        no border, no box. The filled button on this screen is "Send reset link",
+        and a second filled control would compete with it.
+      */}
+      <motion.div variants={formItem} className="mt-8 text-center">
+        <p className="text-[13px] text-gray-500">Remembered it?</p>
         <Link
           to={loginHref}
-          className="rounded-sm font-medium text-primary-text underline-offset-4 outline-none transition-colors duration-200 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="group mt-1.5 inline-flex items-center gap-1.5 rounded-sm text-[15px] font-semibold text-primary-text underline decoration-primary-text/25 underline-offset-4 outline-none transition-colors duration-200 hover:decoration-primary-text focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
+          <ChevronLeft
+            className="size-4 transition-transform duration-200 group-hover:-translate-x-0.5"
+            aria-hidden="true"
+          />
           Back to sign in
         </Link>
-      </motion.p>
+      </motion.div>
     </motion.div>
   );
 }
