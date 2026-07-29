@@ -1,22 +1,30 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { toast } from "react-toastify";
+import { LinkIcon } from "lucide-react";
 import supabase from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Lock, ChevronLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
-import { toast } from "react-toastify";
-import LogoDesign from "@/components/LogoDesign";
-import { motion } from "framer-motion";
-import AnimatedPolygonDecoration from "@/components/AnimatedPolygonDecoration";
+import { AUTH_ERROR_TOAST_MS, getAuthErrorMessage } from "@/lib/authErrors";
+import AuthLayout from "./login/AuthLayout";
+import AuthNotice from "./login/AuthNotice";
+import AuthPending from "./login/AuthPending";
+import ResetPasswordForm from "./login/ResetPasswordForm";
+import { LOGIN_SLIDES } from "./login/loginSlides";
 
+/**
+ * Choose a new password, after following a recovery link.
+ *
+ * Three states, all in the same shell so the page never changes shape under the
+ * user: checking the link, the form, or the expired-link notice. Runs the
+ * sign-in deck for the same reason `ForgotPasswordPage` does — this is the tail
+ * of the returning-user journey, and it ends at /login.
+ *
+ * The session check and the update call are unchanged; only the surface is new.
+ */
 function ResetPasswordPage() {
   const navigate = useNavigate();
   const [hasRecoverySession, setHasRecoverySession] = useState(null);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -24,190 +32,57 @@ function ResetPasswordPage() {
     });
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!password || !confirmPassword) {
-      toast.error("Please fill in both password fields");
-      return;
-    }
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-    setLoading(true);
+  const handleSubmit = async ({ password }) => {
+    if (submitting) return;
+    setSubmitting(true);
+
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       toast.success("Password updated. You can now sign in.");
       navigate("/login", { replace: true });
     } catch (error) {
-      toast.error(error?.message || "Failed to update password");
+      toast.error(getAuthErrorMessage(error, "Failed to update password"), {
+        autoClose: AUTH_ERROR_TOAST_MS,
+      });
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  if (hasRecoverySession === null) {
-    return (
-      <div className="min-h-screen flex bg-white items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex bg-white">
-      <AnimatedPolygonDecoration />
-      <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center bg-white relative">
-        <button
-          onClick={() => navigate(-1)}
-          className="absolute lg:hidden top-9 left-8 flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors text-sm"
-          aria-label="Go back"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
-
-        <div className="w-full max-w-md">
-          <div className="lg:hidden mb-8">
-            <LogoDesign
-              className="w-fit"
-              iconColor="text-white"
-              color="var(--primary)"
-            />
-          </div>
-          <div className="hidden lg:flex items-center gap-2 mb-8">
-            <LogoDesign
-              className="w-fit"
-              iconColor="text-white"
-              color="var(--primary)"
-            />
-          </div>
-
-          {hasRecoverySession ? (
+    <AuthLayout slides={LOGIN_SLIDES}>
+      {hasRecoverySession === null ? (
+        <AuthPending label="Checking your link…" />
+      ) : hasRecoverySession ? (
+        <ResetPasswordForm onSubmit={handleSubmit} loading={submitting} />
+      ) : (
+        <AuthNotice
+          icon={LinkIcon}
+          tone="warning"
+          title="Link expired"
+          action={
+            <Button asChild className="h-11 w-full text-[15px] font-medium">
+              <Link to="/forgot-password">Request a new link</Link>
+            </Button>
+          }
+          footer={
             <>
-              <h1 className="text-3xl font-semibold mb-2 text-gray-900">
-                Set new password
-              </h1>
-              <p className="text-gray-600 mb-8">
-                Enter your new password below.
-              </p>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
+              Back to{" "}
+              <Link
+                to="/login"
+                className="rounded-sm font-medium text-primary-text underline-offset-4 outline-none transition-colors duration-200 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      New password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="•••••••••"
-                        className="pl-10 pr-10 bg-gray-50 border-gray-200 h-11"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={loading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="w-5 h-5" />
-                        ) : (
-                          <Eye className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Confirm password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <Input
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="•••••••••"
-                        className="pl-10 pr-10 bg-gray-50 border-gray-200 h-11"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        disabled={loading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="w-5 h-5" />
-                        ) : (
-                          <Eye className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full bg-brand-600 hover:bg-brand-700 text-white h-11 text-base font-medium"
-                    disabled={loading}
-                  >
-                    {loading ? "Updating..." : "Update password"}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </form>
-              </motion.div>
+                Sign in
+              </Link>
             </>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <h1 className="text-3xl font-semibold mb-2 text-gray-900">
-                Invalid or expired link
-              </h1>
-              <p className="text-gray-600 mb-8">
-                This link is invalid or has expired. Please request a new password reset link.
-              </p>
-              <div className="space-y-4">
-                <Link to="/forgot-password">
-                  <Button
-                    type="button"
-                    className="w-full bg-brand-600 hover:bg-brand-700 text-white h-11 text-base font-medium"
-                  >
-                    Request new link
-                  </Button>
-                </Link>
-                <p className="text-center text-sm text-gray-600">
-                  Back to{" "}
-                  <Link
-                    to="/login"
-                    className="text-brand-600 hover:text-brand-700 font-medium"
-                  >
-                    Sign in
-                  </Link>
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </div>
-      </div>
-    </div>
+          }
+        >
+          This password reset link is invalid or has already expired. Request a
+          new one and we&apos;ll email it straight over.
+        </AuthNotice>
+      )}
+    </AuthLayout>
   );
 }
 
