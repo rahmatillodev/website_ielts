@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/store/authStore";
 import { isMockTestRoute, getPostAuthTarget } from "@/lib/routeContext";
+import { AUTH_ERROR_TOAST_MS, getAuthErrorMessage } from "@/lib/authErrors";
 import AuthLayout from "./login/AuthLayout";
 import LoginForm from "./login/LoginForm";
 import { LOGIN_SLIDES } from "./login/loginSlides";
@@ -79,15 +80,19 @@ function LoginPage() {
         return;
       }
 
-      const message = result?.error?.toLowerCase().includes("invalid login credentials")
-        ? "Invalid email or password"
-        : result?.error || "Sign in failed";
-      toast.error(message);
+      // `signIn` already ran the message through `getAuthErrorMessage`, so a
+      // dropped connection arrives here as the connection notice rather than
+      // "Failed to fetch", and bad credentials as "Invalid email or password."
+      toast.error(result?.error || "Sign in failed", {
+        autoClose: AUTH_ERROR_TOAST_MS,
+      });
     } catch (error) {
       // `signIn` catches its own errors, but anything thrown outside that try —
       // or a rejected promise from a future change — must not leave the form
       // spinning with nothing on screen to explain it.
-      toast.error(error?.message || "Sign in failed");
+      toast.error(getAuthErrorMessage(error, "Sign in failed"), {
+        autoClose: AUTH_ERROR_TOAST_MS,
+      });
     } finally {
       setSubmitting(false);
     }

@@ -4,6 +4,7 @@ import supabase from '@/lib/supabase'
 import { clearAllReadingData } from '@/store/LocalStorage/readingStorage'
 import { clearAllListeningData } from '@/store/LocalStorage/listeningStorage'
 import { compressAvatarImage } from '@/utils/mediaCompression'
+import { getAuthErrorMessage, isNetworkError, toAuthErrorResult } from '@/lib/authErrors'
 
 export const useAuthStore = create(
   persist(
@@ -254,8 +255,9 @@ export const useAuthStore = create(
           set({ loading: false });
           return { success: true };
         } catch (error) {
-          set({ error: error.message, loading: false });
-          return { success: false, error: error.message };
+          const result = toAuthErrorResult(error, 'Sign in failed');
+          set({ error: result.error, loading: false });
+          return result;
         }
       },
 
@@ -343,8 +345,9 @@ export const useAuthStore = create(
           set({ loading: false });
           return { success: true };
         } catch (error) {
-          set({ error: error.message, loading: false });
-          return { success: false, error: error.message };
+          const result = toAuthErrorResult(error, 'Failed to send reset link');
+          set({ error: result.error, loading: false });
+          return result;
         }
       },
 
@@ -360,16 +363,34 @@ export const useAuthStore = create(
             password: currentPassword,
           });
           if (signInError) {
+            // Returned, not thrown, so this never reaches the catch below - a
+            // dropped connection here would otherwise surface as "Failed to
+            // fetch" while looking like a rejected password.
+            //
+            // The re-auth uses the signed-in user's own email, so a credentials
+            // rejection can only mean the current password is wrong; the shared
+            // "Invalid email or password" wording would send the user looking at
+            // the wrong field.
+            const result = isNetworkError(signInError)
+              ? toAuthErrorResult(signInError)
+              : {
+                  success: false,
+                  error: /invalid login credentials/i.test(signInError.message || '')
+                    ? 'Current password is incorrect.'
+                    : getAuthErrorMessage(signInError, 'Failed to update password'),
+                  isNetworkError: false,
+                };
             set({ loading: false });
-            return { success: false, error: signInError.message };
+            return result;
           }
           const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
           if (updateError) throw updateError;
           set({ loading: false });
           return { success: true };
         } catch (error) {
-          set({ error: error.message, loading: false });
-          return { success: false, error: error.message };
+          const result = toAuthErrorResult(error, 'Failed to update password');
+          set({ error: result.error, loading: false });
+          return result;
         }
       },
 
