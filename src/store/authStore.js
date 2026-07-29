@@ -274,9 +274,19 @@ export const useAuthStore = create(
           if (error) throw error;
           const newUser = data.user;
           if (!newUser) throw new Error('User creation failed');
-      
-          set({ authUser: newUser });
-      
+
+          // Only treat the user as signed in when Supabase actually issued a
+          // session. With email confirmation enabled, signUp returns a user but
+          // NO session; setting authUser in that case flips App.jsx into its
+          // authenticated routes, unmounts /signup mid-submit and drops the user
+          // on a dashboard they cannot load - instead of the "check your inbox"
+          // step. When confirmation is disabled this is unchanged: a session is
+          // present, so authUser is set exactly as before.
+          const hasSession = Boolean(data.session);
+          if (hasSession) {
+            set({ authUser: newUser });
+          }
+
           // 2. Link mock_test_clients rows for this email (same as signIn: case-insensitive match)
           // RLS must allow UPDATE on rows where user_id is null and email matches auth user (see docs).
           const { data: updatedRecords, error: linkError } = await supabase
@@ -310,9 +320,11 @@ export const useAuthStore = create(
       
           // 3. Profil ma'lumotlarini yuklash
           await get().fetchUserProfile(newUser.id, false);
-          
+
           set({ loading: false });
-          return { success: true };
+          // `needsEmailConfirmation` lets the page choose between navigating to
+          // the dashboard and showing the confirm-your-email screen.
+          return { success: true, needsEmailConfirmation: !hasSession };
         } catch (error) {
           set({ error: error.message, loading: false });
           return { success: false, error: error.message };
