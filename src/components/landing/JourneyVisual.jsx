@@ -81,6 +81,10 @@ function JourneyVisual() {
             strokeDasharray="4 5"
           />
 
+          {/* The numerals are a step larger than the prototype's; the circles,
+              the curve and every coordinate are untouched, so the line reads
+              exactly as designed and only its labels gained weight. 14 against
+              an r=15 node still leaves the digit comfortably inside the ring. */}
           {WAYPOINTS.map(([cx, cy, label]) => (
             <g key={label}>
               <circle cx={cx} cy={cy} r="15" fill="#fff" stroke="var(--brand-200)" strokeWidth="1.5" />
@@ -89,7 +93,7 @@ function JourneyVisual() {
                 y={cy + 5}
                 textAnchor="middle"
                 fontWeight="700"
-                fontSize="13"
+                fontSize="14"
                 fill="currentColor"
                 className="fill-gray-900"
               >
@@ -114,7 +118,7 @@ function JourneyVisual() {
             y="54"
             textAnchor="middle"
             fontWeight="800"
-            fontSize="15"
+            fontSize="17"
             className="fill-primary"
           >
             9.0
@@ -122,20 +126,64 @@ function JourneyVisual() {
         </svg>
       </div>
 
-      {/* The four-up legend. Two columns below `sm` — at 375px, four 11.5px
-          paragraphs side by side wrap to one word per line. */}
-      <div className="mt-[22px] grid grid-cols-2 gap-x-3.5 gap-y-6 sm:grid-cols-4">
+      {/*
+        The four-up legend. Two columns below `sm` — at 375px, four paragraphs
+        side by side wrap to one word per line.
+
+        The prototype's sizes here were set for a 1180px canvas and never grew:
+        the card is the same 519×353 at 1280 as it is at 2545, because the page
+        container caps at 1180. So on a 24" or 27" panel this block was a 13.5px
+        title over an 11.5px description in 102px columns — legible in principle,
+        genuinely hard to read in practice.
+
+        Three things changed, in order of how much they help:
+
+        1. Contrast. The descriptions were `gray-400`, about 2.8:1 on white —
+           below AA for body text at any size. `gray-500` takes them to ~4.8:1.
+           This is the single biggest readability gain and it costs no space.
+        2. Size. Title 13.5 → 14.5, description 11.5 → 12.5, tile 34 → 36, glyph
+           12 → 14, with one further step at 1800px for the large-desktop case
+           the card cannot answer by getting wider. Leading tightens 1.55 → 1.5
+           to give some of the height back.
+        3. Air. The column gap opens up — except at `lg`, where it deliberately
+           does not. The card is at its narrowest between 1024 and 1279 (443px,
+           because the hero splits in two while the container is still only as
+           wide as the window), so a wider gap there is taken straight out of
+           the columns: 20px of gap cost 4.5px per column and bought an extra
+           wrapped line. It steps back up at `xl` where the card is 519px.
+
+        1800px, not `2xl`: Tailwind's `2xl` is 1536, which is a *laptop* width
+        (1920×1080 at 125%). 1800 clears every laptop — including the 16"
+        MacBook's 1728 — and still catches a 1080p 24" panel, which reports
+        ~1905 once a scrollbar is showing.
+      */}
+      {/* The gap steps are all written as `min-[…]` rather than a mix of `sm:`
+          and `min-[1800px]:`. Mixed forms do not sort against each other
+          reliably — `xl:gap-x-5` was winning over `min-[1800px]:gap-x-6` and the
+          large-desktop gap silently never applied. One form, sorted by width. */}
+      <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-4 min-[640px]:gap-x-5 min-[1024px]:gap-x-3.5 min-[1280px]:gap-x-5 min-[1800px]:gap-x-6">
         {STAGES.map(({ label, detail, Icon, filled }) => (
           <div key={label}>
-            <span className="mb-2.5 flex size-[34px] items-center justify-center rounded-[9px] bg-brand-50">
+            <span className="mb-3 flex size-9 items-center justify-center rounded-[9px] bg-brand-50 min-[1800px]:size-10">
               {filled ? (
-                <span className="size-3 rounded-full bg-primary" aria-hidden="true" />
+                <span
+                  className="size-3.5 rounded-full bg-primary min-[1800px]:size-4"
+                  aria-hidden="true"
+                />
               ) : (
-                <Icon className="size-3 text-primary" strokeWidth={2.4} aria-hidden="true" />
+                <Icon
+                  className="size-3.5 text-primary min-[1800px]:size-4"
+                  strokeWidth={2.4}
+                  aria-hidden="true"
+                />
               )}
             </span>
-            <p className="text-[13.5px] font-extrabold text-gray-900">{label}</p>
-            <p className="mt-[5px] text-[11.5px] leading-[1.55] text-gray-400">{detail}</p>
+            <p className="text-[14.5px] font-extrabold text-gray-900 min-[1800px]:text-base">
+              {label}
+            </p>
+            <p className="mt-1.5 text-[12.5px] leading-[1.5] text-gray-500 min-[1800px]:text-[13.5px]">
+              {detail}
+            </p>
           </div>
         ))}
       </div>
