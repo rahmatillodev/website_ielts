@@ -4,7 +4,7 @@ import { EASE, INTERIOR_START, softFloat, staggerGroup } from "../motionVariants
 import { SlideCard, SlideChip, SlideItem, SlideLabel, SlideMeter } from "./SlidePrimitives";
 
 const SKILLS = [
-  { label: "Listening", score: "8.0" },
+  { label: "Listening", score: "9.0" },
   { label: "Reading", score: "7.5" },
   { label: "Writing", score: "6.5" },
   { label: "Speaking", score: "7.0" },

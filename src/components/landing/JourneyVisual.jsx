@@ -2,7 +2,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Square, Circle, Check } from "lucide-react";
 
 /**
- * "Your journey to Band 8" — the hero card from the prototype.
+ * "Your journey to Band 9" — the hero card from the prototype.
  *
  * The prototype draws a hand-tuned bezier across a 480×96 viewBox, with three
  * numbered waypoints sitting on the curve and an oversized ringed node at the
@@ -15,7 +15,7 @@ import { Square, Circle, Check } from "lucide-react";
  * from the prototype so the curve reads exactly as designed.
  *
  * One correction: the prototype labels its three waypoints 1, 2 and **4**. With
- * a fourth node ("8.0") ending the path and a four-item legend beneath, that is
+ * a fourth node ("9.0") ending the path and a four-item legend beneath, that is
  * a typo — the third waypoint is numbered 3 here.
  */
 
@@ -46,7 +46,7 @@ function JourneyVisual() {
   return (
     <div className="rounded-[18px] border border-border bg-white px-[26px] pb-[30px] pt-8 shadow-[0_20px_50px_rgba(19,23,34,.07)] sm:px-[34px] sm:pt-9">
       <p className="text-center text-base font-extrabold tracking-[-0.01em] text-gray-900">
-        Your journey to Band 8
+        Your journey to Band 9
       </p>
 
       <div className="relative mt-[26px]">
@@ -117,7 +117,7 @@ function JourneyVisual() {
             fontSize="15"
             className="fill-primary"
           >
-            8.0
+            9.0
           </text>
         </svg>
       </div>

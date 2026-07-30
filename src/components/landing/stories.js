@@ -31,11 +31,11 @@ export const STORIES = [
   },
   {
     quote:
-      "The mock tests are very close to the real exam. My score improved from 6.5 to 8.0.",
+      "The mock tests are very close to the real exam. My score improved from 6.5 to 9.0.",
     initials: "AK",
     name: "Azamat K.",
     role: "TUIT Tech Graduate",
-    delta: "6.5 → 8.0",
+    delta: "6.5 → 9.0",
   },
   {
     quote:
@@ -83,7 +83,7 @@ export const STORIES = [
     initials: "DK",
     name: "David Kim",
     role: "International Student",
-    delta: "6.5 → 8.0",
+    delta: "6.5 → 9.0",
   },
   {
     quote:

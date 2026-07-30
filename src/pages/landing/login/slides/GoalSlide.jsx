@@ -3,8 +3,8 @@ import { Target } from "lucide-react";
 import { EASE, INTERIOR_START, staggerGroup } from "../motionVariants";
 import { SlideCard, SlideChip, SlideItem, SlideLabel } from "./SlidePrimitives";
 
-const STEPS = [6.0, 6.5, 7.0, 7.5, 8.0];
-const CURRENT_INDEX = 1;
+const STEPS = [6.5, 7.0, 7.5, 8.0, 8.5, 9.0];
+const CURRENT_INDEX = 0;
 
 /**
  * Sign-up slide 1 — setting a target band.
@@ -32,7 +32,7 @@ function GoalSlide() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: INTERIOR_START + 0.25, ease: EASE }}
               >
-                8.0
+                9.0
               </motion.span>
             </div>
             <motion.div
@@ -88,7 +88,7 @@ function GoalSlide() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: INTERIOR_START + 1.15, ease: EASE }}
           >
-            Currently at 6.5 · 1.5 bands to go
+            Currently at 6.5 · 2.5 bands to go
           </motion.p>
         </SlideCard>
       </motion.div>
