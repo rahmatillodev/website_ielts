@@ -359,8 +359,12 @@ const mapQuestionType = (groupType) => {
   if (normalizedType.includes('multiple_answers')) {
     return 'multiple_answers';
   }
+  if (normalizedType === 'universal') {
+    return 'universal';
+  }
 
-  // Default fallback
+  // Default fallback. Note this mislabels rather than fails, so any question_type enum
+  // value added in future needs a branch above or its answers land here as multiple_choice.
   return 'multiple_choice';
 };
 
