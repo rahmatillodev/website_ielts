@@ -67,21 +67,40 @@ const TypeMap = ({
   const appearance = useAppearance();
   const themeColors = appearance.themeColors;
 
+  // An option is scoped to a specific row when it links to that row's own id, or carries that
+  // row's question_number.
+  const isOptionScopedToRow = (opt, question) =>
+    opt.question_id === question.id ||
+    (opt.question_number != null && opt.question_number === question.question_number);
+
+  // Whether an option should be offered on a given row. Map groups store ONE shared set of
+  // A-H options: options.question_id holds the GROUP id — the same value every row carries in
+  // its own question_id — and options.question_number is null. Such an option applies to every
+  // row. (Matching only against question.id treated these as belonging to no row at all, so
+  // every cell short-circuited to an empty <td> and the grid rendered unanswerable.)
+  const optionAppliesToRow = (opt, question) => {
+    if (isOptionScopedToRow(opt, question)) return true;
+    // Carries a question_number, but not this row's — it belongs to a different row.
+    if (opt.question_number != null) return false;
+    return (
+      opt.question_id == null ||
+      (question.question_id != null && opt.question_id === question.question_id)
+    );
+  };
+
   // Find correct answer for a question (by correct_answer on question or by is_correct option in _question.options)
   const getCorrectAnswerForQuestion = (question) => {
     if (question && question.correct_answer) {
       return question.correct_answer;
     }
-    // Try _question.options (shared among all rows)
+    // Try _question.options — only options scoped to THIS row can identify its answer.
+    // Group-level options are shared by every row and several of them are flagged is_correct
+    // (one per row), so picking the first correct one would label every row with the same
+    // wrong letter. Better to show no hint than a wrong one.
     if (_question?.options && Array.isArray(_question.options)) {
-      // Look for an option that links to this question via question_id
-      let correct = _question.options.find(
-        opt => opt.is_correct === true && (opt.question_id === question.id || opt.question_number === question.question_number)
+      const correct = _question.options.find(
+        opt => opt.is_correct === true && isOptionScopedToRow(opt, question)
       );
-      // Fallback: if none are linked, just return first correct
-      if (!correct) {
-        correct = _question.options.find(opt => opt.is_correct === true);
-      }
       if (correct) {
         return correct.letter || correct.option_text || getOptionValue(correct);
       }
@@ -94,15 +113,8 @@ const TypeMap = ({
     if (!_question?.options) return null;
     // Try to match both question and column via option.question_id + letter/option_key/option_text
     return _question.options.find(opt => {
-      // console.log(opt.question_id === question.id);
-      // Must match to this row (question id), and column (letter/option_key/option_text)
-      // An option belongs to this row when it links to the row's id/number, or when it is a
-      // shared option (no row link) that applies to every row. (Previously compared against
-      // question.question_id, which rows don't carry, so the grid rendered empty.)
-      const matchesRow =
-        opt.question_id === question.id ||
-        (opt.question_number != null && opt.question_number === question.question_number) ||
-        (opt.question_id == null && opt.question_number == null);
+      // Must match this row (see optionAppliesToRow) and this column (letter/option_key/option_text)
+      const matchesRow = optionAppliesToRow(opt, question);
       const matchesCol = (
         (colOption.letter && (opt.letter || '').toUpperCase() === (colOption.letter || '').toUpperCase()) ||
         (colOption.option_key && (opt.option_key || '').toUpperCase() === (colOption.option_key || '').toUpperCase()) ||
