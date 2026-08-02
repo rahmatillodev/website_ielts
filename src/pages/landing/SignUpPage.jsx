@@ -1,209 +1,92 @@
 import { useState } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import { useAuthStore } from "@/store/authStore";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Mail, Lock, User, ChevronLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import LogoDesign from "@/components/LogoDesign";
-import AnimatedPolygonDecoration from "@/components/AnimatedPolygonDecoration";
-import { motion } from "framer-motion";
-import { MdAutoStories } from "react-icons/md";
+import { useAuthStore } from "@/store/authStore";
 import { isMockTestRoute, getPostAuthTarget } from "@/lib/routeContext";
+import AuthLayout from "./login/AuthLayout";
+import SignUpForm from "./login/SignUpForm";
+import SignUpSuccess from "./login/SignUpSuccess";
+import { SIGNUP_SLIDES } from "./login/signupSlides";
 
-// Public Sign Up page
+/**
+ * Public sign-up screen.
+ *
+ * Owns account creation and nothing else — the split layout, showcase and back
+ * control come from `AuthLayout`, the fields and their validation from
+ * `SignUpForm`. It runs its own showcase deck (`SIGNUP_SLIDES`), written for
+ * someone starting out rather than returning.
+ *
+ * The one branch that matters is what happens after `signUp` succeeds:
+ *
+ *   session issued   -> confirmation is off; go where the user was headed
+ *   no session       -> confirmation is on; show "check your email" instead of
+ *                       parking them on a dashboard they cannot load
+ *
+ * The store reports which case it is via `needsEmailConfirmation`.
+ */
 function SignUpPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const signUp = useAuthStore((state) => state.signUp);
-  const loading = useAuthStore((state) => state.loading);
 
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  /**
+   * Submit state is local, deliberately not the store's `loading`.
+   *
+   * That flag is shared by every auth-store action — profile updates, avatar
+   * uploads, session init — and `initializeSession` sets it without a try/catch,
+   * so a single rejected `getSession()` leaves it stuck at `true` for the life of
+   * the page. Every field and the button read it, so the whole form goes dead
+   * with no error and no feedback. Owning the flag here means the form can only
+   * be disabled by its own in-flight request.
+   */
+  const [submitting, setSubmitting] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState(null);
+
+  const redirect = searchParams.get("redirect");
+  const loginHref = redirect
+    ? `/login?redirect=${encodeURIComponent(redirect)}`
+    : "/login";
 
   // Hide the back button when the user was sent here from the mock test flow.
-  const isMockTestMode = isMockTestRoute(
-    (searchParams.get("redirect") || "").split("?")[0]
-  );
+  const isMockTestMode = isMockTestRoute((redirect || "").split("?")[0]);
 
-  const handleSignUp = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async ({ fullName, email, password }) => {
+    if (submitting) return;
+    setSubmitting(true);
 
-    if (!email || !password || !fullName) {
-      toast.error("Please fill in all fields");
-      return;
-    }
+    try {
+      const result = await signUp(email, password, fullName);
 
-    const result = await signUp(email, password, fullName);
+      if (result?.success) {
+        if (result.needsEmailConfirmation) {
+          setPendingEmail(email);
+          return;
+        }
 
-    if (result?.success) {
-      const targetPath = getPostAuthTarget(searchParams.get("redirect"));
+        navigate(getPostAuthTarget(redirect), { replace: true });
+        toast.success("Account created successfully!");
+        return;
+      }
 
-      navigate(targetPath, { replace: true });
-      toast.success("Account created successfully!");
-    } else {
       toast.error(result?.error || "Failed to create account");
+    } catch (error) {
+      // `signUp` catches its own errors, but anything thrown outside that try —
+      // or a rejected promise from a future change — must not leave the form
+      // spinning with nothing on screen to explain it.
+      toast.error(error?.message || "Failed to create account");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
-      {/* Left Panel - Branding with Animation */}
-      <AnimatedPolygonDecoration />
-
-      {/* Right Panel - Sign Up Form */}
-      <div className="w-full lg:w-3/5 p-8 min-h-screen flex flex-col justify-center items-center bg-white relative">
-        {/* Back Button - Responsive (hidden in mock test flow) */}
-        {!isMockTestMode && (
-          <button
-            onClick={() => navigate(-1)}
-            className="absolute lg:hidden top-9 left-8 flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors text-sm"
-            aria-label="Go back"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Back</span>
-          </button>
-        )}
-
-        <div className="w-full max-w-md">
-          {/* Logo - Mobile */}
-          <div className="lg:hidden mb-8">
-            <LogoDesign
-              className="w-fit"
-              iconColor="text-white"
-              color="#1990e6"
-            />
-          </div>
-          {/* Logo - Desktop */}
-          <div className="hidden lg:flex items-center gap-2 mb-8">
-            <LogoDesign
-              className="w-fit"
-              iconColor="text-white"
-              color="#1990e6"
-            />
-          </div>
-
-          <h1 className="text-3xl font-semibold mb-2 text-gray-900">
-          
-            Create an account
-          </h1>
-          <p className="text-gray-600 mb-8">
-            Please enter your details to create an account.
-          </p>
-          {/* Tab Switcher */}
-          <div className="flex items-center gap-1 mb-8 bg-gray-100 rounded-lg p-1">
-            <Link
-              to={searchParams.get("redirect") ? `/login?redirect=${encodeURIComponent(searchParams.get("redirect"))}` : "/login"}
-              className="flex-1 px-4 py-2 rounded-md text-gray-600 font-medium text-sm hover:text-gray-900 transition-all text-center"
-            >
-              Sign In
-            </Link>
-            <button className="flex-1 px-4 py-2 rounded-md bg-white text-gray-900 font-medium text-sm shadow-sm transition-all">
-              Sign Up
-            </button>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-
-            <form onSubmit={handleSignUp} className="space-y-6">
-              {/* Full Name */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    type="text"
-                    placeholder="Full name"
-                    className="pl-10 bg-gray-50 border-gray-200 h-11"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    type="email"
-                    placeholder="name@company.com"
-                    className="pl-10 bg-gray-50 border-gray-200 h-11"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="•••••••••"
-                    className="pl-10 pr-10 bg-gray-50 border-gray-200 h-11"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary-dark text-white h-11 text-base font-medium"
-                disabled={loading}
-              >
-                {loading ? "Creating account..." : "Sign Up"}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </form>
-
-            {/* Sign In Link */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{" "}
-                <Link
-                  to={searchParams.get("redirect") ? `/login?redirect=${encodeURIComponent(searchParams.get("redirect"))}` : "/login"}
-                  className="text-primary hover:text-primary-dark font-medium"
-                >
-                  Sign In
-                </Link>
-              </p>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    </div>
+    <AuthLayout slides={SIGNUP_SLIDES} showBackButton={!isMockTestMode}>
+      {pendingEmail ? (
+        <SignUpSuccess email={pendingEmail} loginHref={loginHref} />
+      ) : (
+        <SignUpForm onSubmit={handleSubmit} loading={submitting} loginHref={loginHref} />
+      )}
+    </AuthLayout>
   );
 }
 

@@ -1438,10 +1438,10 @@ const WritingPracticePageContent = () => {
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
-                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                    backgroundColor: theme === 'light' ? 'var(--destructive-subtle)' : 'rgba(185, 2, 29, 0.05)'
                   }}
                 >
-                  <p className="text-sm font-semibold text-red-500 mb-2">
+                  <p className="text-sm font-semibold text-danger-700 mb-2">
                     ⚠️ Writing loading error
                   </p>
                   <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
@@ -1461,10 +1461,10 @@ const WritingPracticePageContent = () => {
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
-                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                    backgroundColor: theme === 'light' ? 'var(--destructive-subtle)' : 'rgba(185, 2, 29, 0.05)'
                   }}
                 >
-                  <p className="text-sm font-semibold text-red-500 mb-2">
+                  <p className="text-sm font-semibold text-danger-700 mb-2">
                     ⚠️ No tasks found
                   </p>
                   <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
@@ -1631,10 +1631,10 @@ const WritingPracticePageContent = () => {
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
-                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                    backgroundColor: theme === 'light' ? 'var(--destructive-subtle)' : 'rgba(185, 2, 29, 0.05)'
                   }}
                 >
-                  <p className="text-sm font-semibold text-red-500 mb-2">
+                  <p className="text-sm font-semibold text-danger-700 mb-2">
                     ⚠️ Writing loading error
                   </p>
                   <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
@@ -1654,10 +1654,10 @@ const WritingPracticePageContent = () => {
                   className="max-w-xl w-full py-8 px-4 border rounded-xl shadow-sm text-center"
                   style={{
                     borderColor: themeColors.border,
-                    backgroundColor: theme === 'light' ? '#fff5f5' : 'rgba(255,0,0,0.05)'
+                    backgroundColor: theme === 'light' ? 'var(--destructive-subtle)' : 'rgba(185, 2, 29, 0.05)'
                   }}
                 >
-                  <p className="text-sm font-semibold text-red-500 mb-2">
+                  <p className="text-sm font-semibold text-danger-700 mb-2">
                     ⚠️ No tasks found
                   </p>
                   <p className="text-base mb-4 break-words" style={{ color: themeColors.text, opacity: 0.7 }}>
@@ -1749,7 +1749,7 @@ const WritingPracticePageContent = () => {
                         ? countWords(answers[effectiveTaskType] || "")
                         : countWords(taskToDisplay?.sample || "")
                   }</span>
-                  <span style={{ color: '#ef4444' }}>
+                  <span style={{ color: 'var(--destructive-text)' }}>
                     MINIMUM: {effectiveTaskType === "Task 1" ? 150 : 250} WORDS
                   </span>
                 </div>
@@ -1898,7 +1898,7 @@ const WritingPracticePageContent = () => {
           {status === 'reviewing' && (
             <button
               onClick={handleRetakeTask}
-              className="bg-blue-600 p-2 px-4 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-lg"
+              className="bg-brand-600 p-2 px-4 text-white rounded-lg font-bold hover:bg-brand-700 transition-all shadow-lg"
               style={{
                 border: `2px solid ${themeColors.border}`,
               }}
@@ -1933,11 +1933,11 @@ const WritingPracticePageContent = () => {
                 className="animate-spin rounded-full h-24 w-24 border-4"
                 style={{
                   borderColor: `${themeColors.border}40`,
-                  borderTopColor: '#3b82f6',
+                  borderTopColor: 'var(--primary)',
                 }}
               ></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-10 h-10 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -1957,8 +1957,8 @@ const WritingPracticePageContent = () => {
               </p>
               <div className="space-y-2 mt-4">
                 <p
-                  className="text-sm font-semibold text-red-500"
-                  style={{ color: '#ef4444' }}
+                  className="text-sm font-semibold text-danger-700"
+                  style={{ color: 'var(--destructive-text)' }}
                 >
                   ⚠️ Do not close or refresh this page!
                 </p>
@@ -1984,7 +1984,7 @@ const WritingPracticePageContent = () => {
                 className="h-2.5 rounded-full animate-pulse"
                 style={{
                   width: '100%',
-                  backgroundColor: '#3b82f6',
+                  backgroundColor: 'var(--primary)',
                 }}
               ></div>
             </div>

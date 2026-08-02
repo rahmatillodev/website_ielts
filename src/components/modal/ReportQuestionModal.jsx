@@ -75,7 +75,7 @@ const ReportQuestionModal = ({ open, onOpenChange, context }) => {
             maxLength={MAX_LEN}
             disabled={submitting}
             placeholder="What looks wrong? e.g. the answer key seems incorrect, or there's a typo."
-            className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-100"
           />
           <div className="text-right text-[11px] text-gray-400 mt-1">
             {message.length}/{MAX_LEN}

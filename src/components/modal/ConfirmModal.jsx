@@ -43,7 +43,7 @@ const ConfirmModal = ({
           <AlertDialogDescription className="text-gray-500 font-medium pt-2 text-center" style={{ color: themeColors.text }}>
             {testType === "Writing" ? (
               <p>{description}  <br />
-              <span className="font-semibold text-red-600 ">
+              <span className="font-semibold text-danger-700 ">
                  You can still extract the information in PDF format before finishing.
               </span>
               </p>
@@ -66,7 +66,7 @@ const ConfirmModal = ({
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="flex-1 rounded-xl font-semibold bg-blue-500 hover:bg-blue-600 text-white border-none h-12"
+            className="flex-1 rounded-xl font-semibold bg-brand-500 hover:bg-brand-600 text-white border-none h-12"
 
           >
             {confirmLabel}

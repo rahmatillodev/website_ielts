@@ -4,6 +4,7 @@ import supabase from '@/lib/supabase'
 import { clearAllReadingData } from '@/store/LocalStorage/readingStorage'
 import { clearAllListeningData } from '@/store/LocalStorage/listeningStorage'
 import { compressAvatarImage } from '@/utils/mediaCompression'
+import { getAuthErrorMessage, isNetworkError, toAuthErrorResult } from '@/lib/authErrors'
 
 export const useAuthStore = create(
   persist(
@@ -254,8 +255,9 @@ export const useAuthStore = create(
           set({ loading: false });
           return { success: true };
         } catch (error) {
-          set({ error: error.message, loading: false });
-          return { success: false, error: error.message };
+          const result = toAuthErrorResult(error, 'Sign in failed');
+          set({ error: result.error, loading: false });
+          return result;
         }
       },
 
@@ -274,9 +276,19 @@ export const useAuthStore = create(
           if (error) throw error;
           const newUser = data.user;
           if (!newUser) throw new Error('User creation failed');
-      
-          set({ authUser: newUser });
-      
+
+          // Only treat the user as signed in when Supabase actually issued a
+          // session. With email confirmation enabled, signUp returns a user but
+          // NO session; setting authUser in that case flips App.jsx into its
+          // authenticated routes, unmounts /signup mid-submit and drops the user
+          // on a dashboard they cannot load - instead of the "check your inbox"
+          // step. When confirmation is disabled this is unchanged: a session is
+          // present, so authUser is set exactly as before.
+          const hasSession = Boolean(data.session);
+          if (hasSession) {
+            set({ authUser: newUser });
+          }
+
           // 2. Link mock_test_clients rows for this email (same as signIn: case-insensitive match)
           // RLS must allow UPDATE on rows where user_id is null and email matches auth user (see docs).
           const { data: updatedRecords, error: linkError } = await supabase
@@ -310,9 +322,11 @@ export const useAuthStore = create(
       
           // 3. Profil ma'lumotlarini yuklash
           await get().fetchUserProfile(newUser.id, false);
-          
+
           set({ loading: false });
-          return { success: true };
+          // `needsEmailConfirmation` lets the page choose between navigating to
+          // the dashboard and showing the confirm-your-email screen.
+          return { success: true, needsEmailConfirmation: !hasSession };
         } catch (error) {
           set({ error: error.message, loading: false });
           return { success: false, error: error.message };
@@ -331,8 +345,9 @@ export const useAuthStore = create(
           set({ loading: false });
           return { success: true };
         } catch (error) {
-          set({ error: error.message, loading: false });
-          return { success: false, error: error.message };
+          const result = toAuthErrorResult(error, 'Failed to send reset link');
+          set({ error: result.error, loading: false });
+          return result;
         }
       },
 
@@ -348,16 +363,34 @@ export const useAuthStore = create(
             password: currentPassword,
           });
           if (signInError) {
+            // Returned, not thrown, so this never reaches the catch below - a
+            // dropped connection here would otherwise surface as "Failed to
+            // fetch" while looking like a rejected password.
+            //
+            // The re-auth uses the signed-in user's own email, so a credentials
+            // rejection can only mean the current password is wrong; the shared
+            // "Invalid email or password" wording would send the user looking at
+            // the wrong field.
+            const result = isNetworkError(signInError)
+              ? toAuthErrorResult(signInError)
+              : {
+                  success: false,
+                  error: /invalid login credentials/i.test(signInError.message || '')
+                    ? 'Current password is incorrect.'
+                    : getAuthErrorMessage(signInError, 'Failed to update password'),
+                  isNetworkError: false,
+                };
             set({ loading: false });
-            return { success: false, error: signInError.message };
+            return result;
           }
           const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
           if (updateError) throw updateError;
           set({ loading: false });
           return { success: true };
         } catch (error) {
-          set({ error: error.message, loading: false });
-          return { success: false, error: error.message };
+          const result = toAuthErrorResult(error, 'Failed to update password');
+          set({ error: result.error, loading: false });
+          return result;
         }
       },
 

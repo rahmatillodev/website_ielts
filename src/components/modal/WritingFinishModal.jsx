@@ -44,7 +44,7 @@ const WritingFinishModal = ({
           <p>  Are you sure you want to finish writing?</p>
           {!isMockTest && (
             <>
-            <span className="font-bold text-red-600">
+            <span className="font-bold text-danger-700">
               Your data will <u>not</u> be saved and you will <u>not</u> be able to write again. 
             </span>
               <span className="font-semibold text-yellow-600">

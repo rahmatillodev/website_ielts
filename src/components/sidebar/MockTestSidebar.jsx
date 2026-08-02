@@ -24,13 +24,13 @@ const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapse
       onClick={onNavigate}
       className={`flex items-center gap-3 px-4 py-2.5 2xl:py-3 text-sm font-medium rounded-xl cursor-pointer transition-all duration-200
         ${isActive
-          ? "bg-[#EBF5FF] text-[#4A90E2]"
+          ? "bg-brand-50 text-brand-600"
           : "text-[#64748B] hover:text-gray-900 hover:bg-gray-50"
         }
         ${isCollapsed ? "mx-2 justify-center" : "mx-3"}
       `}
     >
-      <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 shrink-0 ${isActive ? "text-[#4A90E2]" : "text-[#64748B]"}`} />
+      <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 shrink-0 ${isActive ? "text-brand-600" : "text-[#64748B]"}`} />
       {!isCollapsed && <span className="truncate">{label}</span>}
     </Link>
   );
@@ -107,14 +107,14 @@ const MockTestSidebar = ({ onNavigate }) => {
             <>
               <div className="flex items-center gap-3">
                 <LogoDesign />
-                <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full font-bold">
                   Beta
                 </span>
               </div>
             </>
           ) : (
             <div className="flex flex-col items-center gap-2 w-full">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#1990e6" }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--primary)" }}>
                 <MdAutoStories className="text-white" size={24} />
               </div>
             </div>
@@ -176,11 +176,11 @@ const MockTestSidebar = ({ onNavigate }) => {
       <div className="p-3 2xl:p-4 border-t border-gray-50 bg-white shrink-0 space-y-2 2xl:space-y-3">
         <LogoutModal onConfirm={handleLogout}>
           {effectiveIsCollapsed ? (
-            <button className="flex items-center justify-center p-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95]">
+            <button className="flex items-center justify-center p-3 w-full bg-danger-50 hover:bg-danger-100 text-danger-700 font-bold rounded-xl transition-all active:scale-[0.95]">
               <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" />
             </button>
           ) : (
-            <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
+            <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-danger-50 hover:bg-danger-100 text-danger-700 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
               <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" /> Log out
             </button>
           )}

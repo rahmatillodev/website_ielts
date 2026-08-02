@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuthStore } from '@/store/authStore';
+import { AUTH_ERROR_TOAST_MS, getAuthErrorMessage } from '@/lib/authErrors';
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -82,11 +83,16 @@ const ChangePasswordModal = ({ open, onOpenChange }) => {
         toast.success('Password updated successfully.');
         handleOpenChange(false);
       } else {
+        // `changePassword` already ran this through `getAuthErrorMessage`, so a
+        // dropped connection reads as the connection notice instead of
+        // "Failed to fetch" masquerading as a rejected password.
         const msg = result.error || 'Failed to update password. Please try again.';
-        toast.error(msg);
+        toast.error(msg, { autoClose: AUTH_ERROR_TOAST_MS });
       }
     } catch (error) {
-      toast.error(error?.message || 'An unexpected error occurred.');
+      toast.error(getAuthErrorMessage(error, 'An unexpected error occurred.'), {
+        autoClose: AUTH_ERROR_TOAST_MS,
+      });
     } finally {
       setLoading(false);
     }
@@ -164,7 +170,7 @@ const ChangePasswordModal = ({ open, onOpenChange }) => {
             <Button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-blue-500 hover:bg-blue-600"
+              className="rounded-xl bg-brand-500 hover:bg-brand-600"
             >
               {loading ? 'Updating...' : 'Update Password'}
             </Button>

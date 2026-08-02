@@ -43,12 +43,12 @@ const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', re
               isSelected && showCorrect
                 ? "bg-green-100 border-2 border-green-500 text-green-900"
                 : isSelected && showWrong
-                ? "bg-red-100 border-2 border-red-500 text-red-900"
+                ? "bg-danger-100 border-2 border-danger-500 text-danger-900"
                 : isCorrectOption && isReviewMode && showCorrectAnswers
                 ? "bg-green-50 border border-green-300 text-green-700"
                 : isSelected
-                ? "bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-300"
-                : "hover:bg-blue-100 dark:hover:bg-blue-800 hover:text-blue-800 dark:hover:text-blue-200"
+                ? "bg-brand-200 dark:bg-brand-900 text-brand-900 dark:text-brand-300"
+                : "hover:bg-brand-100 dark:hover:bg-brand-800 hover:text-brand-800 dark:hover:text-brand-200"
             }`}
           >
             <input
@@ -61,14 +61,14 @@ const TrueFalseNotGiven = ({ question, answer, onAnswerChange, mode = 'test', re
                 }
               }}
               disabled={mode === 'review'}
-              className="accent-blue-500"
+              className="accent-brand-500"
             />
             <span className="flex-1" data-selectable="true">{option}</span>
             {isSelected && showCorrect && (
               <span className="text-xs text-green-700 font-medium">Correct</span>
             )}
             {isSelected && showWrong && (
-              <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-sm">
+              <span className="text-[10px] bg-danger-500 text-white px-2 py-0.5 rounded-sm">
                 Wrong
               </span>
             )}

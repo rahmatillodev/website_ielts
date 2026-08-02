@@ -84,7 +84,7 @@ export default function FinishModal({ isOpen, onClose, link, testId, onSubmit, l
           <Button
             onClick={handleSubmit}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-brand-600 hover:bg-brand-700 text-white"
           >
             {loading ? 'Submitting...' : 'Yes, Finish'}
           </Button>

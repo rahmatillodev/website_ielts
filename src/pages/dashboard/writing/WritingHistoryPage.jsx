@@ -226,7 +226,7 @@ const WritingHistoryPage = () => {
                 <PopoverTrigger asChild>
                   <button
                     onClick={handleFilterOpen}
-                    className="relative rounded-2xl bg-white border-2 border-gray-300 text-base focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-center hover:bg-gray-50 hover:border-blue-400 hover:shadow-lg"
+                    className="relative rounded-2xl bg-white border-2 border-gray-300 text-base focus:ring-2 focus:ring-brand-500 transition-all flex items-center justify-center hover:bg-gray-50 hover:border-brand-400 hover:shadow-lg"
                     style={{
                       width: "48px",
                       height: "48px",
@@ -234,7 +234,7 @@ const WritingHistoryPage = () => {
                   >
                     <CiFilter className="w-6 h-6" />
                     {selectedTaskTypes.length > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-md">
+                      <span className="absolute -top-1 -right-1 bg-brand-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-md">
                         {selectedTaskTypes.length}
                       </span>
                     )}
@@ -270,7 +270,7 @@ const WritingHistoryPage = () => {
                             <Checkbox
                               checked={isChecked}
                               onCheckedChange={() => toggleTaskType(type)}
-                              className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer accent-blue-600"
+                              className="w-5 h-5 rounded border-gray-300 text-brand-600 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 cursor-pointer accent-brand-600"
                             />
                             <span className="text-sm text-gray-700 font-medium">
                               {getWritingTaskTypeDisplayName(type)}
@@ -295,7 +295,7 @@ const WritingHistoryPage = () => {
                           value="newest"
                           checked={tempSortOrder === "newest"}
                           onChange={() => setTempSortOrder("newest")}
-                          className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                          className="w-4 h-4 text-brand-600 focus:ring-2 focus:ring-brand-500 cursor-pointer"
                         />
                         <span className="text-sm text-gray-700 font-medium">Newest First</span>
                       </label>
@@ -306,7 +306,7 @@ const WritingHistoryPage = () => {
                           value="oldest"
                           checked={tempSortOrder === "oldest"}
                           onChange={() => setTempSortOrder("oldest")}
-                          className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                          className="w-4 h-4 text-brand-600 focus:ring-2 focus:ring-brand-500 cursor-pointer"
                         />
                         <span className="text-sm text-gray-700 font-medium">Oldest First</span>
                       </label>
@@ -323,7 +323,7 @@ const WritingHistoryPage = () => {
                     </Button>
                     <Button
                       onClick={handleFilterSearch}
-                      className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                      className="flex-1 px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors"
                     >
                       Search
                     </Button>
@@ -337,7 +337,7 @@ const WritingHistoryPage = () => {
               <Input
                 value={searchQuery}
                 onChange={handleSearchChange}
-                className="pl-10 md:pl-12 bg-white border-gray-200 rounded-xl md:rounded-2xl h-10 md:h-12 shadow-sm focus:ring-2 focus:ring-blue-100 transition-all text-sm md:text-base"
+                className="pl-10 md:pl-12 bg-white border-gray-200 rounded-xl md:rounded-2xl h-10 md:h-12 shadow-sm focus:ring-2 focus:ring-brand-100 transition-all text-sm md:text-base"
                 placeholder="Search by title..."
               />
              </div>

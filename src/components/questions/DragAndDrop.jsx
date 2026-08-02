@@ -28,9 +28,9 @@ const DraggableWord = ({ word, isUsed }) => {
         px-4 py-2 rounded-md text-sm font-medium transition-all
         ${isUsed
           ? 'bg-gray-600 text-gray-300 line-through cursor-not-allowed'
-          : 'bg-blue-100 text-blue-900 hover:bg-blue-200 cursor-move shadow-sm border border-blue-200'
+          : 'bg-brand-100 text-brand-900 hover:bg-brand-200 cursor-move shadow-sm border border-brand-200'
         }
-        ${isDragging ? 'opacity-50 border-2 border-blue-400' : ''}
+        ${isDragging ? 'opacity-50 border-2 border-brand-400' : ''}
       `}
     >
       {word}
@@ -79,7 +79,7 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
         ${isReviewMode ? 'cursor-default' : 'cursor-pointer'}
         ${isOver && canDrop && !isReviewMode ? 'bg-green-100 border-green-500' : ''}
         ${showCorrect ? 'border-green-500 bg-green-50 text-green-700 font-semibold border-solid' : ''}
-        ${showWrong ? 'border-red-400 bg-red-50 text-red-500 font-semibold border-solid' : ''}
+        ${showWrong ? 'border-danger-400 bg-danger-50 text-danger-700 font-semibold border-solid' : ''}
         ${!answer && !isReviewMode ? 'border-gray-400 border-dashed' : 'border-solid'}
         ${!answer && isReviewMode ? 'border-gray-200 bg-gray-50' : ''}
       `}
@@ -216,7 +216,7 @@ const DragAndDrop = ({ question, groupQuestions, answers, onAnswerChange, onInte
 
 
       {wordBank.length > 0 && mode !== 'review' && (
-        <div className="pt-6 border-t border-red-700">
+        <div className="pt-6 border-t border-border">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Word Bank:</p>
           <div className="flex flex-wrap gap-3">
             {wordBank.map((word, idx) => {

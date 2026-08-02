@@ -95,7 +95,7 @@ export default function MockTestLocalArchivePage() {
         )}
 
         {!loading && error && (
-          <p className="text-red-600 text-sm">{error}</p>
+          <p className="text-danger-700 text-sm">{error}</p>
         )}
 
         {!loading && !error && runs.length === 0 && (

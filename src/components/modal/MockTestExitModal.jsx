@@ -27,7 +27,7 @@ const MockTestExitModal = ({ isOpen, onConfirm, onCancel, isSubmitting = false }
         <div className="text-center">
           <div className="mb-4">
             <svg
-              className="mx-auto h-16 w-16 text-red-500"
+              className="mx-auto h-16 w-16 text-danger-700"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -62,7 +62,7 @@ const MockTestExitModal = ({ isOpen, onConfirm, onCancel, isSubmitting = false }
             <button
               onClick={onConfirm}
               disabled={isSubmitting}
-              className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 bg-danger-600 text-white rounded-lg font-semibold hover:bg-danger-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <>

@@ -25,7 +25,7 @@ const UpgradeModal = ({ children, open, onOpenChange }) => {
       ) : null}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+          <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center mb-4">
             <span className="text-2xl">⭐</span>
           </div>
           <DialogTitle className="text-2xl font-bold">Upgrade to Premium</DialogTitle>
@@ -49,7 +49,7 @@ const UpgradeModal = ({ children, open, onOpenChange }) => {
                 <Button variant="outline" className="w-full sm:flex-1">Later</Button>
             </DialogClose>
             <a href={`https://t.me/${settings.telegram_bot_url}`} target="_blank" className="w-full sm:flex-1">
-            <Button className="w-full sm:flex-1 bg-[#4B8EE3] hover:bg-blue-600">Upgrade Now</Button>
+            <Button className="w-full sm:flex-1 bg-brand-600 hover:bg-brand-600">Upgrade Now</Button>
             </a>
         </DialogFooter>
       </DialogContent>

@@ -245,7 +245,7 @@ const TypeMap = ({
                       key={q.id || qNumber}
                       className={`border-t transition-colors group ${
                         showWrong
-                          ? 'bg-red-50'
+                          ? 'bg-danger-50'
                           : showCorrect
                           ? 'bg-green-50'
                           : 'bg-white hover:bg-gray-50'
@@ -256,7 +256,7 @@ const TypeMap = ({
                       <td
                         className={`px-4 py-3 text-gray-900 border-r ${
                           showWrong
-                            ? 'bg-red-50'
+                            ? 'bg-danger-50'
                             : showCorrect
                             ? 'bg-green-50'
                             : ''
@@ -323,7 +323,7 @@ const TypeMap = ({
                               isSelected && showCorrect
                                 ? 'bg-green-100'
                                 : isSelected && showWrong
-                                ? 'bg-red-400'
+                                ? 'bg-danger-400'
                                 : (isCorrectOption || isCorrectAnswerMatch) && isReviewMode && showCorrectAnswers && !isSelected
                                 ? 'bg-green-50'
                                 : ''
@@ -349,8 +349,8 @@ const TypeMap = ({
                                   isSelected && showCorrect
                                     ? 'accent-green-600'
                                     : isSelected && showWrong
-                                    ? 'accent-red-600'
-                                    : 'accent-blue-500'
+                                    ? 'accent-danger-600'
+                                    : 'accent-brand-500'
                                 } ${mode === 'review' ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                               />
                             </label>

@@ -17,7 +17,7 @@ const MockTypeSelector = ({ mockType, setMockType }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <Card className="rounded-2xl shadow-sm border-2 border-blue-200">
+      <Card className="rounded-2xl shadow-sm border-2 border-brand-200">
         <CardContent className="p-6">
           <h3 className="text-xl font-semibold mb-4">Select Mock Type</h3>
           <div className="space-y-3">
@@ -26,7 +26,7 @@ const MockTypeSelector = ({ mockType, setMockType }) => {
               className={cn(
                 "w-full p-4 rounded-lg border-2 transition-all text-left",
                 mockType === "ai"
-                  ? "bg-blue-50 border-blue-500 shadow-md"
+                  ? "bg-brand-50 border-brand-500 shadow-md"
                   : "bg-gray-50 border-gray-300 hover:border-gray-400"
               )}
             >
@@ -45,7 +45,7 @@ const MockTypeSelector = ({ mockType, setMockType }) => {
               className={cn(
                 "w-full p-4 rounded-lg border-2 transition-all text-left",
                 mockType === "human"
-                  ? "bg-blue-50 border-blue-500 shadow-md"
+                  ? "bg-brand-50 border-brand-500 shadow-md"
                   : "bg-gray-50 border-gray-300 hover:border-gray-400"
               )}
             >
@@ -63,7 +63,7 @@ const MockTypeSelector = ({ mockType, setMockType }) => {
           <div className="mt-4 pt-4 border-t">
             <div className="flex justify-between items-center">
               <span className="font-semibold text-lg">Total</span>
-              <span className="font-bold text-xl text-blue-600">
+              <span className="font-bold text-xl text-brand-600">
                 {totalPrice.toLocaleString()} UZS
               </span>
             </div>

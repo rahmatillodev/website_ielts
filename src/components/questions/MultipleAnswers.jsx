@@ -217,9 +217,9 @@ const MultipleAnswers = ({
         backgroundColor = 'rgba(34, 197, 94, 0.1)'; 
         iconBg = 'bg-green-500 border-green-500';
       } else if (reviewStatus === 'incorrect') {
-        borderColor = '#ef4444'; // Qizil
-        backgroundColor = 'rgba(239, 68, 68, 0.1)';
-        iconBg = 'bg-red-500 border-red-500';
+        borderColor = 'var(--destructive)'; // Qizil
+        backgroundColor = 'rgba(185, 2, 29, 0.1)';
+        iconBg = 'bg-danger-500 border-danger-500';
       } else if (reviewStatus === 'missed') {
         borderColor = '#22c55e'; // To'g'ri lekin tanlanmagan
         backgroundColor = 'transparent';
@@ -227,9 +227,9 @@ const MultipleAnswers = ({
         checkIconColor = 'text-green-600';
       }
     } else if (isSelected) {
-      borderColor = '#3b82f6'; // Tanlangan (test paytida)
-      backgroundColor = 'rgba(99, 102, 241, 0.1)';
-      iconBg = 'bg-indigo-600 border-indigo-600';
+      borderColor = 'var(--primary)'; // Tanlangan (test paytida)
+      backgroundColor = 'rgba(227, 6, 19, 0.1)';
+      iconBg = 'bg-brand-700 border-brand-700';
     }
 
     return (
@@ -253,8 +253,8 @@ const MultipleAnswers = ({
         <div className="flex gap-2 flex-1">
           <span className={`font-semibold text-sm ${
             reviewStatus === 'correct' ? 'text-green-700' : 
-            reviewStatus === 'incorrect' ? 'text-red-700' : 
-            isSelected ? 'text-blue-700' : 'text-gray-500'
+            reviewStatus === 'incorrect' ? 'text-danger-700' : 
+            isSelected ? 'text-brand-700' : 'text-gray-500'
           }`}>
             {optionKey}.
           </span>
@@ -269,7 +269,7 @@ const MultipleAnswers = ({
         {isReviewMode && (
           <div className="flex flex-col items-end">
             {reviewStatus === 'correct' && <span className="text-[10px] text-green-700 font-bold uppercase">Correct</span>}
-            {reviewStatus === 'incorrect' && <span className="text-[10px] text-red-700 font-bold uppercase">Your Answer</span>}
+            {reviewStatus === 'incorrect' && <span className="text-[10px] text-danger-700 font-bold uppercase">Your Answer</span>}
             {reviewStatus === 'missed' && <span className="text-[10px] text-green-600 font-bold uppercase italic">Correct Answer</span>}
           </div>
         )}
@@ -285,7 +285,7 @@ const MultipleAnswers = ({
       }}>
         <div className="flex items-center gap-2">
           <p className="text-sm">
-            <span className="font-bold" style={{ color: '#3b82f6' }}>
+            <span className="font-bold" style={{ color: 'var(--primary-text)' }}>
               {selectedOptionKeys.length}
             </span>
             <span className="text-gray-500 mx-1">out of</span>

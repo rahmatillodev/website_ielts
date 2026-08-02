@@ -393,7 +393,7 @@ const sortedQuestions = useMemo(() => {
             <div
               key={q.id || qNumber}
               className={`flex items-start gap-3 justify-between group ${
-                showWrong ? 'p-4 rounded-lg bg-red-50 border-2 border-red-500' : 
+                showWrong ? 'p-4 rounded-lg bg-danger-50 border-2 border-danger-500' : 
                 showCorrect ? 'p-4 rounded-lg bg-green-50 border-2 border-green-500' : 
                 ''
               }`}
@@ -438,14 +438,14 @@ const sortedQuestions = useMemo(() => {
                         className={cn(
                           "min-w-[100px]",
                           selectedAnswer && !isReviewMode && "border-gray-400 border-2",
-                          showWrong && "border-red-500 border-2",
+                          showWrong && "border-danger-500 border-2",
                           showCorrect && "border-green-500 border-2"
                         )}
                         style={{
                           backgroundColor: themeColors.background,
                           color: themeColors.text,
                           borderColor: selectedAnswer && !isReviewMode ? '#dce1e5' : 
-                                     showWrong ? '#ef4444' : 
+                                     showWrong ? 'var(--destructive)' :
                                      showCorrect ? '#22c55e' : 
                                      themeColors.border
                         }}
@@ -476,11 +476,11 @@ const sortedQuestions = useMemo(() => {
                                 value={String(item.key)}
                                 className={cn(
                                   isSelected && showCorrect && "bg-green-50",
-                                  isSelected && showWrong && "bg-red-50"
+                                  isSelected && showWrong && "bg-danger-50"
                                 )}
                                 style={{
                                   backgroundColor: isSelected && showCorrect ? 'rgba(220, 252, 231, 0.5)' : 
-                                                isSelected && showWrong ? 'rgba(254, 226, 226, 0.5)' : 
+                                                isSelected && showWrong ? 'rgba(255, 223, 220, 0.5)' :
                                                 'transparent',
                                   color: themeColors.text
                                 }}
@@ -509,11 +509,11 @@ const sortedQuestions = useMemo(() => {
                                 value={optionText}
                                 className={cn(
                                   isSelected && showCorrect && "bg-green-50",
-                                  isSelected && showWrong && "bg-red-50"
+                                  isSelected && showWrong && "bg-danger-50"
                                 )}
                                 style={{
                                   backgroundColor: isSelected && showCorrect ? 'rgba(220, 252, 231, 0.5)' : 
-                                                isSelected && showWrong ? 'rgba(254, 226, 226, 0.5)' : 
+                                                isSelected && showWrong ? 'rgba(255, 223, 220, 0.5)' :
                                                 'transparent',
                                   color: themeColors.text
                                 }}

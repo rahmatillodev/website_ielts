@@ -66,8 +66,8 @@ const MockTestResults = ({ mockTestId, mockRunId, results, onBack }) => {
 
           {/* Icon */}
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center">
-              <MdSchedule className="text-blue-600" size={42} />
+            <div className="w-20 h-20 rounded-full bg-brand-50 flex items-center justify-center">
+              <MdSchedule className="text-brand-600" size={42} />
             </div>
           </div>
 
@@ -87,14 +87,14 @@ const MockTestResults = ({ mockTestId, mockRunId, results, onBack }) => {
           
 
           {/* Info Card */}
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 mb-8 text-left">
+          <div className="bg-brand-50 border border-brand-100 rounded-2xl p-6 mb-8 text-left">
             <div className="flex items-start gap-4">
-              <MdCheckCircleOutline className="text-blue-600 shrink-0 mt-1" size={28} />
+              <MdCheckCircleOutline className="text-brand-600 shrink-0 mt-1" size={28} />
               <div>
-                <h3 className="text-lg font-bold text-blue-900 mb-2">
+                <h3 className="text-lg font-bold text-brand-900 mb-2">
                   Results will be available within 2 days
                 </h3>
-                <p className="text-blue-800 text-sm leading-relaxed">
+                <p className="text-brand-800 text-sm leading-relaxed">
                   Your mock test will be fully checked by our system and evaluators.
                   Once ready, your results will be published directly on this platform.
                 </p>

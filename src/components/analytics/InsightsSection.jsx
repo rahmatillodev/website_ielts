@@ -119,7 +119,7 @@ const InsightsSection = ({ insights }) => {
       {/* Header & Filter */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <FaChartLine className="text-indigo-600" /> Key Insights
+          <FaChartLine className="text-brand-700" /> Key Insights
         </h3>
 
         <Tabs value={filter} onValueChange={setFilter} className="w-full sm:w-auto">

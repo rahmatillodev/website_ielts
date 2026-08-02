@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { LuHeadphones } from 'react-icons/lu';
 import PolygonChart from './PolygonChart';
+import { accuracyColor } from '@/lib/chartPalette';
 
 const ListeningBreakdown = ({ listeningBreakdown }) => {
   // Format question type names (maps enum values to display names)
@@ -26,34 +27,14 @@ const ListeningBreakdown = ({ listeningBreakdown }) => {
       return [];
     }
 
-    const colors = [
-      '#ef4444', // red
-      '#f97316', // orange
-      '#f59e0b', // yellow
-      '#10b981', // green
-      '#8b5cf6', // purple
-      '#ec4899', // pink
-      '#06b6d4', // cyan
-      '#6366f1', // indigo
-    ];
 
     return Object.entries(listeningBreakdown)
-      .map(([type, stats], index) => {
+      .map(([type, stats]) => {
         const accuracy = stats?.accuracy || 0;
         const total = stats?.total || 0;
         const correct = stats?.correct || 0;
         
-        let color = colors[index % colors.length];
-        
-        // Color based on performance (only if there's data)
-        if (total > 0) {
-          if (accuracy >= 80) color = '#10b981'; // green
-          else if (accuracy >= 60) color = '#f59e0b'; // yellow
-          else color = '#ef4444'; // red
-        } else {
-          // Gray for no data
-          color = '#9ca3af';
-        }
+        const color = accuracyColor(accuracy, total);
 
         return {
           label: formatQuestionType(type),
@@ -81,7 +62,7 @@ const ListeningBreakdown = ({ listeningBreakdown }) => {
         transition={{ duration: 0.5 }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <LuHeadphones className="text-red-600 text-xl" />
+          <LuHeadphones className="text-danger-700 text-xl" />
           <h3 className="text-lg font-semibold text-gray-900">Listening Breakdown</h3>
         </div>
         <div className="text-gray-500 text-sm">Loading...</div>
@@ -97,7 +78,7 @@ const ListeningBreakdown = ({ listeningBreakdown }) => {
       transition={{ duration: 0.5 }}
     >
       <div className="flex items-center gap-2 mb-6">
-        <LuHeadphones className="text-red-600 text-xl" />
+        <LuHeadphones className="text-danger-700 text-xl" />
         <h3 className="text-lg font-semibold text-gray-900">Listening Breakdown</h3>
       </div>
       

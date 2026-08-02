@@ -294,7 +294,7 @@ const ProfilePage = () => {
                   </div>
                   <motion.button
                     onClick={() => setIsModalOpen(true)}
-                    className="absolute bottom-0 -right-1 p-2 bg-blue-500 text-white rounded-full border-4 border-white shadow-sm hover:bg-blue-600 transition-all"
+                    className="absolute bottom-0 -right-1 p-2 bg-brand-500 text-white rounded-full border-4 border-white shadow-sm hover:bg-brand-600 transition-all"
                     whileHover={{ scale: 1.1, rotate: 15 }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -397,7 +397,7 @@ const ProfilePage = () => {
                 <Input
                   value={fullName}
                   placeholder="No name"
-                  className="bg-gray-50/50 border-gray-100 cursor-default rounded-xl h-12 focus-visible:ring-blue-100"
+                  className="bg-gray-50/50 border-gray-100 cursor-default rounded-xl h-12 focus-visible:ring-brand-100"
                   readOnly
                 />
               </motion.div>
@@ -408,7 +408,7 @@ const ProfilePage = () => {
                 <Input
                   value={tg_username}
                   placeholder="No telegram username"
-                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
+                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-brand-100"
                   readOnly
                 />
               </motion.div>
@@ -420,7 +420,7 @@ const ProfilePage = () => {
                   value={email}
                   type="email"
                   placeholder="No email"
-                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
+                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-brand-100"
                   readOnly
                 />
               </motion.div>
@@ -431,7 +431,7 @@ const ProfilePage = () => {
                 <Input
                   value={phone_number}
                   placeholder="No phone number"
-                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-blue-100"
+                  className="bg-gray-50/50 cursor-default border-gray-100 rounded-xl h-12 focus-visible:ring-brand-100"
                   readOnly
                 />
               </motion.div>
@@ -450,7 +450,7 @@ const ProfilePage = () => {
                   // onBlur={(e) => handleTargetScoreChange(e.target.value)}
                   placeholder="7.5"
                   readOnly
-                  className="bg-white border-gray-200 rounded-xl h-12 focus-visible:ring-blue-100"
+                  className="bg-white border-gray-200 rounded-xl h-12 focus-visible:ring-brand-100"
                 />
                 <p className="text-xs text-gray-500">
                   Set your target IELTS band score (0-9)
@@ -511,7 +511,7 @@ const ProfilePage = () => {
                 transition={{ duration: 0.4, delay: 0.2 }}
               >
                 <motion.div
-                  className="p-2.5 bg-blue-50 text-blue-500 rounded-xl"
+                  className="p-2.5 bg-brand-50 text-brand-500 rounded-xl"
                   whileHover={{ scale: 1.1 }}
                   transition={{ duration: 0.5 }}
                 >
@@ -593,7 +593,7 @@ const ProfilePage = () => {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="How can we help you?"
-                    className="w-full p-4 text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none text-gray-700"
+                    className="w-full p-4 text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all resize-none text-gray-700"
                   />
                 </div>
 
@@ -601,7 +601,7 @@ const ProfilePage = () => {
                   whileTap={{ scale: 0.95 }}
                   disabled={loading}
                   type="submit"
-                  className="w-full py-3 bg-blue-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors disabled:opacity-50"
+                  className="w-full py-3 bg-brand-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-brand-600 transition-colors disabled:opacity-50"
                 >
                   {loading ? (
                     "Sending..."

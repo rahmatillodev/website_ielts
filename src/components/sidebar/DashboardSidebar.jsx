@@ -33,13 +33,13 @@ const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapse
       onClick={onNavigate}
       className={`flex items-center gap-3 px-4 py-2.5 2xl:py-3 text-sm font-medium rounded-xl cursor-pointer transition-all duration-200
         ${isActive
-          ? "bg-[#EBF5FF] text-[#4A90E2]"
+          ? "bg-brand-50 text-brand-600"
           : "text-[#64748B] hover:text-gray-900 hover:bg-gray-50"
         }
         ${isCollapsed ? "mx-2 justify-center" : "mx-3"}
       `}
     >
-      <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 shrink-0 ${isActive ? "text-[#4A90E2]" : "text-[#64748B]"}`} />
+      <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 shrink-0 ${isActive ? "text-brand-600" : "text-[#64748B]"}`} />
       {!isCollapsed && <span className="truncate">{label}</span>}
     </Link>
   );
@@ -113,14 +113,14 @@ const DashboardSidebar = ({ onNavigate }) => {
           {!isCollapsed ? (
             <>
               <div className="flex items-center gap-3">
-                {/* <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
-                  <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
+                {/* <div className="size-10 2xl:size-12 bg-brand-50 rounded-xl flex items-center justify-center">
+                  <GraduationCap className="text-brand-600 size-6 2xl:size-7" />
                 </div>
                 <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
                   IELTSCORE
                 </span> */}
                 <LogoDesign />
-                <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full font-bold">
                   Beta
                 </span>
               </div>
@@ -128,7 +128,7 @@ const DashboardSidebar = ({ onNavigate }) => {
             </>
           ) : (
             <div className="flex flex-col items-center gap-2 w-full">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#1990e6" }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--primary)" }}>
                 <MdAutoStories className="text-white" size={24} />
               </div>
 
@@ -260,22 +260,20 @@ const DashboardSidebar = ({ onNavigate }) => {
         {userProfile?.subscription_status !== "premium" && (
           <>
             {!effectiveIsCollapsed ? (
-              /* Expanded holatdagi Upgrade Card */
+              /* Expanded holatdagi Upgrade Card.
+                 Compact by design: the icon, title and Free Plan badge share one
+                 row so the card costs two rows of sidebar height instead of five.
+                 Same brand fill and rounded corners, just a smaller footprint. */
               <UpgradeModal>
-                <div className="p-5 bg-[#4B8EE3] rounded-[24px] relative overflow-hidden shadow-lg shadow-blue-100 cursor-pointer active:scale-[0.98] transition-all group">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-white/20 rounded-xl text-white">
-                      <LuStar size={20} fill="currentColor" />
-                    </div>
-                    <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black text-white uppercase tracking-wider">
+                <div className="p-3.5 bg-brand-600 rounded-2xl relative overflow-hidden shadow-sm shadow-brand-100 cursor-pointer active:scale-[0.98] transition-all group">
+                  <div className="flex items-center gap-2 mb-3">
+                    <LuStar size={15} fill="currentColor" className="text-white shrink-0" />
+                    <span className="text-[13px] font-bold text-white truncate">Upgrade to Pro</span>
+                    <span className="ml-auto shrink-0 px-2 py-0.5 bg-white/20 rounded-full text-[9px] font-bold text-white uppercase tracking-wider">
                       Free Plan
                     </span>
                   </div>
-                  <div className="text-[17px] font-black text-white mb-1">Upgrade to Pro</div>
-                  <p className="text-[12px] text-white/80 font-medium leading-tight mb-5">
-                    Unlock unlimited tests and AI scoring.
-                  </p>
-                  <Button className="w-full bg-white hover:bg-blue-50 text-[#4B8EE3] font-semibold py-5 rounded-xl border-none shadow-sm transition-all text-[13px]">
+                  <Button className="w-full h-8 py-0 bg-white hover:bg-brand-50 text-brand-600 font-semibold rounded-lg border-none shadow-sm transition-all text-[12px]">
                     View Plans
                   </Button>
                 </div>
@@ -283,7 +281,7 @@ const DashboardSidebar = ({ onNavigate }) => {
             ) : (
               /* Collapsed holatdagi Upgrade Icon */
               <UpgradeModal>
-                  <button className="flex items-center justify-center p-3 w-full bg-[#4B8EE3] rounded-xl hover:bg-[#3a7bc8] transition-colors">
+                  <button className="flex items-center justify-center p-3 w-full bg-brand-600 rounded-xl hover:bg-brand-700 transition-colors">
                     <LuStar size={20} className="text-white" fill="currentColor" />
                   </button>
               </UpgradeModal>
@@ -294,12 +292,12 @@ const DashboardSidebar = ({ onNavigate }) => {
         <LogoutModal onConfirm={handleLogout}>
           {effectiveIsCollapsed ? (
 
-            <button className="flex items-center justify-center p-3 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95]">
+            <button className="flex items-center justify-center p-3 w-full bg-danger-50 hover:bg-danger-100 text-danger-700 font-bold rounded-xl transition-all active:scale-[0.95]">
               <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" />
 
             </button>
           ) : (
-            <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
+            <button className="flex items-center gap-3 px-5 py-2.5 w-full bg-danger-50 hover:bg-danger-100 text-danger-700 font-bold rounded-xl transition-all active:scale-[0.95] text-[13px]">
               <LuLogOut className="w-4 h-4 2xl:w-5 2xl:h-5" /> Log out
             </button>
           )}

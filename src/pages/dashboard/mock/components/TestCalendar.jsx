@@ -112,7 +112,7 @@ const TestCalendar = ({
                   >
                     {format(date, "d")}
                     {loadingDates && isCurrentMonth && (
-                      <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                      <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-brand-500 rounded-full" />
                     )}
                   </motion.button>
                 );

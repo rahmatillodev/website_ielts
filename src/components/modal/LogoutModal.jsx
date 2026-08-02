@@ -15,13 +15,13 @@ import { LuLogOut } from "react-icons/lu";
 const LogoutModal = ({ children, onConfirm }) => {
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild className="w-full hover:bg-red-50">
+      <AlertDialogTrigger asChild className="w-full hover:bg-danger-50">
         {children}
       </AlertDialogTrigger>
       
       <AlertDialogContent className="rounded-[24px] max-w-[400px]">
         <AlertDialogHeader className="flex flex-col items-center text-center">
-          <div className="size-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4">
+          <div className="size-16 bg-danger-50 text-danger-700 rounded-full flex items-center justify-center mb-4">
             <LuLogOut size={30} />
           </div>
           <AlertDialogTitle className="text-xl font-black text-gray-900">
@@ -38,7 +38,7 @@ const LogoutModal = ({ children, onConfirm }) => {
           </AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm}
-            className="flex-1 rounded-xl font-semibold bg-red-500 hover:bg-red-600 text-white border-none h-12"
+            className="flex-1 rounded-xl font-semibold bg-danger-500 hover:bg-danger-600 text-white border-none h-12"
           >
             Yes, Log out
           </AlertDialogAction>

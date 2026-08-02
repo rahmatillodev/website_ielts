@@ -68,10 +68,10 @@ const MockTypeSelectionPage = () => {
         >
           {/* Online Mock Card */}
           <motion.div variants={itemVariants}>
-            <Card className="h-full rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border-2 hover:border-blue-200">
+            <Card className="h-full rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border-2 hover:border-brand-200">
               <CardContent className="p-8 flex flex-col items-center text-center h-full">
-                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-6">
-                  <Laptop className="w-8 h-8 text-blue-600" />
+                <div className="w-16 h-16 rounded-full bg-brand-100 flex items-center justify-center mb-6">
+                  <Laptop className="w-8 h-8 text-brand-600" />
                 </div>
                 <h2 className="text-2xl font-semibold mb-4">Take Online Mock</h2>
                 <p className="text-gray-600 mb-6 grow">
@@ -79,7 +79,7 @@ const MockTypeSelectionPage = () => {
                 </p>
                 <Button
                   onClick={() => navigate(`/mock/online`)}
-                  className="w-full bg-blue-500 text-white hover:bg-blue-600 rounded-xl py-6 text-lg font-medium"
+                  className="w-full bg-brand-500 text-white hover:bg-brand-600 rounded-xl py-6 text-lg font-medium"
                 >
                   Take Online
                 </Button>

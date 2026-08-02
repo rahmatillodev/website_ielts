@@ -56,10 +56,10 @@ const ResultBanner = ({ score, testType = "Reading" }) => {
   const Icon = performance.icon;
 
   return (
-    <div className="bg-blue-50 rounded-2xl p-2 sm:p-4 mb-6 shadow-sm">
+    <div className="bg-brand-50 rounded-2xl p-2 sm:p-4 mb-6 shadow-sm">
       <div className="flex flex-col items-center text-center">
         <div className="text-4xl sm:text-5xl mb-1">
-          <Icon className="text-blue-600" />
+          <Icon className="text-brand-600" />
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
           {performance.title}

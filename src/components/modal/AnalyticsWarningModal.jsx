@@ -37,7 +37,7 @@ const AnalyticsWarningModal = ({ isOpen, onClose }) => {
         <AlertDialogFooter className="flex gap-3 sm:justify-center pt-4">
           <AlertDialogAction 
             onClick={handleGotIt}
-            className="flex-1 rounded-xl font-semibold bg-blue-500 hover:bg-blue-600 text-white border-none h-12"
+            className="flex-1 rounded-xl font-semibold bg-brand-500 hover:bg-brand-600 text-white border-none h-12"
           >
             Got it
           </AlertDialogAction>

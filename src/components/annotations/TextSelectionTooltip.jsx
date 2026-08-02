@@ -347,7 +347,7 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
         }
         .ielts-delete-icon {
           font-size: 16px;
-          color: #ef4444;
+          color: var(--destructive-text);
         }
         .ielts-divider {
           width: 1px;
@@ -357,10 +357,10 @@ const TextSelectionTooltip = ({ universalContentRef, partId: defaultPartId, onHi
         }
         /* Delete button specific styling */
         .ielts-btn-delete:hover {
-          background-color: #fee2e2;
+          background-color: var(--destructive-subtle);
         }
         .ielts-btn-delete span {
-          color: #ef4444;
+          color: var(--destructive-text);
         }
       `}</style>
       <div

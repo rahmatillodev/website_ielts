@@ -62,14 +62,14 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
         {/* ===== LEFT ===== */}
         {flow === 'mockTest' && (
             <div className="flex items-center gap-3">
-                {/* <div className="size-10 2xl:size-12 bg-[#EBF5FF] rounded-xl flex items-center justify-center">
-                  <GraduationCap className="text-[#4A90E2] size-6 2xl:size-7" />
+                {/* <div className="size-10 2xl:size-12 bg-brand-50 rounded-xl flex items-center justify-center">
+                  <GraduationCap className="text-brand-600 size-6 2xl:size-7" />
                 </div>
                 <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
                   IELTSCORE
                 </span> */}
                 <LogoDesign />
-                <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full font-bold">
                   Mock Test
                 </span>
               </div>
@@ -147,10 +147,10 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
               <LogoutModal onConfirm={handleLogout}>
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
-                  className="text-red-600 font-semibold p-2 px-3 hover:text-red-600 rounded-xl"
+                  className="text-danger-700 font-semibold p-2 px-3 hover:text-danger-700 rounded-xl"
                 >
-                  <LuLogOut className="w-5 h-5 mr-1 text-red-600 hover:text-red-600 rounded-xl" />
-                  <span className="text-red-600 hover:text-red-600 rounded-xl">Log out</span>
+                  <LuLogOut className="w-5 h-5 mr-1 text-danger-700 hover:text-danger-700 rounded-xl" />
+                  <span className="text-danger-700 hover:text-danger-700 rounded-xl">Log out</span>
                 </DropdownMenuItem>
               </LogoutModal>
             </div>
