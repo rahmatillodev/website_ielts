@@ -6,7 +6,8 @@ import { QUESTION_TYPE_GROUPS, getQuestionTypeDisplayName } from "@/store/testSt
 import { WRITING_TASK_TYPES, getWritingTaskTypeDisplayName } from "@/store/testStore/utils/writingTaskTypeUtils";
 
 /**
- * The library's control row: search and one filter button, nothing else.
+ * The library's control row: search on the left, Filter on the right, with a
+ * Clear filters shortcut appearing next to it while anything is filtering.
  *
  * Everything that filters the list now lives inside the popover — access level,
  * difficulty, parts, question/task types and sort. The access tabs and the
@@ -82,12 +83,31 @@ const LibraryToolbar = ({
           />
         </div>
 
+        {/* Clear sits beside Filter rather than under the search box: the two
+            filter controls belong together, and the row keeps its shape because
+            Clear only exists while something is actually filtering. Whichever of
+            the two comes first carries ml-auto, since the capped search box
+            cannot push them right on its own. */}
+        {hasActiveFilters && (
+          <button
+            onClick={onFilterClear}
+            className="ml-auto inline-flex h-9 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+          >
+            <LuX className="size-3.5" aria-hidden="true" />
+            <span className="whitespace-nowrap">
+              Clear<span className="hidden sm:inline"> filters</span>
+            </span>
+          </button>
+        )}
+
         <Popover open={filterOpen} onOpenChange={onFilterOpenChange}>
           <PopoverTrigger asChild>
             <button
               onClick={onFilterOpen}
               aria-label={`Filters${activeFilterCount ? `, ${activeFilterCount} active` : ""}`}
-              className={`relative ml-auto inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
+              className={`relative inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
+                hasActiveFilters ? "" : "ml-auto"
+              } ${
                 filterOpen || activeFilterCount > 0
                   ? "border-gray-300 bg-gray-50 text-gray-900"
                   : "border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
@@ -245,17 +265,8 @@ const LibraryToolbar = ({
       {/* Only feedback that a filter is narrowing the list, now that the tabs and
           chips no longer show it on the surface. Hidden when nothing is active. */}
       {hasActiveFilters && (
-        <div className="flex items-center gap-2 px-3 pb-2.5 text-[12px] text-gray-500 md:px-8">
-          <span className="tabular-nums">
-            {resultCount} {resultCount === 1 ? "test" : "tests"}
-          </span>
-          <button
-            onClick={onFilterClear}
-            className="inline-flex items-center gap-1 text-gray-400 transition-colors hover:text-gray-900"
-          >
-            <LuX className="size-3" aria-hidden="true" />
-            Clear filters
-          </button>
+        <div className="px-3 pb-2.5 text-[12px] tabular-nums text-gray-500 md:px-8">
+          {resultCount} {resultCount === 1 ? "test" : "tests"}
         </div>
       )}
     </div>
