@@ -8,6 +8,7 @@ import { LuUserRound } from "react-icons/lu";
 import { LiaExternalLinkAltSolid } from "react-icons/lia";
 import { Crown, Send, Zap, Paperclip } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { isPremiumSubscriber } from "@/utils/isPremiumSubscriber";
 import { useSettingsStore } from "@/store/systemStore";
 import ProfileModal from "@/components/modal/ProfileModal";
 import ChangePasswordModal from "@/components/modal/ChangePasswordModal";
@@ -106,7 +107,7 @@ const ProfilePage = () => {
 
   // Memoize premium calculations
   const premiumData = useMemo(() => {
-    const isPremium = userProfile?.subscription_status === "premium";
+    const isPremium = isPremiumSubscriber(userProfile);
     const premiumStart = userProfile?.premium_started_at ? new Date(userProfile.premium_started_at) : null;
     const premiumUntil = userProfile?.premium_until
       ? new Date(userProfile.premium_until)
@@ -128,7 +129,7 @@ const ProfilePage = () => {
       remainingDays,
       progressPercent
     };
-  }, [userProfile?.subscription_status, userProfile?.premium_started_at, userProfile?.premium_until]);
+  }, [userProfile]);
 
   const { isPremium, premiumStart, premiumUntil, daysRemaining, progressPercent } = premiumData;
 

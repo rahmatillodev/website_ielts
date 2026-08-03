@@ -5,6 +5,38 @@ import { clearAllReadingData } from '@/store/LocalStorage/readingStorage'
 import { clearAllListeningData } from '@/store/LocalStorage/listeningStorage'
 import { compressAvatarImage } from '@/utils/mediaCompression'
 import { getAuthErrorMessage, isNetworkError, toAuthErrorResult } from '@/lib/authErrors'
+import { msUntilPremiumExpiry, normalizePremiumProfile } from '@/utils/premiumSubscription'
+
+/**
+ * Premium expiry, client side.
+ *
+ * The database is the authority — a trigger refuses to store an expired plan
+ * and a scheduled sweep clears rows that lapse while nobody is looking (see
+ * supabase/migrations/20260803090000_premium_subscription_expiry.sql). These
+ * three hooks make a live session agree with it:
+ *
+ *  - every profile read is normalized before it reaches the UI, so a lapsed
+ *    plan is never rendered as premium even for one frame;
+ *  - the first read that notices the lapse calls the RPC to write it through,
+ *    so the row stops carrying dates it should not have;
+ *  - a timer armed at `premium_until` re-runs the check on a tab that was left
+ *    open across the boundary, instead of waiting for the next reload.
+ *
+ * The timer lives at module scope: it is a side effect of the session, not
+ * state anything renders, and it must never be persisted.
+ */
+let premiumExpiryTimer = null;
+let premiumVisibilityHandler = null;
+
+/** setTimeout silently fires immediately past this, and plans outlive it. */
+const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+
+const clearPremiumExpiryTimer = () => {
+  if (premiumExpiryTimer) {
+    clearTimeout(premiumExpiryTimer);
+    premiumExpiryTimer = null;
+  }
+};
 
 export const useAuthStore = create(
   persist(
@@ -61,6 +93,17 @@ export const useAuthStore = create(
         } else {
           set({ isInitialized: true, loading: false });
         }
+
+        // Background tabs get their timers throttled and a sleeping machine
+        // stops them altogether, so re-check whenever the tab comes back.
+        if (typeof document !== 'undefined' && !premiumVisibilityHandler) {
+          premiumVisibilityHandler = () => {
+            if (document.visibilityState === 'visible') get().refreshPremiumStatus();
+          };
+          document.addEventListener('visibilitychange', premiumVisibilityHandler);
+        }
+
+        get().schedulePremiumExpiryCheck();
       },
 
       updateUserProfile: async (update) => {
@@ -84,8 +127,9 @@ export const useAuthStore = create(
 
 
 
-          set({ userProfile: data, loading: false });
-          return { success: true, data };
+          const profile = get().applyUserProfile(data);
+          set({ loading: false });
+          return { success: true, data: profile };
         } catch (error) {
           set({ error: error.message, loading: false });
           return { success: false, error: error.message };
@@ -414,25 +458,83 @@ export const useAuthStore = create(
             return null;
           }
 
-          // Subscription status to premium
-          if (data.subscription_status === 'vip') {
-            data.subscription_status = 'premium';
-          }
-          // End of subscription status to premium
-
-          // Check if premium_until is past the current date
-          if (data.premium_until && new Date(data.premium_until) < new Date()) {
-            data.subscription_status = 'free';
-            data.premium_until = null;
-            data.premium_started_at = null;
-          }
-
-          set({ userProfile: data });
-          return data;
+          // Normalizes vip → premium and winds back a lapsed plan, then writes
+          // that expiry through to the row it came from.
+          return get().applyUserProfile(data);
         } catch (error) {
           console.error("Profile fetch error:", error);
           return null;
         }
+      },
+
+      /**
+       * The single door every profile takes into the store. Anything that has
+       * just read or written the `users` row goes through here so the premium
+       * rules are applied once, in one place.
+       */
+      applyUserProfile: (profile) => {
+        const { profile: normalized, expired } = normalizePremiumProfile(profile);
+        set({ userProfile: normalized });
+        get().schedulePremiumExpiryCheck();
+        if (expired) {
+          // Fire and forget: the UI is already downgraded, and a failed write
+          // is retried on the next read and swept server-side regardless.
+          get().expirePremiumSubscription();
+        }
+        return normalized;
+      },
+
+      /**
+       * Clears the lapsed plan in the database. Safe to call from the client:
+       * the RPC only ever downgrades, only the caller's own row, and only when
+       * `premium_until` really has passed.
+       */
+      expirePremiumSubscription: async () => {
+        const userId = get().authUser?.id ?? get().userProfile?.id;
+        if (!userId) return null;
+
+        try {
+          const { data, error } = await supabase.rpc('expire_own_premium_subscription');
+          if (error) throw error;
+          if (data) {
+            const { profile } = normalizePremiumProfile(data);
+            set({ userProfile: profile });
+            return profile;
+          }
+        } catch (error) {
+          // Not fatal: this session already treats the user as free, and the
+          // scheduled sweep clears the row even if this client never succeeds.
+          console.error('Premium expiry write failed:', error);
+        }
+        return get().userProfile;
+      },
+
+      /** Re-applies the premium rules to the profile already in memory. */
+      refreshPremiumStatus: () => {
+        const profile = get().userProfile;
+        if (!profile) {
+          clearPremiumExpiryTimer();
+          return null;
+        }
+        return get().applyUserProfile(profile);
+      },
+
+      /**
+       * Wakes up when the current plan lapses. Long plans exceed the setTimeout
+       * ceiling, so the timer is re-armed in chunks until the real moment.
+       */
+      schedulePremiumExpiryCheck: () => {
+        clearPremiumExpiryTimer();
+        const remaining = msUntilPremiumExpiry(get().userProfile);
+        if (remaining === null) return;
+
+        // A second of slack keeps the timer from firing a hair early and
+        // finding the plan still technically active.
+        const delay = Math.min(remaining + 1000, MAX_TIMEOUT_MS);
+        premiumExpiryTimer = setTimeout(() => {
+          premiumExpiryTimer = null;
+          get().refreshPremiumStatus();
+        }, delay);
       },
 
       // LocalStorage tozalash mantiqi bitta joyda
@@ -460,6 +562,7 @@ export const useAuthStore = create(
         try {
           await supabase.auth.signOut();
           get().clearUserLocalData();
+          clearPremiumExpiryTimer();
           set({ authUser: null, userProfile: null, loading: false });
           return { success: true };
         } catch (error) {
@@ -471,6 +574,7 @@ export const useAuthStore = create(
       forceSignOutToLogin: async (reason) => {
         await supabase.auth.signOut();
         get().clearUserLocalData();
+        clearPremiumExpiryTimer();
         set({ authUser: null, userProfile: null, error: reason });
       }
     }),
@@ -481,6 +585,14 @@ export const useAuthStore = create(
         authUser: state.authUser,
         userProfile: state.userProfile
       }),
+      // The persisted copy can be days old, so a plan that lapsed since the tab
+      // was last open would otherwise render as premium until the fetch lands.
+      // Normalizing here means the first paint after a reload is already right;
+      // fetchUserProfile then persists the expiry to the row.
+      onRehydrateStorage: () => (state) => {
+        if (!state?.userProfile) return;
+        state.userProfile = normalizePremiumProfile(state.userProfile).profile;
+      },
     }
   )
 )

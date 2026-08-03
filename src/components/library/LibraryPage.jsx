@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { FaArrowLeft } from "react-icons/fa";
 import { LuHistory, LuArrowRight } from "react-icons/lu";
 import { useAuthStore } from "@/store/authStore";
+import { isPremiumSubscriber } from "@/utils/isPremiumSubscriber";
 import { useResponsiveGridCols } from "@/hooks/useResponsiveGridCols";
 import { ShimmerBox } from "@/components/ui/shimmer";
 import { getQuestionTypeDisplayName } from "@/store/testStore/utils/questionTypeUtils";
@@ -83,6 +84,7 @@ const LibraryPage = ({
   const hasFetchedRef = useRef(false);
 
   const userProfile = useAuthStore((state) => state.userProfile);
+  const isPro = isPremiumSubscriber(userProfile);
   const location = useLocation();
   const navigate = useNavigate();
   const cols = useResponsiveGridCols();
@@ -466,8 +468,7 @@ const LibraryPage = ({
               key={activeTab}
             >
               {currentItems.map((test) => {
-                const subscriptionStatus = userProfile?.subscription_status ?? "free";
-                const canAccess = subscriptionStatus === "premium" || !test.is_premium;
+                const canAccess = isPro || !test.is_premium;
                 return (
                   <motion.div
                     key={test.id}

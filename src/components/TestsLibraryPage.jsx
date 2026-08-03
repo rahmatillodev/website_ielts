@@ -17,6 +17,7 @@ import { CiFilter } from "react-icons/ci";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { isPremiumSubscriber } from "@/utils/isPremiumSubscriber";
 import { Button } from "./ui/button";
 const TestsLibraryPage = ({
   title,
@@ -897,8 +898,7 @@ const TestsLibraryPage = ({
                     key={`${activeTab}-${searchQuery}-${selectedPartLabels.join(",")}-${(testType === "writing" ? selectedWritingTaskLabels : []).join(",")}-${testType === "writing" ? selectedTaskTypes.join(",") : selectedQuestionTypes.join(",")}-${sortOrder}-${isGridView}`}
                   >
                     {currentItems.map((test, index) => {
-                      const subscriptionStatus = userProfile?.subscription_status ?? "free";
-                      const canAccess = subscriptionStatus === "premium" || !test.is_premium;
+                      const canAccess = isPremiumSubscriber(userProfile) || !test.is_premium;
                       const idToPass = test.video_id || test.id;
 
                       return (

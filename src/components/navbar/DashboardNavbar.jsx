@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import LogoutModal from '../modal/LogoutModal';
 import { useAuthStore } from '@/store/authStore';
+import { isPremiumSubscriber } from '@/utils/isPremiumSubscriber';
 import { toast } from 'sonner';
 import LogoDesign from '../LogoDesign';
 
@@ -31,7 +32,9 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
     'User';
 
   const email = authUser?.email || 'user@example.com';
-  const subscriptionStatus = userProfile?.subscription_status || 'Free';
+  // Derived, not read straight off the row: a lapsed plan still labelled
+  // premium must show as Free here the moment it expires.
+  const subscriptionStatus = isPremiumSubscriber(userProfile) ? 'Premium' : 'Free';
   const avatarVersion = userProfile?.avatar_version ?? 1;
   const avatarUrl = userProfile?.avatar_image
     ? `${userProfile.avatar_image}?v=${avatarVersion}`

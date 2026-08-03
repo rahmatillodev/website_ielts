@@ -14,6 +14,7 @@ import {
 import { FaChartSimple } from "react-icons/fa6";
 import { Button } from "../ui/button";
 import { useAuthStore } from "@/store/authStore";
+import { isPremiumSubscriber } from "@/utils/isPremiumSubscriber";
 import { useMockTestClientStore } from "@/store/mockTestClientStore";
 import LogoutModal from "../modal/LogoutModal";
 import { toast } from "react-toastify";
@@ -257,7 +258,7 @@ const DashboardSidebar = ({ onNavigate }) => {
       </nav>
 
       <div className="p-3 2xl:p-4 border-t border-gray-50 bg-white shrink-0 space-y-2 2xl:space-y-3">
-        {userProfile?.subscription_status !== "premium" && (
+        {!isPremiumSubscriber(userProfile) && (
           <>
             {!effectiveIsCollapsed ? (
               /* Expanded holatdagi Upgrade Card.
