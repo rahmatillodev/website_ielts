@@ -169,7 +169,7 @@ not from the layout.
   app — `sonner` is used in a few places, which the redesign should consolidate.
 - **`FeedbackModal`** is mounted globally and is **self-triggering**: it opens once per browser,
   unprompted, over whatever page the user is on, when they have completed 3+ tests that day.
-- **A "powered by AhsanLabs" badge** renders fixed bottom-right at `z-index: 9999` on every
+- **A "powered by HEAD" badge** renders fixed bottom-right at `z-index: 9999` on every
   non-practice page. The JSX element is empty; the text is injected by CSS `::before`/`::after`.
 - **Boot state** — while auth initialises the entire app is a centred spinner + "Loading...".
 

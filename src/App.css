@@ -2,7 +2,7 @@
   position: fixed;
   bottom: 20px;
   right: 20px;
-  width: 155px;
+  width: 120px;
   height: 40px;
   color: #2c2b34;
   opacity: 0.5;
@@ -18,7 +18,7 @@
 }
 
 .fixed_bottom_right_container::after {
-  content: " AhsanLabs";
+  content: " HEAD";
   font-size: 13px;
   font-weight: 600;
   color: #2c2b34;
