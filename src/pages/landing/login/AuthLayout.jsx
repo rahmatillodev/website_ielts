@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { MotionConfig, motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import AuthShowcase from "./AuthShowcase";
 import GradientBackground from "./GradientBackground";
 import { backChevronMotion, formItem } from "./motionVariants";
@@ -18,7 +19,7 @@ import { backChevronMotion, formItem } from "./motionVariants";
  * wrapper is `h-[100dvh] overflow-hidden` and the form column carries its own
  * `overflow-y-auto`, so a short window scrolls that column rather than the page.
  */
-function AuthLayout({ children, slides, showBackButton = true }) {
+function AuthLayout({ children, slides, showBackButton = true, mainClassName }) {
   return (
     <MotionConfig reducedMotion="user">
       <div className="relative flex min-h-[100dvh] w-full overflow-x-hidden bg-white md:h-[100dvh] md:min-h-0 md:overflow-hidden">
@@ -57,7 +58,15 @@ function AuthLayout({ children, slides, showBackButton = true }) {
         {/* The form is first in the DOM and pulled right with `order`, so a
             keyboard lands on the first field rather than tabbing through the
             carousel indicators to reach it. */}
-        <main className="relative flex w-full items-center justify-center px-6 py-16 sm:px-10 md:order-2 md:h-full md:w-[60%] md:overflow-y-auto md:py-12 lg:w-[55%] lg:px-16">
+        {/* `mainClassName` exists for the taller form: sign-up needs to trade
+            some of this padding for content on a short laptop, and sign-in —
+            which fits comfortably — must not be changed to pay for it. */}
+        <main
+          className={cn(
+            "relative flex w-full items-center justify-center px-6 py-16 sm:px-10 md:order-2 md:h-full md:w-[60%] md:overflow-y-auto md:py-12 lg:w-[55%] lg:px-16",
+            mainClassName
+          )}
+        >
           <GradientBackground variant="form" />
           {children}
         </main>

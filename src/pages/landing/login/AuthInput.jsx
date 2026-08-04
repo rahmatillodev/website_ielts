@@ -18,15 +18,53 @@ import { fieldShadow, formItem } from "./motionVariants";
  * border and the icon tint all move off a single source of truth. Nothing here
  * resizes or moves on focus; only colour and shadow change.
  */
-function AuthInput({ id, label, icon: Icon, error, hint, trailing, ...inputProps }) {
+function AuthInput({
+  id,
+  label,
+  icon: Icon,
+  error,
+  hint,
+  trailing,
+  inlineError = false,
+  ...inputProps
+}) {
   const [focused, setFocused] = useState(false);
   const state = error ? "error" : focused ? "focus" : "rest";
 
   return (
-    <motion.div variants={formItem} className="space-y-2">
-      <Label htmlFor={id} className="text-[13px] text-gray-700">
-        {label}
-      </Label>
+    <motion.div variants={formItem} className={inlineError ? "space-y-1.5" : "space-y-2"}>
+      {inlineError ? (
+        /* Label left, message right, on one row of fixed height. The message
+           costs the form nothing: the row exists whether or not it is there, so
+           an error cannot move the input, the fields under it, or the button.
+           Only opacity animates. */
+        <div className="flex h-[18px] items-center justify-between gap-3">
+          <Label htmlFor={id} className="shrink-0 text-[13px] text-gray-700">
+            {label}
+          </Label>
+          <AnimatePresence initial={false}>
+            {error && (
+              <motion.span
+                key={error}
+                id={`${id}-error`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                // `truncate` is the backstop for a narrow phone; the messages
+                // themselves are written short enough that it should not fire.
+                className="min-w-0 truncate text-right text-[12px] leading-none text-destructive-text"
+              >
+                {error}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <Label htmlFor={id} className="text-[13px] text-gray-700">
+          {label}
+        </Label>
+      )}
 
       <motion.div
         variants={fieldShadow}
@@ -61,28 +99,29 @@ function AuthInput({ id, label, icon: Icon, error, hint, trailing, ...inputProps
         {trailing}
       </motion.div>
 
-      {/* The message sits directly under its own field — never as a toast, and
-          never pooled with the other fields' problems. `height: auto` rather
-          than a reserved slot: an empty 18px gap under every input on a
-          six-field form reads as broken spacing. */}
-      <AnimatePresence initial={false}>
-        {error ? (
-          <motion.p
-            id={`${id}-error`}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="overflow-hidden text-[12.5px] leading-snug text-destructive-text"
-          >
-            {error}
-          </motion.p>
-        ) : (
-          hint && (
-            <p className="text-[12px] leading-snug text-gray-500">{hint}</p>
-          )
-        )}
-      </AnimatePresence>
+      {/* Below-the-input message, for the forms that are short enough to absorb
+          the reflow. `inlineError` fields have already said their piece up in
+          the label row and must add nothing here — anything below the input
+          would grow the form and move the button, which is the whole reason
+          the message moved. */}
+      {!inlineError && (
+        <AnimatePresence initial={false}>
+          {error ? (
+            <motion.p
+              id={`${id}-error`}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="overflow-hidden text-[12.5px] leading-snug text-destructive-text"
+            >
+              {error}
+            </motion.p>
+          ) : (
+            hint && <p className="text-[12px] leading-snug text-gray-500">{hint}</p>
+          )}
+        </AnimatePresence>
+      )}
     </motion.div>
   );
 }

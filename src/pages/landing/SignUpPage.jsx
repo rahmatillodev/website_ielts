@@ -80,7 +80,13 @@ function SignUpPage() {
   };
 
   return (
-    <AuthLayout slides={SIGNUP_SLIDES} showBackButton={!isMockTestMode}>
+    <AuthLayout
+      slides={SIGNUP_SLIDES}
+      showBackButton={!isMockTestMode}
+      // Six controls need the room: below 800px of viewport height the panel
+      // gives back half its vertical padding so the whole form still fits.
+      mainClassName="[@media(max-height:800px)]:py-8"
+    >
       {pendingEmail ? (
         <SignUpSuccess email={pendingEmail} loginHref={loginHref} />
       ) : (
