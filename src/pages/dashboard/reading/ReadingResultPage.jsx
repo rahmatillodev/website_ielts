@@ -19,7 +19,7 @@ import { formatDateToDayMonth } from "@/store/analyticsStore";
 import { formatScore } from "@/utils/score";
 import ReportQuestionModal from "@/components/modal/ReportQuestionModal";
 import ResultFeedbackModal from "@/components/modal/ResultFeedbackModal";
-import { MdOutlineFlag, MdOutlineFeedback } from "react-icons/md";
+import { MdOutlineFlag, MdOutlineFeedback, MdOutlineLightbulb } from "react-icons/md";
 
 
 const ReadingResultPage = () => {
@@ -322,6 +322,50 @@ const ReadingResultPage = () => {
     });
     return map;
   }, [testForDisplay]);
+
+  /**
+   * question_number -> `questions.explanation` (Explain, 1-bosqich).
+   *
+   * FAQAT READING. Bu sahifa reading natijasi uchun, listening esa o'zining
+   * ListeningResultPage'iga ega va u yerda Explain YO'Q - qaror bo'yicha listening
+   * highlight + Locate + audio seek oladi, Explain emas.
+   *
+   * Izohlar kutubxonaning kichik qismida bor (hozircha 27 ta savol), shuning uchun
+   * ustun faqat shu testda kamida bitta izoh bo'lsa chiziladi: izohsiz testlar
+   * jadvali avvalgidek qoladi, bo'sh "Explanation yo'q" kataklari bilan
+   * to'ldirilmaydi.
+   */
+  const explanationByNumber = useMemo(() => {
+    const map = new Map();
+    (testForDisplay?.parts || []).forEach((part) => {
+      (part.questionGroups || []).forEach((group) => {
+        (group.questions || []).forEach((question) => {
+          if (question.question_number == null) return;
+          const text = (question.explanation || '').trim();
+          if (text) map.set(String(question.question_number), text);
+        });
+      });
+    });
+    return map;
+  }, [testForDisplay]);
+
+  const hasAnyExplanation = explanationByNumber.size > 0;
+  const [openExplanations, setOpenExplanations] = useState(() => new Set());
+
+  /* Jadval ustunlari: #, Status, Your Answer (+ Correct Answer) (+ Explanation) + Report.
+     Bitta joyda hisoblanadi - bo'sh holat va yoyilgan izoh qatori bir xil colSpan ishlatsin. */
+  const answerTableColumnCount =
+    4 + (showCorrectAnswers ? 1 : 0) + (hasAnyExplanation ? 1 : 0);
+
+  const toggleExplanation = (questionNumber) => {
+    setOpenExplanations((prev) => {
+      const next = new Set(prev);
+      const key = String(questionNumber);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const openReport = (questionNumber) => {
     const ctx = questionContextByNumber.get(String(questionNumber)) || { questionNumber };
@@ -784,6 +828,11 @@ const ReadingResultPage = () => {
                         Correct Answer
                       </th>
                     )}
+                    {hasAnyExplanation && (
+                      <th className="text-left p-4 text-xs font-black text-slate-400 uppercase tracking-widest w-24">
+                        Explanation
+                      </th>
+                    )}
                     <th className="text-right p-4 text-xs font-black text-slate-400 uppercase tracking-widest w-16">
                       Report
                     </th>
@@ -791,9 +840,13 @@ const ReadingResultPage = () => {
                 </thead>
                 <tbody className="divide-y">
                   {answerDisplayData.length > 0 ? (
-                    answerDisplayData.map((answerItem) => (
+                    answerDisplayData.map((answerItem) => {
+                      const explanation = explanationByNumber.get(String(answerItem.questionNumber));
+                      const isExplanationOpen = openExplanations.has(String(answerItem.questionNumber));
+
+                      return (
+                      <React.Fragment key={answerItem.questionNumber}>
                       <tr
-                        key={answerItem.questionNumber}
                         className="hover:bg-slate-50/50 transition-colors"
                       >
                         <td className="p-4 text-slate-400 font-semibold">
@@ -801,23 +854,42 @@ const ReadingResultPage = () => {
                         </td>
                         <td className="p-4">
                           {answerItem.isCorrect ? (
-                            <FaCheckCircle className="text-green-500 text-xl" />
+                            <FaCheckCircle className="text-success-500 text-xl" />
                           ) : (
                             <FaTimesCircle className="text-danger-700 text-xl" />
                           )}
                         </td>
                         <td className="p-4">
-                          <span className={answerItem.isCorrect ? "text-green-600 font-semibold" : "text-danger-700 font-semibold"}>
+                          <span className={answerItem.isCorrect ? "text-success-600 font-semibold" : "text-danger-700 font-semibold"}>
                             {answerItem.yourAnswer || "-"}
                           </span>
                         </td>
                         {showCorrectAnswers && (
                           <td className="p-4">
 
-                            <span className="text-green-600 font-semibold">
+                            <span className="text-success-600 font-semibold">
                               {answerItem.correctAnswer}
                             </span>
 
+                          </td>
+                        )}
+                        {hasAnyExplanation && (
+                          <td className="p-4">
+                            {explanation ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleExplanation(answerItem.questionNumber)}
+                                aria-expanded={isExplanationOpen}
+                                aria-controls={`explanation-${answerItem.questionNumber}`}
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+                              >
+                                <MdOutlineLightbulb size={15} />
+                                {isExplanationOpen ? 'Hide' : 'Why?'}
+                              </button>
+                            ) : (
+                              /* Izohi yo'q savol - toza bo'sh katak qoladi. */
+                              <span className="sr-only">No explanation available</span>
+                            )}
                           </td>
                         )}
                         <td className="p-4 text-right">
@@ -832,10 +904,30 @@ const ReadingResultPage = () => {
                           </button>
                         </td>
                       </tr>
-                    ))
+
+                      {explanation && isExplanationOpen && (
+                        <tr id={`explanation-${answerItem.questionNumber}`} className="bg-brand-50/40">
+                          <td colSpan={answerTableColumnCount} className="px-4 pb-4 pt-0">
+                            <div className="rounded-xl border border-brand-100 bg-white p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <MdOutlineLightbulb className="text-brand-600" size={16} />
+                                <span className="text-[11px] font-black uppercase tracking-widest text-brand-700">
+                                  Why this is the answer
+                                </span>
+                              </div>
+                              <p className="text-sm leading-relaxed text-slate-700">
+                                {explanation}
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={showCorrectAnswers ? 5 : 4} className="p-6 text-center text-gray-500">
+                      <td colSpan={answerTableColumnCount} className="p-6 text-center text-gray-500">
                         No answers submitted
                       </td>
                     </tr>
