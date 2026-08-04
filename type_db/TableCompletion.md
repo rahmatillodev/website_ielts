@@ -2,6 +2,11 @@
 
 ## 7. Table Completion
 
+> Table completion is `table_completion` (and, for many live groups, `fill_in_blanks` — the two are
+> interchangeable in prod, distinguished only by which enum the author picked). The schema type named
+> **`table` is a different skill entirely** — "Which paragraph contains the following information?" —
+> documented in `ListofHeadings.md` §6b. Verified against prod 2026-08-04.
+
 ```json
 {
   "id": "test-uuid-123",

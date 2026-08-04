@@ -1,6 +1,26 @@
 
 ## 8. Matching Information
 
+> **`matching_information` carries two different skills that need different treatments.**
+> Verified against prod 2026-08-04. Do not branch on the type alone.
+>
+> | | Statement matching (this file) | List of Headings (`ListofHeadings.md`) |
+> |---|---|---|
+> | `correct_answer` | option letter — `"B"` | roman numeral — `"IV"` |
+> | `questions.question_text` | the statement being matched | the target paragraph — `"Paragraph A"` |
+> | `options.option_text` | a person, org, or claim | the heading prose |
+> | Live volume | 250 reading + 443 listening | 143 reading |
+>
+> **Discriminator:** a roman-numeral `correct_answer` means List of Headings. `i`, `v` and `x` collide
+> with option keys `I`, `V`, `X`, so require either more than one character or a `%heading%`
+> instruction before treating it as a heading question.
+>
+> The two also behave very differently for answer location, because the options differ in kind.
+> Statement-matching options are locatable in the passage only when they are entity-like — a name such
+> as `Roger Ekirch` or `British Civil Aviation Authority` is found, a full clause such as
+> `It took longer than expected.` is not. Measured: **151 of 250 reading (60.4%)** locate, versus
+> **40 of 443 listening (9.0%)**, where the option is a paraphrase of what was spoken.
+
 ```json
 {
   "id": "test-uuid-123",
