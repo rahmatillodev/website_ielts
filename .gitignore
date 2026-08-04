@@ -41,3 +41,9 @@ TRANSCRIPTION_PROGRESS.md
 scripts/transcribe/transcription_state.json
 scripts/transcribe/audio_inventory.json
 scripts/transcribe/transcripts/
+
+# Playwright browser smoke tests (e2e/)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

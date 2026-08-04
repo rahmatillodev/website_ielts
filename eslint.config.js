@@ -34,4 +34,21 @@ export default defineConfig([
       'react/jsx-uses-vars': 'error',
     },
   },
+  {
+    // The browser smoke tests are Node, not browser code, and contain no React.
+    // Two rules misfire here otherwise: `no-undef` on Node globals, and
+    // `rules-of-hooks` on Playwright's fixture callbacks, whose second argument is
+    // conventionally named `use` and reads to the plugin as a React hook.
+    files: ['e2e/**/*.js', 'playwright.config.js'],
+    languageOptions: {
+      globals: { ...globals.node },
+      parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+      'react-refresh/only-export-components': 'off',
+      // Playwright fixtures declare "this test needs no other fixture" as `{}`.
+      'no-empty-pattern': 'off',
+    },
+  },
 ])
