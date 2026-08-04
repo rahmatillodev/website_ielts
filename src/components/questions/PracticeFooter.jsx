@@ -191,7 +191,7 @@ const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAns
                                 }
 
                                 // Theme-aware progress line: answered = green, unanswered = muted border
-                                const lineBg = answered ? '#22c55e' : themeColors.border;
+                                const lineBg = answered ? 'var(--success)' : themeColors.border;
 
                                 return (
                                   <div

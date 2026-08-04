@@ -43,7 +43,7 @@ const FillInTheBlank = ({
             showWrong
               ? 'border-danger-500 bg-danger-50 text-danger-700 focus-visible:ring-danger-500'
               : showCorrect
-              ? 'border-green-500 bg-green-50 text-green-700 focus-visible:ring-green-500'
+              ? 'border-success-500 bg-success-50 text-success-700 focus-visible:ring-success-500'
               : ''
           } ${mode === 'review' ? 'cursor-not-allowed' : ''}`}
         />
@@ -57,7 +57,7 @@ const FillInTheBlank = ({
         />
         {/* Correct Answer - Only for fill_in_blank type, after bookmark */}
         {showWrong && correctAnswer && showCorrectAnswers && (
-          <span className="text-sm text-green-600 font-semibold whitespace-nowrap">
+          <span className="text-sm text-success-600 font-semibold whitespace-nowrap">
             {correctAnswer}
           </span>
         )}

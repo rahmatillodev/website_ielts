@@ -247,7 +247,7 @@ const TypeMap = ({
                         showWrong
                           ? 'bg-danger-50'
                           : showCorrect
-                          ? 'bg-green-50'
+                          ? 'bg-success-50'
                           : 'bg-white hover:bg-gray-50'
                       }`}
                       style={{ borderColor: themeColors.border }}
@@ -258,7 +258,7 @@ const TypeMap = ({
                           showWrong
                             ? 'bg-danger-50'
                             : showCorrect
-                            ? 'bg-green-50'
+                            ? 'bg-success-50'
                             : ''
                         }`}
                         style={{
@@ -272,10 +272,10 @@ const TypeMap = ({
                             <span className="font-medium">{qNumber}.</span>
                             <span data-selectable="true">{questionText}</span>
                             {showCorrect && (
-                              <span className="text-xs text-green-700 font-medium ml-2">Correct</span>
+                              <span className="text-xs text-success-700 font-medium ml-2">Correct</span>
                             )}
                             {showWrong && correctAnswer && showCorrectAnswers && (
-                              <span className="text-xs text-green-600 font-medium ml-2 flex whitespace-nowrap">
+                              <span className="text-xs text-success-600 font-medium ml-2 flex whitespace-nowrap">
                                 Correct: {correctAnswer}
                               </span>
                             )}
@@ -321,11 +321,11 @@ const TypeMap = ({
                             key={`${q.id}-${optInRow.id || colValue}`}
                             className={`px-4 py-3 text-center ${
                               isSelected && showCorrect
-                                ? 'bg-green-100'
+                                ? 'bg-success-100'
                                 : isSelected && showWrong
                                 ? 'bg-danger-400'
                                 : (isCorrectOption || isCorrectAnswerMatch) && isReviewMode && showCorrectAnswers && !isSelected
-                                ? 'bg-green-50'
+                                ? 'bg-success-50'
                                 : ''
                             }`}
                             style={{
@@ -347,7 +347,7 @@ const TypeMap = ({
                                 disabled={mode === 'review'}
                                 className={`w-5 h-5 ${
                                   isSelected && showCorrect
-                                    ? 'accent-green-600'
+                                    ? 'accent-success-600'
                                     : isSelected && showWrong
                                     ? 'accent-danger-600'
                                     : 'accent-brand-500'

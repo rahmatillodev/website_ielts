@@ -28,13 +28,13 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
     <div className="border border-gray-200 rounded-lg overflow-hidden group relative">
       <div className="grid grid-cols-[1fr_auto] divide-x divide-gray-200">
         {/* Left: Question Text */}
-        <div className={`p-4 relative ${showWrong ? 'bg-danger-50 border-danger-500' : showCorrect ? 'bg-green-50 border-green-500' : 'bg-white'} ${showWrong || showCorrect ? 'border-2' : ''}`}>
+        <div className={`p-4 relative ${showWrong ? 'bg-danger-50 border-danger-500' : showCorrect ? 'bg-success-50 border-success-500' : 'bg-white'} ${showWrong || showCorrect ? 'border-2' : ''}`}>
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-gray-900 font-medium" data-selectable="true">
               {questionText}
             </p>
             {showCorrect && (
-              <span className="text-xs text-green-700 font-medium">Correct</span>
+              <span className="text-xs text-success-700 font-medium">Correct</span>
             )}
             {showWrong && (
               <span className="text-[10px] bg-danger-500 text-white px-2 py-0.5 rounded-sm">
@@ -42,7 +42,7 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
               </span>
             )}
             {showWrong && correctAnswer && showCorrectAnswers && (
-              <span className="text-xs text-green-600 font-medium">Correct: {correctAnswer}</span>
+              <span className="text-xs text-success-600 font-medium">Correct: {correctAnswer}</span>
             )}
           </div>
           {/* Bookmark + report actions */}
@@ -73,11 +73,11 @@ const MatchingHeadings = ({ question, answer, onAnswerChange, options = [], mode
                   flex flex-col items-center justify-center w-10 h-10 rounded-md border-2 transition-all
                   ${mode === 'review' ? 'cursor-default' : 'cursor-pointer'}
                   ${isSelected && showCorrect
-                    ? "border-green-600 bg-green-100 text-green-900"
+                    ? "border-success-600 bg-success-100 text-success-900"
                     : isSelected && showWrong
                     ? "border-danger-600 bg-danger-100 text-danger-900"
                     : isCorrectOption && isReviewMode && showCorrectAnswers
-                    ? "border-green-400 bg-green-50 text-green-700"
+                    ? "border-success-400 bg-success-50 text-success-700"
                     : isSelected
                     ? "border-brand-600 bg-brand-50 text-brand-900"
                     : "border-gray-300 bg-white text-gray-700 hover:border-brand-400 hover:bg-brand-50"

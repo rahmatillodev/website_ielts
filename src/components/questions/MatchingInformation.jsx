@@ -394,7 +394,7 @@ const sortedQuestions = useMemo(() => {
               key={q.id || qNumber}
               className={`flex items-start gap-3 justify-between group ${
                 showWrong ? 'p-4 rounded-lg bg-danger-50 border-2 border-danger-500' : 
-                showCorrect ? 'p-4 rounded-lg bg-green-50 border-2 border-green-500' : 
+                showCorrect ? 'p-4 rounded-lg bg-success-50 border-2 border-success-500' : 
                 ''
               }`}
               style={showWrong || showCorrect ? {} : {
@@ -416,12 +416,12 @@ const sortedQuestions = useMemo(() => {
                    {parse(questionText, { allowDangerousHtml: true })}
                 </span>
                 {showCorrect && (
-                  <span className="text-xs text-green-700 font-medium ml-2">
+                  <span className="text-xs text-success-700 font-medium ml-2">
                     Correct
                   </span>
                 )}
                 {showWrong && correctAnswerText && showCorrectAnswers && (
-                  <span className="text-xs text-green-600 font-medium ml-2">
+                  <span className="text-xs text-success-600 font-medium ml-2">
                     {correctAnswerText}
                   </span>
                 )}
@@ -439,14 +439,14 @@ const sortedQuestions = useMemo(() => {
                           "min-w-[100px]",
                           selectedAnswer && !isReviewMode && "border-gray-400 border-2",
                           showWrong && "border-danger-500 border-2",
-                          showCorrect && "border-green-500 border-2"
+                          showCorrect && "border-success-500 border-2"
                         )}
                         style={{
                           backgroundColor: themeColors.background,
                           color: themeColors.text,
-                          borderColor: selectedAnswer && !isReviewMode ? '#dce1e5' : 
+                          borderColor: selectedAnswer && !isReviewMode ? 'var(--border)' :
                                      showWrong ? 'var(--destructive)' :
-                                     showCorrect ? '#22c55e' : 
+                                     showCorrect ? 'var(--success)' :
                                      themeColors.border
                         }}
                         aria-label={`Select answer for question ${qNumber}`}
@@ -475,7 +475,7 @@ const sortedQuestions = useMemo(() => {
                                 key={idx}
                                 value={String(item.key)}
                                 className={cn(
-                                  isSelected && showCorrect && "bg-green-50",
+                                  isSelected && showCorrect && "bg-success-50",
                                   isSelected && showWrong && "bg-danger-50"
                                 )}
                                 style={{
@@ -508,7 +508,7 @@ const sortedQuestions = useMemo(() => {
                                 key={idx}
                                 value={optionText}
                                 className={cn(
-                                  isSelected && showCorrect && "bg-green-50",
+                                  isSelected && showCorrect && "bg-success-50",
                                   isSelected && showWrong && "bg-danger-50"
                                 )}
                                 style={{

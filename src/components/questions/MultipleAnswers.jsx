@@ -213,18 +213,18 @@ const MultipleAnswers = ({
 
     if (isReviewMode) {
       if (reviewStatus === 'correct') {
-        borderColor = '#22c55e'; // Yashil
-        backgroundColor = 'rgba(34, 197, 94, 0.1)'; 
-        iconBg = 'bg-green-500 border-green-500';
+        borderColor = 'var(--success)'; // Yashil
+        backgroundColor = 'color-mix(in oklab, var(--success) 10%, transparent)';
+        iconBg = 'bg-success-500 border-success-500';
       } else if (reviewStatus === 'incorrect') {
         borderColor = 'var(--destructive)'; // Qizil
-        backgroundColor = 'rgba(185, 2, 29, 0.1)';
+        backgroundColor = 'color-mix(in oklab, var(--destructive) 10%, transparent)';
         iconBg = 'bg-danger-500 border-danger-500';
       } else if (reviewStatus === 'missed') {
-        borderColor = '#22c55e'; // To'g'ri lekin tanlanmagan
+        borderColor = 'var(--success)'; // To'g'ri lekin tanlanmagan
         backgroundColor = 'transparent';
-        iconBg = 'bg-white border-green-500 border-dashed'; // Farqlanishi uchun punktir
-        checkIconColor = 'text-green-600';
+        iconBg = 'bg-white border-success-500 border-dashed'; // Farqlanishi uchun punktir
+        checkIconColor = 'text-success-600';
       }
     } else if (isSelected) {
       borderColor = 'var(--primary)'; // Tanlangan (test paytida)
@@ -252,7 +252,7 @@ const MultipleAnswers = ({
         {/* Option Text */}
         <div className="flex gap-2 flex-1">
           <span className={`font-semibold text-sm ${
-            reviewStatus === 'correct' ? 'text-green-700' : 
+            reviewStatus === 'correct' ? 'text-success-700' : 
             reviewStatus === 'incorrect' ? 'text-danger-700' : 
             isSelected ? 'text-brand-700' : 'text-gray-500'
           }`}>
@@ -268,9 +268,9 @@ const MultipleAnswers = ({
         {/* Status Text labels */}
         {isReviewMode && (
           <div className="flex flex-col items-end">
-            {reviewStatus === 'correct' && <span className="text-[10px] text-green-700 font-bold uppercase">Correct</span>}
+            {reviewStatus === 'correct' && <span className="text-[10px] text-success-700 font-bold uppercase">Correct</span>}
             {reviewStatus === 'incorrect' && <span className="text-[10px] text-danger-700 font-bold uppercase">Your Answer</span>}
-            {reviewStatus === 'missed' && <span className="text-[10px] text-green-600 font-bold uppercase italic">Correct Answer</span>}
+            {reviewStatus === 'missed' && <span className="text-[10px] text-success-600 font-bold uppercase italic">Correct Answer</span>}
           </div>
         )}
       </button>
@@ -296,12 +296,12 @@ const MultipleAnswers = ({
           </p>
         </div>
         { selectedOptionKeys.length === questionRange && (
-          <span className="text-green-500 font-medium flex items-center gap-1">
+          <span className="text-success-500 font-medium flex items-center gap-1">
             <Check size={14} /> Complete
           </span>
         )}
         { selectedOptionKeys.length > 0 && selectedOptionKeys.length < questionRange && (
-          <span className="text-amber-500 font-medium text-xs">
+          <span className="text-warning-500 font-medium text-xs">
             Select {questionRange - selectedOptionKeys.length} more
           </span>
         )}

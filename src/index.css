@@ -99,6 +99,17 @@ textarea {
   /* -- supporting status ramps (kept well clear of both reds) ------------- */
   --success-50: oklch(0.972 0.021 155);
   --success-100: oklch(0.94 0.048 155);
+  /* 200-400 exist so CORRECT can mirror INCORRECT step for step. The review UI
+     states them as a pair - a selected-correct chip is 100/500/900 against the
+     wrong chip's danger-100/500/900, and the softer "here was the answer" chip
+     is 50/300/700 against danger-50/200/700. Without these steps the correct
+     side had to borrow stock Tailwind greens, which is how meaning colours
+     drifted off the token set in the first place. Interpolated along the same
+     L-down/C-up curve as the brand and danger ramps; borders only, so no AA
+     text requirement rides on them. */
+  --success-200: oklch(0.883 0.075 155);
+  --success-300: oklch(0.816 0.106 155);
+  --success-400: oklch(0.752 0.136 155);
   --success-500: oklch(0.686 0.164 155);
   --success-600: oklch(0.596 0.145 155);
   --success-700: oklch(0.512 0.123 156);
@@ -442,6 +453,9 @@ textarea {
 
   --color-success-50: var(--success-50);
   --color-success-100: var(--success-100);
+  --color-success-200: var(--success-200);
+  --color-success-300: var(--success-300);
+  --color-success-400: var(--success-400);
   --color-success-500: var(--success-500);
   --color-success-600: var(--success-600);
   --color-success-700: var(--success-700);

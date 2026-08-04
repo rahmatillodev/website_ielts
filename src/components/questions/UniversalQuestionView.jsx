@@ -134,7 +134,7 @@ const UniversalQuestionView = ({
             showWrong
               ? "border-danger-500 bg-danger-50 text-danger-700 focus-visible:ring-danger-500"
               : showCorrect
-                ? "border-green-500 bg-green-50 text-green-700 focus-visible:ring-green-500"
+                ? "border-success-500 bg-success-50 text-success-700 focus-visible:ring-success-500"
                 : "border-gray-400 focus-visible:ring-brand-500"
           } ${mode === "review" ? "cursor-not-allowed" : ""}`}
           style={{ backgroundColor: themeColors.background, color: themeColors.text }}
@@ -147,7 +147,7 @@ const UniversalQuestionView = ({
           onReport={() => onReport(questionItem)}
         />
         {showWrong && correctAnswer && showCorrectAnswers && (
-          <span className="ml-0 mr-0.5 text-sm text-green-600 font-semibold whitespace-nowrap">
+          <span className="ml-0 mr-0.5 text-sm text-success-600 font-semibold whitespace-nowrap">
             {correctAnswer}
           </span>
         )}

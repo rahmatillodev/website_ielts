@@ -154,17 +154,17 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                 <tr
                   key={q.id || qNumber}
                   className={`border-t border-gray-200 transition-colors group ${
-                    showWrong ? 'bg-danger-50' : showCorrect ? 'bg-green-50' : 'bg-white hover:bg-gray-50'
+                    showWrong ? 'bg-danger-50' : showCorrect ? 'bg-success-50' : 'bg-white hover:bg-gray-50'
                   }`}
                 >
                   {/* First Column: Question Number and Question Text */}
-                  <td className={`px-4 py-3 text-gray-900 border-r border-gray-200 ${showWrong ? 'bg-danger-50' : showCorrect ? 'bg-green-50' : ''}`} style={{ backgroundColor: themeColors.background, color: themeColors.text }}>
+                  <td className={`px-4 py-3 text-gray-900 border-r border-gray-200 ${showWrong ? 'bg-danger-50' : showCorrect ? 'bg-success-50' : ''}`} style={{ backgroundColor: themeColors.background, color: themeColors.text }}>
                     <div className="flex gap-2 items-center justify-between">
                       <div className="flex gap-2">
                         <span className="font-medium">{qNumber}.</span>
                         <span data-selectable="true">{questionText}</span>
                         {showCorrect && (
-                          <span className="text-xs text-green-700 font-medium ml-2">Correct</span>
+                          <span className="text-xs text-success-700 font-medium ml-2">Correct</span>
                         )}
                         {/* {showWrong && (
                           <span className="text-[10px] bg-danger-500 text-white px-2 py-0.5 rounded-sm ml-2">
@@ -172,7 +172,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                           </span>
                         )} */}
                         {showWrong && correctAnswer && showCorrectAnswers && (
-                          <span className="text-xs text-green-600 font-medium ml-2 flex whitespace-nowrap">Correct: {correctAnswer}</span>
+                          <span className="text-xs text-success-600 font-medium ml-2 flex whitespace-nowrap">Correct: {correctAnswer}</span>
                         )}
                       </div>
                       {/* Bookmark + report actions */}
@@ -204,9 +204,9 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                       <td
                         key={`${q.id}-${columnOption.id || columnOptionLetter || optionValue}`}
                         className={`px-4 py-3 text-center ${
-                          isSelected && showCorrect ? 'bg-green-100' :
+                          isSelected && showCorrect ? 'bg-success-100' :
                           isSelected && showWrong ? 'bg-danger-400' :
-                          isCorrectAnswerMatch && isReviewMode && showCorrectAnswers && !isSelected ? 'bg-green-50' : ''
+                          isCorrectAnswerMatch && isReviewMode && showCorrectAnswers && !isSelected ? 'bg-success-50' : ''
                         }`}
                         style={{ backgroundColor: themeColors.background, color: themeColors.text }}
                       >
@@ -219,7 +219,7 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                             onChange={() => handleOptionChange(qNumber, optionValue)}
                             disabled={mode === 'review'}
                             className={`w-5 h-5 ${
-                              isSelected && showCorrect ? 'accent-green-600' :
+                              isSelected && showCorrect ? 'accent-success-600' :
                               isSelected && showWrong ? 'accent-danger-600' :
                               'accent-brand-500'
                             } ${mode === 'review' ? 'cursor-not-allowed' : 'cursor-pointer'}`}

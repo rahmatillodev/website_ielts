@@ -77,8 +77,8 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
         inline-flex items-center justify-center min-w-[120px] text-sm h-7 px-2 mx-1
         border-2 transition-all align-middle relative group rounded
         ${isReviewMode ? 'cursor-default' : 'cursor-pointer'}
-        ${isOver && canDrop && !isReviewMode ? 'bg-green-100 border-green-500' : ''}
-        ${showCorrect ? 'border-green-500 bg-green-50 text-green-700 font-semibold border-solid' : ''}
+        ${isOver && canDrop && !isReviewMode ? 'bg-success-100 border-success-500' : ''}
+        ${showCorrect ? 'border-success-500 bg-success-50 text-success-700 font-semibold border-solid' : ''}
         ${showWrong ? 'border-danger-400 bg-danger-50 text-danger-700 font-semibold border-solid' : ''}
         ${!answer && !isReviewMode ? 'border-gray-400 border-dashed' : 'border-solid'}
         ${!answer && isReviewMode ? 'border-gray-200 bg-gray-50' : ''}
@@ -99,7 +99,7 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
 
       {/* Correct Answer - Only for drag_and_drop type, after bookmark */}
       {showWrong && correctAnswer && showCorrectAnswers && (
-        <span className="ml-2 text-sm text-green-600 font-semibold whitespace-nowrap">
+        <span className="ml-2 text-sm text-success-600 font-semibold whitespace-nowrap">
           {correctAnswer}
         </span>
       )}
