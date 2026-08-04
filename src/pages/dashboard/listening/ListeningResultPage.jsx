@@ -17,7 +17,8 @@ import { clearListeningPracticeData } from "@/store/LocalStorage/listeningStorag
 import { formatDateToDayMonth } from "@/store/analyticsStore";
 import { formatScore } from "@/utils/score";
 import ReportQuestionModal from "@/components/modal/ReportQuestionModal";
-import { MdOutlineFlag } from "react-icons/md";
+import ResultFeedbackModal from "@/components/modal/ResultFeedbackModal";
+import { MdOutlineFlag, MdOutlineFeedback } from "react-icons/md";
 
 const ListeningResultPage = () => {
   const { id } = useParams();
@@ -292,6 +293,8 @@ const ListeningResultPage = () => {
   // Include ALL questions from the test, not just answered ones
   // Savol bo'yicha shikoyat: qaysi savol ekani avtomatik biriktiriladi.
   const [reportContext, setReportContext] = useState(null);
+  // Natija haqidagi umumiy fikr (savolga bog'liq emas).
+  const [resultFeedbackOpen, setResultFeedbackOpen] = useState(false);
 
   /**
    * question_number -> savol konteksti. testForDisplay JONLI test ma'lumotidan quriladi,
@@ -617,6 +620,15 @@ const ListeningResultPage = () => {
             <Button
               variant="outline"
               className="border-gray-200 text-gray-700 shadow-sm flex gap-2 h-9 px-4 sm:px-6"
+              onClick={() => setResultFeedbackOpen(true)}
+              title="Send feedback about this test or result"
+            >
+              <MdOutlineFeedback className="text-base" />
+              <span className="hidden sm:inline">Feedback</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="border-gray-200 text-gray-700 shadow-sm flex gap-2 h-9 px-4 sm:px-6"
               onClick={downloadPDF}
             >
               <IoPrint className="text-base" /> <span className="hidden sm:inline">Print</span>
@@ -854,6 +866,17 @@ const ListeningResultPage = () => {
         open={!!reportContext}
         onOpenChange={(v) => { if (!v) setReportContext(null); }}
         context={reportContext}
+      />
+
+      <ResultFeedbackModal
+        open={resultFeedbackOpen}
+        onOpenChange={setResultFeedbackOpen}
+        description="About this listening result."
+        context={{
+          testId: testForDisplay?.id ?? attemptData?.test_id ?? null,
+          testTitle: testForDisplay?.title ?? null,
+          attemptId: attemptData?.id ?? null,
+        }}
       />
     </div>
   );

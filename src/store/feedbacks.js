@@ -2,11 +2,38 @@ import { create } from 'zustand';
 import supabase from '@/lib/supabase';
 import { useAuthStore } from './authStore';
 
+/**
+ * `feedbacks.test_id` va `attempt_id` - uuid ustunlari. Kontekst esa marshrut
+ * parametrlari / `location.state` dan keladi, ya'ni uuid bo'lmasligi mumkin
+ * (masalan, mock natija sahifasidagi query string). Noto'g'ri qiymat butun
+ * insertni yiqitmasligi uchun uni null ga aylantiramiz: kontekstsiz fikr
+ * yuborilgani - umuman yuborilmaganidan yaxshiroq.
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const asUuid = (value) => (typeof value === 'string' && UUID_RE.test(value) ? value : null);
+
+/** Savol/qism raqami satr sifatida ham kelishi mumkin ("12") - yo'qotmasdan songa o'giramiz. */
+const asInt = (value) => {
+  const n = Number.parseInt(value, 10);
+  return Number.isInteger(n) ? n : null;
+};
+
 export const useFeedbacksStore = create((set, get) => ({
     feedbacks: [],
     loading: false,
     error: null,
     
+    /**
+     * Umumiy fikr-mulohaza yuborish.
+     *
+     * Kontekst (test/urinish) IXTIYORIY: profildan yoki global modaldan yuborilganda
+     * bo'sh bo'ladi, natija sahifalaridan yuborilganda esa to'ldiriladi. Turi baribir
+     * 'general' bo'lib qoladi - bu test/natija haqidagi umumiy fikr, savol ustidan
+     * shikoyat emas (buning uchun `addQuestionReport` bor).
+     *
+     * MUHIM: test_title SNAPSHOT sifatida saqlanadi - test keyinchalik qayta
+     * nomlansa ham hisobot ma'noli bo'lib qolsin.
+     */
     addFeedback: async (feedbackData) => {
       const userProfile = useAuthStore.getState().userProfile;
       const userId = userProfile?.id;
@@ -28,6 +55,10 @@ export const useFeedbacksStore = create((set, get) => ({
             message: feedbackData.message.trim(),
             user_id: userId,
             type: 'general',
+            test_id: asUuid(feedbackData.testId),
+            test_title: feedbackData.testTitle ?? null,
+            attempt_id: asUuid(feedbackData.attemptId),
+            part_number: asInt(feedbackData.partNumber),
           })
           .select()
           .single();
@@ -111,13 +142,13 @@ export const useFeedbacksStore = create((set, get) => ({
             user_id: userId,
             type: 'question_report',
             question_id: questionId != null ? String(questionId) : null,
-            question_number: questionNumber ?? null,
+            question_number: asInt(questionNumber),
             question_type: questionType ?? null,
             question_text: questionText ?? null,
-            test_id: testId ?? null,
+            test_id: asUuid(testId),
             test_title: testTitle ?? null,
-            part_number: partNumber ?? null,
-            attempt_id: attemptId ?? null,
+            part_number: asInt(partNumber),
+            attempt_id: asUuid(attemptId),
           })
           .select()
           .single();

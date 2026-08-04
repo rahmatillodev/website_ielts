@@ -3,8 +3,10 @@ import { useParams, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import supabase from '@/lib/supabase';
 import { loadMockTestSectionResults } from '@/utils/mockTestResults';
 import MockTestClientResults from './MockTestClientResults';
-import { MdArrowBack } from 'react-icons/md';
+import { MdArrowBack, MdOutlineFeedback } from 'react-icons/md';
 import { useMockTestClientStore } from '@/store/mockTestClientStore';
+import { Button } from '@/components/ui/button';
+import ResultFeedbackModal from '@/components/modal/ResultFeedbackModal';
 
 /**
  * Page wrapper for MockTestClientResults
@@ -26,6 +28,7 @@ const MockTestClientResultsPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   if (isMockTestClient === false) {
     return <Navigate to="/dashboard" replace />;
@@ -67,6 +70,21 @@ const MockTestClientResultsPage = () => {
             clientWithAvatar = { ...clientData, avatar_image: userRow.avatar_image };
           }
         }
+        // Mock test sarlavhasi - FAQAT fikr-mulohaza konteksti uchun. Alohida so'rov:
+        // `select('*')` ichiga joylashtirilgan bo'lsa, mock_test ustidagi RLS butun
+        // qatorni yo'qotib, sahifani buzishi mumkin edi. Bu yerda xato bo'lsa,
+        // sarlavha null bo'lib qoladi, xolos.
+        if (clientData.mock_test_id) {
+          const { data: mockTestRow } = await supabase
+            .from('mock_test')
+            .select('title')
+            .eq('id', clientData.mock_test_id)
+            .maybeSingle();
+          if (mockTestRow?.title) {
+            clientWithAvatar = { ...clientWithAvatar, mock_test_title: mockTestRow.title };
+          }
+        }
+
         setClient(clientWithAvatar);
 
         // Fetch results if client has user_id and mock_test_id
@@ -126,14 +144,35 @@ const MockTestClientResultsPage = () => {
 
   return (
     <div className="w-full h-full max-w-7xl mx-auto p-4 md:p-6 bg-gray-50">
-      <button
-        onClick={handleBack}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-      >
-        <MdArrowBack className="text-xl" />
-        <span className="font-semibold">Back to History</span>
-      </button>
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <MdArrowBack className="text-xl" />
+          <span className="font-semibold">Back to History</span>
+        </button>
+        <Button
+          variant="outline"
+          className="border-gray-200 text-gray-700 shadow-sm flex gap-2 h-9 px-4 sm:px-6"
+          onClick={() => setFeedbackOpen(true)}
+          title="Send feedback about this mock test result"
+        >
+          <MdOutlineFeedback className="text-base" />
+          <span className="hidden sm:inline">Feedback</span>
+        </Button>
+      </div>
       <MockTestClientResults client={client} results={results} />
+
+      <ResultFeedbackModal
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+        description="About this mock test result."
+        context={{
+          testId: client.mock_test_id ?? null,
+          testTitle: client.mock_test_title ?? null,
+        }}
+      />
     </div>
   );
 };

@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FaTelegramPlane } from 'react-icons/fa';
-import { MdSchedule, MdCheckCircleOutline } from 'react-icons/md';
+import { MdSchedule, MdCheckCircleOutline, MdOutlineFeedback } from 'react-icons/md';
 import { clearAllMockTestDataForId } from '@/store/LocalStorage/mockTestStorage';
 import { getRun, sanitizeRunForDisplay } from '@/lib/mockTestIndexedArchive';
+import { Button } from '@/components/ui/button';
+import ResultFeedbackModal from '@/components/modal/ResultFeedbackModal';
 
 
 /**
@@ -26,6 +28,7 @@ const MockTestResults = ({ mockTestId, mockRunId, results, onBack }) => {
   const [showArchive, setShowArchive] = useState(false);
   const [archive, setArchive] = useState(null);
   const [archiveError, setArchiveError] = useState(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const loadArchive = useCallback(async () => {
     if (!effectiveMockRunId) {
@@ -123,10 +126,31 @@ const MockTestResults = ({ mockTestId, mockRunId, results, onBack }) => {
             No scores are displayed at this stage. Please wait for the official evaluation.
           </p>
 
+          {/* Fikr-mulohaza: baholash kutilayotgan bo'lsa ham, sessiya bo'yicha muammoni
+              (audio uzilishi, matn yuklanmasligi) aynan shu yerda aytish qulay. */}
+          <div className="border-t border-gray-100 pt-6">
+            <p className="text-gray-500 text-sm mb-3">
+              Something go wrong during the test?
+            </p>
+            <Button
+              variant="outline"
+              className="border-gray-200 text-gray-700 shadow-sm inline-flex gap-2 h-9 px-6"
+              onClick={() => setFeedbackOpen(true)}
+            >
+              <MdOutlineFeedback className="text-base" />
+              Send feedback
+            </Button>
+          </div>
+
         </div>
       </div>
 
-      
+      <ResultFeedbackModal
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+        description="About the mock test you just submitted."
+        context={{ testId: effectiveMockTestId ?? null }}
+      />
     </div>
   );
 };
