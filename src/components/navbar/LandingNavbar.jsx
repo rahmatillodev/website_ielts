@@ -65,7 +65,7 @@ function LandingNavbar() {
     <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-white/85 backdrop-blur-[14px]">
       <div className="mx-auto grid h-16 w-full max-w-[1180px] grid-cols-[auto_1fr] items-center gap-6 px-6 sm:px-8 lg:grid-cols-[1fr_auto_1fr]">
         {/* Brand. The prototype sets the wordmark as type, not as the logo
-            asset — 22px/800 in the accent, with a Beta pill beside it. */}
+            asset — 22px/800 in the accent. */}
         <div className="flex items-center gap-2.5">
           <Link
             to="/"
@@ -74,9 +74,6 @@ function LandingNavbar() {
           >
             EDU
           </Link>
-          <span className="rounded-full bg-primary px-[9px] py-[3px] text-[10.5px] font-bold tracking-[0.04em] text-primary-foreground">
-            Beta
-          </span>
         </div>
 
         <nav className="hidden justify-center gap-[34px] lg:flex">

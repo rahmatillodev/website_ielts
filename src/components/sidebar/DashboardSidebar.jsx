@@ -121,9 +121,6 @@ const DashboardSidebar = ({ onNavigate }) => {
                   IELTSCORE
                 </span> */}
                 <LogoDesign />
-                <span className="text-[10px] bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full font-bold">
-                  Beta
-                </span>
               </div>
 
             </>
