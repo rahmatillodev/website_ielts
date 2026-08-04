@@ -6,13 +6,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HiOutlinePencil } from "react-icons/hi2";
 import { LuUserRound } from "react-icons/lu";
 import { LiaExternalLinkAltSolid } from "react-icons/lia";
-import { Crown, Send, Zap, Paperclip } from "lucide-react";
+import { Send, Zap } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { isPremiumSubscriber } from "@/utils/isPremiumSubscriber";
 import { useSettingsStore } from "@/store/systemStore";
 import ProfileModal from "@/components/modal/ProfileModal";
 import ChangePasswordModal from "@/components/modal/ChangePasswordModal";
-import { format, differenceInCalendarDays } from "date-fns";
+import SubscriptionCard from "@/components/cards/SubscriptionCard";
 // Animation imports
 import { motion } from "framer-motion";
 import { useFeedbacksStore } from "@/store/feedbacks";
@@ -105,33 +105,17 @@ const ProfilePage = () => {
     };
   }, [fullName]);
 
-  // Memoize premium calculations
+  // The plan's two dates. Everything the card displays — days left, the share of
+  // the plan remaining — it derives from these itself.
   const premiumData = useMemo(() => {
-    const isPremium = isPremiumSubscriber(userProfile);
-    const premiumStart = userProfile?.premium_started_at ? new Date(userProfile.premium_started_at) : null;
-    const premiumUntil = userProfile?.premium_until
-      ? new Date(userProfile.premium_until)
-      : null;
-    const daysRemaining = premiumUntil
-      ? Math.max(0, differenceInCalendarDays(premiumUntil, premiumStart))
-      : 0;
-    const totalDays = premiumStart && premiumUntil ? differenceInCalendarDays(premiumUntil, premiumStart) : 0;
-    const remainingDays = premiumUntil ? Math.max(0, differenceInCalendarDays(premiumUntil, new Date())) : 0;
-    const progressPercent = totalDays > 0 ? (remainingDays / totalDays) * 100 : 0;
-
     return {
-      isPremium,
-      premiumStart,
-      premiumUntil,
-      daysRemaining,
-      
-      totalDays,
-      remainingDays,
-      progressPercent
+      isPremium: isPremiumSubscriber(userProfile),
+      premiumStart: userProfile?.premium_started_at ? new Date(userProfile.premium_started_at) : null,
+      premiumUntil: userProfile?.premium_until ? new Date(userProfile.premium_until) : null,
     };
   }, [userProfile]);
 
-  const { isPremium, premiumStart, premiumUntil, daysRemaining, progressPercent } = premiumData;
+  const { isPremium, premiumStart, premiumUntil } = premiumData;
 
   // Memoize initials calculation
   const initials = useMemo(() => {
@@ -327,58 +311,11 @@ const ProfilePage = () => {
                   </p>
                 </motion.div>
               </div>
-              {isPremium && premiumUntil && (
-                <motion.div
-                  className="relative overflow-hidden rounded-[24px] p-8 shadow-xl"
-                  initial={{ opacity: 0, scale: 0.9, x: 20 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.4, type: "spring" }}
-                  whileHover={{ scale: 1.02 }}
-                >
-                  {/* Glassmorphism overlay */}
-                  <div className="absolute inset-0 bg-linear-to-tr from-white/10 to-gray-100 pointer-events-none" />
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between flex-wrap gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-linear-to-br from-amber-400 to-orange-500 rounded-2xl shadow-lg shadow-amber-500/25">
-                          <Crown size={28} className="text-white" />
-                        </div>
-                        <div>
-                          <h2 className="text-xl font-black text-black">
-                            Premium Subscription
-                          </h2>
-                          <p className="text-gray-400 font-medium">
-                            Expires on {format(premiumUntil, "MMMM dd, yyyy")}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-3xl font-black text-transparent bg-clip-text bg-linear-to-r from-amber-400 to-orange-400">
-                          {daysRemaining} Days
-                        </p>
-                        <p className="text-gray-400 font-medium">Remaining</p>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <motion.div className="mt-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
-                      <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden backdrop-blur-sm">
-                        <motion.div
-                          className="h-full bg-linear-to-r from-amber-400 to-orange-500 rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${progressPercent}%` }}
-                          transition={{ duration: 1, delay: 0.7, ease: "easeOut" }}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2 font-medium">
-                        {Math.round(progressPercent)}% of subscription period
-                        remaining
-                      </p>
-                    </motion.div>
-                  </div>
-                </motion.div>
+              {isPremium && (
+                <SubscriptionCard
+                  premiumUntil={premiumUntil}
+                  premiumStart={premiumStart}
+                />
               )}
             </motion.div>
 

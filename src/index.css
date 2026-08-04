@@ -550,6 +550,12 @@ textarea {
   --color-text-secondary-dark: var(--text-secondary-dark);
 
   --color-orange-500: var(--orange-500);
+
+  /* -- type ---------------------------------------------------------------- */
+  /* Poppins stays the body face (set on html/body in the base layer). This
+     only names the mono face, so `font-mono` reaches IBM Plex Mono instead of
+     the browser default. Loaded alongside Poppins in index.html. */
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 /* NOTE: the previous partial overrides of Tailwind's blue/indigo/green/amber/
    yellow/gray scales were removed. In light mode every one of them restated the
