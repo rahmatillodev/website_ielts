@@ -5,6 +5,7 @@
 
 import supabase from './supabase';
 import { useTestDetailStore } from '@/store/testStore/testDetailStore';
+import { answersMatch } from './answerNormalization';
 
 // Helper to get user from localStorage (persisted by Zustand in 'auth-storage')
 export const getUserIdFromLocalStorage = () => {
@@ -532,11 +533,11 @@ const calculateTestScore = (answers, currentTest) => {
             totalQuestions++;
             const correctAnswer = getCorrectAnswer(question, questionGroup);
 
-            // Normalize answers for comparison
-            const normalizedUserAnswer = normalizeAnswer(userAnswer);
-            const normalizedCorrectAnswer = normalizeAnswer(correctAnswer);
-
-            const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer && normalizedUserAnswer !== '';
+            // The only place typed answers are graded. answersMatch() tries an
+            // exact comparison first, then the canonical forms, so a legitimate
+            // variant of the right answer counts and nothing that passed before
+            // can start failing. See src/lib/answerNormalization.js.
+            const isCorrect = answersMatch(userAnswer, correctAnswer);
 
             if (isCorrect) {
               correctCount++;
@@ -716,16 +717,6 @@ const getCorrectAnswer = (question, questionGroup) => {
   // If no correct answer found, return empty string
   // This will be marked as incorrect during scoring
   return '';
-};
-
-/**
- * Normalize answer for comparison (case-insensitive, trim whitespace)
- * @param {string} answer - Answer to normalize
- * @returns {string} Normalized answer
- */
-const normalizeAnswer = (answer) => {
-  if (!answer) return '';
-  return answer.toString().trim().toLowerCase();
 };
 
 const readingBands = [
