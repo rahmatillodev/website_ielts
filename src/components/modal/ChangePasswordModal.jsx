@@ -170,7 +170,7 @@ const ChangePasswordModal = ({ open, onOpenChange }) => {
             <Button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-brand-500 hover:bg-brand-600"
+              className="rounded-xl bg-primary hover:bg-primary-hover"
             >
               {loading ? 'Updating...' : 'Update Password'}
             </Button>

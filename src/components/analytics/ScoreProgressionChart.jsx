@@ -109,7 +109,7 @@ const ScoreProgressionChart = ({ scoreTrends, testLimit = '5' }) => {
                 fontSize={11}
                 tick={{ fill: AXIS.tick }}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f9fafb' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--chart-grid)' }} />
               {/* <Legend verticalAlign="top" align="left" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }} /> */}
               <Bar
                 dataKey="Reading"

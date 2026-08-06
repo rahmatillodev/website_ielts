@@ -5,6 +5,8 @@ import { LuChevronsLeftRight } from "react-icons/lu";
 import { useTestStore } from "@/store/testStore";
 import QuestionRenderer from "@/components/questions/QuestionRenderer";
 import QuestionHeader from "@/components/questions/QuestionHeader";
+import QuestionReviewActions from "@/components/questions/QuestionReviewActions";
+import { ExplainProvider } from "@/components/questions/ExplainContext";
 import { saveReadingPracticeData, loadReadingPracticeData, clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
 import { saveSectionData, loadSectionData, loadMockTestData } from "@/store/LocalStorage/mockTestStorage";
 import { submitTestAttempt, fetchLatestAttempt, getUserIdFromLocalStorage } from "@/lib/testAttempts";
@@ -1801,6 +1803,23 @@ const ReadingPracticePageContent = () => {
                               />
 
                             </div>
+
+                            {/* Explain: bu turlar izohni HAR BIR bo'sh joy/qator yonida
+                                o'zi chizadi (report bayrog'i yonidagi ikonka), shuning uchun
+                                kartochka ostida ro'yxat YO'Q. Faqat per-savol tayanchi
+                                bo'lmagan turlar (multiple_answers - variantlari <button>,
+                                ichiga tugma qo'yib bo'lmaydi; map) shu ro'yxatni oladi. */}
+                            {status === 'reviewing' && (isMultipleAnswers || isMap) &&
+                              [...groupQuestions]
+                                .sort((a, b) => (a.question_number ?? 0) - (b.question_number ?? 0))
+                                .map((q) => (
+                                  <QuestionReviewActions
+                                    key={q.id || q.question_number}
+                                    questionNumber={q.question_number}
+                                    explanation={q.explanation}
+                                    showQuestionNumber
+                                  />
+                                ))}
                           </div>
                         ) : (
                           /* For other question types: Render individual questions */
@@ -1888,6 +1907,14 @@ const ReadingPracticePageContent = () => {
                                       onReport={(q) => openReport({ question: q, questionGroup, questionNumber: q?.question_number })}
                                     />
                                   </div>
+
+                                  {/* Explain: bitta savolli kartochka - qator kartochka ostida turadi. */}
+                                  {status === 'reviewing' && (
+                                    <QuestionReviewActions
+                                      questionNumber={questionNumber}
+                                      explanation={question.explanation}
+                                    />
+                                  )}
                                 </div>
                               );
                             })
@@ -1968,7 +1995,13 @@ const ReadingPracticePage = () => {
   return (
     <AppearanceProvider>
       <AnnotationProvider>
-        <ReadingPracticePageContent />
+        {/* Explain state lives here, and ONLY here: the question components are
+            shared with listening, which deliberately has no Explain surface, so
+            the absence of this provider on that page is what keeps it off.
+            Mounted in both modes - the controls key off review mode themselves. */}
+        <ExplainProvider>
+          <ReadingPracticePageContent />
+        </ExplainProvider>
       </AnnotationProvider>
     </AppearanceProvider>
   );

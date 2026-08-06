@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { getOptionValue } from "../../store/optionUtils";
 import QuestionActionIcons from "./QuestionActionIcons";
+import { ExplainIcon, ExplainPanel } from "./InlineExplain";
 import { useAppearance } from "@/contexts/AppearanceContext";
 
 /**
@@ -183,7 +184,19 @@ const Table = ({ question: _question, groupQuestions = [], answers = {}, onAnswe
                         isReviewMode={isReviewMode}
                         onReport={() => onReport(q)}
                       />
+                      <ExplainIcon
+                        questionKey={qNumber}
+                        explanation={q.explanation}
+                        isReviewMode={isReviewMode}
+                        className="ml-0.5"
+                      />
                     </div>
+                    {/* Outside the flex row: opens as a block under this cell's row. */}
+                    <ExplainPanel
+                      questionKey={qNumber}
+                      explanation={q.explanation}
+                      isReviewMode={isReviewMode}
+                    />
                   </td>
                   
                   {/* Subsequent Columns: Radio Buttons for Options */}

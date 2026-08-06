@@ -121,7 +121,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
         <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2 overflow-hidden">
           <motion.div
             className={`h-2.5 rounded-full ${
-              needsImprovement ? 'bg-orange-500' : 'bg-brand-600'
+              needsImprovement ? 'bg-warning-700' : 'bg-brand-600'
             }`}
             variants={progressBarVariants}
             initial="hidden"
@@ -156,7 +156,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
           </div>
           {readingTrend !== null && readingTrend !== 0 && (
             <div className={`flex items-center gap-1 text-sm font-semibold ${
-              readingTrend > 0 ? 'text-green-600' : 'text-danger-700'
+              readingTrend > 0 ? 'text-success-700' : 'text-danger-700'
             }`}>
               {readingTrend > 0 ? (
                 <>
@@ -199,7 +199,7 @@ const PerformanceOverviewCards = ({ analyticsData, targetBandScore = 7.5 }) => {
             {formatScore(listeningAvg)}
           </div>
           {listeningRecommendation && (
-            <div className="flex items-center gap-1 text-sm font-semibold text-orange-600">
+            <div className="flex items-center gap-1 text-sm font-semibold text-warning-text">
               <FaExclamationTriangle size={12} />
               <span>{listeningStatus}</span>
             </div>

@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import parse from "html-react-parser";
 import { Input } from "@/components/ui/input";
 import QuestionActionIcons from "./QuestionActionIcons";
+import { ExplainIcon, ExplainPanel } from "./InlineExplain";
 import { useAppearance } from "@/contexts/AppearanceContext";
 
 const TableCompletion = ({
@@ -64,10 +65,8 @@ const TableCompletion = ({
     const isBookmarked = bookmarks.has(questionId) || bookmarks.has(qNumber) || bookmarks.has(answerKey);
 
     return (
-      <span
-        key={`input-${qIndex}`}
-        className="inline-flex items-center relative align-middle group"
-      >
+      <React.Fragment key={`input-${qIndex}`}>
+      <span className="inline-flex items-center relative align-middle group">
         <Input
           spellCheck="false"
           type="text"
@@ -102,6 +101,12 @@ const TableCompletion = ({
           isReviewMode={isReviewMode}
           onReport={() => onReport(questionItem)}
         />
+        <ExplainIcon
+          questionKey={qNumber}
+          explanation={questionItem.explanation}
+          isReviewMode={isReviewMode}
+          className="ml-0.5"
+        />
         {/* Correct Answer - Only for table_completion type, after bookmark */}
         {showWrong && correctAnswer && showCorrectAnswers && (
           <span className="ml-2 text-sm text-success-600 font-semibold whitespace-nowrap">
@@ -109,6 +114,13 @@ const TableCompletion = ({
           </span>
         )}
       </span>
+      {/* Opens as a block inside the same table cell, under the gap it explains. */}
+      <ExplainPanel
+        questionKey={qNumber}
+        explanation={questionItem.explanation}
+        isReviewMode={isReviewMode}
+      />
+      </React.Fragment>
     );
   };
 

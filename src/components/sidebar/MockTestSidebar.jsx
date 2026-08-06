@@ -25,12 +25,12 @@ const SidebarItem = ({ icon: Icon, label, link, isActive, onNavigate, isCollapse
       className={`flex items-center gap-3 px-4 py-2.5 2xl:py-3 text-sm font-medium rounded-xl cursor-pointer transition-all duration-200
         ${isActive
           ? "bg-brand-50 text-brand-600"
-          : "text-[#64748B] hover:text-gray-900 hover:bg-gray-50"
+          : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
         }
         ${isCollapsed ? "mx-2 justify-center" : "mx-3"}
       `}
     >
-      <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 shrink-0 ${isActive ? "text-brand-600" : "text-[#64748B]"}`} />
+      <Icon className={`w-5 h-5 2xl:w-6 2xl:h-6 shrink-0 ${isActive ? "text-brand-600" : "text-gray-500"}`} />
       {!isCollapsed && <span className="truncate">{label}</span>}
     </Link>
   );
@@ -156,7 +156,7 @@ const MockTestSidebar = ({ onNavigate }) => {
         )}
 
         {!effectiveIsCollapsed && (
-          <div className="mt-2 xl:mt-4 px-7 text-[10px] 2xl:text-[11px] font-black text-[#94A3B8] uppercase tracking-[1.5px]">
+          <div className="mt-2 xl:mt-4 px-7 text-[10px] 2xl:text-[11px] font-black text-gray-400 uppercase tracking-[1.5px]">
             Account
           </div>
         )}

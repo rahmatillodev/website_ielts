@@ -5,11 +5,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, format, formatISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { MONTH_NAMES, DAY_NAMES, isDateDisabled } from "../utils/dateHelpers";
+import { SESSION_ICON } from "@/lib/skillColors";
 
 const TestCalendar = ({
   title,
   icon: Icon,
-  iconColor,
+  session = "rwl",
   selectedDate,
   onDateSelect,
   currentMonth,
@@ -20,6 +21,8 @@ const TestCalendar = ({
   loadingDates,
   today,
 }) => {
+  const iconColor = SESSION_ICON[session] ?? SESSION_ICON.rwl;
+
   // Get all days for the calendar view
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(new Date(currentYear, currentMonth));
@@ -100,10 +103,12 @@ const TestCalendar = ({
                     className={cn(
                       "p-2 rounded-lg text-sm font-medium transition-all aspect-square relative",
                       isDisabled && "bg-gray-50 text-gray-300 cursor-not-allowed",
-                      !isDisabled && isSelected && iconColor.includes('purple') && "bg-purple-500 text-white shadow-md hover:bg-purple-600",
-                      !isDisabled && isSelected && iconColor.includes('green') && "bg-green-500 text-white shadow-md hover:bg-green-600",
-                      !isDisabled && !isSelected && isToday && iconColor.includes('purple') && "bg-purple-100 text-purple-700 border-2 border-purple-300 hover:bg-purple-200",
-                      !isDisabled && !isSelected && isToday && iconColor.includes('green') && "bg-green-100 text-green-700 border-2 border-green-300 hover:bg-green-200",
+                      // Selected and today are brand in BOTH calendars: selection
+                      // is brand-owned app-wide, so a picked day must look the
+                      // same here as a picked row anywhere else. The session is
+                      // told apart by the icon (see SESSION_ICON).
+                      !isDisabled && isSelected && "bg-primary text-primary-foreground shadow-md hover:bg-primary-hover",
+                      !isDisabled && !isSelected && isToday && "bg-primary-subtle text-primary-text border-2 border-primary-border hover:bg-primary-subtle-hover",
                       !isDisabled && !isSelected && !isToday && isCurrentMonth && hasSlots && "bg-gray-50 text-gray-700 hover:bg-gray-100",
                       !isDisabled && !isSelected && !isToday && isCurrentMonth && !hasSlots && "bg-gray-50 text-gray-400 hover:bg-gray-100 opacity-50",
                       !isDisabled && !isSelected && !isToday && !isCurrentMonth && "bg-gray-50 text-gray-400 hover:bg-gray-100"

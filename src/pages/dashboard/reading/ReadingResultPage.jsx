@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { FaArrowLeft } from "react-icons/fa6";
@@ -19,7 +20,7 @@ import { formatDateToDayMonth } from "@/store/analyticsStore";
 import { formatScore } from "@/utils/score";
 import ReportQuestionModal from "@/components/modal/ReportQuestionModal";
 import ResultFeedbackModal from "@/components/modal/ResultFeedbackModal";
-import { MdOutlineFlag, MdOutlineFeedback, MdOutlineLightbulb } from "react-icons/md";
+import { MdOutlineFlag, MdOutlineFeedback } from "react-icons/md";
 
 
 const ReadingResultPage = () => {
@@ -323,50 +324,6 @@ const ReadingResultPage = () => {
     return map;
   }, [testForDisplay]);
 
-  /**
-   * question_number -> `questions.explanation` (Explain, 1-bosqich).
-   *
-   * FAQAT READING. Bu sahifa reading natijasi uchun, listening esa o'zining
-   * ListeningResultPage'iga ega va u yerda Explain YO'Q - qaror bo'yicha listening
-   * highlight + Locate + audio seek oladi, Explain emas.
-   *
-   * Izohlar kutubxonaning kichik qismida bor (hozircha 27 ta savol), shuning uchun
-   * ustun faqat shu testda kamida bitta izoh bo'lsa chiziladi: izohsiz testlar
-   * jadvali avvalgidek qoladi, bo'sh "Explanation yo'q" kataklari bilan
-   * to'ldirilmaydi.
-   */
-  const explanationByNumber = useMemo(() => {
-    const map = new Map();
-    (testForDisplay?.parts || []).forEach((part) => {
-      (part.questionGroups || []).forEach((group) => {
-        (group.questions || []).forEach((question) => {
-          if (question.question_number == null) return;
-          const text = (question.explanation || '').trim();
-          if (text) map.set(String(question.question_number), text);
-        });
-      });
-    });
-    return map;
-  }, [testForDisplay]);
-
-  const hasAnyExplanation = explanationByNumber.size > 0;
-  const [openExplanations, setOpenExplanations] = useState(() => new Set());
-
-  /* Jadval ustunlari: #, Status, Your Answer (+ Correct Answer) (+ Explanation) + Report.
-     Bitta joyda hisoblanadi - bo'sh holat va yoyilgan izoh qatori bir xil colSpan ishlatsin. */
-  const answerTableColumnCount =
-    4 + (showCorrectAnswers ? 1 : 0) + (hasAnyExplanation ? 1 : 0);
-
-  const toggleExplanation = (questionNumber) => {
-    setOpenExplanations((prev) => {
-      const next = new Set(prev);
-      const key = String(questionNumber);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
   const openReport = (questionNumber) => {
     const ctx = questionContextByNumber.get(String(questionNumber)) || { questionNumber };
     setReportContext({
@@ -653,7 +610,7 @@ const ReadingResultPage = () => {
         {/* Back Link */}
         <Link
           to="/reading"
-          className="flex max-w-max items-center gap-2 text-brand-500 font-semibold text-sm mb-6 cursor-pointer uppercase tracking-wider hover:text-brand-600 transition-colors"
+          className="flex max-w-max items-center gap-2 text-primary-text font-semibold text-sm mb-6 cursor-pointer uppercase tracking-wider hover:text-brand-800 transition-colors"
         >
           <FaArrowLeft size={12} />
           <span>Back to Reading</span>
@@ -665,7 +622,7 @@ const ReadingResultPage = () => {
             <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2">
               Exam Results
             </h1>
-            <div className="flex flex-wrap items-center gap-2 text-slate-500 font-medium text-xs sm:text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-gray-500 font-medium text-xs sm:text-sm">
               <span>{testForDisplay?.title || "Academic Reading Practice Test"}</span>
               <span className="text-gray-400">•</span>
               <span>Completed on {formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt)}</span>
@@ -674,7 +631,7 @@ const ReadingResultPage = () => {
           <div className="flex gap-3">
             <Button
               variant="outline"
-              className="border-gray-200 text-gray-700 shadow-sm flex gap-2 h-9 px-4 sm:px-6"
+              className="flex gap-2 h-9 px-4 sm:px-6"
               onClick={() => setResultFeedbackOpen(true)}
               title="Send feedback about this test or result"
             >
@@ -683,7 +640,7 @@ const ReadingResultPage = () => {
             </Button>
             <Button
               variant="outline"
-              className="border-gray-200 text-gray-700 shadow-sm flex gap-2 h-9 px-4 sm:px-6"
+              className="flex gap-2 h-9 px-4 sm:px-6"
               onClick={downloadPDF}
               disabled={pdfLoading}
             >
@@ -705,10 +662,11 @@ const ReadingResultPage = () => {
 
         {/* Stats Cards - Redesigned */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
-          {/* Overall Score Card */}
-          <div className="border-2 border-brand-200 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-lg">
+          {/* Overall Score Card. The brand border is what marks this as the
+              headline stat; the other two carry the default `--border`. */}
+          <Card className="gap-0 border-primary-border px-5 py-5 relative overflow-hidden">
             <div className="relative z-10">
-              <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest mb-3">
+              <h3 className="text-gray-500 font-semibold text-xs sm:text-sm uppercase tracking-widest mb-3">
                 Overall Band Score
               </h3>
               <div className="flex items-baseline gap-1 mb-4">
@@ -729,18 +687,20 @@ const ReadingResultPage = () => {
             <div className="absolute -right-4 -top-4 text-brand-200/30">
               <FaCheckCircle size={80} />
             </div>
-          </div>
+          </Card>
 
           {/* Correct Answers Card */}
-          <div className=" border-2 border-grey-200 rounded-2xl p-4 sm:p-5 shadow-lg">
+          <Card className="gap-0 px-5 py-5">
             <div className="flex justify-between items-start mb-3">
-              <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest">
+              <h3 className="text-gray-500 font-semibold text-xs sm:text-sm uppercase tracking-widest">
                 Correct Answers
               </h3>
-              <FaCheckCircle className="text-green-600 text-lg sm:text-xl" />
+              {/* A count of right answers IS the correct/incorrect axis, so it
+                  takes the success ramp — the same one the question cards use. */}
+              <FaCheckCircle className="text-success-600 text-lg sm:text-xl" />
             </div>
             <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-3xl sm:text-4xl font-black text-gray-800">
+              <span className="text-3xl sm:text-4xl font-black text-gray-900">
                 {stats.correctCount}
               </span>
               <span className="text-gray-500 font-semibold text-lg">
@@ -750,25 +710,27 @@ const ReadingResultPage = () => {
             <div className="text-sm font-semibold text-gray-500">
               {stats.percentage}%
             </div>
-          </div>
+          </Card>
 
           {/* Time Taken Card */}
-          <div className=" border-2 border-grey-200 rounded-2xl p-4 sm:p-5 shadow-lg">
+          <Card className="gap-0 px-5 py-5">
             <div className="flex justify-between items-start mb-3">
-              <h3 className="text-slate-600 font-semibold text-xs sm:text-sm uppercase tracking-widest">
+              <h3 className="text-gray-500 font-semibold text-xs sm:text-sm uppercase tracking-widest">
                 Time Taken
               </h3>
-              <LuTimer className="text-purple-600 text-lg sm:text-xl" />
+              {/* Elapsed time is neither good nor bad, so it must not borrow a
+                  meaning ramp — `info` is the system's non-brand neutral notice. */}
+              <LuTimer className="text-info-600 text-lg sm:text-xl" />
             </div>
             <div className="mb-2">
-              <span className="text-3xl sm:text-4xl font-black text-gray-800">
+              <span className="text-3xl sm:text-4xl font-black text-gray-900">
                 {stats.timeTaken}
               </span>
             </div>
             <div className="text-sm font-semibold text-gray-500">
               Avg. {stats.avgTime} per question
             </div>
-          </div>
+          </Card>
         </div>
         {/* Performance Banner */}
         <ResultBanner score={stats.score} testType="Reading" />
@@ -792,15 +754,15 @@ const ReadingResultPage = () => {
                 </label>
               </div>
               <div className="flex gap-4 font-semibold text-sm">
-                <span className="text-slate-500">
+                <span className="text-gray-500">
                   Correct{" "}
-                  <span className="bg-green-100 text-green-600 px-2 py-0.5 rounded-full ml-1">
+                  <span className="bg-success-100 text-success-700 px-2 py-0.5 rounded-full ml-1">
                     {stats.correctCount}
                   </span>
                 </span>
-                <span className="text-slate-500">
+                <span className="text-gray-500">
                   Questions{" "}
-                  <span className="bg-brand-100 text-brand-600 px-2 py-0.5 rounded-full ml-1">
+                  <span className="bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full ml-1">
                     {stats.totalQuestions}
                   </span>
                 </span>
@@ -813,83 +775,58 @@ const ReadingResultPage = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-slate-50 border-b">
-                    <th className="text-left p-4 text-xs font-black text-slate-400 uppercase tracking-widest w-16">
+                  <tr className="bg-gray-50 border-b">
+                    <th className="text-left p-4 text-xs font-black text-gray-500 uppercase tracking-widest w-16">
                       #
                     </th>
-                    <th className="text-left p-4 text-xs font-black text-slate-400 uppercase tracking-widest w-20">
+                    <th className="text-left p-4 text-xs font-black text-gray-500 uppercase tracking-widest w-20">
                       Status
                     </th>
-                    <th className="text-left p-4 text-xs font-black text-slate-400 uppercase tracking-widest">
+                    <th className="text-left p-4 text-xs font-black text-gray-500 uppercase tracking-widest">
                       Your Answer
                     </th>
                     {showCorrectAnswers && (
-                      <th className="text-left p-4 text-xs font-black text-slate-400 uppercase tracking-widest">
+                      <th className="text-left p-4 text-xs font-black text-gray-500 uppercase tracking-widest">
                         Correct Answer
                       </th>
                     )}
-                    {hasAnyExplanation && (
-                      <th className="text-left p-4 text-xs font-black text-slate-400 uppercase tracking-widest w-24">
-                        Explanation
-                      </th>
-                    )}
-                    <th className="text-right p-4 text-xs font-black text-slate-400 uppercase tracking-widest w-16">
+                    <th className="text-right p-4 text-xs font-black text-gray-500 uppercase tracking-widest w-16">
                       Report
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {answerDisplayData.length > 0 ? (
-                    answerDisplayData.map((answerItem) => {
-                      const explanation = explanationByNumber.get(String(answerItem.questionNumber));
-                      const isExplanationOpen = openExplanations.has(String(answerItem.questionNumber));
-
-                      return (
-                      <React.Fragment key={answerItem.questionNumber}>
+                    answerDisplayData.map((answerItem) => (
                       <tr
-                        className="hover:bg-slate-50/50 transition-colors"
+                        key={answerItem.questionNumber}
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        <td className="p-4 text-slate-400 font-semibold">
+                        <td className="p-4 text-gray-500 font-semibold">
                           {answerItem.questionNumber}
                         </td>
+                        {/* Same correct/incorrect pairing as the question
+                            components: the two icons sit on the same step of
+                            their ramps (600) so neither reads heavier than the
+                            other, and the answer text takes the -700 text steps
+                            (`--success-text` / `--destructive-text`). */}
                         <td className="p-4">
                           {answerItem.isCorrect ? (
-                            <FaCheckCircle className="text-success-500 text-xl" />
+                            <FaCheckCircle className="text-success-600 text-xl" />
                           ) : (
-                            <FaTimesCircle className="text-danger-700 text-xl" />
+                            <FaTimesCircle className="text-danger-600 text-xl" />
                           )}
                         </td>
                         <td className="p-4">
-                          <span className={answerItem.isCorrect ? "text-success-600 font-semibold" : "text-danger-700 font-semibold"}>
+                          <span className={answerItem.isCorrect ? "text-success-700 font-semibold" : "text-danger-700 font-semibold"}>
                             {answerItem.yourAnswer || "-"}
                           </span>
                         </td>
                         {showCorrectAnswers && (
                           <td className="p-4">
-
-                            <span className="text-success-600 font-semibold">
+                            <span className="text-success-700 font-semibold">
                               {answerItem.correctAnswer}
                             </span>
-
-                          </td>
-                        )}
-                        {hasAnyExplanation && (
-                          <td className="p-4">
-                            {explanation ? (
-                              <button
-                                type="button"
-                                onClick={() => toggleExplanation(answerItem.questionNumber)}
-                                aria-expanded={isExplanationOpen}
-                                aria-controls={`explanation-${answerItem.questionNumber}`}
-                                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors"
-                              >
-                                <MdOutlineLightbulb size={15} />
-                                {isExplanationOpen ? 'Hide' : 'Why?'}
-                              </button>
-                            ) : (
-                              /* Izohi yo'q savol - toza bo'sh katak qoladi. */
-                              <span className="sr-only">No explanation available</span>
-                            )}
                           </td>
                         )}
                         <td className="p-4 text-right">
@@ -898,39 +835,16 @@ const ReadingResultPage = () => {
                             onClick={() => openReport(answerItem.questionNumber)}
                             title="Report a problem with this question"
                             aria-label={`Report a problem with question ${answerItem.questionNumber}`}
-                            className="text-gray-300 hover:text-danger-700 transition-colors"
+                            className="text-gray-400 hover:text-destructive-text transition-colors"
                           >
                             <MdOutlineFlag size={16} />
                           </button>
                         </td>
                       </tr>
-
-                      {explanation && isExplanationOpen && (
-                        <tr id={`explanation-${answerItem.questionNumber}`} className="bg-brand-50/40">
-                          <td colSpan={answerTableColumnCount} className="px-4 pb-4 pt-0">
-                            <div className="rounded-xl border border-brand-100 bg-white p-4">
-                              <div className="flex items-center gap-2 mb-2">
-                                <MdOutlineLightbulb className="text-brand-600" size={16} />
-                                <span className="text-[11px] font-black uppercase tracking-widest text-brand-700">
-                                  Why this is the answer
-                                </span>
-                              </div>
-                              {/* whitespace-pre-line: izohlar "Where:/Quote:/Why:" uch qatorli
-                                  formatda saqlanadi, qator uzilishlari saqlanib qolishi kerak.
-                                  Qo'lda yozilgan eski bir qatorli izohlar ham xuddi shunday chiziladi. */}
-                              <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
-                                {explanation}
-                              </p>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                      </React.Fragment>
-                      );
-                    })
+                    ))
                   ) : (
                     <tr>
-                      <td colSpan={answerTableColumnCount} className="p-6 text-center text-gray-500">
+                      <td colSpan={showCorrectAnswers ? 5 : 4} className="p-6 text-center text-gray-500">
                         No answers submitted
                       </td>
                     </tr>
@@ -945,7 +859,7 @@ const ReadingResultPage = () => {
             <Link to="/dashboard">
               <Button
                 variant="ghost"
-                className="text-slate-500 w-full sm:w-auto hover:text-black bg-brand-100 hover:bg-brand-200 font-semibold transition-all flex items-center gap-2 px-6 h-12 rounded-xl"
+                className="text-gray-600 w-full sm:w-auto font-semibold transition-all flex items-center gap-2 px-6 h-12 rounded-xl"
               >
                 <HiOutlineHome className="text-xl" />
                 Go Home
@@ -956,13 +870,13 @@ const ReadingResultPage = () => {
               <Link to={"/reading-practice/" + (attemptData?.test_id ?? '') + "?mode=review"} className="w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  className="border-brand-600 text-brand-600 w-full sm:w-auto hover:bg-brand-50 font-semibold px-8 h-12 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95"
+                  className="border-primary-border-strong text-primary-text w-full sm:w-auto font-semibold px-8 h-12 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95"
                 >
                   Review Test
                 </Button>
               </Link>
               <Button
-                className="bg-brand-600 w-full sm:w-auto hover:bg-brand-700 text-white font-semibold px-8 h-12 rounded-xl shadow-lg shadow-brand-200 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                className="w-full sm:w-auto font-semibold px-8 h-12 rounded-xl shadow-lg shadow-brand-200 transition-all flex items-center justify-center gap-2 active:scale-95"
                 onClick={handleRetake}
                 disabled={isDeleting}
               >
@@ -973,7 +887,7 @@ const ReadingResultPage = () => {
           </div>
         </div>
 
-        <footer className="mt-12 py-8 text-center text-slate-400 text-sm">
+        <footer className="mt-12 py-8 text-center text-gray-500 text-sm">
           <p>© 2026 IELTSCORE. All rights reserved.</p>
         </footer>
       </div>

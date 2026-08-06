@@ -5,13 +5,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 
+/**
+ * Three points on one availability axis, so all three sit on the semantic
+ * status ramps and step together: available/busy are the success/danger pair,
+ * pending is the warning set in between.
+ */
 const statusConfig = {
   available: {
     label: "Available",
     icon: CheckCircle2,
-    color: "text-green-600",
-    bgColor: "bg-green-50",
-    borderColor: "border-green-200",
+    color: "text-success-700",
+    bgColor: "bg-success-50",
+    borderColor: "border-success-200",
   },
   busy: {
     label: "Busy",
@@ -23,9 +28,9 @@ const statusConfig = {
   pending: {
     label: "Pending Approval",
     icon: Clock,
-    color: "text-yellow-600",
-    bgColor: "bg-yellow-50",
-    borderColor: "border-yellow-200",
+    color: "text-warning-text",
+    bgColor: "bg-warning-subtle",
+    borderColor: "border-warning-border",
   },
 };
 
@@ -122,7 +127,7 @@ const MockOnlinePage = () => {
             className={`w-full py-6 text-lg font-medium rounded-xl ${
               status === "pending"
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-brand-500 hover:bg-brand-600"
+                : "bg-primary hover:bg-primary-hover"
             } text-white`}
           >
             {status === "pending" ? "Request Pending" : "Request Online Mock"}
@@ -138,15 +143,17 @@ const MockOnlinePage = () => {
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
               transition={{ duration: 0.3 }}
             >
-              <Card className="rounded-2xl shadow-md border-2 border-yellow-200 bg-yellow-50">
+              <Card className="rounded-2xl shadow-md border-2 border-warning-border bg-warning-subtle">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
-                    <Clock className="w-6 h-6 text-yellow-600 mt-1" />
+                    {/* warning-600 is only 2.80:1 on the warning-subtle card and
+                        misses even the 3:1 graphics floor; --warning-text clears it. */}
+                    <Clock className="w-6 h-6 text-warning-text mt-1" />
                     <div>
-                      <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+                      <h3 className="text-lg font-semibold text-warning-900 mb-2">
                         Request Submitted
                       </h3>
-                      <p className="text-yellow-800">
+                      <p className="text-warning-text">
                         You will receive a notification after admin approval. Please check back later for updates.
                       </p>
                     </div>

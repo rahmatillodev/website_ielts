@@ -1,8 +1,16 @@
 import React, { useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
-const COLOR = "var(--primary)";
-
+/**
+ * The recordings a student just made, grouped by part.
+ *
+ * This page used to be built entirely from inline `style` objects with literal
+ * hex — its own page background, its own border grey, its own three text greys —
+ * so none of it moved when the token set did. It is now plain utilities on the
+ * shared ramps, which is also what lets it match the reading and listening
+ * result pages: same page background, same card border, same back control.
+ */
 const SpeakingResultPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,128 +41,83 @@ const SpeakingResultPage = () => {
   }, [audioUrls]);
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#f8fafc",
-      fontFamily: "'Segoe UI', system-ui, sans-serif",
-    }}>
-
+    <div className="min-h-screen bg-gray-50/50 font-sans">
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header style={{
-        background: "#fff",
-        borderBottom: "1px solid #f0f0f0",
-        padding: "16px 40px",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
-          <button
+      <header className="bg-white border-b border-gray-200 px-6 py-4 sm:px-10">
+        <div className="flex items-center gap-4">
+          <Button
             onClick={() => navigate("/speaking-library")}
-            style={{
-              background: COLOR, color: "#fff", border: "none",
-              borderRadius: 8, padding: "7px 14px",
-              fontWeight: 600, fontSize: 13, cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 6,
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-hover)"}
-            onMouseLeave={(e) => e.currentTarget.style.background = COLOR}
+            size="sm"
+            className="gap-1.5"
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
             Back
-          </button>
+          </Button>
           <div>
-
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0 }}>
-            Your Recordings
-          </h1>
-          <div style={{ fontSize: 12, color: "#9ca3af", display: "flex", gap: 6, alignItems: "center" }}>
-          <span>Speaking</span>
-          <span style={{ color: "#d1d5db" }}>/</span>
-          <span style={{ color: COLOR, fontWeight: 600 }}>Results</span>
-        </div>
+            <h1 className="text-xl font-bold text-gray-900">
+              Your Recordings
+            </h1>
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <span>Speaking</span>
+              <span className="text-gray-300">/</span>
+              <span className="font-semibold text-primary-text">Results</span>
+            </div>
           </div>
         </div>
-        
       </header>
 
       {/* ── Main ───────────────────────────────────────────────────────── */}
-      <main style={{ maxWidth: 820, margin: "0 auto", padding: "40px 24px" }}>
-
+      <main className="mx-auto max-w-[820px] px-6 py-10">
         {recordings.length === 0 ? (
-          <div style={{
-            background: "#fff", borderRadius: 16,
-            border: "1px solid #f0f0f0", padding: 48,
-            textAlign: "center", color: "#6b7280",
-          }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="#d1d5db" style={{ marginBottom: 16 }}>
+          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center text-gray-500 shadow-sm">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              className="mx-auto mb-4 fill-gray-300"
+            >
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
               <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
             </svg>
-            <p style={{ fontSize: 16, marginBottom: 16 }}>No recordings found.</p>
-            <button
-              onClick={() => navigate(-1)}
-              style={{
-                color: COLOR, fontWeight: 600,
-                background: "none", border: "none",
-                cursor: "pointer", fontSize: 14,
-              }}
-            >
+            <p className="mb-4 text-base">No recordings found.</p>
+            <Button variant="link" onClick={() => navigate(-1)} className="font-semibold">
               ← Go back
-            </button>
+            </Button>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
+          <div className="flex flex-col gap-9">
             {grouped.map(([partLabel, items]) => (
               <div key={partLabel}>
-
                 {/* Part header */}
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 14, marginBottom: 16,
-                }}>
-                  <div style={{
-                    background: COLOR, color: "#fff",
-                    borderRadius: 8, padding: "5px 16px",
-                    fontWeight: 700, fontSize: 13, whiteSpace: "nowrap",
-                  }}>
+                <div className="mb-4 flex items-center gap-3.5">
+                  <div className="whitespace-nowrap rounded-lg bg-primary px-4 py-1.5 text-[13px] font-bold text-primary-foreground">
                     {partLabel}
                   </div>
-                  <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
-                  <span style={{ fontSize: 12, color: "#9ca3af", whiteSpace: "nowrap" }}>
+                  <div className="h-px flex-1 bg-gray-200" />
+                  <span className="whitespace-nowrap text-xs text-gray-500">
                     {items.length} question{items.length !== 1 ? "s" : ""}
                   </span>
                 </div>
 
                 {/* Question cards */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div className="flex flex-col gap-3">
                   {items.map((item, qi) => (
-                    <div key={`${item.questionId}-${qi}`} style={{
-                      background: "#fff",
-                      borderRadius: 14,
-                      border: "1px solid #f0f0f0",
-                      padding: "20px 24px",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                    }}>
-                      <p style={{
-                        fontSize: 11, fontWeight: 700, color: COLOR,
-                        textTransform: "uppercase", letterSpacing: 1,
-                        margin: "0 0 8px",
-                      }}>
+                    <div
+                      key={`${item.questionId}-${qi}`}
+                      className="rounded-xl border border-gray-200 bg-white px-6 py-5 shadow-sm"
+                    >
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-primary-text">
                         Question {qi + 1}
                       </p>
-                      <p style={{
-                        color: "#111827", fontSize: 15,
-                        margin: "0 0 16px", lineHeight: 1.6,
-                      }}>
+                      <p className="mb-4 text-[15px] leading-relaxed text-gray-900">
                         {item.question}
                       </p>
                       {item.url ? (
-                        <audio
-                          controls
-                          src={item.url}
-                          style={{ width: "100%", maxWidth: 500 }}
-                        />
+                        <audio controls src={item.url} className="w-full max-w-[500px]" />
                       ) : (
-                        <p style={{ color: "#9ca3af", fontSize: 13, margin: 0 }}>
+                        <p className="text-[13px] text-gray-500">
                           No audio recorded.
                         </p>
                       )}

@@ -31,10 +31,14 @@ const formatBookingTime = (value) => {
 };
 
 const BOOKING_STATUS_LABEL = {
-  booked: { text: "Booked", className: "bg-blue-50 text-blue-700 border-blue-200" },
-  started: { text: "In progress", className: "bg-amber-50 text-amber-700 border-amber-200" },
-  completed: { text: "Awaiting review", className: "bg-purple-50 text-purple-700 border-purple-200" },
-  checked: { text: "Result ready", className: "bg-green-50 text-green-700 border-green-200" },
+  // One lifecycle, four points, all on system ramps: scheduled is a plain
+  // notice (info), in-progress is the active/current state (brand, which owns
+  // "you are here"), awaiting review is a wait (warning), result ready is the
+  // terminal good outcome (success).
+  booked: { text: "Booked", className: "bg-info-50 text-info-700 border-info-100" },
+  started: { text: "In progress", className: "bg-brand-50 text-brand-700 border-brand-200" },
+  completed: { text: "Awaiting review", className: "bg-warning-subtle text-warning-text border-warning-border" },
+  checked: { text: "Result ready", className: "bg-success-50 text-success-700 border-success-200" },
   notified: { text: "Result sent", className: "bg-gray-100 text-gray-700 border-gray-200" },
 };
 

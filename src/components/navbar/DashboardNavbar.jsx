@@ -68,7 +68,7 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
                 {/* <div className="size-10 2xl:size-12 bg-brand-50 rounded-xl flex items-center justify-center">
                   <GraduationCap className="text-brand-600 size-6 2xl:size-7" />
                 </div>
-                <span className="text-lg 2xl:text-xl font-black text-[#1E293B] tracking-tight">
+                <span className="text-lg 2xl:text-xl font-black text-gray-900 tracking-tight">
                   IELTSCORE
                 </span> */}
                 <LogoDesign />
@@ -105,7 +105,7 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
 
               <Avatar className="size-10 shadow-sm">
                 <AvatarImage src={avatarUrl} className="object-cover" />
-                <AvatarFallback className="bg-[#00838f] text-white font-medium">
+                <AvatarFallback className="bg-primary text-primary-foreground font-medium">
                   {getInitials()[0]}
                 </AvatarFallback>
               </Avatar>
@@ -125,7 +125,7 @@ const DashboardNavbar = ({ onMenuClick, flow = 'regular' }) => {
                   className="size-16 mx-auto rounded-full object-cover"
                 />
               ) : (
-                <div className="size-16 mx-auto bg-[#00838f] rounded-full flex items-center justify-center text-white text-2xl font-semibold">
+                <div className="size-16 mx-auto bg-primary rounded-full flex items-center justify-center text-white text-2xl font-semibold">
                   {getInitials()[0]}
                 </div>
               )}

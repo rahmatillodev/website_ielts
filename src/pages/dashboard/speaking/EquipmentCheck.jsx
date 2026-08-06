@@ -397,7 +397,7 @@ const EquipmentCheck = () => {
 
   return (
     <div
-      className={`min-h-[calc(100vh-64px)] flex items-center justify-center bg-slate-100 px-3 py-8 transition-opacity duration-200 ease-out ${
+      className={`min-h-[calc(100vh-64px)] flex items-center justify-center bg-gray-100 px-3 py-8 transition-opacity duration-200 ease-out ${
         isOpenAnimating ? "opacity-100" : "opacity-0"
       }`}
     >

@@ -296,7 +296,7 @@ const MultipleAnswers = ({
           </p>
         </div>
         { selectedOptionKeys.length === questionRange && (
-          <span className="text-success-500 font-medium flex items-center gap-1">
+          <span className="text-success-700 font-medium flex items-center gap-1">
             <Check size={14} /> Complete
           </span>
         )}

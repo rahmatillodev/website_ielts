@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Play, Clock, Calendar } from "lucide-react";
 import { FaCrown } from "react-icons/fa";
 import UpgradeModal from "@/components/modal/UpgradeModal";
+import { CARD_CTA, TIER_BADGE } from "@/components/cards/cardTokens";
 
 /**
  * Layout clone of ShadowingCard: white rounded-3xl, date row, title, solid blue CTA.
@@ -32,7 +33,7 @@ const SpeakingPodcastCard = ({ testId, title, image, duration, videoUrl, date, i
   const thumbSrc = image?.trim?.() || "";
 
   const buttonClass = isLocked
-    ? "w-full py-3 text-white bg-amber-500 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-amber-500 shadow-sm hover:bg-amber-600"
+    ? `w-full py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${CARD_CTA}`
     : "w-full py-3 bg-brand-600 text-white rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 border border-brand-600 shadow-sm group-hover:bg-brand-700 group-hover:border-brand-700";
 
   return (
@@ -67,7 +68,7 @@ const SpeakingPodcastCard = ({ testId, title, image, duration, videoUrl, date, i
             </div>
           </div>
           {isPremium ? (
-            <div className="absolute top-2.5 right-2.5 bg-amber-500 backdrop-blur-md text-white text-[9px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 border border-amber-500">
+            <div className={`absolute top-2.5 right-2.5 backdrop-blur-md text-[9px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 ${TIER_BADGE.premium}`}>
               <FaCrown className="w-3 h-3 shrink-0 text-white" aria-hidden />
               Premium
             </div>

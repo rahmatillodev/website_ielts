@@ -6,8 +6,10 @@
 //     --dry-run         generate + validate + log, write nothing to the DB
 //     --status          print the progress table and exit
 //
-// Scope is READING ONLY. Listening has no Explain surface (see the comment in
-// ReadingResultPage.jsx) so generating for it would write data nothing renders.
+// Scope is READING ONLY. The Explain surface is the reading practice page in
+// review mode (QuestionReviewActions.jsx, rendered from ReadingPracticePage);
+// listening review deliberately has none, so generating for it would write data
+// nothing renders.
 //
 // Safety properties:
 //   - never overwrites a non-empty explanation (the 27 prod / 31 dev
@@ -18,7 +20,7 @@
 import { requireEnv, supabase, projectRef, sleep, fetchTest, resolveAnswer } from './lib.mjs';
 import { locatePart, paragraphs, paragraphByLetter, norm, DETERMINISTIC_TYPES } from './locate.mjs';
 import { buildGroupPrompt, parseResponse } from './prompts.mjs';
-import { newState, loadState, saveState, summarize, appendLog, appendFlags, priorRunRowIds } from './state.mjs';
+import { setTarget, newState, loadState, saveState, summarize, appendLog, appendFlags, priorRunRowIds } from './state.mjs';
 
 const MODELS = (process.env.GEMINI_MODELS ?? 'gemini-flash-latest,gemini-flash-lite-latest')
   .split(',').map((m) => m.trim()).filter(Boolean);
@@ -117,6 +119,23 @@ async function generateWithFallback(prompt, log = () => {}) {
 // -------------------------------------------------------------- validation
 
 /**
+ * The passage's own characters for an accepted quote, or null.
+ *
+ * Exact hit first; otherwise match with quote marks and whitespace treated as
+ * equivalent and return what the PASSAGE says. Keeping the stored quote
+ * byte-identical to the source is what lets a later exact search find it.
+ */
+function exactFromPassage(candidate, passage) {
+  if (passage.includes(candidate)) return candidate;
+  const loose = candidate
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/["“”'‘’]/g, '["“”\'‘’]')
+    .replace(/\s+/g, '\\s+');
+  const m = passage.match(new RegExp(loose, 'i'));
+  return m ? m[0] : null;
+}
+
+/**
  * The content rule, enforced in code rather than trusted to the prompt: an
  * explanation may only ship if its quote really is in the passage. A quote the
  * model invented, paraphrased, or stitched together fails here and the question
@@ -132,10 +151,18 @@ function validate(parsed, item, passage, located) {
   //  - it ends a quote at a sentence boundary inside nested speech and appends
   //    the closing mark: `...not kept pace.'` where the passage runs
   //    `...not kept pace. Our company intends to turn that around.'`
-  //  - it prefixes "..." to be honest that it started mid-sentence.
+  //  - it brackets the quote with "..." to be honest that it started or stopped
+  //    mid-sentence.
   // Both are trimmed. Nothing else is forgiven: any difference in the words
   // themselves still fails and the question is flagged.
-  const EDGE = /^[\s"“”'‘’.…]+|[\s"“”'‘’…]+$/g;
+  //
+  // The two character classes MUST stay identical. They were not: '.' was in the
+  // leading class only, so a quote the model closed with "..." - the commonest
+  // shape it produces - failed verbatim matching for its punctuation alone. That
+  // one missing character discarded 13 correct citations out of 56 rejections on
+  // the first prod run. Trimming a real trailing full stop costs nothing, because
+  // the untrimmed string is tried first and wins whenever it matches.
+  const EDGE = /^[\s"“”'‘’.…]+|[\s"“”'‘’.…]+$/g;
   const trimmed = parsed.quote.replace(EDGE, '');
   let quote = [parsed.quote, trimmed].find(
     (v) => norm(v).length >= 12 && hay.includes(norm(v))
@@ -165,6 +192,21 @@ function validate(parsed, item, passage, located) {
           : 'quote is not verbatim in the passage',
     };
   }
+
+  // Store the PASSAGE's own rendering, never the model's.
+  //
+  // norm() runs NFKD, which folds curly quotes to straight, so a model that
+  // retypes ‘...’ as '...' passes the match above and would then be stored with
+  // its own punctuation. The words are identical, so it is still real evidence -
+  // but the stored string is no longer findable in the passage by exact search,
+  // which is exactly what the Locate highlight will do with it. Recover the
+  // passage's characters, and reject if they cannot be recovered at all.
+  const exact = exactFromPassage(quote, passage);
+  if (!exact) {
+    return { ok: false, reason: 'quote matched only after normalisation and could not be recovered from the passage' };
+  }
+  quote = exact;
+
   const needle = norm(quote);
 
   // GROUND TRUTH is the block that actually contains the verified quote. The
@@ -201,6 +243,35 @@ function validate(parsed, item, passage, located) {
 
   const why = parsed.why.replace(/\s+/g, ' ').trim();
   if (why.length < 15) return { ok: false, reason: 'why line too short' };
+
+  // The quote being verbatim proves the EVIDENCE is real; it does not prove the
+  // explanation is about the STORED answer. Observed on prod: a question whose
+  // options are "is pleasing / is soothing / provokes hunger / requires thought"
+  // has D flagged correct, but the passage says music "that a person likes ...
+  // activates the higher thinking centers". The model quoted that honestly and
+  // then argued for option A - a fluent, well-evidenced explanation of the wrong
+  // answer, which every other check here passes.
+  //
+  // Whenever the model names a letter and the stored answer is itself a letter,
+  // they must agree. A mismatch is the signature of an answer the passage does
+  // not support, so it is flagged as the content defect it is rather than
+  // shipped to a student who can see which option is marked correct.
+  //
+  // multiple_choice ONLY. On group-legend types (matching_information, table) the
+  // check produced 4 false positives out of 4: the model's "option E" does not
+  // reliably refer to the legend key the answer uses, so a disagreement says
+  // nothing. Every true positive it has found was multiple_choice, where the
+  // options belong to the one question and the letter is unambiguous.
+  const storedLetter = String(item.answer ?? '').trim().toUpperCase();
+  if (item.group?.type === 'multiple_choice' && /^[A-K]$/.test(storedLetter)) {
+    const named = why.match(/\boption\s+([A-K])\b/i);
+    if (named && named[1].toUpperCase() !== storedLetter) {
+      return {
+        ok: false,
+        reason: `explanation argues for option ${named[1].toUpperCase()} but the stored answer is ${storedLetter}`,
+      };
+    }
+  }
 
   return {
     ok: true,
@@ -311,6 +382,12 @@ async function processTest(db, testId, title, priorRunRows) {
 async function main() {
   const db = supabase();
   const { ref, label } = projectRef();
+  // MUST happen before any state/log read or write. state.mjs keys its files by
+  // target precisely because 23 of dev's 24 reading test ids also exist in prod;
+  // without this call every target shares one `*.unknown.*` state file, so a dev
+  // run marks those ids done and the following prod run skips them - 270 prod
+  // questions left unexplained while the summary reports success.
+  setTarget(ref);
 
   if (flag('--status')) {
     const st = loadState();
@@ -337,12 +414,19 @@ async function main() {
   const queue = tests.filter((t) => state.entries[t.id]?.status !== 'done').slice(0, Number(value('--limit')) || Infinity);
   console.log(`${queue.length} test(s) to process\n`);
 
+  // A dry run must leave NO trace. Persisting state would mark these tests
+  // 'done' and log their rows into generated_log as if they had been written -
+  // so the real run that follows would skip exactly the tests the rehearsal
+  // covered, and priorRunRowIds() would count rows that were never committed.
+  const isDry = flag('--dry-run');
+  const dry = { tests: 0, generated: 0, flagged: 0, samples: [] };
+
   for (const t of queue) {
     process.stdout.write(`→ ${t.title} … `);
     try {
       const r = await processTest(db, t.id, t.title, priorRunRows);
 
-      if (!flag('--dry-run')) {
+      if (!isDry) {
         for (const g of r.generated) {
           const { error: upErr } = await db
             .from('questions')
@@ -351,32 +435,50 @@ async function main() {
             .or('explanation.is.null,explanation.eq.'); // never clobber an existing one
           if (upErr) throw new Error(`write failed on Q${g.questionNumber}: ${upErr.message}`);
         }
+
+        appendLog(r.generated);
+        appendFlags(r.flagged);
+        state.entries[t.id] = {
+          testId: t.id, title: t.title, status: 'done', questions: r.total,
+          generated: r.generated.length,
+          skippedHandAuthored: r.skippedHandAuthored, skippedPriorRun: r.skippedPriorRun,
+          flagged: r.flagged.length,
+          lastRunAt: new Date().toISOString(), error: null,
+        };
+        saveState(state);
+      } else {
+        dry.tests += 1;
+        dry.generated += r.generated.length;
+        dry.flagged += r.flagged.length;
+        dry.samples.push(...r.generated, ...r.flagged.map((f) => ({ ...f, flaggedOnly: true })));
       }
 
-      appendLog(r.generated);
-      appendFlags(r.flagged);
-      state.entries[t.id] = {
-        testId: t.id, title: t.title, status: 'done', questions: r.total,
-        generated: r.generated.length,
-        skippedHandAuthored: r.skippedHandAuthored, skippedPriorRun: r.skippedPriorRun,
-        flagged: r.flagged.length,
-        lastRunAt: new Date().toISOString(), error: null,
-      };
-      saveState(state);
       console.log(
         `${r.generated.length} generated, ${r.skippedHandAuthored} hand-authored kept, ` +
           `${r.skippedPriorRun} from prior run, ${r.flagged.length} flagged`
       );
     } catch (err) {
-      state.entries[t.id] = {
-        testId: t.id, title: t.title, status: 'failed', questions: null,
-        generated: 0, skippedHandAuthored: 0, skippedPriorRun: 0, flagged: 0,
-        lastRunAt: new Date().toISOString(), error: String(err.message).slice(0, 200),
-      };
-      saveState(state);
+      if (!isDry) {
+        state.entries[t.id] = {
+          testId: t.id, title: t.title, status: 'failed', questions: null,
+          generated: 0, skippedHandAuthored: 0, skippedPriorRun: 0, flagged: 0,
+          lastRunAt: new Date().toISOString(), error: String(err.message).slice(0, 200),
+        };
+        saveState(state);
+      }
       console.log(`FAILED: ${err.message}`);
       if (/quota exhausted/.test(err.message)) break;
     }
+  }
+
+  if (isDry) {
+    console.log(`\n=== DRY RUN - nothing written to the DB, no state saved ===`);
+    console.log(JSON.stringify({ tests: dry.tests, generated: dry.generated, flagged: dry.flagged }, null, 2));
+    for (const s of dry.samples) {
+      console.log(`\n--- Q${s.questionNumber} [${s.type}] ${s.flaggedOnly ? 'FLAGGED' : `answer: ${s.answer}`}`);
+      console.log(s.flaggedOnly ? `    reason: ${s.reason}` : s.explanation);
+    }
+    return;
   }
 
   console.log('\n' + JSON.stringify(summarize(state), null, 2));

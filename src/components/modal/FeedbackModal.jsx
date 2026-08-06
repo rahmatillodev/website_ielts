@@ -135,7 +135,7 @@ const FeedbackModal = ({ isOpen, setFeedbackOpen }) => {
                         exit={{ opacity: 0 }}
                         onClick={handleClose}
                         aria-hidden="true"
-                        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+                        className="absolute inset-0 bg-gray-900/40 backdrop-blur-[2px]"
                     />
 
                     <MotionContainer
@@ -146,14 +146,14 @@ const FeedbackModal = ({ isOpen, setFeedbackOpen }) => {
                         initial={{ opacity: 0, scale: 0.98, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.98, y: 10 }}
-                        className="relative w-full max-w-md overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-8 shadow-[0_20px_50px_rgba(0,0,0,0.1)]"
+                        className="relative w-full max-w-md overflow-hidden rounded-[1.5rem] border border-gray-200 bg-white p-8 shadow-[0_20px_50px_rgba(0,0,0,0.1)]"
                     >
                         <Button
                             onClick={handleClose}
                             variant="ghost"
                             size="icon"
                             aria-label="Close feedback dialog"
-                            className="absolute right-4 top-4 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                            className="absolute right-4 top-4 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                         >
                             <X className="size-5" aria-hidden="true" />
                         </Button>
@@ -164,10 +164,10 @@ const FeedbackModal = ({ isOpen, setFeedbackOpen }) => {
                                     <Sparkles className="size-3.5" aria-hidden="true" />
                                     <span className="text-[10px] font-bold uppercase tracking-widest">Feedback</span>
                                 </div>
-                                <h2 id="feedback-modal-title" className="text-2xl font-bold tracking-tight text-slate-900">
+                                <h2 id="feedback-modal-title" className="text-2xl font-bold tracking-tight text-gray-900">
                                     Help us <span className="text-primary">improve</span>
                                 </h2>
-                                <p id="feedback-modal-description" className="text-sm text-slate-500 leading-relaxed">
+                                <p id="feedback-modal-description" className="text-sm text-gray-500 leading-relaxed">
                                     We read every piece of feedback. Share your thoughts or report an issue.
                                 </p>
                             </div>
@@ -184,11 +184,11 @@ const FeedbackModal = ({ isOpen, setFeedbackOpen }) => {
                                         onChange={(e) => setFeedback(e.target.value.slice(0, MAX_FEEDBACK_LENGTH))}
                                         maxLength={MAX_FEEDBACK_LENGTH}
                                         placeholder="Tell us what's on your mind..."
-                                        className="min-h-[140px] w-full resize-none rounded-xl border-slate-200 bg-slate-50/50 p-4 pb-8 text-base text-slate-900 transition-all placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 group-hover:border-slate-300"
+                                        className="min-h-[140px] w-full resize-none rounded-xl border-gray-200 bg-gray-50 p-4 pb-8 text-base text-gray-900 transition-all placeholder:text-gray-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 group-hover:border-gray-300"
                                     />
                                     <div
                                         aria-live="polite"
-                                        className="pointer-events-none absolute bottom-3 right-3 text-[10px] font-medium text-slate-400"
+                                        className="pointer-events-none absolute bottom-3 right-3 text-[10px] font-medium text-gray-400"
                                     >
                                         {feedback.length}/{MAX_FEEDBACK_LENGTH}
                                     </div>
@@ -201,7 +201,7 @@ const FeedbackModal = ({ isOpen, setFeedbackOpen }) => {
                                     <Button 
                                         disabled={isEmpty || loading}
                                         onClick={handleSubmit}
-                                        className="relative w-full h-12 overflow-hidden rounded-xl bg-slate-900 font-semibold text-white shadow-lg transition-all hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
+                                        className="relative w-full h-12 overflow-hidden rounded-xl bg-primary font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary-hover disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none"
                                     >
                                         <span className="relative z-10 flex items-center gap-2">
                                             {loading ? "Sending..." : "Send Feedback"} <MessageSquareText className="size-4" />
@@ -217,14 +217,14 @@ const FeedbackModal = ({ isOpen, setFeedbackOpen }) => {
                                     </Button>
                                 </MotionHover>
 
-                                <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/50 p-3">
-                                    <UserCircle className="size-4 mt-0.5 text-slate-400" aria-hidden="true" />
-                                    <p className="text-[12px] text-slate-500 leading-snug italic">
+                                <div className="flex items-start gap-2.5 rounded-xl border border-gray-100 bg-gray-50 p-3">
+                                    <UserCircle className="size-4 mt-0.5 text-gray-400" aria-hidden="true" />
+                                    <p className="text-[12px] text-gray-500 leading-snug italic">
                                         Not ready yet? You can always find this form later in your{" "}
                                         <Link
                                             to="/profile"
                                             onClick={handleDeferred}
-                                            className="font-semibold text-slate-700 underline underline-offset-2 hover:text-slate-900"
+                                            className="font-semibold text-gray-700 underline underline-offset-2 hover:text-gray-900"
                                         >
                                             Profile Settings
                                         </Link>
@@ -232,7 +232,7 @@ const FeedbackModal = ({ isOpen, setFeedbackOpen }) => {
                                     </p>
                                 </div>
 
-                                <p className="text-center text-[10px] text-slate-400 uppercase tracking-tighter opacity-70">
+                                <p className="text-center text-[10px] text-gray-400 uppercase tracking-tighter opacity-70">
                                     Sent securely • Visible only to our team
                                 </p>
                             </div>

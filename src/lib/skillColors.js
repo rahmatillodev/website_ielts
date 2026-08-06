@@ -46,3 +46,24 @@ export const SKILL_CLASS = {
   writing: { text: 'text-skill-writing-text', bg: 'bg-skill-writing-subtle' },
   speaking: { text: 'text-skill-speaking-text', bg: 'bg-skill-speaking-subtle' },
 };
+
+/**
+ * The mock-centre booking flow books two sittings — the combined
+ * Reading/Writing/Listening one and the separate Speaking one — and has to tell
+ * them apart at a glance.
+ *
+ * Only the ICON carries the distinction. Selected days and selected slots stay
+ * brand in both calendars, because selection is brand-owned across the whole app
+ * (see the BRAND note in index.css: "selection, nav, tabs, pagination, focus,
+ * active/selected state"). Painting the selected state per session is what
+ * produced the green/purple split this replaces, and it made a picked slot in
+ * one calendar look like a different kind of thing from a picked slot in the
+ * other.
+ *
+ * `rwl` takes the brand rather than a skill token because it spans three
+ * skills, so no single skill colour is truthful for it.
+ */
+export const SESSION_ICON = {
+  rwl: 'text-brand-600',
+  speaking: 'text-skill-speaking-text',
+};

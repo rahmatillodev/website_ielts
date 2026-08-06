@@ -212,7 +212,7 @@ const ProfilePage = () => {
 
   return (
     <motion.div
-      className="mx-auto min-h-screen bg-[#F8FAFC] p-6 lg:p-12 font-sans"
+      className="mx-auto min-h-screen bg-gray-50/50 p-6 lg:p-12 font-sans"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -257,7 +257,7 @@ const ProfilePage = () => {
                   <div
                     className={
                       isPremium
-                        ? "p-1 bg-linear-to-br from-amber-400 via-orange-500 to-amber-400 rounded-full"
+                        ? "p-1 bg-primary rounded-full"
                         : ""
                     }
                   >
@@ -279,7 +279,7 @@ const ProfilePage = () => {
                   </div>
                   <motion.button
                     onClick={() => setIsModalOpen(true)}
-                    className="absolute bottom-0 -right-1 p-2 bg-brand-500 text-white rounded-full border-4 border-white shadow-sm hover:bg-brand-600 transition-all"
+                    className="absolute bottom-0 -right-1 p-2 bg-primary text-primary-foreground rounded-full border-4 border-white shadow-sm hover:bg-primary-hover transition-all"
                     whileHover={{ scale: 1.1, rotate: 15 }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -297,7 +297,7 @@ const ProfilePage = () => {
                     </h3>
                     {isPremium && (
                       <motion.div
-                        className="p-1 bg-linear-to-br from-amber-400 to-orange-500 rounded-md"
+                        className="p-1 bg-primary rounded-md"
                         initial={{ scale: 0, rotate: -180 }}
                         animate={{ scale: 1, rotate: 0 }}
                         transition={{ type: "spring", stiffness: 200, delay: 0.5 }}
@@ -539,7 +539,7 @@ const ProfilePage = () => {
                   whileTap={{ scale: 0.95 }}
                   disabled={loading}
                   type="submit"
-                  className="w-full py-3 bg-brand-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-brand-600 transition-colors disabled:opacity-50"
+                  className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors disabled:opacity-50"
                 >
                   {loading ? (
                     "Sending..."

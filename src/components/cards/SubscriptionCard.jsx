@@ -56,29 +56,29 @@ const SubscriptionCard = ({ premiumUntil, premiumStart = null, className = "" })
 
   return (
     <motion.div
-      className={`w-full max-w-[560px] border border-[#e8e5e0] bg-white px-10 pt-9 pb-8 ${className}`}
+      className={`w-full max-w-[560px] border border-border bg-white px-10 pt-9 pb-8 ${className}`}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
     >
       <div className="flex items-start justify-between gap-6">
         <div className="flex flex-col gap-1.5">
-          <div className="font-mono text-[11px] tracking-[0.14em] uppercase text-[#c81e1e]">
+          <div className="font-mono text-[11px] tracking-[0.14em] uppercase text-brand-600">
             Premium
           </div>
-          <div className="text-[20px] font-semibold tracking-[-0.01em] text-[#191817]">
+          <div className="text-[20px] font-semibold tracking-[-0.01em] text-gray-900">
             Subscription
           </div>
-          <div className="text-[13px] text-[#8a857e]">
+          <div className="text-[13px] text-gray-500">
             Expires {format(premiumUntil, "MMMM dd, yyyy")}
           </div>
         </div>
 
         <div className="flex flex-col items-end gap-0.5">
-          <div className="text-[40px] leading-none font-semibold tracking-[-0.03em] tabular-nums text-[#191817]">
+          <div className="text-[40px] leading-none font-semibold tracking-[-0.03em] tabular-nums text-gray-900">
             {daysLeft}
           </div>
-          <div className="font-mono text-[11px] tracking-[0.14em] uppercase text-[#8a857e]">
+          <div className="font-mono text-[11px] tracking-[0.14em] uppercase text-gray-500">
             {daysLeft === 1 ? "day left" : "days left"}
           </div>
         </div>
@@ -86,21 +86,21 @@ const SubscriptionCard = ({ premiumUntil, premiumStart = null, className = "" })
 
       {percent !== null && (
         <div className="mt-8 flex flex-col gap-2.5">
-          <div className="relative h-[2px] bg-[#eeebe6]">
+          <div className="relative h-[2px] bg-gray-200">
             <motion.div
-              className="absolute top-0 bottom-0 left-0 bg-[#c81e1e]"
+              className="absolute top-0 bottom-0 left-0 bg-brand-600"
               initial={{ width: 0 }}
               animate={{ width: `${percent}%` }}
               transition={{ duration: 0.9, delay: 0.6, ease: "easeOut" }}
             />
             <motion.div
-              className="absolute -top-[3px] size-2 -translate-x-1/2 rounded-full bg-[#c81e1e]"
+              className="absolute -top-[3px] size-2 -translate-x-1/2 rounded-full bg-brand-600"
               initial={{ left: 0 }}
               animate={{ left: `${percent}%` }}
               transition={{ duration: 0.9, delay: 0.6, ease: "easeOut" }}
             />
           </div>
-          <div className="flex justify-between font-mono text-[11px] text-[#8a857e]">
+          <div className="flex justify-between font-mono text-[11px] text-gray-500">
             <span>{percent}% remaining</span>
             <span>{format(premiumUntil, "MMM yyyy")}</span>
           </div>

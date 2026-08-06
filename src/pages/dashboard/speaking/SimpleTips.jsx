@@ -104,7 +104,7 @@ export default function SimpleTips({ activeTab, setActiveTab, searchQuery, setSe
       return (
         <div className="mx-auto w-full max-w-5xl animate-in fade-in slide-in-from-right-4 duration-500 px-0">
           <div className="rounded-3xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-            <p className="mb-4 text-slate-600">Tip not found.</p>
+            <p className="mb-4 text-gray-600">Tip not found.</p>
             <button
               type="button"
               onClick={() => navigate("/speaking/tips")}
@@ -131,24 +131,24 @@ export default function SimpleTips({ activeTab, setActiveTab, searchQuery, setSe
 
         <article className="w-full">
           <header className="mb-10 border-b border-gray-200 pb-8">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-600 sm:text-sm">{tip.type}</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-600 sm:text-sm">{tip.type}</p>
             <h1 className="mb-4 text-2xl font-black tracking-tight text-gray-900 sm:text-3xl md:text-4xl">{tip.title}</h1>
-            <p className="mb-4 text-base font-medium leading-relaxed text-slate-700">{tip.desc}</p>
-            <p className="max-w-4xl text-base leading-relaxed text-slate-600">{tip.content}</p>
+            <p className="mb-4 text-base font-medium leading-relaxed text-gray-700">{tip.desc}</p>
+            <p className="max-w-4xl text-base leading-relaxed text-gray-600">{tip.content}</p>
           </header>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-              <h2 className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-600 sm:text-sm">
-                <Lightbulb className="size-5 shrink-0 text-amber-500" aria-hidden />
+            <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+              <h2 className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-600 sm:text-sm">
+                <Lightbulb className="size-5 shrink-0 text-brand-600" aria-hidden />
                 Steps
               </h2>
               <ul className="space-y-5">
                 {tip.steps.map((step, index) => (
                   <li key={step} className="flex gap-3">
-                    <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-500" aria-hidden />
-                    <span className="text-base leading-relaxed text-slate-700">
-                      <span className="font-semibold text-slate-900">{index + 1}.</span> {step}
+                    <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success-600" aria-hidden />
+                    <span className="text-base leading-relaxed text-gray-700">
+                      <span className="font-semibold text-gray-900">{index + 1}.</span> {step}
                     </span>
                   </li>
                 ))}
@@ -185,14 +185,14 @@ export default function SimpleTips({ activeTab, setActiveTab, searchQuery, setSe
 
   const headerNavRow = (
     <div className="mb-6 flex w-full min-w-0 flex-row flex-nowrap items-center gap-6 overflow-x-auto">
-      <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+      <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm">
         {["All", "Parts", "Strategy"].map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab)}
             className={`rounded-xl px-5 py-2 text-sm font-semibold transition-all md:px-7 ${
-              activeTab === tab ? "bg-brand-600 text-white shadow-sm" : "text-slate-600 hover:text-brand-600"
+              activeTab === tab ? "bg-brand-600 text-white shadow-sm" : "text-gray-600 hover:text-brand-600"
             }`}
           >
             {tab}
@@ -245,7 +245,7 @@ export default function SimpleTips({ activeTab, setActiveTab, searchQuery, setSe
     return (
       <>
         {headerNavRow}
-        <div className="rounded-[2.5rem] border border-slate-200 bg-white p-10 text-center text-slate-500">
+        <div className="rounded-[2.5rem] border border-gray-200 bg-white p-10 text-center text-gray-500">
           No tips match your filters.
         </div>
       </>

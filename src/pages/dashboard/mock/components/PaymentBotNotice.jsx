@@ -9,16 +9,19 @@ const PaymentBotNotice = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5 }}
     >
-      <Card className="rounded-2xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-yellow-50 shadow-sm">
+      <Card className="rounded-2xl border-2 border-warning-border bg-warning-subtle shadow-sm">
         <CardContent className="p-5">
           <div className="flex items-start gap-4">
             <div className="shrink-0 mt-1">
-              <Bot className="w-6 h-6 text-orange-600" />
+              <Bot className="w-6 h-6 text-warning-text" />
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 Payment via Bot
-                <span className="px-2 py-1 bg-orange-500 text-white text-xs font-bold rounded-full">
+                {/* warning-700, not the `--warning` fill (warning-600): white on
+                    600 measures 3.00:1 and this is small bold text, so it needs
+                    the 700 step's 4.51:1. */}
+                <span className="px-2 py-1 bg-warning-700 text-white text-xs font-bold rounded-full">
                   IMPORTANT
                 </span>
               </h3>
@@ -30,15 +33,15 @@ const PaymentBotNotice = () => {
 
               <div className="space-y-1 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4 text-orange-600" />
+                  <MessageCircle className="w-4 h-4 text-warning-text" />
                   <span>Booking confirmation happens in the bot</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-orange-600" />
+                  <DollarSign className="w-4 h-4 text-warning-text" />
                   <span>Payment is accepted only via bot</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-orange-600" />
+                  <Clock className="w-4 h-4 text-warning-text" />
                   <span>You have limited time to complete the payment</span>
                 </div>
               </div>

@@ -36,9 +36,12 @@ const GradientAudioVisualizer = ({ stream, width = 350, height = 100 }) => {
 
     // Create gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, "#ff6457"); // brand-400 (canvas needs a literal, var() won't resolve here)
-    gradient.addColorStop(0.5, "#a855f7"); // Purple mid-stop
-    gradient.addColorStop(1, "#8b5cf6"); // Purple
+    // Canvas needs literals, var() won't resolve here. All three stops are the
+    // brand ramp (400 -> 600 -> 700) rather than a red-to-purple fade, so the
+    // visualiser reads as product identity instead of a fourth accent hue.
+    gradient.addColorStop(0, "#ff6457"); // brand-400
+    gradient.addColorStop(0.5, "#e30613"); // brand-600, the logo red
+    gradient.addColorStop(1, "#b2000a"); // brand-700
 
     const centerY = height / 2;
     const barCount = 40;
@@ -358,8 +361,10 @@ const MockTestStart = ({ onStart, mockTestId }) => {
           >
             {/* Icon */}
             <div className="shrink-0">
-              <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                <MdMic className="w-6 h-6 text-purple-600" />
+              {/* This is the Speaking equipment check, so it takes the Speaking
+                  skill token rather than an unrelated purple. */}
+              <div className="w-12 h-12 rounded-full bg-skill-speaking-subtle flex items-center justify-center">
+                <MdMic className="w-6 h-6 text-skill-speaking-text" />
               </div>
             </div>
 
@@ -424,7 +429,7 @@ const MockTestStart = ({ onStart, mockTestId }) => {
               <motion.div
                 className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
                   micSuccess
-                    ? "bg-green-500 text-white shadow-lg"
+                    ? "bg-success text-white shadow-lg"
                     : "bg-gray-200 text-gray-400"
                 }`}
                 animate={micSuccess ? { scale: [1, 1.1, 1] } : {}}
@@ -486,7 +491,7 @@ const MockTestStart = ({ onStart, mockTestId }) => {
               <motion.div
                 className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
                   speakerSuccess
-                    ? "bg-green-500 text-white shadow-lg"
+                    ? "bg-success text-white shadow-lg"
                     : "bg-gray-200 text-gray-400"
                 }`}
                 animate={speakerSuccess ? { scale: [1, 1.1, 1] } : {}}

@@ -258,7 +258,7 @@ const OwnWritingPageContent = () => {
           <button
             onClick={() => setIsRunning((p) => !p)}
             disabled={isSubmitted}
-            className="px-4 py-2 bg-brand-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRunning ? "Pause" : "Start"}
           </button>
@@ -273,7 +273,7 @@ const OwnWritingPageContent = () => {
           </button>
           <button
             onClick={handleDownloadPDF}
-            className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded"
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded"
           >
             <FaDownload /> save as PDF
           </button>
@@ -295,7 +295,7 @@ const OwnWritingPageContent = () => {
           }}
         >
           {/* TOP INFO CARD */}
-          <div className="shrink-0 rounded-xl border border-slate-200 p-4 mb-4">
+          <div className="shrink-0 rounded-xl border border-gray-200 p-4 mb-4">
             <div className="flex items-center gap-2">
               <PenSquare className="w-5 h-5" />
               <span className="text-base font-bold">
@@ -312,7 +312,7 @@ const OwnWritingPageContent = () => {
             <textarea
               spellCheck="false"
               ref={questionTextareaRef}
-              className="w-full border border-gray-300 bg-amber-500 rounded-lg p-2 focus:ring-0 focus:border-brand-500 resize-none min-h-[10px] shrink-0"
+              className="w-full border border-gray-300 bg-white rounded-lg p-2 focus:ring-0 focus:border-brand-500 resize-none min-h-[10px] shrink-0"
               placeholder={
                 activeTask === "task1"
                   ? "Type your writing task question here...\n\nTip: You can drag & drop or paste image"
@@ -414,7 +414,7 @@ const OwnWritingPageContent = () => {
             </span>
             <span
               className={
-                wordCount >= minWords ? "text-green-600" : "text-danger-700"
+                wordCount >= minWords ? "text-success-700" : "text-danger-700"
               }
             >
               Minimum: {minWords}
@@ -435,7 +435,7 @@ const OwnWritingPageContent = () => {
               onClick={() => setActiveTask(t)}
               className="flex-1 py-3 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                background: activeTask === t ? "#e5e7eb" : "transparent",
+                background: activeTask === t ? "var(--muted)" : "transparent",
               }}
             >
               {t === "task1" ? "Task 1" : "Task 2"}

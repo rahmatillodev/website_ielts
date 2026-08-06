@@ -10,6 +10,15 @@ import { motion } from "framer-motion";
 import { FaCrown, FaPencilAlt } from "react-icons/fa";
 import { formatDateToDayMonth } from "@/utils/formatDate";
 import { toScore, formatScore } from "@/utils/score";
+import {
+  TIER_BADGE,
+  CARD_BORDER,
+  CARD_BORDER_LEFT,
+  CARD_ICON,
+  CARD_SCORE,
+  CARD_CTA,
+  CARD_CTA_SECONDARY,
+} from "./cardTokens";
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
   <span className="inline-flex items-end gap-[2px] h-[10px]">
@@ -123,10 +132,15 @@ const CardOpen = ({
   const correctAnswers = attemptData?.correct_answers || 0;
   const totalQuestions = attemptData?.total_questions || question_quantity || 0;
 
-  // Container classes with green border for completed tests
+  // Completion is the only thing the card edge reports. Tier used to bend it
+  // too (amber for premium), which meant a premium card and a locked card wore
+  // the same colour while saying different things; tier now lives in the badge.
+  const cardState = hasCompleted ? 'completed' : 'default';
+  const tier = is_premium ? 'premium' : 'free';
+
   const containerClass = isGridView
-    ? `bg-white border ${hasCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-brand-500'} rounded-2xl p-4 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
-    : `bg-white border border-l-4 ${hasCompleted ? 'border-l-green-500' : is_premium ? 'border-l-amber-400' : 'border-l-brand-500'} rounded-xl md:rounded-[24px] p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 mb-4 relative`;
+    ? `bg-white border ${CARD_BORDER[cardState]} rounded-2xl p-4 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
+    : `bg-white border border-l-4 ${CARD_BORDER_LEFT[cardState]} rounded-xl md:rounded-[24px] p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 mb-4 relative`;
 
 
   // Animation variants for hover effect
@@ -151,10 +165,7 @@ const CardOpen = ({
         {/* Premium/Free Badge */}
         {
           <div className={`${'absolute top-5 right-3 z-10'}`}>
-            <span className={`px-2.5 md:px-3 py-1 text-[10px] md:text-xs font-black uppercase rounded-lg tracking-wider flex items-center gap-1.5 ${is_premium
-              ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
-              : "bg-green-500 text-white border-0 shadow-md"
-              }`}>
+            <span className={`px-2.5 md:px-3 py-1 text-[10px] md:text-xs font-black uppercase rounded-lg tracking-wider flex items-center gap-1.5 ${TIER_BADGE[tier]}`}>
               {is_premium && <FaCrown className="text-xs md:text-sm" />} {cardStatus}
             </span>
           </div>
@@ -172,15 +183,12 @@ const CardOpen = ({
             {hasCompleted ? (
               <div className="bg-white border border-gray-200 w-12 md:w-14 h-12 md:h-14 rounded-full flex flex-col items-center justify-center shadow-sm">
                 <span className="text-[10px] text-gray-500 font-semibold">Score</span>
-                <span className="text-sm md:text-base font-black text-green-600">
+                <span className={`text-sm md:text-base font-black ${CARD_SCORE}`}>
                   {formatScore(score, '0.0')}
                 </span>
               </div>
             ) : (
-              <div className={`size-full rounded-xl flex items-center justify-center ${is_premium
-                  ? 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-500'
-                  : 'bg-brand-50 text-brand-500'
-                }`}>
+              <div className={`size-full rounded-xl flex items-center justify-center ${CARD_ICON.default}`}>
                 {testType === 'listening'
                   ? <MdHeadset className="text-2xl" />
                   : testType === 'writing'
@@ -249,13 +257,13 @@ const CardOpen = ({
           <div className="mt-4 flex gap-2 w-full">
             <button
               onClick={handleReview}
-              className="flex-1 py-2.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-all"
+              className={`flex-1 py-2.5 px-3 text-xs font-semibold rounded-lg transition-all ${CARD_CTA_SECONDARY}`}
             >
               Review
             </button>
             <button
               onClick={handleRetake}
-              className="flex-1 py-2.5 px-3 bg-brand-500 hover:bg-brand-600 text-white text-xs font-black rounded-lg flex items-center justify-center gap-2 transition-all"
+              className={`flex-1 py-2.5 px-3 text-xs font-black rounded-lg flex items-center justify-center gap-2 transition-all ${CARD_CTA}`}
             >
               Retake <HiOutlinePlay className="text-sm" />
             </button>
@@ -263,7 +271,7 @@ const CardOpen = ({
         ) : (
           <button
             onClick={handleStartTest}
-            className="mt-4 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-black rounded-lg flex items-center justify-center gap-2 w-full transition-all"
+            className={`mt-4 py-2.5 text-xs font-black rounded-lg flex items-center justify-center gap-2 w-full transition-all ${CARD_CTA}`}
           >
             {testType === 'writing' ? "View Sample" : testType === 'shadowing' ? "Watch Now" : "Start Practice"} <HiOutlinePlay className="text-sm" />
           </button>
@@ -279,10 +287,7 @@ const CardOpen = ({
         whileHover="hover"
       >
         {/* Icon */}
-        <div className={`size-10 md:size-14 rounded-xl md:rounded-2xl ${hasCompleted
-          ? 'bg-green-50 text-green-500'
-          : 'bg-brand-50 text-brand-400'
-          } flex items-center justify-center shrink-0`}>
+        <div className={`size-10 md:size-14 rounded-xl md:rounded-2xl ${CARD_ICON[cardState]} flex items-center justify-center shrink-0`}>
           {hasCompleted ? (
             <MdCheckCircle className="text-2xl md:text-3xl" />
           ) : (
@@ -303,10 +308,7 @@ const CardOpen = ({
               {title}
             </h3>
 
-            <span className={`ml-2 md:ml-4 px-2.5 md:px-3 py-1 md:py-1 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 shrink-0 self-start ${is_premium
-              ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
-              : "bg-green-500 text-white border-0 shadow-md"
-              }`}>
+            <span className={`ml-2 md:ml-4 px-2.5 md:px-3 py-1 md:py-1 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 shrink-0 self-start ${TIER_BADGE[tier]}`}>
               {is_premium && <FaCrown className="text-xs md:text-sm" />} {cardStatus}
             </span>
 
@@ -362,18 +364,18 @@ const CardOpen = ({
             <>
               <div className="flex flex-col items-end border-l border-gray-200 pl-3 md:pl-6">
                 <span className="text-[10px] md:text-xs text-gray-500 font-semibold mb-1">Score</span>
-                <span className="text-xl md:text-2xl font-black text-green-600">{formatScore(score, '0.0')}</span>
+                <span className={`text-xl md:text-2xl font-black ${CARD_SCORE}`}>{formatScore(score, '0.0')}</span>
               </div>
               <div className="flex flex-col gap-1.5 md:gap-2 mr-2 md:mr-4">
                 <button
                   onClick={handleReview}
-                  className="py-1.5 md:py-2 px-3 md:px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs md:text-sm font-semibold rounded-md transition-all"
+                  className={`py-1.5 md:py-2 px-3 md:px-4 text-xs md:text-sm font-semibold rounded-md transition-all ${CARD_CTA_SECONDARY}`}
                 >
                   Review
                 </button>
                 <button
                   onClick={handleRetake}
-                  className="py-1 text-xs md:text-sm font-semibold text-brand-400 hover:text-brand-700 transition-all text-left"
+                  className="py-1 text-xs md:text-sm font-semibold text-primary-text hover:text-brand-800 transition-all text-left"
                 >
                   Retake Test
                 </button>
@@ -382,7 +384,7 @@ const CardOpen = ({
           ) : (
             <button
               onClick={handleStartTest}
-              className="py-2 md:py-3 px-4 md:px-6 bg-brand-500 hover:bg-brand-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
+              className={`py-2 md:py-3 px-4 md:px-6 text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all ${CARD_CTA}`}
             >
               {testType === 'writing' ? "View Sample" : testType === 'shadowing' ? "Watch Now" : "Start Practice"} <HiOutlinePlay className="text-sm md:text-base" />
             </button>

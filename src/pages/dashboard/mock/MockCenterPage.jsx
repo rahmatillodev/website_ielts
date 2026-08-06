@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Mic, BookOpen, Info, DollarSign, CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { formatISO } from "date-fns";
 
 // Components
@@ -256,7 +255,7 @@ const MockCenterPage = () => {
                 <TestCalendar
                   title="Reading, Writing & Listening"
                   icon={BookOpen}
-                  iconColor="text-green-600"
+                  session="rwl"
                   selectedDate={rwlDate}
                   onDateSelect={handleRwlDateClick}
                   currentMonth={rwlCurrentMonth}
@@ -271,7 +270,7 @@ const MockCenterPage = () => {
                 {/* Reading/Writing/Listening Test - Time Slots */}
                 <TimeSlotSelector
                   title="RWL Time Slot"
-                  iconColor="text-green-600"
+                  session="rwl"
                   selectedDate={rwlDate}
                   selectedSlot={rwlSlot}
                   onSlotSelect={setRwlSlot}
@@ -284,7 +283,7 @@ const MockCenterPage = () => {
                 <TestCalendar
                   title="Speaking Test"
                   icon={Mic}
-                  iconColor="text-purple-600"
+                  session="speaking"
                   selectedDate={speakingDate}
                   onDateSelect={handleSpeakingDateClick}
                   currentMonth={speakingCurrentMonth}
@@ -299,7 +298,7 @@ const MockCenterPage = () => {
                 {/* Speaking Test - Time Slots */}
                 <TimeSlotSelector
                   title="Speaking Time Slot"
-                  iconColor="text-purple-600"
+                  session="speaking"
                   selectedDate={speakingDate}
                   selectedSlot={speakingSlot}
                   onSlotSelect={setSpeakingSlot}
@@ -319,12 +318,10 @@ const MockCenterPage = () => {
               <Button
                 onClick={handleBookSlot}
                 disabled={!speakingDate || !speakingSlot || !rwlDate || !rwlSlot}
-                className={cn(
-                  "w-full py-6 text-lg font-medium rounded-xl",
-                  !speakingDate || !speakingSlot || !rwlDate || !rwlSlot
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-green-500 hover:bg-green-600"
-                )}
+                // The page's primary action, so it takes the Button's own brand
+                // fill and its own disabled treatment rather than a hand-rolled
+                // green/grey pair.
+                className="w-full py-6 text-lg font-medium rounded-xl"
               >
                 Book Slot
               </Button>
@@ -361,7 +358,7 @@ const MockCenterPage = () => {
                     </p>
                     <div className="grid md:grid-cols-2 gap-4 mt-4">
                       <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-brand-100">
-                        <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                        <CheckCircle2 className="w-5 h-5 text-success-600 shrink-0 mt-0.5" />
                         <div>
                           <p className="font-semibold text-gray-900 mb-1">Part 1: Reading, Writing & Listening</p>
                           <p className="text-sm text-gray-600">
@@ -370,7 +367,7 @@ const MockCenterPage = () => {
                         </div>
                       </div>
                       <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-brand-100">
-                        <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                        <CheckCircle2 className="w-5 h-5 text-success-600 shrink-0 mt-0.5" />
                         <div>
                           <p className="font-semibold text-gray-900 mb-1">Part 2: Speaking Test</p>
                           <p className="text-sm text-gray-600">
@@ -396,17 +393,20 @@ const MockCenterPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <Card className="rounded-2xl shadow-sm border-2 border-green-200">
+              {/* A price is identity, not a judgement — it takes the brand, not
+                  the success ramp. The success ticks below are a separate axis:
+                  each one asserts "this is included". */}
+              <Card className="rounded-2xl shadow-sm border-2 border-primary-border">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3 mb-6">
-                    <DollarSign className="w-6 h-6 text-green-600" />
+                    <DollarSign className="w-6 h-6 text-brand-600" />
                     <h2 className="text-2xl font-semibold">Pricing</h2>
                   </div>
                   <div className="space-y-4">
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="p-4 bg-brand-50 rounded-lg border border-brand-200">
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-semibold text-gray-900">Full Mock Test</span>
-                        <span className="text-2xl font-bold text-green-600">
+                        <span className="text-2xl font-bold text-brand-700">
                           {pricingInfo.fullMockTest.toLocaleString()} {pricingInfo.currency}
                         </span>
                       </div>
@@ -416,19 +416,19 @@ const MockCenterPage = () => {
                     </div>
                     <div className="pt-4 border-t space-y-2">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <CheckCircle2 className="w-4 h-4 text-success-600" />
                         <span>One-time payment for complete test</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <CheckCircle2 className="w-4 h-4 text-success-600" />
                         <span>Flexible scheduling - split into 2 parts</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <CheckCircle2 className="w-4 h-4 text-success-600" />
                         <span>Professional examiners for speaking test</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <CheckCircle2 className="w-4 h-4 text-success-600" />
                         <span>Real exam environment and conditions</span>
                       </div>
                     </div>

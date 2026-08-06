@@ -1,6 +1,7 @@
 import React from "react";
 import { useDrag, useDrop } from "react-dnd";
 import QuestionActionIcons from "./QuestionActionIcons";
+import { ExplainIcon, ExplainPanel } from "./InlineExplain";
 import parse from "html-react-parser"; // HTML strukturasini saqlash uchun
 import { useAppearance } from "@/contexts/AppearanceContext";
 
@@ -68,6 +69,7 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
   const showCorrect = isReviewMode && review.isCorrect === true;
   const isBookmarked = bookmarks.has(questionId) || (questionNumber ? bookmarks.has(questionNumber) : false);   
   return (
+    <>
     <span
       ref={isReviewMode ? null : drop}
       onClick={() => {
@@ -97,6 +99,13 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
         onReport={() => onReport(question)}
       />
 
+      <ExplainIcon
+        questionKey={questionNumber}
+        explanation={question?.explanation}
+        isReviewMode={isReviewMode}
+        className="ml-0.5"
+      />
+
       {/* Correct Answer - Only for drag_and_drop type, after bookmark */}
       {showWrong && correctAnswer && showCorrectAnswers && (
         <span className="ml-2 text-sm text-success-600 font-semibold whitespace-nowrap">
@@ -104,6 +113,12 @@ const DropZone = ({ questionId, questionNumber, answer, onDrop, onClear, mode = 
         </span>
       )}
     </span>
+    <ExplainPanel
+      questionKey={questionNumber}
+      explanation={question?.explanation}
+      isReviewMode={isReviewMode}
+    />
+    </>
   );
 };
 

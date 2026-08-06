@@ -7,6 +7,7 @@ import {
 } from "@/utils/htmlRenderer";
 import { Input } from "@/components/ui/input";
 import QuestionActionIcons from "./QuestionActionIcons";
+import { ExplainIcon, ExplainPanel } from "./InlineExplain";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import styles from "./UniversalQuestionView.module.css";
 
@@ -113,10 +114,8 @@ const UniversalQuestionView = ({
       bookmarks.has(questionId) || bookmarks.has(qNumber) || bookmarks.has(answerKey);
 
     return (
-      <span
-        key={`input-${qIndex}`}
-        className="inline-flex items-center relative align-middle group"
-      >
+      <React.Fragment key={`input-${qIndex}`}>
+      <span className="inline-flex items-center relative align-middle group">
         <Input
           spellCheck="false"
           type="text"
@@ -146,12 +145,24 @@ const UniversalQuestionView = ({
           isReviewMode={isReviewMode}
           onReport={() => onReport(questionItem)}
         />
+        <ExplainIcon
+          questionKey={qNumber}
+          explanation={questionItem.explanation}
+          isReviewMode={isReviewMode}
+          className="ml-0.5"
+        />
         {showWrong && correctAnswer && showCorrectAnswers && (
           <span className="ml-0 mr-0.5 text-sm text-success-600 font-semibold whitespace-nowrap">
             {correctAnswer}
           </span>
         )}
       </span>
+      <ExplainPanel
+        questionKey={qNumber}
+        explanation={questionItem.explanation}
+        isReviewMode={isReviewMode}
+      />
+      </React.Fragment>
     );
   };
 

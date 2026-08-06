@@ -7,7 +7,7 @@ import { Shimmer, ShimmerBox, ShimmerCircle } from '@/components/ui/shimmer';
  */
 const DashboardShimmer = () => {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-white to-slate-50 min-h-full">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-full">
       {/* Welcome Section Shimmer */}
       <div className="mb-4 sm:mb-6">
         <ShimmerBox height="2rem" width="60%" className="mb-2" />
@@ -42,7 +42,7 @@ const DashboardShimmer = () => {
             </div>
 
             {/* Footer */}
-            <div className="bg-gradient-to-r from-slate-50 via-slate-100/60 to-slate-50 px-5 sm:px-6 md:px-8 pt-4 sm:pt-5 md:pt-6 pb-4 sm:pb-5 md:pb-7 mt-5 border-t border-slate-200">
+            <div className="bg-gradient-to-r from-gray-50 via-gray-100/60 to-gray-50 px-5 sm:px-6 md:px-8 pt-4 sm:pt-5 md:pt-6 pb-4 sm:pb-5 md:pb-7 mt-5 border-t border-gray-200">
               <ShimmerBox height="0.75rem" width="50%" className="mb-2" />
               <ShimmerBox height="1.75rem" width="40%" />
             </div>

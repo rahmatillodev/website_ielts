@@ -35,13 +35,13 @@ const UpgradeModal = ({ children, open, onOpenChange }) => {
         </DialogHeader>
         <div className="py-4 space-y-3">
             <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-green-500">✓</span> Unlimited Practice Tests
+                <span className="text-success-600">✓</span> Unlimited Practice Tests
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-green-500">✓</span> AI Writing & Speaking Scores
+                <span className="text-success-600">✓</span> AI Writing & Speaking Scores
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-green-500">✓</span> Advanced Performance Analytics
+                <span className="text-success-600">✓</span> Advanced Performance Analytics
             </div>
         </div>
         <DialogFooter className="flex flex-col sm:flex-row gap-2">

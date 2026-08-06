@@ -529,7 +529,7 @@ const TestsLibraryPage = ({
               <div className="flex justify-end">
                 <Link
                   to={headerAction}
-                  className="text-sm bg-brand-500 text-white px-4 py-2 rounded-md 
+                  className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded-md 
                    hover:bg-brand-700 transition-all duration-200 
                    flex items-center gap-2"
                 >

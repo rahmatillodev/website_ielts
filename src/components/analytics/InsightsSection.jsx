@@ -1,6 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { FaThumbsUp, FaExclamationTriangle, FaChartLine } from 'react-icons/fa';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SKILL_CLASS } from "@/lib/skillColors";
+
+/** Category label -> skill tokens. Falls back to neutral for anything that is
+ *  not one of the four skills. */
+const skillBadge = (category) => {
+  const skill = SKILL_CLASS[String(category || "").toLowerCase()];
+  return skill ? `${skill.bg} ${skill.text}` : "bg-gray-100 text-gray-700";
+};
 const INSIGHT_TIPS = {
   reading: {
     matching: {
@@ -139,20 +147,24 @@ const InsightsSection = ({ insights }) => {
             return (
               <div
                 key={idx}
-                className={`p-5 rounded-2xl border transition-all duration-300 ${item.accuracy >= 70
-                    ? 'bg-gradient-to-r from-green-50 to-white border-green-200 shadow-sm'
-                    : 'bg-gradient-to-r from-orange-50 to-white border-orange-200 shadow-sm'
+                // Strength vs needs-focus is a judgement, so it rides the
+                // success/warning ramps — never the brand, and never danger,
+                // which is reserved for things that actually failed.
+                className={`p-5 rounded-2xl border shadow-sm transition-all duration-300 ${item.accuracy >= 70
+                    ? 'bg-gradient-to-r from-success-50 to-white border-success-200'
+                    : 'bg-gradient-to-r from-warning-50 to-white border-warning-border'
                   }`}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${item.accuracy >= 70 ? 'bg-green-500' : 'bg-orange-500'} text-white text-sm`}>
+                    <div className={`p-2 rounded-lg ${item.accuracy >= 70 ? 'bg-success' : 'bg-warning-700'} text-white text-sm`}>
                       {item.accuracy >= 70 ? <FaThumbsUp /> : <FaExclamationTriangle />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${item.category === 'Reading' ? 'bg-orange-100 text-orange-700' : 'bg-purple-100 text-purple-700'
-                          }`}>
+                        {/* The category is a SKILL, so it takes the skill tokens rather than
+                            an arbitrary orange/purple pair. */}
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${skillBadge(item.category)}`}>
                           {item.category}
                         </span>
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
@@ -163,7 +175,7 @@ const InsightsSection = ({ insights }) => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={`text-2xl font-black ${item.accuracy >= 70 ? 'text-green-600' : 'text-orange-600'}`}>
+                    <div className={`text-2xl font-black ${item.accuracy >= 70 ? 'text-success-700' : 'text-warning-text'}`}>
                       {item.accuracy.toFixed(0)}%
                     </div>
                   </div>

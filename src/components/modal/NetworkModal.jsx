@@ -39,7 +39,7 @@ export default function NetworkModal({ isOpen }) {
                 <span className="text-xs text-gray-600 dark:text-gray-400">No internet connection</span>
               </div>
               <div className="flex items-center space-x-2 mt-2">
-                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div className="w-3 h-3 rounded-full bg-warning-600"></div>
                 <span className="text-xs text-gray-600 dark:text-gray-400">Some features may be unavailable</span>
               </div>
             </div>

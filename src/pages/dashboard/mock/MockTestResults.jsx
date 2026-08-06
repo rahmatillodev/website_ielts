@@ -105,15 +105,17 @@ const MockTestResults = ({ mockTestId, mockRunId, results, onBack }) => {
             </div>
           </div>
 
-          {/* Telegram Notice */}
-          <div className="bg-green-50 border border-green-100 rounded-2xl p-6 mb-10 text-left">
+          {/* Telegram Notice. This is a heads-up, not a pass/fail, so it takes
+              the `info` ramp — the success ramp is reserved for the
+              correct/incorrect axis and must not be spent on a notice. */}
+          <div className="bg-info-50 border border-info-100 rounded-2xl p-6 mb-10 text-left">
             <div className="flex items-start gap-4">
-              <FaTelegramPlane className="text-green-600 shrink-0 mt-1" size={26} />
+              <FaTelegramPlane className="text-info-600 shrink-0 mt-1" size={26} />
               <div>
-                <h3 className="text-lg font-bold text-green-900 mb-2">
+                <h3 className="text-lg font-bold text-info-900 mb-2">
                   Telegram Notification
                 </h3>
-                <p className="text-green-800 text-sm leading-relaxed">
+                <p className="text-info-700 text-sm leading-relaxed">
                   We will also send you a reminder and notification via our Telegram bot
                   as soon as your results are ready.
                 </p>
@@ -134,7 +136,7 @@ const MockTestResults = ({ mockTestId, mockRunId, results, onBack }) => {
             </p>
             <Button
               variant="outline"
-              className="border-gray-200 text-gray-700 shadow-sm inline-flex gap-2 h-9 px-6"
+              className="inline-flex gap-2 h-9 px-6"
               onClick={() => setFeedbackOpen(true)}
             >
               <MdOutlineFeedback className="text-base" />

@@ -1,8 +1,10 @@
 // Resumable state for the explanation pipeline.
 //
-// explain_state.json is the machine source of truth; EXPLAIN_PROGRESS.md is
-// regenerated from it after EVERY test so an interruption at any point still
-// leaves an accurate human-readable summary behind.
+// explain_state.<projectRef>.json is the machine source of truth;
+// EXPLAIN_PROGRESS.<projectRef>.md is regenerated from it after EVERY test so an
+// interruption at any point still leaves an accurate human-readable summary
+// behind. Every path here is target-keyed, so setTarget() must be called before
+// any of these functions - generate.mjs does it as its first act.
 //
 // Granularity is one entry per TEST, written only once that test's rows are
 // committed to the DB. A crash mid-test replays that test; because writes are
@@ -55,27 +57,27 @@ export function newState({ model, target }) {
 
 export function saveState(state) {
   state.updatedAt = new Date().toISOString();
-  writeJsonAtomic(STATE_PATH, state);
-  writeFileSync(MD_PATH, renderMarkdown(state));
+  writeJsonAtomic(statePath(), state);
+  writeFileSync(MD_PATH(), renderMarkdown(state));
 }
 
 /** Append-only audit trail: every explanation produced, and every flag raised. */
 export function appendLog(records) {
   if (!records.length) return;
   mkdirSync(new URL('./', DIR), { recursive: true });
-  writeFileSync(LOG_PATH, records.map((r) => JSON.stringify(r)).join('\n') + '\n', { flag: 'a' });
+  writeFileSync(logPath(), records.map((r) => JSON.stringify(r)).join('\n') + '\n', { flag: 'a' });
 }
 
 export function appendFlags(records) {
   if (!records.length) return;
-  writeFileSync(FLAG_PATH, records.map((r) => JSON.stringify(r)).join('\n') + '\n', { flag: 'a' });
+  writeFileSync(flagPath(), records.map((r) => JSON.stringify(r)).join('\n') + '\n', { flag: 'a' });
 }
 
 /** Row ids this pipeline has already written, read back from the audit log. */
 export function priorRunRowIds() {
-  if (!existsSync(LOG_PATH)) return new Set();
+  if (!existsSync(logPath())) return new Set();
   const ids = new Set();
-  for (const line of readFileSync(LOG_PATH, 'utf8').split('\n')) {
+  for (const line of readFileSync(logPath(), 'utf8').split('\n')) {
     if (!line.trim()) continue;
     try { ids.add(JSON.parse(line).rowId); } catch { /* skip a torn final line */ }
   }
@@ -143,8 +145,8 @@ function renderMarkdown(state) {
     '',
     '## Artefacts',
     '',
-    '- `scripts/explain/generated_log.jsonl` — every explanation produced (test, question, output)',
-    '- `scripts/explain/flagged.jsonl` — every question flagged instead of explained',
+    `- \`scripts/explain/generated_log.${target}.jsonl\` — every explanation produced (test, question, output)`,
+    `- \`scripts/explain/flagged.${target}.jsonl\` — every question flagged instead of explained`,
     '',
     '## Resuming',
     '',

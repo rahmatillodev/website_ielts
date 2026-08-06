@@ -20,7 +20,7 @@ export default function TipCard({ data, viewMode = "list" }) {
         <div className="flex flex-1 flex-col items-center gap-3 text-center">
           <div
             className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${
-              isParts ? "bg-brand-50 text-brand-600" : "bg-amber-50 text-amber-600"
+              isParts ? "bg-brand-50 text-brand-600" : "bg-info-50 text-info-600"
             }`}
           >
             {isParts ? <Target size={26} /> : <Star size={26} />}
@@ -57,7 +57,7 @@ export default function TipCard({ data, viewMode = "list" }) {
       <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
         <div
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-            isParts ? "bg-brand-50 text-brand-600" : "bg-amber-50 text-amber-600"
+            isParts ? "bg-brand-50 text-brand-600" : "bg-info-50 text-info-600"
           }`}
         >
           {isParts ? <Target size={22} /> : <Star size={22} />}

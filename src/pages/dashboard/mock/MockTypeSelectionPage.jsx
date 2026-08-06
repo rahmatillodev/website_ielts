@@ -79,7 +79,7 @@ const MockTypeSelectionPage = () => {
                 </p>
                 <Button
                   onClick={() => navigate(`/mock/online`)}
-                  className="w-full bg-brand-500 text-white hover:bg-brand-600 rounded-xl py-6 text-lg font-medium"
+                  className="w-full rounded-xl py-6 text-lg font-medium"
                 >
                   Take Online
                 </Button>
@@ -89,10 +89,13 @@ const MockTypeSelectionPage = () => {
 
           {/* Visit Center Card */}
           <motion.div variants={itemVariants}>
-            <Card className="h-full rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border-2 hover:border-green-200">
+            {/* The two routes are equal-weight choices, so both CTAs take the
+                brand fill; the cards are told apart by icon and by the badge
+                tint, with `info` standing in as the system's non-brand accent. */}
+            <Card className="h-full rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border-2 hover:border-info-100">
               <CardContent className="p-8 flex flex-col items-center text-center h-full">
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-6">
-                  <Building2 className="w-8 h-8 text-green-600" />
+                <div className="w-16 h-16 rounded-full bg-info-50 flex items-center justify-center mb-6">
+                  <Building2 className="w-8 h-8 text-info-600" />
                 </div>
                 <h2 className="text-2xl font-semibold mb-4">Visit Mock Center</h2>
                 <p className="text-gray-600 mb-6 grow">
@@ -100,7 +103,7 @@ const MockTypeSelectionPage = () => {
                 </p>
                 <Button
                   onClick={() => navigate(`/mock/center`)}
-                  className="w-full bg-green-500 text-white hover:bg-green-600 rounded-xl py-6 text-lg font-medium"
+                  className="w-full rounded-xl py-6 text-lg font-medium"
                 >
                   Visit Center
                 </Button>

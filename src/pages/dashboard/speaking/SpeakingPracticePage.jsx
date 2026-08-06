@@ -75,34 +75,34 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
       <div style={{
-        background: "#fff", borderRadius: 20, padding: "36px 40px",
+        background: "var(--card)", borderRadius: 20, padding: "36px 40px",
         maxWidth: 400, width: "90%", textAlign: "center",
         boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
       }}>
         <div style={{
           width: 56, height: 56, borderRadius: "50%",
-          background: "#fff7ed", margin: "0 auto 20px",
+          background: "var(--warning-subtle)", margin: "0 auto 20px",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <svg width="28" height="28" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
+          <svg width="28" height="28" fill="none" stroke="var(--warning-text)" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
               d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
           </svg>
         </div>
-        <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: "0 0 8px" }}>
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--foreground)", margin: "0 0 8px" }}>
           {message}
         </h3>
-        <p style={{ fontSize: 14, color: "#6b7280", margin: "0 0 28px" }}>
+        <p style={{ fontSize: 14, color: "var(--text-secondary-light)", margin: "0 0 28px" }}>
           Your current recording will be saved.
         </p>
         <div style={{ display: "flex", gap: 12 }}>
           <button onClick={onCancel} style={{
-            flex: 1, background: "#f3f4f6", color: "#374151",
+            flex: 1, background: "var(--muted)", color: "var(--foreground)",
             border: "none", borderRadius: 10, padding: "12px 0",
             fontWeight: 600, fontSize: 14, cursor: "pointer",
           }}>Cancel</button>
           <button onClick={onConfirm} style={{
-            flex: 1, background: COLOR, color: "#fff",
+            flex: 1, background: COLOR, color: "var(--card)",
             border: "none", borderRadius: 10, padding: "12px 0",
             fontWeight: 600, fontSize: 14, cursor: "pointer",
           }}>Yes, leave</button>
@@ -366,9 +366,9 @@ export default function SpeakingPracticePage() {
   const renderSampleMode = () => (
     <>
       <header style={{
-        borderBottom: "1px solid #f0f0f0",
+        borderBottom: "1px solid var(--border)",
         padding: "12px 24px 10px",
-        background: "#fff",
+        background: "var(--card)",
       }}>
         <div style={{
           display: "grid",
@@ -381,7 +381,7 @@ export default function SpeakingPracticePage() {
               type="button"
               onClick={() => navigate("/speaking-library")}
               style={{
-                background: COLOR, color: "#fff", border: "none",
+                background: COLOR, color: "var(--card)", border: "none",
                 borderRadius: 8, padding: "7px 14px",
                 fontWeight: 600, fontSize: 13, cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
@@ -399,7 +399,7 @@ export default function SpeakingPracticePage() {
             type="button"
             onClick={() => setViewMode("practice")}
             style={{
-              background: COLOR, color: "#fff", border: "none",
+              background: COLOR, color: "var(--card)", border: "none",
               borderRadius: 8, padding: "7px 14px",
               fontWeight: 600, fontSize: 13, cursor: "pointer",
               flexShrink: 0,
@@ -417,15 +417,15 @@ export default function SpeakingPracticePage() {
       <div style={{
         display: "flex",
         justifyContent: "center",
-        borderBottom: "1px solid #e5e7eb",
+        borderBottom: "1px solid var(--border)",
         padding: "12px 24px 14px",
-        background: "#fff",
+        background: "var(--card)",
         flexShrink: 0,
       }}>
         <div style={{ width: "100%", maxWidth: 1100, position: "relative" }}>
           <div style={{
             position: "absolute", top: 9, left: 0, right: 0,
-            height: 2, background: "#e5e7eb", zIndex: 0,
+            height: 2, background: "var(--border)", zIndex: 0,
           }} />
           <div style={{ position: "relative", display: "flex", alignItems: "flex-start" }}>
             {steps.map((step, si) => {
@@ -448,15 +448,15 @@ export default function SpeakingPracticePage() {
                 >
                   <div style={{
                     width: 20, height: 20, borderRadius: "50%",
-                    border: `2px solid ${isActive || isPast ? COLOR : "#d1d5db"}`,
-                    background: isPast ? COLOR : "#fff",
+                    border: `2px solid ${isActive || isPast ? COLOR : "var(--input)"}`,
+                    background: isPast ? COLOR : "var(--card)",
                     boxShadow: isActive ? `0 0 0 4px ${COLOR_LIGHT}` : "none",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     marginBottom: 4, transition: "all 0.3s",
                   }}>
                     {isPast && (
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.8"
+                        <path d="M2 5l2.5 2.5L8 3" stroke="var(--card)" strokeWidth="1.8"
                           strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     )}
@@ -464,7 +464,7 @@ export default function SpeakingPracticePage() {
                   <span style={{
                     fontSize: 11,
                     fontWeight: isPartType || isActive ? 700 : 500,
-                    color: isActive ? COLOR : isPast ? COLOR : "#9ca3af",
+                    color: isActive ? COLOR : isPast ? COLOR : "var(--muted-foreground)",
                     whiteSpace: "nowrap",
                   }}>
                     {step.label}
@@ -484,7 +484,7 @@ export default function SpeakingPracticePage() {
           <span style={{ color: COLOR, fontWeight: 700, fontSize: 14, marginBottom: 8, display: "block" }}>
             {sampleStep?.partLabel || ""}
           </span>
-          <h1 style={{ color: "#111827", fontSize: 26, fontWeight: 600, lineHeight: 1.6, margin: 0, maxWidth: 720 }}>
+          <h1 style={{ color: "var(--foreground)", fontSize: 26, fontWeight: 600, lineHeight: 1.6, margin: 0, maxWidth: 720 }}>
             {sampleStep?.question?.question || ""}
           </h1>
         </div>
@@ -492,8 +492,8 @@ export default function SpeakingPracticePage() {
         <div style={{
           width: "42%",
           minWidth: 320,
-          borderLeft: "1px solid #f0f0f0",
-          background: "#fff",
+          borderLeft: "1px solid var(--border)",
+          background: "var(--card)",
           display: "flex",
           flexDirection: "column",
           padding: "40px 32px 32px",
@@ -509,8 +509,8 @@ export default function SpeakingPracticePage() {
             padding: "16px 18px",
             borderRadius: 12,
             border: `1px solid ${COLOR_LIGHT}`,
-            background: "#f8fcfe",
-            color: "#374151",
+            background: "var(--muted)",
+            color: "var(--foreground)",
             fontSize: 15,
             lineHeight: 1.65,
             overflowY: "auto",
@@ -528,7 +528,7 @@ export default function SpeakingPracticePage() {
             style={{
               width: "100%",
               background: COLOR,
-              color: "#fff",
+              color: "var(--card)",
               border: "none",
               borderRadius: 12,
               padding: "14px 0",
@@ -559,16 +559,16 @@ export default function SpeakingPracticePage() {
       )}
 
       <header style={{
-        borderBottom: "1px solid #f0f0f0",
+        borderBottom: "1px solid var(--border)",
         padding: "12px 24px 10px",
-        background: "#fff",
+        background: "var(--card)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
 
           <button
             onClick={() => setModal("back")}
             style={{
-              background: COLOR, color: "#fff", border: "none",
+              background: COLOR, color: "var(--card)", border: "none",
               borderRadius: 8, padding: "7px 14px",
               fontWeight: 600, fontSize: 13, cursor: "pointer",
               display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
@@ -585,7 +585,7 @@ export default function SpeakingPracticePage() {
           <div style={{ flex: 1, position: "relative" }}>
             <div style={{
               position: "absolute", top: 9, left: 0, right: 0,
-              height: 2, background: "#e5e7eb", zIndex: 0,
+              height: 2, background: "var(--border)", zIndex: 0,
             }} />
 
             <div style={{ position: "relative", display: "flex", alignItems: "flex-start" }}>
@@ -601,15 +601,15 @@ export default function SpeakingPracticePage() {
                   }}>
                     <div style={{
                       width: 20, height: 20, borderRadius: "50%",
-                      border: `2px solid ${isActive || isPast ? COLOR : "#d1d5db"}`,
-                      background: isPast ? COLOR : "#fff",
+                      border: `2px solid ${isActive || isPast ? COLOR : "var(--input)"}`,
+                      background: isPast ? COLOR : "var(--card)",
                       boxShadow: isActive ? `0 0 0 4px ${COLOR_LIGHT}` : "none",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       marginBottom: 4, transition: "all 0.3s",
                     }}>
                       {isPast && (
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                          <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.8"
+                          <path d="M2 5l2.5 2.5L8 3" stroke="var(--card)" strokeWidth="1.8"
                             strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
@@ -617,7 +617,7 @@ export default function SpeakingPracticePage() {
                     <span style={{
                       fontSize: 11,
                       fontWeight: isPartType || isActive ? 700 : 500,
-                      color: isActive ? COLOR : isPast ? COLOR : "#9ca3af",
+                      color: isActive ? COLOR : isPast ? COLOR : "var(--muted-foreground)",
                       whiteSpace: "nowrap",
                     }}>
                       {step.label}
@@ -639,32 +639,32 @@ export default function SpeakingPracticePage() {
           <span style={{ color: COLOR, fontWeight: 700, fontSize: 18, marginBottom: 16, display: "block" }}>
             Question {qStepIdx + 1}
           </span>
-          <h1 style={{ color: "#111827", fontSize: 28, fontWeight: 600, lineHeight: 1.6, margin: 0, maxWidth: 700 }}>
+          <h1 style={{ color: "var(--foreground)", fontSize: 28, fontWeight: 600, lineHeight: 1.6, margin: 0, maxWidth: 700 }}>
             {currentQuestion?.question || ""}
           </h1>
         </div>
 
         <div style={{
-          width: 310, borderLeft: "1px solid #f0f0f0", background: "#fff",
+          width: 310, borderLeft: "1px solid var(--border)", background: "var(--card)",
           display: "flex", flexDirection: "column", alignItems: "center",
           justifyContent: "center", padding: "32px 24px", gap: 20,
         }}>
           <div style={{
             width: 76, height: 76, borderRadius: "50%",
-            background: status === "recording" ? "var(--destructive-subtle)" : "#f3f4f6",
+            background: status === "recording" ? "var(--destructive-subtle)" : "var(--muted)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            <svg width="34" height="34" viewBox="0 0 24 24" fill={status === "recording" ? "var(--destructive)" : "#9ca3af"}>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill={status === "recording" ? "var(--destructive)" : "var(--muted-foreground)"}>
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
               <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
             </svg>
           </div>
 
           <div style={{ textAlign: "center" }}>
-            <h3 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>
+            <h3 style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)", margin: "0 0 6px" }}>
               {status === "recording" ? "Recording" : "Listen"}
             </h3>
-            <p style={{ fontSize: 13, color: "#9ca3af", margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>
               {status === "recording"
                 ? "Speak your answer clearly into the microphone."
                 : "The examiner is reading the question..."}
@@ -672,15 +672,15 @@ export default function SpeakingPracticePage() {
           </div>
 
           {status === "recording" && (
-            <div style={{ fontSize: 50, fontWeight: 800, fontFamily: "monospace", color: "#111827", letterSpacing: 3 }}>
+            <div style={{ fontSize: 50, fontWeight: 800, fontFamily: "monospace", color: "var(--foreground)", letterSpacing: 3 }}>
               {displayTime}
             </div>
           )}
 
           {status === "recording" && (
             <div style={{
-              width: "100%", height: 50, background: "#f9fafb",
-              borderRadius: 12, overflow: "hidden", border: "1px solid #f0f0f0",
+              width: "100%", height: 50, background: "var(--muted)",
+              borderRadius: 12, overflow: "hidden", border: "1px solid var(--border)",
             }}>
               <canvas ref={canvasRef} style={{ width: "100%", height: "100%" }} width={262} height={50} />
             </div>
@@ -690,7 +690,7 @@ export default function SpeakingPracticePage() {
             <button
               onClick={goNext}
               style={{
-                width: "100%", background: COLOR, color: "#fff",
+                width: "100%", background: COLOR, color: "var(--card)",
                 border: "none", borderRadius: 12, padding: "15px 0",
                 fontWeight: 700, fontSize: 14, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
@@ -709,7 +709,7 @@ export default function SpeakingPracticePage() {
           <button
             onClick={() => setModal("finish")}
             style={{
-              width: "100%", background: "var(--destructive)", color: "#fff",
+              width: "100%", background: "var(--destructive)", color: "var(--card)",
               border: "none", borderRadius: 12, padding: "13px 0",
               fontWeight: 600, fontSize: 13, cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
@@ -731,10 +731,10 @@ export default function SpeakingPracticePage() {
     <div style={{
       fontFamily: "'Segoe UI', system-ui, sans-serif",
       height: "100vh", display: "flex", flexDirection: "column",
-      background: "#fff", overflow: "hidden",
+      background: "var(--card)", overflow: "hidden",
     }}>
       {isLoading && (
-        <div style={{ margin: "auto", color: "#6b7280", fontSize: 16 }}>Loading speaking test...</div>
+        <div style={{ margin: "auto", color: "var(--text-secondary-light)", fontSize: 16 }}>Loading speaking test...</div>
       )}
       {!isLoading && loadError && (
         <div style={{ margin: "auto", textAlign: "center", color: "var(--destructive-text)" }}>
@@ -745,7 +745,7 @@ export default function SpeakingPracticePage() {
             style={{
               marginTop: 12,
               background: COLOR,
-              color: "#fff",
+              color: "var(--card)",
               border: "none",
               borderRadius: 8,
               padding: "8px 14px",
@@ -757,7 +757,7 @@ export default function SpeakingPracticePage() {
         </div>
       )}
       {!isLoading && !loadError && questionSteps.length === 0 && (
-        <div style={{ margin: "auto", textAlign: "center", color: "#6b7280" }}>
+        <div style={{ margin: "auto", textAlign: "center", color: "var(--text-secondary-light)" }}>
           <p>No speaking questions were found for this test.</p>
           <button
             type="button"
@@ -765,7 +765,7 @@ export default function SpeakingPracticePage() {
             style={{
               marginTop: 12,
               background: COLOR,
-              color: "#fff",
+              color: "var(--card)",
               border: "none",
               borderRadius: 8,
               padding: "8px 14px",

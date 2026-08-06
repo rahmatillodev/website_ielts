@@ -61,9 +61,11 @@ test
 ```
 
 #### `question` Table
-This table serves dual purposes:
-1. **Question Groups** - For types like `fill_in_blanks`, `drag_drop`, `table`, `map`, `matching_information`
-2. **Individual Questions** - For `multiple_choice` type (each question is stored directly)
+This table holds QUESTION GROUPS for every type - one row per instruction block.
+
+> **Corrected 2026-08.** This previously said multiple_choice questions are "stored
+> directly" here. They are not: multiple_choice items are rows in `questions` like every
+> other type, and this table has **no `question_number` column**.
 
 ```sql
 {
@@ -71,16 +73,16 @@ This table serves dual purposes:
   test_id: UUID (foreign key → test.id)
   part_id: UUID (foreign key → part.id)
   type: TEXT - Question type identifier
-  question_range: INTEGER (nullable) - Number of questions in group
+  question_range: TEXT (nullable) - Number of questions in group (TEXT, not integer)
   instruction: TEXT (nullable) - Instructions for users
   question_text: TEXT (nullable) - Content/passage for some types, null for others
-  question_number: INTEGER (nullable) - Only for multiple_choice individual questions
   image_url: TEXT (nullable) - For map type
 }
 ```
 
 #### `questions` Table
-Stores individual questions within question groups (NOT used for `multiple_choice`).
+Stores individual questions within question groups - **including `multiple_choice`**
+(corrected 2026-08; the previous "NOT used for multiple_choice" was wrong).
 
 ```sql
 {
@@ -90,7 +92,8 @@ Stores individual questions within question groups (NOT used for `multiple_choic
   part_id: UUID
   question_number: INTEGER - Sequential question number across entire test
   question_text: TEXT (nullable) - Question text or answer text
-  correct_answer: TEXT (nullable) - Correct answer (format varies by type)
+  correct_answer: TEXT (nullable) - Correct answer; ALWAYS NULL for multiple_choice,
+                  where the answer is the options row flagged is_correct
   explanation: TEXT (nullable)
   is_correct: BOOLEAN - true for valid questions, false for distractors
 }
@@ -207,8 +210,10 @@ The response will have the following structure:
 
 The raw database structure needs to be processed differently based on question type:
 
-1. **Multiple Choice**: Questions are stored directly in `question` table with `options` linked to each question
-2. **Other Types**: Questions are grouped in `question` table, with individual questions in `questions` table
+1. **Every type**: groups live in `question`, individual items in `questions`, choices in `options`.
+2. **Multiple choice** differs only in HOW the answer is stored: `questions.correct_answer` is NULL
+   and the answer is the `options` row flagged `is_correct`, matched by `question_number`.
+   (Corrected 2026-08 — this previously claimed MC questions live in the `question` table.)
 
 See the `ContentFormPage.jsx` file (lines 216-846) for detailed processing logic.
 
@@ -416,7 +421,18 @@ The save process follows these steps:
 
 ---
 
-### 5. Table / List of Headings (`table`)
+### 5. Table — "Which paragraph contains…" (`table`)
+
+> **Corrected 2026-08.** This section was titled "Table / List of Headings". Both halves
+> of that title were wrong, and building against it mistreats 387 live questions:
+> - `table` is **not** table completion (that is `table_completion` / `fill_in_blanks`) and
+>   **not** list of headings. 40 of its 45 live groups ask *"which paragraph contains the
+>   following information?"*, answered with a paragraph letter.
+> - List of Headings lives in **`matching_information`** with roman-numeral keys.
+> - `table`'s options hold **bare letters** in `option_text`, and `option_key` is NULL on
+>   every row — resolving one of its answers by `option_key` returns nothing.
+>
+> See `INGESTION_GUIDE.md` and `ListofHeadings.md` §6b.
 
 **Database Structure:**
 - Group row in `question` table with `question_text: null`

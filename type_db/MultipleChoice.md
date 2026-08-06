@@ -2,6 +2,20 @@
 
 ## 1. Multiple Choice
 
+> **Corrected 2026-08 — verified against prod.** Two things this file's example does not
+> show, both load-bearing:
+>
+> 1. **`questions.correct_answer` is NULL for every multiple-choice question** (all 211
+>    live prod rows). The answer exists *only* as the `options` row with `is_correct = true`.
+>    Code that reads `correct_answer` for this type finds nothing.
+> 2. **The letter the student sees is not stored.** `option_key` is NULL; the platform
+>    derives A/B/C/D at render time by sorting options on `option_text` and taking the array
+>    index (`testDetailStore` fetches `.order("option_text")`). Reproduce that sort or your
+>    letters will disagree with the screen.
+>
+> Multiple-choice items are rows in the **`questions`** table like every other type — the
+> `question` group table has no `question_number` column. See `INGESTION_GUIDE.md`.
+
 
 ```json
 {

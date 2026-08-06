@@ -24,6 +24,7 @@ import { formatBandScore } from '@/utils/mockTestResults';
 import { useSettingsStore } from "@/store/systemStore";
 import { toast } from 'sonner';
 import { formatScore } from "@/utils/score";
+import { SKILL_CLASS } from "@/lib/skillColors";
 
 const MockTestClientResults = ({
   client,
@@ -72,12 +73,16 @@ const MockTestClientResults = ({
 
   const ResultAccordionItem = ({ value, title, item, icon: Icon }) => {
     const showQuestionStats = title !== "Writing" && title !== "Speaking";
-    
+    // The four modules are a CATEGORY axis, so each takes its own skill token
+    // rather than all four wearing the brand red — which is what made the
+    // sections indistinguishable at a glance. `value` is the skill key.
+    const skill = SKILL_CLASS[value] ?? SKILL_CLASS.reading;
+
     return (
       <AccordionItem value={value} className="border-none mb-4 bg-white rounded-xl shadow-sm overflow-hidden">
-        <AccordionTrigger className="px-6 hover:no-underline hover:bg-gray-50/50 transition-all">
+        <AccordionTrigger className="px-6 hover:no-underline hover:bg-gray-50 transition-all">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-brand-100 text-brand-700 rounded-lg">
+            <div className={`p-2 rounded-lg ${skill.bg} ${skill.text}`}>
               <Icon size={20} />
             </div>
             <span className="font-bold text-gray-700 text-lg">{title}</span>
@@ -117,9 +122,11 @@ const MockTestClientResults = ({
                             {item.total_questions ?? 'N/A'}
                           </p>
                         </div>
-                        <div className="p-3 bg-green-50 rounded-lg">
-                          <p className="text-xs text-green-600 uppercase font-bold mb-1">Correct</p>
-                          <div className="flex items-center gap-1 text-green-700">
+                        {/* Correct-answer count sits on the success ramp, the
+                            same pairing the question components use. */}
+                        <div className="p-3 bg-success-50 rounded-lg">
+                          <p className="text-xs text-success-700 uppercase font-bold mb-1">Correct</p>
+                          <div className="flex items-center gap-1 text-success-700">
                             <CheckCircle2 size={14} />
                             <span className="font-semibold">
                               {Number(item.correct_answers ?? 0)}
@@ -137,10 +144,10 @@ const MockTestClientResults = ({
                         Feedback
                       </h4>
                       <div
-                        className="text-sm leading-relaxed prose prose-sm  prose prose-slate max-w-none 
+                        className="text-sm leading-relaxed prose prose-sm prose-gray max-w-none
                         [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4
-                        [&_li]:mb-2 
-                        text-gray-800" 
+                        [&_li]:mb-2
+                        text-gray-800"
                         data-selectable="true"
                       >
                         {parse(item.feedback)}
@@ -164,12 +171,12 @@ const MockTestClientResults = ({
 
   const getStatusBadgeClass = (status) => {
     return status === 'completed'
-      ? 'bg-green-100 text-green-700'
+      ? 'bg-success-100 text-success-700'
       : 'bg-brand-100 text-brand-700';
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -212,7 +219,9 @@ const MockTestClientResults = ({
             <AccordionItem value="client" className="border-none bg-white rounded-xl shadow-sm overflow-hidden">
               <AccordionTrigger className="px-6 hover:no-underline">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
+                  {/* Client details are metadata, not a skill and not a
+                      judgement — `info` is the system's non-brand notice ramp. */}
+                  <div className="p-2 bg-info-50 text-info-600 rounded-lg">
                     <User size={20} />
                   </div>
                   <span className="font-bold text-gray-700 text-lg">Client Information</span>

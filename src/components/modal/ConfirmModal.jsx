@@ -21,8 +21,8 @@ const ConfirmModal = ({
   cancelLabel = "Stay",
   confirmLabel = "Yes, Leave",
   icon: Icon = FaArrowLeft,
-  iconBgColor = "bg-orange-50",
-  iconColor = "text-orange-500",
+  iconBgColor = "bg-warning-subtle",
+  iconColor = "text-warning-text",
   testType = "test"
 }) => {
   const { themeColors } = useAppearance();
@@ -66,7 +66,7 @@ const ConfirmModal = ({
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="flex-1 rounded-xl font-semibold bg-brand-500 hover:bg-brand-600 text-white border-none h-12"
+            className="flex-1 rounded-xl font-semibold bg-primary hover:bg-primary-hover text-white border-none h-12"
 
           >
             {confirmLabel}

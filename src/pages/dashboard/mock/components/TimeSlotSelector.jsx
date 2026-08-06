@@ -4,15 +4,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Clock, Calendar, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTime } from "../utils/dateHelpers";
+import { SESSION_ICON } from "@/lib/skillColors";
 
+/**
+ * Available/booked is the same yes/no axis the review UI states as
+ * correct/incorrect, so it uses the same soft pairing: success 50/300/700
+ * against danger 50/200/700. Pending is neither, and takes the warning
+ * semantic set — the one `AuthNotice` already uses for its warning tone.
+ */
 const getSlotStatusColor = (status) => {
   switch (status) {
     case "available":
-      return "bg-green-100 border-green-300 text-green-700 hover:bg-green-200";
+      return "bg-success-50 border-success-300 text-success-700 hover:bg-success-100";
     case "booked":
-      return "bg-danger-100 border-danger-300 text-danger-700 cursor-not-allowed opacity-60";
+      return "bg-danger-50 border-danger-200 text-danger-700 cursor-not-allowed opacity-60";
     case "pending":
-      return "bg-yellow-100 border-yellow-300 text-yellow-700 hover:bg-yellow-200";
+      return "bg-warning-subtle border-warning-border text-warning-text hover:bg-warning-100";
     default:
       return "bg-gray-100 border-gray-300 text-gray-700";
   }
@@ -20,13 +27,14 @@ const getSlotStatusColor = (status) => {
 
 const TimeSlotSelector = ({
   title,
-  iconColor,
+  session = "rwl",
   selectedDate,
   selectedSlot,
   onSlotSelect,
   slots,
   loading,
 }) => {
+  const iconColor = SESSION_ICON[session] ?? SESSION_ICON.rwl;
   const [showCustomNote, setShowCustomNote] = useState(false);
   const noteTimeoutRef = useRef(null);
 
@@ -96,10 +104,8 @@ const TimeSlotSelector = ({
                   className={cn(
                     "p-4 rounded-xl border-2 font-medium transition-all text-center flex flex-col items-center justify-center",
                     getSlotStatusColor(slot.status),
-                    selectedSlot === slot.time &&
-                      `ring-4 ${
-                        iconColor.includes("purple") ? "ring-purple-300" : "ring-green-300"
-                      } ring-offset-2`
+                    // Selection is brand in both calendars — see SESSION_ICON.
+                    selectedSlot === slot.time && "ring-4 ring-brand-300 ring-offset-2"
                   )}
                 >
                   <span className="text-lg font-semibold">{formatTime(slot.time)}</span>
@@ -129,7 +135,7 @@ const TimeSlotSelector = ({
               />
 
               {showCustomNote && (
-                <div className="absolute top-full mt-2 left-0 bg-yellow-50 border-l-4 border-yellow-300 text-yellow-700 p-3 rounded-lg text-sm shadow-md">
+                <div className="absolute top-full mt-2 left-0 bg-warning-subtle border-l-4 border-warning-500 text-warning-text p-3 rounded-lg text-sm shadow-md">
                   The time you enter may change depending on our speakers availability or
                   the number of available spots. If any changes occur, we will contact you
                   to confirm and discuss the new schedule.

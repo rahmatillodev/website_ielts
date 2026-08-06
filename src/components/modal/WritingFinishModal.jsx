@@ -28,7 +28,7 @@ const WritingFinishModal = ({
         style={{ backgroundColor: themeColors.background }}
       >
         <AlertDialogHeader className="flex flex-col items-center text-center">
-          <div className="size-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-4">
+          <div className="size-16 bg-success-50 text-success-600 rounded-full flex items-center justify-center mb-4">
             <FaCheck size={30} />
           </div>
           <AlertDialogTitle 
@@ -47,7 +47,7 @@ const WritingFinishModal = ({
             <span className="font-bold text-danger-700">
               Your data will <u>not</u> be saved and you will <u>not</u> be able to write again. 
             </span>
-              <span className="font-semibold text-yellow-600">
+              <span className="font-semibold text-warning-text">
                 <u>  Note:</u> You can still extract the information in PDF format before finishing.
               </span>
             </>
@@ -71,7 +71,7 @@ const WritingFinishModal = ({
           <AlertDialogAction 
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 rounded-xl font-semibold bg-green-600 hover:bg-green-700 text-white border-none h-12 disabled:opacity-50"
+            className="flex-1 rounded-xl font-semibold h-12"
           >
             {loading ? 'Saving...' : 'Finish'}
           </AlertDialogAction>

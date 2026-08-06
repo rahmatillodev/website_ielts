@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import QuestionActionIcons from "./QuestionActionIcons";
+import { ExplainIcon, ExplainPanel } from "./InlineExplain";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import {
   Select,
@@ -385,13 +386,20 @@ const sortedQuestions = useMemo(() => {
           // Get correct answer text (converted from option_key if needed)
           const correctAnswerText = review.correctAnswer || getCorrectAnswerForQuestion(q);
           const selectedAnswer = getSelectedAnswer(qNumber);
-          const showWrong = isReviewMode && !isCorrect;
-          const showCorrect = isReviewMode && isCorrect;
+          // `!isCorrect` treated "no review entry" as WRONG, which every other
+          // question type avoids by checking the property exists first. Two real
+          // consequences: while the attempt is still loading (~0.7s after the
+          // questions render) every row flashed red, telling the student they had
+          // got everything wrong; and a question with no answer row at all - one
+          // never answered - stayed marked wrong instead of simply unanswered.
+          const hasVerdict = Object.prototype.hasOwnProperty.call(review, 'isCorrect');
+          const showWrong = isReviewMode && hasVerdict && review.isCorrect === false;
+          const showCorrect = isReviewMode && hasVerdict && review.isCorrect === true;
           const isBookmarked = bookmarks.has(qNumber);
 
           return (
+            <React.Fragment key={q.id || qNumber}>
             <div
-              key={q.id || qNumber}
               className={`flex items-start gap-3 justify-between group ${
                 showWrong ? 'p-4 rounded-lg bg-danger-50 border-2 border-danger-500' : 
                 showCorrect ? 'p-4 rounded-lg bg-success-50 border-2 border-success-500' : 
@@ -535,7 +543,22 @@ const sortedQuestions = useMemo(() => {
                     isReviewMode={isReviewMode}
                     onReport={() => onReport(q)}
                   />
+                  <ExplainIcon
+                    questionKey={qNumber}
+                    explanation={q.explanation}
+                    isReviewMode={isReviewMode}
+                    /* No self-center: the row is items-start, so centering would
+                       drop the lightbulb below the flag instead of beside it. */
+                    className="shrink-0"
+                  />
             </div>
+            {/* Outside the flex row, so it opens as a block beneath it. */}
+            <ExplainPanel
+              questionKey={qNumber}
+              explanation={q.explanation}
+              isReviewMode={isReviewMode}
+            />
+            </React.Fragment>
           );
         })}
       </div>

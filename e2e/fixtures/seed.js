@@ -45,11 +45,11 @@ export async function deleteFixtureUser(userId) {
 }
 
 /**
- * Finds an active reading test carrying at least `minExplanations` stored explanations.
+ * Finds an active test of `type` carrying at least `minExplanations` stored explanations.
  * Returns null when the content has none, so a spec can skip rather than fail - Explain
  * coverage is thin and is expected to vary between environments.
  */
-export async function findReadingTestWithExplanations(minExplanations = 1) {
+export async function findTestWithExplanations(type = 'reading', minExplanations = 1) {
   const rows = await sql(`
     select t.id::text as test_id,
            t.title,
@@ -57,7 +57,7 @@ export async function findReadingTestWithExplanations(minExplanations = 1) {
            count(*) as question_count
     from test t
     join questions q on q.test_id = t.id
-    where t.type = 'reading' and t.is_active
+    where t.type = ${lit(type)} and t.is_active
     group by t.id, t.title
     having count(*) filter (where btrim(coalesce(q.explanation, '')) <> '') >= ${Number(minExplanations)}
     order by explanation_count desc
@@ -72,12 +72,46 @@ export async function findReadingTestWithExplanations(minExplanations = 1) {
   };
 }
 
+export async function findReadingTestWithExplanations(minExplanations = 1) {
+  return findTestWithExplanations('reading', minExplanations);
+}
+
+export async function findListeningTestWithExplanations(minExplanations = 1) {
+  return findTestWithExplanations('listening', minExplanations);
+}
+
+/**
+ * Every question of a test with the part it belongs to and whether it has an
+ * explanation stored. Specs use it to assert the exact opposite of a screenshot:
+ * an Explain control appears for precisely the explained questions of the part on
+ * screen, and for nothing else.
+ */
+export async function listQuestionExplanations(testId) {
+  const rows = await sql(`
+    select q.question_number,
+           p.part_number,
+           qg.type::text as type,
+           (btrim(coalesce(q.explanation, '')) <> '') as has_explanation
+    from questions q
+    join part p on p.id = q.part_id
+    join question qg on qg.id = q.question_id
+    where q.test_id = ${lit(testId)} and q.question_number is not null
+    order by q.question_number`, { readOnly: true });
+
+  return (rows ?? []).map((row) => ({
+    questionNumber: Number(row.question_number),
+    partNumber: Number(row.part_number),
+    type: row.type,
+    hasExplanation: row.has_explanation === true || row.has_explanation === 't',
+  }));
+}
+
 /**
  * Builds a completed attempt for `userId` on `testId`, answering every question.
  * Even-numbered questions are answered correctly and odd ones wrongly, so the review
  * table always renders both the correct and the incorrect state.
  */
-export async function seedCompletedAttempt({ userId, testId }) {
+export async function seedCompletedAttempt({ userId, testId, type = 'reading' }) {
   const attemptId = randomUUID();
 
   const [{ total }] = await sql(
@@ -90,7 +124,7 @@ export async function seedCompletedAttempt({ userId, testId }) {
     values
       (${lit(attemptId)}, ${lit(userId)}, ${lit(testId)}, 6.5, ${total},
        (select count(*) from questions where test_id = ${lit(testId)} and question_number % 2 = 0),
-       now(), now(), 300, 'reading', false)`);
+       now(), now(), 300, ${lit(type)}, false)`);
 
   await sql(`
     insert into user_answers

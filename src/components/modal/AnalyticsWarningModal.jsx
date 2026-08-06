@@ -23,7 +23,7 @@ const AnalyticsWarningModal = ({ isOpen, onClose }) => {
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className="rounded-[24px] max-w-[400px]">
         <AlertDialogHeader className="flex flex-col items-center text-center">
-          <div className="size-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mb-4">
+          <div className="size-16 bg-warning-subtle text-warning-text rounded-full flex items-center justify-center mb-4">
             <AlertTriangle size={30} />
           </div>
           <AlertDialogTitle className="text-xl font-black text-gray-900">
@@ -37,7 +37,7 @@ const AnalyticsWarningModal = ({ isOpen, onClose }) => {
         <AlertDialogFooter className="flex gap-3 sm:justify-center pt-4">
           <AlertDialogAction 
             onClick={handleGotIt}
-            className="flex-1 rounded-xl font-semibold bg-brand-500 hover:bg-brand-600 text-white border-none h-12"
+            className="flex-1 rounded-xl font-semibold bg-primary hover:bg-primary-hover text-white border-none h-12"
           >
             Got it
           </AlertDialogAction>

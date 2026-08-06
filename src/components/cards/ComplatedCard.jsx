@@ -9,6 +9,15 @@ import { useDashboardStore } from "@/store/dashboardStore";
 import { motion } from "framer-motion";
 import { FaPencilAlt } from "react-icons/fa";
 import { formatDateToDayMonth } from "@/store/analyticsStore";
+import {
+  TIER_BADGE,
+  CARD_BORDER,
+  CARD_BORDER_LEFT,
+  CARD_ICON,
+  CARD_SCORE,
+  CARD_CTA,
+  CARD_CTA_SECONDARY,
+} from "./cardTokens";
 
 // Иконка «сети» с 1–3 полосками: Easy=1, Medium=2, Hard=3
 const SignalBars = ({ level = 1 }) => (
@@ -96,10 +105,13 @@ const ComplatedCard = ({
   const createdDate = created_at ? formatDateToDayMonth(created_at) : '';
   const completedDate = completed_at ? formatDateToDayMonth(completed_at) : '';
 
-  // Container classes with green border for completed tests
+  // Same rule as CardOpen: the edge reports completion only, tier lives in the badge.
+  const cardState = isCompleted ? 'completed' : 'default';
+  const tier = is_premium ? 'premium' : 'free';
+
   const containerClass = isGridView
-    ? `bg-white border ${isCompleted ? 'border-green-500' : is_premium ? 'border-amber-400' : 'border-brand-500'} rounded-2xl p-4 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
-    : `bg-white border border-l-4 ${isCompleted ? 'border-l-green-500' : is_premium ? 'border-l-amber-400' : 'border-l-brand-500'} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 mb-4 relative`;
+    ? `bg-white border ${CARD_BORDER[cardState]} rounded-2xl p-4 shadow-lg hover:shadow-2xl flex flex-col relative h-full transition-all`
+    : `bg-white border border-l-4 ${CARD_BORDER_LEFT[cardState]} rounded-xl md:rounded-[24px] p-3 md:p-4 shadow-lg hover:shadow-2xl flex items-center gap-3 md:gap-4 mb-4 relative`;
 
   // Animation variants for hover effect
   const cardVariants = {
@@ -123,10 +135,7 @@ const ComplatedCard = ({
         {/* Premium/Free Badge */}
         {
           <div className={`${'absolute top-3 right-3 z-10'}`}>
-            <span className={`px-2.5 md:px-3 py-1 text-[10px] md:text-xs font-black uppercase rounded-lg tracking-wider flex items-center gap-1.5 ${is_premium
-              ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
-              : "bg-green-500 text-white border-0 shadow-md"
-              }`}>
+            <span className={`px-2.5 md:px-3 py-1 text-[10px] md:text-xs font-black uppercase rounded-lg tracking-wider flex items-center gap-1.5 ${TIER_BADGE[tier]}`}>
               {is_premium && <MdStar className="text-xs md:text-sm" />} {cardStatus}
             </span>
           </div>
@@ -143,7 +152,7 @@ const ComplatedCard = ({
               <div className="">
                 <div className="bg-white border border-gray-200 w-12 md:w-14 h-12 md:h-14 rounded-full p-2 flex items-center justify-center flex-col shadow-sm">
                   <p className="text-[10px] text-gray-500 font-semibold">Score</p>
-                  <p className="text-sm md:text-base font-black text-green-600">{'--'}</p>
+                  <p className={`text-sm md:text-base font-black ${CARD_SCORE}`}>{'--'}</p>
                 </div>
               </div>
             )}
@@ -184,14 +193,14 @@ const ComplatedCard = ({
           <div className={`mt-4 flex gap-2 w-full ${isOwnWriting ? 'justify-center' : ''}`}>
             <button
               onClick={handleReview}
-              className={`${isOwnWriting ? 'flex-1 max-w-xs' : 'flex-1'} py-2.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-all`}
+              className={`${isOwnWriting ? 'flex-1 max-w-xs' : 'flex-1'} py-2.5 px-3 text-xs font-semibold rounded-lg transition-all ${CARD_CTA_SECONDARY}`}
             >
               Review
             </button>
             {!isOwnWriting && (
               <button
                 onClick={handleRetake}
-                className="flex-1 py-2.5 px-3 bg-brand-500 hover:bg-brand-600 text-white text-xs font-black rounded-lg flex items-center justify-center gap-2 transition-all"
+                className={`flex-1 py-2.5 px-3 text-xs font-black rounded-lg flex items-center justify-center gap-2 transition-all ${CARD_CTA}`}
               >
                 Retake <HiOutlinePlay className="text-sm" />
               </button>
@@ -200,7 +209,7 @@ const ComplatedCard = ({
         ) : (
           <button
             onClick={handleStartTest}
-            className="mt-4 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-black rounded-lg flex items-center justify-center gap-2 w-full transition-all"
+            className={`mt-4 py-2.5 text-xs font-black rounded-lg flex items-center justify-center gap-2 w-full transition-all ${CARD_CTA}`}
           >
             Start Practice <HiOutlinePlay className="text-sm" />
           </button>
@@ -216,10 +225,7 @@ const ComplatedCard = ({
         whileHover="hover"
       >
         {/* Icon */}
-        <div className={`size-10 md:size-14 rounded-xl md:rounded-2xl ${isCompleted
-          ? 'bg-green-50 text-green-500'
-          : 'bg-brand-50 text-brand-400'
-          } flex items-center justify-center shrink-0`}>
+        <div className={`size-10 md:size-14 rounded-xl md:rounded-2xl ${CARD_ICON[cardState]} flex items-center justify-center shrink-0`}>
           {isCompleted ? (
             <MdCheckCircle className="text-2xl md:text-3xl" />
           ) : (
@@ -240,10 +246,7 @@ const ComplatedCard = ({
               {title}
             </h3>
 
-            <span className={`ml-2 md:ml-4 px-2.5 md:px-3 py-1 md:py-1 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 shrink-0 self-start ${is_premium
-              ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white border-0 shadow-md"
-              : "bg-green-500 text-white border-0 shadow-md"
-              }`}>
+            <span className={`ml-2 md:ml-4 px-2.5 md:px-3 py-1 md:py-1 text-[10px] md:text-xs font-black uppercase rounded-lg md:rounded-xl tracking-wider flex items-center gap-1.5 shrink-0 self-start ${TIER_BADGE[tier]}`}>
               {is_premium && <MdStar className="text-xs md:text-sm" />} {cardStatus}
             </span>
 
@@ -277,19 +280,19 @@ const ComplatedCard = ({
             <>
               <div className="flex flex-col items-end border-l border-gray-200 pl-3 md:pl-6">
                 <span className="text-[10px] md:text-xs text-gray-500 font-semibold mb-1">Score</span>
-                <span className="text-xl md:text-2xl font-black text-green-600">{'--'}</span>
+                <span className={`text-xl md:text-2xl font-black ${CARD_SCORE}`}>{'--'}</span>
               </div>
               <div className="flex flex-col gap-1.5 md:gap-2 mr-2 md:mr-4">
                 <button
                   onClick={handleReview}
-                  className="py-1.5 md:py-2 px-3 md:px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs md:text-sm font-semibold rounded-md transition-all"
+                  className={`py-1.5 md:py-2 px-3 md:px-4 text-xs md:text-sm font-semibold rounded-md transition-all ${CARD_CTA_SECONDARY}`}
                 >
                   Review
                 </button>
                 {!isOwnWriting && (
                   <button
                     onClick={handleRetake}
-                    className="py-1 text-xs md:text-sm font-semibold text-brand-400 hover:text-brand-700 transition-all text-left"
+                    className="py-1 text-xs md:text-sm font-semibold text-primary-text hover:text-brand-800 transition-all text-left"
                   >
                     Retake Test
                   </button>
@@ -299,7 +302,7 @@ const ComplatedCard = ({
           ) : (
             <button
               onClick={handleStartTest}
-              className="py-2 md:py-3 px-4 md:px-6 bg-brand-500 hover:bg-brand-600 text-white text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all"
+              className={`py-2 md:py-3 px-4 md:px-6 text-xs md:text-sm font-black rounded-lg md:rounded-xl flex items-center justify-center gap-2 transition-all ${CARD_CTA}`}
             >
               Start Practice <HiOutlinePlay className="text-sm md:text-base" />
             </button>

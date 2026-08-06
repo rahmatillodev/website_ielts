@@ -67,7 +67,7 @@ const SpeakingPage = () => {
               }`}
             >
               {card.comingSoon && (
-                <span className="absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                <span className="absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full bg-info-50 text-info-700 border border-info-100">
                   Coming soon
                 </span>
               )}

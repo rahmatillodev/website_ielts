@@ -27,15 +27,17 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
         {/* Left: Test Info */}
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
+            {/* Awaiting review is a wait (warning); anything past it is the
+                good terminal state (success). */}
             <div className={`rounded-full p-2 ${
               client.status === 'completed'
-                ? 'bg-yellow-50'
-                : 'bg-green-50'
+                ? 'bg-warning-subtle'
+                : 'bg-success-50'
             }`}>
               <MdCheckCircle className={`text-xl ${
                 client.status === 'completed'
-                  ? 'text-yellow-600'
-                  : 'text-green-600'
+                  ? 'text-warning-text'
+                  : 'text-success-600'
               }`} />
             </div>
             <div>
@@ -109,7 +111,9 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
                 <span className="text-sm font-semibold text-gray-700">
                   Total Score:
                 </span>
-                <span className="text-2xl font-bold text-green-600">
+                {/* A band score is identity, not a verdict — same brand
+                    treatment as the headline score on the result pages. */}
+                <span className="text-2xl font-bold text-brand-600">
                   {formatBandScore(client.total_score)}
                 </span>
               </div>
@@ -120,16 +124,14 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
         {/* Right: Status Badge and Actions */}
         <div className="flex flex-col items-end gap-2">
           <div className={`px-4 py-2 border rounded-lg ${
-            client.status === 'completed' 
-              ? 'bg-yellow-100 border-yellow-200'
-              : 'bg-green-100 border-green-200'
+            client.status === 'completed'
+              ? 'bg-warning-subtle border-warning-border'
+              : 'bg-success-100 border-success-200'
           }`}>
             <span className={`text-sm font-semibold ${
               client.status === 'completed'
-                ? 'text-yellow-700'
-                : client.status === 'checked'
-                  ? 'text-green-700'
-                  : 'text-green-700'
+                ? 'text-warning-text'
+                : 'text-success-700'
             }`}>
               {client.status === 'completed' 
                 ? 'Waiting for Review' 
@@ -147,7 +149,7 @@ const MockTestHistoryItem = ({ client, results, completedAt, from = 'mockTest' }
               </p>
               <button
                 onClick={handleViewResults}
-                className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 View Results
               </button>
