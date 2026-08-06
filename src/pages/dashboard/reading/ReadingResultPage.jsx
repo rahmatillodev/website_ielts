@@ -915,7 +915,10 @@ const ReadingResultPage = () => {
                                   Why this is the answer
                                 </span>
                               </div>
-                              <p className="text-sm leading-relaxed text-slate-700">
+                              {/* whitespace-pre-line: izohlar "Where:/Quote:/Why:" uch qatorli
+                                  formatda saqlanadi, qator uzilishlari saqlanib qolishi kerak.
+                                  Qo'lda yozilgan eski bir qatorli izohlar ham xuddi shunday chiziladi. */}
+                              <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
                                 {explanation}
                               </p>
                             </div>
