@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { FaTelegramPlane, FaInstagram } from "react-icons/fa";
-import { useSettingsStore } from "@/store/systemStore";
+import { CONTACT } from "@/lib/contact";
 
 /**
  * The landing footer, from the prototype.
@@ -12,12 +12,11 @@ import { useSettingsStore } from "@/store/systemStore";
  * line, which is exactly what the prototype actually paints.
  *
  * The social buttons are the prototype's 30px bordered squares, wired to the
- * real channels from the settings store and hidden when a channel is unset.
+ * brand's channels in src/lib/contact.js.
  */
 function LandingFooter() {
-  const settings = useSettingsStore((state) => state.settings);
-  const telegram = settings?.telegram_channel;
-  const instagram = settings?.instagram_channel;
+  const telegram = CONTACT.telegramUsername;
+  const instagram = CONTACT.instagram;
 
   return (
     <footer className="border-t border-border bg-white">

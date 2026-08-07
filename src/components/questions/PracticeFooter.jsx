@@ -19,7 +19,7 @@ const formatCurrentTime = () => {
  */
 
 
-const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false, isMockTest = false, mockTestId = null, timeRemaining, isListening = false, volume, onVolumeChange, assessmentLabel = 'IELTSCORE.UZ' }) => {
+const PracticeFooter = ({ currentTest, currentPart, handlePartChange, getPartAnsweredCount, answers, scrollToQuestion, isModalOpen, setIsModalOpen, id, activeQuestion, onFinish, onSubmitTest, status = 'taking', onReview, onRetake, resultLink, getAllQuestions, bookmarks = new Set(), isSubmitting = false, isMockTest = false, mockTestId = null, timeRemaining, isListening = false, volume, onVolumeChange, assessmentLabel = 'EDU' }) => {
   // Immediately check URL for review mode to prevent flickering
   const [searchParams] = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review' || status === 'reviewing';

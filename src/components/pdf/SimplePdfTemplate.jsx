@@ -1,5 +1,7 @@
 // components/pdf/SimplePdfTemplate.jsx
-const SimplePdfTemplate = ({ tasks, timer }) => {  
+import { CONTACT } from "@/lib/contact";
+
+const SimplePdfTemplate = ({ tasks, timer }) => {
     const styles = {
       page: {
         width: '210mm',
@@ -77,11 +79,14 @@ const SimplePdfTemplate = ({ tasks, timer }) => {
         <header style={styles.header}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <span style={{ fontSize: '24px' }}>📘</span>
-            <span style={styles.title}>IELTSCORE</span>
+            <span style={styles.title}>EDU</span>
           </div>
+          {/* Plain text, never anchors — this template is rasterised into a PDF
+              and a link here would carry through as a clickable annotation. */}
           <div style={{ textAlign: 'right', fontSize: '12px', color: '#666' }}>
-            <div>Phone: (123) 456-7890</div>
-            <div>Telegram: @username</div>
+            <div>Telegram: {CONTACT.telegram}</div>
+            <div>Phone: {CONTACT.phone}</div>
+            <div>Instagram: {CONTACT.instagram}</div>
           </div>
         </header>
   

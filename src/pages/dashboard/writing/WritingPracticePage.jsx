@@ -65,7 +65,7 @@ const WritingPracticePageContent = () => {
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { themeColors, fontSizeValue, settings, theme } = useAppearance();
+  const { themeColors, fontSizeValue, theme } = useAppearance();
   const [currentClock, setCurrentClock] = useState(formatCurrentTime);
   const [isBatteryHovered, setIsBatteryHovered] = useState(false);
   const { isOnline, speed } = useNetworkStatus();
@@ -1264,7 +1264,7 @@ const WritingPracticePageContent = () => {
       }
 
       const totalTime = formatTime(timeForPdf);
-      await generateWritingPDF(tasks, totalTime, settings);
+      await generateWritingPDF(tasks, totalTime);
       toast.success('PDF downloaded successfully');
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -1832,7 +1832,7 @@ const WritingPracticePageContent = () => {
         }}
         >
           <span className="text-sm font-bold shrink-0" style={{ color: themeColors.text, opacity: 0.9 }}>
-            IELTSCORE.UZ
+            EDU
           </span>
           <div className="flex items-center gap-4">
 

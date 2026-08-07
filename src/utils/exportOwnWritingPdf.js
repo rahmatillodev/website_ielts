@@ -47,14 +47,14 @@ function drawSectionBox(doc, x, y, width, height, { fillColor }) {
   // Borders removed
 }
 
-export const generateWritingPDF = async (tasks, totalTime, settings) => {
+export const generateWritingPDF = async (tasks, totalTime) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
 
   // Brend headerini qo'shish
-  let yPos = await addBrandHeader(doc, pageWidth, "writing", settings);
+  let yPos = await addBrandHeader(doc, pageWidth, "writing");
 
   // Umumiy vaqt (faqat mavjud bo'lsa)
   if (totalTime) {
@@ -190,7 +190,7 @@ export const generateWritingPDF = async (tasks, totalTime, settings) => {
     doc.setFontSize(8);
     doc.setTextColor(150);
     doc.text(
-      `Page ${i} of ${totalPages} - IELTS Practice Hub`,
+      `Page ${i} of ${totalPages} - EDU`,
       pageWidth / 2,
       pageHeight - 10,
       { align: "center" }

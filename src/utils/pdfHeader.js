@@ -1,3 +1,5 @@
+import { CONTACT } from '@/lib/contact';
+
 /**
  * Converts an image URL to base64 data URL for use in jsPDF
  * @param {string} url - The image URL
@@ -73,7 +75,7 @@ export const imageToBase64 = (url, options = {}) => {
  * @param {string} testType - Type of test (e.g., "Reading", "Listening", "Writing")
  * @returns {Promise<number>} - The Y position after the header
  */
-export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) => {
+export const addBrandHeader = async (doc, pageWidth, testType) => {
     const margin = 20;
     let yPos = margin;
     const logoSize = 24;
@@ -90,39 +92,14 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
     doc.line(margin, yPos - 5, pageWidth - margin, yPos - 5);
     yPos = margin;
 
-    // Format contact information with labels and icons
-    const formatContactInfo = (type, value) => {
-      if (!value || String(value).trim() === '') return null;
-      const val = String(value).trim();
-      
-      switch (type) {
-        case 'support_link':
-          // Check if it's an email or a URL
-          if (val.includes('@')) {
-            return { text: val, icon: 'email' };
-          } else {
-            return { text: val, icon: null };
-          }
-        case 'telegram_admin_username':
-          return { text: val, icon: 'telegram' };
-        case 'phone_number':
-          return { text: val, icon: 'phone' };
-        case 'instagram_channel':
-          return { text: val, icon: 'instagram' };
-        case 'telegram_channel':
-          return { text: val, icon: 'telegram' };
-        default:
-          return { text: val, icon: null };
-      }
-    };
-
+    // The public contact block: one Telegram, the phone, and Instagram. Every
+    // line is drawn with doc.text, never doc.textWithLink or doc.link, so the
+    // PDF carries no clickable annotation over any of it.
     const contactInfo = [
-      formatContactInfo('support_link', settings?.support_link),
-      formatContactInfo('telegram_admin_username', settings?.telegram_admin_username),
-      formatContactInfo('phone_number', settings?.phone_number),
-      formatContactInfo('instagram_channel', settings?.instagram_channel),
-      formatContactInfo('telegram_channel', settings?.telegram_channel),
-    ].filter((val) => val != null);
+      { text: CONTACT.telegram, icon: 'telegram' },
+      { text: CONTACT.phone, icon: 'phone' },
+      { text: CONTACT.instagram, icon: 'instagram' },
+    ];
 
     try {
       // Header background box with rounded corners effect
@@ -151,7 +128,7 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
       doc.setFont(undefined, 'bold');
       const companyX = logoX + logoSize + 8;
       const companyY = logoY + logoSize / 2 - 2;
-      doc.text('IELTSCORE', companyX, companyY);
+      doc.text('EDU', companyX, companyY);
       
       // Subtitle
       doc.setFontSize(7);
@@ -172,16 +149,14 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
           telegram: imageToBase64('/telegram.png').catch(() => null),
           instagram: imageToBase64('/instagram.png').catch(() => null),
           phone: imageToBase64('/phone.png').catch(() => null),
-          email: imageToBase64('/gmail.png').catch(() => null),
         };
-        
+
         const icons = {
           telegram: await iconPromises.telegram,
           instagram: await iconPromises.instagram,
           phone: await iconPromises.phone,
-          email: await iconPromises.email,
         };
-        
+
         for (const contact of contactInfo) {
           let textX = rightAlignX;
           
@@ -241,7 +216,7 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text('IELTSCORE', margin + 8, yPos + 15);
+      doc.text('EDU', margin + 8, yPos + 15);
       
       doc.setFontSize(7);
       doc.setTextColor(...darkGray);
@@ -256,20 +231,18 @@ export const addBrandHeader = async (doc, pageWidth, testType, settings = {}) =>
         
         // Load icons from public folder
         const iconPromises = {
-          telegram: imageToBase64('/telegram.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }),
-          instagram: imageToBase64('/instagram.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }),
-          phone: imageToBase64('/phone.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }),
-          email: imageToBase64('/gmail.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }),
+          telegram: imageToBase64('/telegram.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }).catch(() => null),
+          instagram: imageToBase64('/instagram.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }).catch(() => null),
+          phone: imageToBase64('/phone.png', { maxWidth: 24, maxHeight: 24, quality: 0.6 }).catch(() => null),
         };
-        
-        
+
+
         const icons = {
           telegram: await iconPromises.telegram,
           instagram: await iconPromises.instagram,
           phone: await iconPromises.phone,
-          email: await iconPromises.email,
         };
-        
+
         for (const contact of contactInfo) {
           let textX = rightAlignX;
           

@@ -10,10 +10,9 @@ import {
   DialogClose
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { useSettingsStore } from '@/store/systemStore'
+import { CONTACT } from '@/lib/contact'
 
 const UpgradeModal = ({ children, open, onOpenChange }) => {
-  const { settings } = useSettingsStore()
   const isControlled = open !== undefined
 
   return (
@@ -48,7 +47,7 @@ const UpgradeModal = ({ children, open, onOpenChange }) => {
             <DialogClose asChild>
                 <Button variant="outline" className="w-full sm:flex-1">Later</Button>
             </DialogClose>
-            <a href={`https://t.me/${settings.telegram_bot_url}`} target="_blank" className="w-full sm:flex-1">
+            <a href={`https://t.me/${CONTACT.telegramUsername}`} target="_blank" className="w-full sm:flex-1">
             <Button className="w-full sm:flex-1 bg-brand-600 hover:bg-brand-600">Upgrade Now</Button>
             </a>
         </DialogFooter>

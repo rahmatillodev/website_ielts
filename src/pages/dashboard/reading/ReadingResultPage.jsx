@@ -13,7 +13,6 @@ import { fetchAttemptById, fetchAttemptAnswers } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
 import { generateTestResultsPDF } from "@/utils/pdfExport";
 import ResultBanner from "@/components/badges/ResultBanner";
-import { useSettingsStore } from "@/store/systemStore";
 import { toast } from "react-toastify";
 import { clearReadingPracticeData } from "@/store/LocalStorage/readingStorage";
 import { formatDateToDayMonth } from "@/store/analyticsStore";
@@ -41,7 +40,6 @@ const ReadingResultPage = () => {
   const lastLoadedIdRef = useRef(null);
   const isLoadingRef = useRef(false);
   const fetchTestByIdRef = useRef(fetchTestById);
-  const settings = useSettingsStore((state) => state.settings);
   // Update ref when value changes
   useEffect(() => {
     fetchTestByIdRef.current = fetchTestById;
@@ -565,7 +563,6 @@ const ReadingResultPage = () => {
       completedDate: formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt),
       testType: 'Reading',
       defaultTestTitle: 'Academic Reading Practice Test',
-      settings
     });
     setPdfLoading(false);
     toast.success('PDF is generated successfully');
@@ -888,7 +885,7 @@ const ReadingResultPage = () => {
         </div>
 
         <footer className="mt-12 py-8 text-center text-gray-500 text-sm">
-          <p>© 2026 IELTSCORE. All rights reserved.</p>
+          <p>© 2026 EDU. All rights reserved.</p>
         </footer>
       </div>
 

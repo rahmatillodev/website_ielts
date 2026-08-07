@@ -13,7 +13,6 @@ import { fetchAttemptById, fetchAttemptAnswers } from "@/lib/testAttempts";
 import { useAuthStore } from "@/store/authStore";
 import { generateTestResultsPDF } from "@/utils/pdfExport";
 import ResultBanner from "@/components/badges/ResultBanner";
-import { useSettingsStore } from "@/store/systemStore";
 import { clearListeningPracticeData } from "@/store/LocalStorage/listeningStorage";
 import { formatDateToDayMonth } from "@/store/analyticsStore";
 import { formatScore } from "@/utils/score";
@@ -33,7 +32,6 @@ const ListeningResultPage = () => {
   const [loading, setLoading] = useState(true);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const settings = useSettingsStore((state) => state.settings);
   // Use refs to track loaded state and prevent unnecessary re-fetches
   const lastLoadedIdRef = useRef(null);
   const isLoadingRef = useRef(false);
@@ -557,7 +555,6 @@ const ListeningResultPage = () => {
       completedDate: formatDateToDayMonth(attemptData?.completed_at || resultData?.completedAt),
       testType: 'Listening',
       defaultTestTitle: 'Academic Listening Practice Test',
-      settings
     });
   }, [testForDisplay, resultData, answerDisplayData, stats, showCorrectAnswers, attemptData, formatDateToDayMonth]);
 
@@ -867,7 +864,7 @@ const ListeningResultPage = () => {
         </div>
 
         <footer className="mt-12 py-8 text-center text-gray-500 text-sm">
-          <p>© 2026 IELTSCORE. All rights reserved.</p>
+          <p>© 2026 EDU. All rights reserved.</p>
         </footer>
       </div>
 

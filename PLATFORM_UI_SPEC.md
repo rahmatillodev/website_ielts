@@ -250,7 +250,7 @@ There is **no OAuth/social login, no "remember me", and no resend-email flow** a
     institution, quote, emoji, result), each rendered twice via duplicated map blocks.
   - **CTA band** — "Ready to finally get the band score you actually want?", "Join 1,000+ students…".
   - **Footer** — logo, "Know where you stand before test day", blurb, socials, "Useful Links"
-    (only the two anchors), "© 2026 IELTSCORE".
+    (only the two anchors), "© 2026 EDU".
 - **Actions:** three separate routes to `/signup`; Login; two in-page anchors; social links built
   from settings.
 - **States:** scroll-reveal animations and lazy images are present. **Missing:** a loading state —
@@ -364,7 +364,7 @@ There is **no OAuth/social login, no "remember me", and no resend-email flow** a
     username, Email Address, Phone Number, **Target Band Score** with the help text
     "Set your target IELTS band score (0-9)".
   - **Security** — a Password row + Change button.
-  - **Contact support** — Telegram handle (new tab), support email and phone (both **copy to
+  - **Contact support** — Telegram handle (new tab), Instagram handle and phone (both **copy to
     clipboard** on click, despite rendering an external-link icon), and a **Send Feedback**
     textarea + Submit.
 - **Actions:** the avatar pencil opens `ProfileModal` — **the only way to edit anything**.
@@ -471,7 +471,7 @@ review. Registered under **both** layouts; the real behavioural switch is `?mock
   - **Footer:** part tabs showing `answered/total` for inactive parts; for the active part a
     **progress-dot strip** above a **question-number palette** (blue ring on the active question, a
     red bookmark pip above bookmarked ones, tooltip showing the stored answer); a bottom bar with
-    the "IELTSCORE.UZ" label, a live wall clock, a battery indicator, wifi, and Submit (or **Redo
+    the "EDU" label, a live wall clock, a battery indicator, wifi, and Submit (or **Redo
     Test** in review). Floating prev/next arrows sit above the footer and cross part boundaries.
 - **Reading-specific:** a part banner ("Part {n}: Read the text and answer questions {a}-{b}."); a
   left pane with the part title, an optional image and the passage split into paragraphs, all
@@ -559,7 +559,7 @@ anywhere in the test with no way to recover it.
   `{correct}/{total}` + percentage, **Time Taken** + average per question; a `ResultBanner` with one
   of six tiers keyed off the band (the lowest titled "Poor Performance"); a **Detailed Answer
   Review** table with `#`, Status, Your Answer, Correct Answer and Report columns, covering **every**
-  question including unanswered ones; correct/total counters; a "© 2026 IELTSCORE" footer.
+  question including unanswered ones; correct/total counters; a "© 2026 EDU" footer.
 - **Actions:** PDF export; the Show-Correct-Answers switch (which also hides the table column);
   per-row report; Go Home; **Review Test** → the practice page in review mode; **Retake Exam**.
 - **States:** loading; "No results found" — which doubles as the **de facto error state**, so a

@@ -7,7 +7,7 @@
     "dev": "vite --mode dev",
     "build": "vite build --mode prod",
     "lint": "eslint .",
-    "test": "node --test \"src/**/*.test.js\"",
+    "test": "node --test \"src/**/*.test.js\" \"scripts/**/*.test.mjs\"",
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",

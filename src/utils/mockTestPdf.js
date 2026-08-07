@@ -283,9 +283,9 @@ const drawJustifiedText = (doc, text, x, y, maxWidth) => {
   return y + lines.length * 3.5;
 };
 
-/** Draw the version footer (e.g. IELTSCORE.UZ) at bottom-right of the current page. */
+/** Draw the brand footer (EDU) at bottom-right of the current page. */
 const drawVersionFooter = (doc, pageWidth, pageHeight, rightMargin) => {
-  const versionText = "IELTSCORE.UZ";
+  const versionText = "EDU";
   doc.setFontSize(FONT_SMALL);
   doc.setFont(undefined, "normal");
   doc.text(versionText, pageWidth - rightMargin, pageHeight - rightMargin, { align: "right" });

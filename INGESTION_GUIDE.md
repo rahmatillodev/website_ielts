@@ -1,6 +1,6 @@
 # Content Ingestion Guide
 
-How to add a new test to IELTScore correctly and completely.
+How to add a new test to EDU correctly and completely.
 
 This is the authoritative document. Where it disagrees with `type_db/`, this document
 wins — `type_db/` was written from the admin form's point of view and has been wrong about
@@ -85,9 +85,40 @@ choose the correct heading" — and holds no answers itself.
 | `content` | the passage (reading) or transcript (listening) |
 | `listening_url` | audio URL — **part 1 only**, by convention |
 | `image_url` | optional |
+| `video_url` | podcast / shadowing video — a YouTube link or a direct media file |
+| `video_duration_seconds` | **seconds**, the real length of `video_url`. See below |
 
 `part_number` outside 1–5 is rejected by the database. Validate before writing: a
 rejection halfway through a multi-table write is how you get a half-built test.
+
+#### Video duration (podcast / shadowing)
+
+The Speaking library cards print a duration badge from `video_duration_seconds`.
+It is **seconds**, and it belongs to that specific video. Do not confuse it with
+`test.duration`, which is the exam time limit in minutes and defaults to 60 —
+podcast and shadowing rows inherit that default, which is why the badge used to
+be wrong.
+
+Rules for anything that writes `part`:
+
+- set it whenever `video_url` is set or changed;
+- store the video's real length, not a rounded estimate;
+- leave it `NULL` rather than guessing. `NULL` means "not measured yet" and the
+  client measures the video in the browser; a wrong number is shown as fact.
+
+To fill in rows that are missing it, or to find rows whose stored value no
+longer matches the file:
+
+```bash
+node --env-file=.env.explain scripts/media/backfillVideoDurations.mjs --dry-run
+node --env-file=.env.explain scripts/media/backfillVideoDurations.mjs
+node --env-file=.env.explain scripts/media/backfillVideoDurations.mjs --recheck
+```
+
+The column ships in `supabase/migrations/20260807120000_part_video_duration.sql`
+and **must be applied before** a client build that reads it — though the client
+degrades safely if it is not: it retries the query without the column and falls
+back to measuring each video.
 
 ### `question` (the group)
 

@@ -17,14 +17,12 @@ import WritingFinishModal from "@/components/modal/WritingFinishModal";
 import WritingSuccessModal from "@/components/modal/WritingSuccessModal";
 import { generateWritingPDF } from "@/utils/exportOwnWritingPdf";
 import { toast } from "react-toastify";
-import { useSettingsStore } from "@/store/systemStore";
 import { Button } from "@/components/ui/button";
 import ConfirmModal from "@/components/modal/ConfirmModal";
 
 const OwnWritingPageContent = () => {
   const navigate = useNavigate();
   const { themeColors, fontSizeValue } = useAppearance();
-  const settings = useSettingsStore((s) => s.settings);
 
   const [activeTask, setActiveTask] = useState("task1");
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -102,7 +100,7 @@ const OwnWritingPageContent = () => {
 
   const handleDownloadPDF = async () => {
     try {
-      await generateWritingPDF(tasks, formatTime(elapsedTime), settings);
+      await generateWritingPDF(tasks, formatTime(elapsedTime));
       toast.success("PDF saved successfully");
     } catch {
       toast.error("Failed to save PDF");

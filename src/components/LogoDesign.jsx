@@ -4,7 +4,7 @@ import React from "react";
  * The EDU logo.
  *
  * This used to draw the mark in code — a book glyph inside a coloured circle
- * plus an "ieltscore." wordmark built from styled spans — which meant the logo
+ * plus a wordmark built from styled spans — which meant the logo
  * drifted with whatever the brand hex happened to be. It now renders the real
  * asset, so the logo is a fixed artwork and the brand colour is sampled FROM it
  * (#e30613, see the brand ramp in src/index.css) rather than the other way

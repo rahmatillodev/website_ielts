@@ -1,4 +1,5 @@
 import "./pdf.css";
+import { CONTACT } from "@/lib/contact";
 
 const PdfTemplate = ({ tasks, timer }) => {  
   return (
@@ -19,13 +20,16 @@ const PdfTemplate = ({ tasks, timer }) => {
             <img src="/logo-icon.png" alt="EDU" />
           </div>
           <span className="pdf-title" style={{ color: '#e30613' }}>
-            IELTSCORE
+            EDU
           </span>
         </div>
 
+        {/* Plain text, never anchors — this template is rasterised into a PDF
+            and a link here would carry through as a clickable annotation. */}
         <div className="pdf-header-right" style={{ color: '#6b7280' }}>
-          <div>Phone: (123) 456-7890</div>
-          <div>Telegram: @username</div>
+          <div>Telegram: {CONTACT.telegram}</div>
+          <div>Phone: {CONTACT.phone}</div>
+          <div>Instagram: {CONTACT.instagram}</div>
         </div>
       </header>
 
