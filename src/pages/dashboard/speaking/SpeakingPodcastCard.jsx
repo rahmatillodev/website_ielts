@@ -4,22 +4,20 @@ import { Play, Clock, Calendar } from "lucide-react";
 import { FaCrown } from "react-icons/fa";
 import UpgradeModal from "@/components/modal/UpgradeModal";
 import { CARD_CTA, TIER_BADGE } from "@/components/cards/cardTokens";
+import { formatDuration } from "@/utils/mediaDuration";
 
 /**
  * Layout clone of ShadowingCard: white rounded-3xl, date row, title, solid blue CTA.
- * `test.duration` shown verbatim on the thumbnail capsule as "{duration} min" (no conversion).
+ * The thumbnail capsule shows the video's real length in whole minutes (`6 min`,
+ * `81 min`) from `durationSeconds` — stored on the row or measured from the
+ * source, see src/utils/mediaDuration.js — or `-- min` while it is unknown.
  */
-const SpeakingPodcastCard = ({ testId, title, image, duration, videoUrl, date, isPremium = false, isProUser = false }) => {
+const SpeakingPodcastCard = ({ testId, title, image, durationSeconds, videoUrl, date, isPremium = false, isProUser = false }) => {
   const navigate = useNavigate();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const isLocked = isPremium && !isProUser;
 
-  const hasDuration =
-    duration != null &&
-    duration !== "" &&
-    !(typeof duration === "number" && Number.isNaN(duration));
-
-  const overlayDurationLabel = hasDuration ? `${duration} min` : null;
+  const overlayDurationLabel = formatDuration(durationSeconds);
 
   const handleOpen = () => {
     if (isPremium && !isProUser) {
@@ -73,12 +71,10 @@ const SpeakingPodcastCard = ({ testId, title, image, duration, videoUrl, date, i
               Premium
             </div>
           ) : null}
-          {overlayDurationLabel ? (
-            <div className="absolute bottom-2.5 right-2.5 bg-black/70 backdrop-blur-md text-white text-[9px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
-              <Clock className="w-3 h-3 shrink-0" aria-hidden />
-              {overlayDurationLabel}
-            </div>
-          ) : null}
+          <div className="absolute bottom-2.5 right-2.5 bg-black/70 backdrop-blur-md text-white text-[9px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+            <Clock className="w-3 h-3 shrink-0" aria-hidden />
+            {overlayDurationLabel}
+          </div>
         </div>
 
         <div className="p-6 flex flex-col flex-grow">

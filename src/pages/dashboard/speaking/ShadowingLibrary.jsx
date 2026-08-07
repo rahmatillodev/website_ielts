@@ -2,34 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaSearch } from "react-icons/fa";
 import { Input } from "@/components/ui/input";
-import supabase from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useDashboardStore } from "@/store/dashboardStore";
-import { formatDateToDayMonth } from "@/utils/formatDate";
+import { formatPublishedDate } from "@/utils/formatDate";
 import { isPremiumSubscriber } from "@/utils/isPremiumSubscriber";
+import { fetchMediaLibraryRows, mapMediaLibraryRow } from "@/lib/speakingLibrary";
+import { useMediaDurations } from "@/hooks/useMediaDurations";
 import ShadowingCard from "./ShadowingCard";
-
-/**
- * Maps `test` row + nested `part[]` (SQL schema).
- * - duration: `test.duration` (minutes from DB, passed through unchanged)
- * - image: `test.image_url`
- * - video: `part[0].video_url` (empty `part` → no video)
- */
-function mapItemForCard(item) {
-  const parts = Array.isArray(item.part) ? item.part : item.part ? [item.part] : [];
-  const part0 = parts[0];
-  const videoUrl = part0?.video_url?.trim?.() || "";
-
-  return {
-    id: item.id,
-    title: item.title ?? "Untitled",
-    duration: item.duration,
-    image: item.image_url?.trim?.() || "",
-    videoUrl,
-    date: item.created_at ? formatDateToDayMonth(item.created_at) : "",
-    is_premium: item.is_premium,
-  };
-}
 
 const ShadowingLibrary = () => {
   const navigate = useNavigate();
@@ -51,24 +30,7 @@ const ShadowingLibrary = () => {
     (async () => {
       setLoading(true);
       setFetchError("");
-      const { data, error } = await supabase
-        .from("test")
-        .select(
-          `
-          id,
-          title,
-          duration,
-          image_url,
-          created_at,
-          is_premium,
-          part (
-            video_url
-          )
-        `
-        )
-        .eq("type", "shadowing")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchMediaLibraryRows("shadowing");
 
       if (cancelled) return;
 
@@ -77,8 +39,7 @@ const ShadowingLibrary = () => {
         setRows([]);
         setLoading(false);
       } else {
-        const list = Array.isArray(data) ? data : [];
-        setRows(list.map(mapItemForCard));
+        setRows(data.map((item) => mapMediaLibraryRow(item, formatPublishedDate)));
         setLoading(false);
       }
 
@@ -92,6 +53,10 @@ const ShadowingLibrary = () => {
       cancelled = true;
     };
   }, [authUser?.id, fetchUserProfile, fetchDashboardData]);
+
+  // Measured against the full list, not the filtered one, so typing in the search
+  // box never re-probes a video that has already been measured.
+  const durations = useMediaDurations(rows);
 
   const filteredData = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -155,10 +120,10 @@ const ShadowingLibrary = () => {
                   testId={item.id}
                   title={item.title}
                   image={item.image}
-                  duration={item.duration}
+                  durationSeconds={durations[item.id]}
                   videoUrl={item.videoUrl}
                   date={item.date}
-                  isPremium={Boolean(item.is_premium)}
+                  isPremium={Boolean(item.isPremium)}
                   isProUser={isProMember}
                 />
               ))}
@@ -167,7 +132,7 @@ const ShadowingLibrary = () => {
             {filteredData.length === 0 && (
               <p className="text-gray-500 text-center py-12 text-sm md:text-base font-medium">
                 {rows.length === 0
-                  ? "No shadowing content yet. Add `test` rows with type “shadowing”, `image_url`, `duration`, and `part.video_url`."
+                  ? "No shadowing content yet. Add `test` rows with type “shadowing”, `image_url`, and `part.video_url`."
                   : "No shadowing topics match your search."}
               </p>
             )}

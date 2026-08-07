@@ -2,32 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaSearch } from "react-icons/fa";
 import { Input } from "@/components/ui/input";
-import supabase from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useDashboardStore } from "@/store/dashboardStore";
-import { formatDateToDayMonth } from "@/utils/formatDate";
+import { formatPublishedDate } from "@/utils/formatDate";
 import { isPremiumSubscriber } from "@/utils/isPremiumSubscriber";
+import { fetchMediaLibraryRows, mapMediaLibraryRow } from "@/lib/speakingLibrary";
+import { useMediaDurations } from "@/hooks/useMediaDurations";
 import SpeakingPodcastCard from "./SpeakingPodcastCard";
-
-/**
- * Maps `test` row + nested `part[]` where `type` = podcast.
- * `duration` is passed through unchanged from `test.duration` for overlay display.
- */
-function mapPodcastRow(item) {
-  const parts = Array.isArray(item.part) ? item.part : item.part ? [item.part] : [];
-  const part0 = parts[0];
-  const videoUrl = part0?.video_url?.trim?.() || "";
-
-  return {
-    id: item.id,
-    title: item.title ?? "Untitled",
-    duration: item.duration,
-    image: item.image_url?.trim?.() || "",
-    videoUrl,
-    date: item.created_at ? formatDateToDayMonth(item.created_at) : "",
-    isPremium: item.is_premium,
-  };
-}
 
 const SpeakingPodcast = () => {
   const navigate = useNavigate();
@@ -45,24 +26,7 @@ const SpeakingPodcast = () => {
   const loadPodcasts = useCallback(async () => {
     setLoading(true);
     setFetchError("");
-    const { data, error } = await supabase
-      .from("test")
-      .select(
-        `
-        id,
-        title,
-        duration,
-        image_url,
-        created_at,
-        is_premium,
-        part (
-          video_url
-        )
-      `
-      )
-      .eq("type", "podcast")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
+    const { data, error } = await fetchMediaLibraryRows("podcast");
 
     if (error) {
       setFetchError(error.message || "Could not load podcasts.");
@@ -71,8 +35,7 @@ const SpeakingPodcast = () => {
       return;
     }
 
-    const list = Array.isArray(data) ? data : [];
-    setRows(list.map(mapPodcastRow));
+    setRows(data.map((item) => mapMediaLibraryRow(item, formatPublishedDate)));
     setLoading(false);
   }, []);
 
@@ -86,6 +49,10 @@ const SpeakingPodcast = () => {
   useEffect(() => {
     loadPodcasts();
   }, [loadPodcasts]);
+
+  // Measured against the full list, not the filtered one, so typing in the search
+  // box never re-probes a video that has already been measured.
+  const durations = useMediaDurations(rows);
 
   const filteredData = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -149,7 +116,7 @@ const SpeakingPodcast = () => {
                   testId={item.id}
                   title={item.title}
                   image={item.image}
-                  duration={item.duration}
+                  durationSeconds={durations[item.id]}
                   videoUrl={item.videoUrl}
                   date={item.date}
                   isPremium={Boolean(item.isPremium)}
@@ -161,7 +128,7 @@ const SpeakingPodcast = () => {
             {filteredData.length === 0 && (
               <p className="text-gray-500 text-center py-12 text-sm md:text-base font-medium">
                 {rows.length === 0
-                  ? "No podcasts yet. Add `test` rows with type “podcast”, `image_url`, `duration`, and `part.video_url`."
+                  ? "No podcasts yet. Add `test` rows with type “podcast”, `image_url`, and `part.video_url`."
                   : "No podcasts match your search."}
               </p>
             )}
