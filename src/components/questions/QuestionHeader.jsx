@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FaArrowLeft, FaExpand, FaBars, FaEdit, FaCompress } from 'react-icons/fa'
+import { FaArrowLeft, FaExpand, FaBars, FaEdit, FaCompress, FaHighlighter } from 'react-icons/fa'
 import { LuWifi, LuWifiHigh, LuWifiLow, LuWifiOff } from 'react-icons/lu'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import useNetworkStatus from '@/hooks/use_network_status'
@@ -9,6 +9,7 @@ import AppearanceSettingsModal from '@/components/modal/AppearanceSettingsModal'
 import ConfirmModal from '@/components/modal/ConfirmModal'
 import { useAppearance } from '@/contexts/AppearanceContext'
 import { useAnnotation } from '@/contexts/AnnotationContext'
+import { useTouchPrimary } from '@/hooks/useTouchPrimary'
 
 const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteracted, isPaused, handleStart, handlePause, onBack, showCorrectAnswers, onToggleShowCorrect, status, type, showTryPractice, handleRedoTask, isPracticeMode }) => {
   // Immediately check URL for review mode to prevent flickering
@@ -36,14 +37,25 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
   let toggleSidebar = null;
   let notes = [];
   let isSidebarOpen = false;
+  let isHighlightMode = false;
+  let toggleHighlightMode = null;
   try {
     const annotation = useAnnotation();
     toggleSidebar = annotation.toggleSidebar;
     notes = annotation.notes;
     isSidebarOpen = annotation.isSidebarOpen;
+    isHighlightMode = annotation.isHighlightMode;
+    toggleHighlightMode = annotation.toggleHighlightMode;
   } catch {
     // Annotation context not available, sidebar toggle won't work
   }
+
+  // Highlight Mode is a touch affordance: with a mouse you just drag and pick
+  // from the bubble, so the button would be noise. Capability-gated, never
+  // width-gated - a narrow desktop window still gets the desktop behaviour.
+  const isTouchPrimary = useTouchPrimary();
+  const showHighlightModeButton =
+    isTouchPrimary && !!toggleHighlightMode && (type === 'Reading' || type === 'Listening');
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -256,7 +268,27 @@ const QuestionHeader = ({ currentTest, id, timeRemaining, isStarted, hasInteract
               )}
             </button>
           )}
-          <button 
+          {showHighlightModeButton && (
+            <button
+              onClick={toggleHighlightMode}
+              className="p-2 rounded transition-colors"
+              style={{
+                color: isHighlightMode ? 'var(--primary)' : themeColors.text,
+                backgroundColor: isHighlightMode
+                  ? (theme === 'light' ? '#f3f4f6' : 'rgba(255,255,255,0.1)')
+                  : 'transparent',
+                // First-tap response, and no iOS callout on a long press.
+                touchAction: 'manipulation',
+                WebkitTouchCallout: 'none',
+              }}
+              aria-pressed={isHighlightMode}
+              title={isHighlightMode ? 'Highlight mode on' : 'Highlight mode off'}
+              type="button"
+            >
+              <FaHighlighter className="w-5 h-5" />
+            </button>
+          )}
+          <button
             onClick={() => setIsSettingsModalOpen(true)}
             className="p-2 rounded transition-colors"
             style={{ color: themeColors.text }}

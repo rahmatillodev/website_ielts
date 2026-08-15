@@ -1,5 +1,7 @@
 import React from "react";
 import QuestionActionIcons from "./QuestionActionIcons";
+import { ExplainIcon, ExplainPanel } from "./InlineExplain";
+import { useSelectionSafeClick } from "@/hooks/useSelectionSafeClick";
 
 const YesNoNotGiven = ({ question, answer, onAnswerChange, mode = 'test', reviewData = {}, showCorrectAnswers = true, bookmarks = new Set(), toggleBookmark = () => {}, onReport = () => {} }) => {
   const questionId = question.id;
@@ -11,27 +13,37 @@ const YesNoNotGiven = ({ question, answer, onAnswerChange, mode = 'test', review
                  reviewData[questionNumber] ||
                  reviewData[String(questionNumber)] ||
                  {};
-  const isCorrect = review.isCorrect;
   const correctAnswer = review.correctAnswer || '';
   // Use review.userAnswer if available, otherwise use the answer prop
   const userAnswer = review.userAnswer || answer;
-  const showWrong = isReviewMode && review.hasOwnProperty('isCorrect') && review.isCorrect === false;
+  const showWrong = isReviewMode && Object.prototype.hasOwnProperty.call(review, 'isCorrect') && review.isCorrect === false;
   const showCorrect = isReviewMode && review.isCorrect === true;
   const isBookmarked = bookmarks.has(questionId) || bookmarks.has(questionNumber);
   // Options are fixed uppercase strings; normalize the stored answer so casing/whitespace
   // differences (e.g. "Yes", " not given") still match.
   const normalize = (v) => (v ?? '').toString().trim().toUpperCase();
+  // Highlighting the option text must not toggle the answer.
+  const { onPointerDown, isTextSelectionClick } = useSelectionSafeClick();
 
   return (
     <div className="space-y-2 group relative">
-      {/* Bookmark + report actions */}
-      <QuestionActionIcons
-        className="absolute right-0 -top-10"
-        isBookmarked={isBookmarked}
-        onToggleBookmark={() => toggleBookmark(questionNumber)}
-        isReviewMode={isReviewMode}
-        onReport={() => onReport(question)}
-      />
+      {/* Bookmark + report actions, and the explanation toggle beside them.
+          They share one absolutely-positioned row so the lightbulb sits next to
+          the flag rather than overlapping the first option. */}
+      <span className="absolute right-0 -top-10 flex items-center gap-1">
+        <QuestionActionIcons
+          isBookmarked={isBookmarked}
+          onToggleBookmark={() => toggleBookmark(questionNumber)}
+          isReviewMode={isReviewMode}
+          onReport={() => onReport(question)}
+        />
+        <ExplainIcon
+          questionKey={questionNumber}
+          explanation={question.explanation}
+          isReviewMode={isReviewMode}
+          className="shrink-0"
+        />
+      </span>
       {["YES", "NO", "NOT GIVEN"].map((option) => {
         const isSelected = normalize(userAnswer || answer) === normalize(option);
         const isCorrectOption = isReviewMode && normalize(option) === normalize(correctAnswer);
@@ -39,6 +51,13 @@ const YesNoNotGiven = ({ question, answer, onAnswerChange, mode = 'test', review
         return (
           <label
             key={option}
+            onPointerDown={onPointerDown}
+            onClick={(event) => {
+              // Selecting text inside the option must not activate the radio.
+              if (isTextSelectionClick(event, event.currentTarget)) {
+                event.preventDefault();
+              }
+            }}
             className={`flex gap-3 items-center p-2 rounded-md transition-all ${
               mode === 'review' ? 'cursor-default' : 'cursor-pointer'
             } ${
@@ -57,11 +76,12 @@ const YesNoNotGiven = ({ question, answer, onAnswerChange, mode = 'test', review
               type="radio"
               name={`q-${questionNumber}`}
               checked={isSelected}
-              onChange={() => {
-                if (mode !== 'review') {
-                  // Use question.id (UUID) as primary key, fallback to question_number
-                  onAnswerChange(questionId || questionNumber, option);
-                }
+              onChange={(event) => {
+                if (mode === 'review') return;
+                // Ignore the change that ends a text selection.
+                if (isTextSelectionClick(event, event.target.closest('label'))) return;
+                // Use question.id (UUID) as primary key, fallback to question_number
+                onAnswerChange(questionId || questionNumber, option);
               }}
               disabled={mode === 'review'}
               className="accent-brand-500"
@@ -86,6 +106,12 @@ const YesNoNotGiven = ({ question, answer, onAnswerChange, mode = 'test', review
           </label>
         );
       })}
+      {/* Opens as a block beneath the three options. */}
+      <ExplainPanel
+        questionKey={questionNumber}
+        explanation={question.explanation}
+        isReviewMode={isReviewMode}
+      />
     </div>
   );
 };

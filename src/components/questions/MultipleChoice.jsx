@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { sortOptionsByLetter, getOptionDisplayText, getOptionValue, isOptionSelected } from "../../store/optionUtils";
 import QuestionActionIcons from "./QuestionActionIcons";
+import { useSelectionSafeClick } from "@/hooks/useSelectionSafeClick";
 
 const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode = 'test', reviewData = {}, showCorrectAnswers = true, useTableFormat = false, bookmarks = new Set(), toggleBookmark = () => {}, onReport = () => {} }) => {
   // Use questions.id as the answer key (from questions table), fallback to question_number for display
@@ -9,7 +10,9 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
   const questionText = question.question_text || question.text || '';
   const isBookmarked = bookmarks.has(questionId) || bookmarks.has(questionNumber);
 
-  
+  // Highlighting text inside an option must not toggle the answer.
+  const { onPointerDown, isTextSelectionClick } = useSelectionSafeClick();
+
   // Deduplicate options based on unique identifier (id, or combination of option_text and letter)
   const deduplicatedOptions = useMemo(() => {
     const seen = new Set();
@@ -117,16 +120,20 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
                       isCorrectOption && isReviewMode ? 'bg-success-50' : ''
                     }`}
                   >
-                    <label className={`flex items-center justify-center ${mode === 'review' ? 'cursor-default' : 'cursor-pointer'}`}>
+                    <label
+                      className={`flex items-center justify-center ${mode === 'review' ? 'cursor-default' : 'cursor-pointer'}`}
+                      onPointerDown={onPointerDown}
+                    >
                       <input
                         type="radio"
                         name={`q-${questionNumber}`}
                         checked={isSelected}
-                        onChange={() => {
-                          if (mode !== 'review') {
-                            // Use questionId (questions.id) as the answer key
-                            onAnswerChange(questionId, optionValue);
-                          }
+                        onChange={(event) => {
+                          if (mode === 'review') return;
+                          // Ignore the click that ends a text selection.
+                          if (isTextSelectionClick(event, event.target.closest('label'))) return;
+                          // Use questionId (questions.id) as the answer key
+                          onAnswerChange(questionId, optionValue);
                         }}
                         disabled={mode === 'review'}
                         className={`w-5 h-5 ${
@@ -168,6 +175,13 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
         return (
           <label
             key={uniqueKey}
+            onPointerDown={onPointerDown}
+            onClick={(event) => {
+              // Selecting text inside the option must not activate the radio.
+              if (isTextSelectionClick(event, event.currentTarget)) {
+                event.preventDefault();
+              }
+            }}
             className={`flex gap-3 items-center p-2 rounded-md transition-all ${
               mode === 'review' ? 'cursor-default' : 'cursor-pointer'
             } ${
@@ -186,11 +200,12 @@ const MultipleChoice = ({ question, answer, onAnswerChange, options = [], mode =
               type="radio"
               name={`q-${questionNumber}`}
               checked={isSelected}
-              onChange={() => {
-                if (mode !== 'review') {
-                  // Use questionId (questions.id) as the answer key, store option_text as the answer value
-                  onAnswerChange(questionId, optionValue);
-                }
+              onChange={(event) => {
+                if (mode === 'review') return;
+                // Ignore the click that ends a text selection.
+                if (isTextSelectionClick(event, event.target.closest('label'))) return;
+                // Use questionId (questions.id) as the answer key, store option_text as the answer value
+                onAnswerChange(questionId, optionValue);
               }}
               disabled={mode === 'review'}
               className="accent-brand-500"

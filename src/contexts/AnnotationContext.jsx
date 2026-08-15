@@ -16,6 +16,11 @@ export const AnnotationProvider = ({ children }) => {
   const [notes, setNotes] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [focusedNoteId, setFocusedNoteId] = useState(null);
+  // Touch-only sticky mode: while it is on, a finished text selection is
+  // highlighted straight away instead of offering the Note/Highlight bubble.
+  // It drives no separate highlight machinery - it only changes what happens
+  // when the existing selection handler fires.
+  const [isHighlightMode, setIsHighlightMode] = useState(false);
 
   // Highlight functions
   const addHighlight = useCallback((highlightData) => {
@@ -104,6 +109,10 @@ export const AnnotationProvider = ({ children }) => {
     setIsSidebarOpen(true);
   }, []);
 
+  const toggleHighlightMode = useCallback(() => {
+    setIsHighlightMode((prev) => !prev);
+  }, []);
+
   const value = {
     highlights,
     notes,
@@ -121,6 +130,9 @@ export const AnnotationProvider = ({ children }) => {
     closeSidebar,
     openNoteSidebar,
     focusedNoteId,
+    isHighlightMode,
+    toggleHighlightMode,
+    setIsHighlightMode,
   };
 
   return (

@@ -597,6 +597,23 @@ textarea {
 /* Highlight annotation: inline text background only (multi-node safe) */
 mark.annotation-highlight {
   background-color: rgb(253, 224, 71);
+  /* A highlight is already unselectable (set with the mark, so dragging out of
+     one cannot produce nested marks). Suppressing the iOS callout as well means
+     a long press on it does nothing surprising - removing is a tap, handled by
+     TextSelectionTooltip. */
+  -webkit-touch-callout: none;
+}
+
+/* Every piece of annotatable copy - passage paragraphs, question stems and the
+   text inside answer options - is tagged `data-selectable`. Options live inside
+   <label>/role=checkbox wrappers that iOS would otherwise treat as pure
+   controls, so state explicitly that their text takes the native long-press
+   selection with its handles. The click guard in useSelectionSafeClick is what
+   keeps that selection from also choosing the answer. */
+[data-selectable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 @layer base {

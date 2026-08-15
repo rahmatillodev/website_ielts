@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Check } from 'lucide-react';
 import { useAppearance } from '@/contexts/AppearanceContext';
 import QuestionActionIcons from './QuestionActionIcons';
+import { useSelectionSafeClick } from '@/hooks/useSelectionSafeClick';
 import parse from 'html-react-parser';
 
 const MultipleAnswers = ({ 
@@ -19,6 +20,8 @@ const MultipleAnswers = ({
   const appearance = useAppearance();
   const themeColors = appearance.themeColors;
   const isReviewMode = mode === 'review';
+  // Highlighting text inside an option must not toggle the answer.
+  const { onPointerDown, isTextSelectionClick } = useSelectionSafeClick();
   // Get question data
   const questionId = question.id; // Group-level ID for answer storage
   const questionRange = question.question_range || groupQuestions.length || 1; // Number of correct answers to select
@@ -233,10 +236,26 @@ const MultipleAnswers = ({
     }
 
     return (
-      <button
+      <div
         key={option.id || optionKey}
-        disabled={isReviewMode}
-        onClick={() => toggleOption(optionKey)}
+        role="checkbox"
+        aria-checked={isSelected}
+        aria-disabled={isReviewMode || undefined}
+        tabIndex={isReviewMode ? -1 : 0}
+        onPointerDown={onPointerDown}
+        onClick={(event) => {
+          if (isReviewMode) return;
+          // Ignore the click that ends a text selection.
+          if (isTextSelectionClick(event, event.currentTarget)) return;
+          toggleOption(optionKey);
+        }}
+        onKeyDown={(event) => {
+          if (isReviewMode) return;
+          if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+            event.preventDefault(); // keep Space from scrolling the page
+            toggleOption(optionKey);
+          }
+        }}
         className={`flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all w-full ${
           isReviewMode ? 'cursor-default' : 'cursor-pointer hover:shadow-sm'
         }`}
@@ -258,9 +277,12 @@ const MultipleAnswers = ({
           }`}>
             {optionKey}.
           </span>
-          <span className={`text-sm ${
-            (isSelected || reviewStatus === 'missed') ? 'font-medium' : ''
-          }`}>
+          <span
+            data-selectable="true"
+            className={`text-sm ${
+              (isSelected || reviewStatus === 'missed') ? 'font-medium' : ''
+            }`}
+          >
             {parse(option.option_text || '', { allowDangerousHtml: true })}
           </span>
         </div>
@@ -273,7 +295,7 @@ const MultipleAnswers = ({
             {reviewStatus === 'missed' && <span className="text-[10px] text-success-600 font-bold uppercase italic">Correct Answer</span>}
           </div>
         )}
-      </button>
+      </div>
     );
   })}
 </div>
