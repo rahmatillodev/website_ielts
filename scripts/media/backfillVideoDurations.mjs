@@ -8,11 +8,13 @@
 // a different codebase; until it writes the column itself, this is what keeps
 // the data correct.
 //
-// Secrets come from the process environment only, matching scripts/explain:
+// Secrets come from the process environment only. Put SUPABASE_URL and
+// SUPABASE_SERVICE_ROLE_KEY in an untracked env file - `.env.scripts` below -
+// and choose the target project by editing that file:
 //
-//   node --env-file=.env.explain scripts/media/backfillVideoDurations.mjs
-//   node --env-file=.env.explain scripts/media/backfillVideoDurations.mjs --dry-run
-//   node --env-file=.env.explain scripts/media/backfillVideoDurations.mjs --recheck
+//   node --env-file=.env.scripts scripts/media/backfillVideoDurations.mjs
+//   node --env-file=.env.scripts scripts/media/backfillVideoDurations.mjs --dry-run
+//   node --env-file=.env.scripts scripts/media/backfillVideoDurations.mjs --recheck
 //
 //   --dry-run   measure and report, write nothing
 //   --recheck   also re-measure rows that already have a value, and report any
@@ -44,7 +46,7 @@ function requireEnv(name) {
   const value = process.env[name];
   if (!value) {
     throw new Error(
-      `Missing ${name}. Run with: node --env-file=.env.explain scripts/media/backfillVideoDurations.mjs`
+      `Missing ${name}. Run with: node --env-file=.env.scripts scripts/media/backfillVideoDurations.mjs`
     );
   }
   return value;

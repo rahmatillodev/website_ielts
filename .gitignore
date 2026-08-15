@@ -37,10 +37,6 @@ phaseB_findings.json
 content_audit_changes.json
 coverage_plan.csv
 DELETED_*.json
-TRANSCRIPTION_PROGRESS.md
-scripts/transcribe/transcription_state.json
-scripts/transcribe/audio_inventory.json
-scripts/transcribe/transcripts/
 
 # Playwright browser smoke tests (e2e/)
 /test-results/

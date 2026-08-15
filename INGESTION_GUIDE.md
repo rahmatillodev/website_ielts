@@ -1,11 +1,19 @@
 # Content Ingestion Guide
 
-How to add a new test to EDU correctly and completely.
+What a correct, complete test looks like in the database, and the rules any tool or person
+writing one has to follow.
 
 This is the authoritative document. Where it disagrees with `type_db/`, this document
 wins — `type_db/` was written from the admin form's point of view and has been wrong about
 the schema in ways that would corrupt live content (see [Documentation corrections](#documentation-corrections)).
 Everything here was verified against live prod data in August 2026.
+
+> **The automated pipeline is gone.** `scripts/ingest/`, `scripts/explain/` and
+> `scripts/transcribe/` called the Gemini API and were removed from the project; they can
+> be recovered from git history. Content is now added by hand or by the admin app, so the
+> rules below have to be checked by whoever writes the rows — they are no longer enforced
+> for you. Everything the tooling learned is still recorded here, including the measured
+> failure modes, because that is the part worth keeping.
 
 ---
 
@@ -13,40 +21,26 @@ Everything here was verified against live prod data in August 2026.
 
 To add a new test:
 
-1. **Put the materials in one folder.** A PDF, HTML or plain-text file containing the
-   passages and questions; optionally an answer key (same file or a separate one); for
-   listening, the audio file.
-2. **Point `.env.ingest` at the right project.** `SUPABASE_URL` decides where content
-   lands. There is no `--prod` flag by design — targeting prod is a deliberate edit to
-   that file. Dev is `miyoovimtupziuehtcxi`, prod is `oqzluzzctiirxxhxsboc`.
-3. **Parse and validate.** Nothing is written:
-   ```bash
-   cd platform
-   node --env-file=.env.ingest scripts/ingest/ingest.mjs /path/to/materials
-   ```
-   Read the report: title, parts, question count per type, answers found, anything
-   ambiguous. Fix errors before continuing — a failed validation writes nothing.
-4. **Dry run.** See the exact rows, table by table:
-   ```bash
-   node --env-file=.env.ingest scripts/ingest/ingest.mjs /path/to/materials --apply --dry-run
-   ```
-5. **Write it.** You are asked to confirm before anything is inserted:
-   ```bash
-   node --env-file=.env.ingest scripts/ingest/ingest.mjs /path/to/materials --apply
-   ```
-   The test is created **inactive**. It verifies itself afterwards: counts match, every
-   question resolves an answer, gap answers appear in their own part's passage.
+1. **Collect the materials.** The passages and questions, an answer key, and for listening
+   the audio file.
+2. **Decide which project you are writing to.** Dev is `miyoovimtupziuehtcxi`, prod is
+   `oqzluzzctiirxxhxsboc`. Targeting prod should always be a deliberate act.
+3. **Check the content against the rules below** before writing anything: the right type
+   per group, the right option convention, an answer that is actually recoverable for
+   every question, gap answers that match their own part's passage spelling, and a passage
+   whose text layer is undamaged. See [Content rules](#content-rules).
+4. **Write the rows in order** — `test` → `part` → `question` → `questions` → `options` —
+   and create the test **inactive**. If a write fails part-way, delete the `test` row: every
+   child table cascades from it, so that is the whole rollback for a brand-new test.
+5. **Verify what you wrote.** Counts match the paper, every question resolves an answer,
+   and every gap answer appears in its own part's passage.
 6. **Listening only — upload the audio by hand** to the `listening-test` bucket and set
-   part 1's `listening_url`. (Deliberately manual: see [Listening](#listening).)
+   part 1's `listening_url`. (See [Listening](#listening).)
 7. **Check it in the app**, then activate:
    `update test set is_active = true where id = '<id>';`
-8. **Optional — generate explanations** for the new reading questions:
-   ```bash
-   node --env-file=.env.ingest scripts/explain/generate.mjs --only <testId>
-   ```
-   (or pass `--explain` in step 5).
 
-`--status` prints progress; a job that reached `applied` is never re-applied.
+Reading explanations (`questions.explanation`) are now hand-authored. Existing ones are
+live content and must not be overwritten — see [Writing rules](#writing-rules).
 
 ---
 
@@ -110,9 +104,9 @@ To fill in rows that are missing it, or to find rows whose stored value no
 longer matches the file:
 
 ```bash
-node --env-file=.env.explain scripts/media/backfillVideoDurations.mjs --dry-run
-node --env-file=.env.explain scripts/media/backfillVideoDurations.mjs
-node --env-file=.env.explain scripts/media/backfillVideoDurations.mjs --recheck
+node --env-file=.env.scripts scripts/media/backfillVideoDurations.mjs --dry-run
+node --env-file=.env.scripts scripts/media/backfillVideoDurations.mjs
+node --env-file=.env.scripts scripts/media/backfillVideoDurations.mjs --recheck
 ```
 
 The column ships in `supabase/migrations/20260807120000_part_video_duration.sql`
@@ -142,7 +136,7 @@ describing a schema that does not exist.
 | `question_number` | the printed number. NULL **only** for drag-drop word-bank rows |
 | `question_text` | meaning varies by type — see the table below |
 | `correct_answer` | the answer, **or NULL for `multiple_choice`** |
-| `explanation` | the Explain surface (reading only) — see `scripts/explain/` |
+| `explanation` | the Explain surface (reading only) — hand-authored; never overwrite a non-empty one |
 | `is_correct` | true for real questions; false marks a word-bank distractor |
 
 ### `options`
@@ -183,8 +177,8 @@ reads the answer from `correct_answer` finds nothing; it must resolve through th
 > **The letter a student sees is not stored.** For per-question choices the platform
 > derives it at render time: `testDetailStore` fetches options `.order("option_text")` and
 > letters them by array index. So "option C" means *the third option alphabetically by
-> text*. Any tool that names a letter must reproduce that sort — `displayLetters()` in
-> `scripts/ingest/types.mjs` does — or its letters will disagree with the screen.
+> text*. Anyone naming a letter must reproduce that sort — sort the group's `option_text`
+> values ascending and count from A — or the letter will disagree with the screen.
 
 #### The `option_key` trap — read this before importing multiple choice
 
@@ -203,8 +197,8 @@ key, their "D" and our "D" are different options. That is the mechanism by which
 `is_correct` flag survives review, and it is how the two confirmed mis-keys in
 *A great leap forward* got in.
 
-**Decided 2026-08-06: `option_key` is not stored for per-question types.** The pipeline
-drops it on write for `multiple_choice` and `map`. The app has never read it there, grading
+**Decided 2026-08-06: `option_key` is not stored for per-question types.** Leave it NULL on
+write for `multiple_choice` and `map`. The app has never read it there, grading
 has never depended on it, and keeping it only maintained a second, invisible lettering
 scheme that disagreed with the screen. Existing rows are left as they are — the column is
 simply ignored, as it always has been.
@@ -221,8 +215,8 @@ simply ignored, as it always has been.
 >   comparison is meaningless and is exactly how the two confirmed mis-keys in
 >   *A great leap forward* survived review.
 > - **Writing about a question** (explanations, reports, bug tickets) — if you must name a
->   letter, derive it with `displayLetters()` so it matches what the student sees. Better:
->   quote the option text.
+>   letter, derive it from the alphabetical `option_text` sort so it matches what the
+>   student sees. Better: quote the option text.
 >
 > Group legends (`matching_information`, `table`, `multiple_answers`) are the exception and
 > keep their keys, because there the key **is** the answer — it is what
@@ -291,9 +285,9 @@ nothing about where in the passage to look.
 
 ## Content rules
 
-These come from audits of live content. Each one is enforced by
-`scripts/ingest/validate.mjs`; the rule is here so the tooling can be changed without
-losing the reason.
+These come from audits of live content. They used to be enforced automatically; they are
+now checks a person has to make. Each is stated with the measurement behind it, so the rule
+survives whatever tooling comes next.
 
 **Every answerable question must have a recoverable answer.** Either a non-empty
 `correct_answer`, or exactly one option flagged `is_correct`. This started as 19 ungradeable
@@ -340,20 +334,20 @@ to the material **by construction**. That is a guarantee we never invent text. I
 guarantee the text is good: when a PDF's text layer is broken, the damage is stored exactly as
 faithfully as clean prose would be, and the student reads it.
 
-This is measured, not theoretical. Of the 56 citations the explanation pipeline rejected on prod:
+This is measured, not theoretical. Of the 56 explanation citations rejected on prod for not
+being verbatim:
 
-> **30 were rejected because the passage was broken, not the model.** The generator quoted
-> correctly; `part.content` said `highly com p etitive`, `the property o f preserving`,
-> `the research teamat brigham& women's hospital`. The model read the damage, silently
-> repaired it, and was rejected for not being verbatim.
+> **30 were rejected because the passage was broken, not because the citation was wrong.**
+> The quote was right; `part.content` said `highly com p etitive`, `the property o f
+> preserving`, `the research teamat brigham& women's hospital`. The damage was read, silently
+> repaired, and then rejected for disagreeing with the stored text.
 
 **28 of those 30 are in `Full Reading *` and `Mock Test - Reading *`** — the bulk-imported
 tests. Hand-authored single-passage tests are essentially clean. Bulk import is where this
-defect enters, which is exactly why it belongs in this pipeline.
+defect enters, which is why any bulk import has to check for it.
 
-`scripts/ingest/textIntegrity.mjs` runs on every part before any write. Signatures that
-**block the write** — none of these can occur in correctly extracted prose, and each changes
-what the student reads:
+Check every part for these signatures before writing it. They are **blocking** — none can
+occur in correctly extracted prose, and each changes what the student reads:
 
 | Signature | Live hits | Example |
 |---|---|---|
@@ -396,31 +390,33 @@ on good material, which is the whole argument for making it an error rather than
 - **Transcripts go in `part.content`, split per part, with `[mm:ss]` timestamps.** This is
   a deliberate decision: transcripts are readable by the client, and that is accepted, in
   exchange for audio seek and answer location.
-- **Audio upload is deliberately manual.** The pipeline reports the file and reminds you,
-  but does not upload: bucket writes are not covered by the compensating-delete rollback,
-  so an upload could survive a failed write and leave an orphan object.
-- **Transcribing new audio** is already solved — `scripts/transcribe/` chunks the audio,
-  runs Gemini, splits on part markers and writes `part.content`, resumably. Reuse it
-  rather than writing something new.
+- **Audio upload is deliberately manual.** Bucket writes are not covered by the
+  compensating-delete rollback, so an upload can survive a failed write and leave an orphan
+  object. Upload the file, then write the rows.
+- **Transcripts already in the database stay as they are.** They are live content. The
+  automated transcription tooling was removed with the rest of the Gemini pipeline; a new
+  transcript is written by hand, or by whatever replaces it, into `part.content` in the
+  format above. What the old tool did — chunk the audio, transcribe each chunk, split on
+  part markers, keep `[mm:ss]` timestamps — is the shape any replacement should follow.
 
 ---
 
 ## Writing rules
 
 **Validate everything before the first insert.** Never delete or partially insert and then
-discover the content is unusable. The pipeline runs extract → parse → validate → confirm
-→ apply, and the first four touch nothing.
+discover the content is unusable. Read → check → confirm → write, and only the last step
+touches the database.
 
 **Writes are atomic by compensating delete.** PostgREST has no multi-statement
 transaction, but every child table cascades from `test`, so a failed write is undone by
 deleting the one test row. This is sound **only for a brand-new test** — nothing else
-references a test created seconds ago. That is why this pipeline creates new tests and
-never edits existing ones. Editing existing content is an admin-UI or hand-written job,
-and would need a real transaction (a Postgres function) to be safe.
+references a test created seconds ago. Editing existing content is a different job, and
+would need a real transaction (a Postgres function) to be safe.
 
-**Never overwrite existing content silently.** The explanation pipeline's rule —
-`.or('explanation.is.null,explanation.eq.')` on every update — applies to any tool that
-touches content that might already be populated.
+**Never overwrite existing content silently.** Guard every update the way the explanation
+writes did — `.or('explanation.is.null,explanation.eq.')`, so a row that already has content
+is left alone. This applies to anything touching a column that might already be populated;
+the reading explanations and listening transcripts now in the database are exactly that.
 
 **New tests land inactive.** Look at it in the app before students can.
 
@@ -459,45 +455,35 @@ that `correct_answer` is NULL and the answer is on the option row.
 
 ## The tooling
 
-`scripts/ingest/` follows the same shape as `scripts/explain/` and `scripts/transcribe/`:
-an `.env.<name>` file chooses the target, state is resumable and keyed by project ref, and
-progress is mirrored to a regenerated Markdown file.
+There is no ingestion tooling in this repo any more. `scripts/ingest/`, `scripts/explain/`
+and `scripts/transcribe/` were removed with the Gemini API; git history has them if a
+future tool wants a starting point. What survives in `scripts/` is `media/`, which measures
+video durations and calls no model API.
 
-| File | Role |
-|---|---|
-| `ingest.mjs` | the CLI: extract → parse → validate → confirm → apply → verify |
-| `extract.mjs` | PDF/HTML/text → plain text. **Ground truth** — never paraphrases |
-| `parse.mjs` | Gemini structures the text; passages are *sliced*, never re-emitted |
-| `validate.mjs` | every rule above, as errors and warnings |
-| `textIntegrity.mjs` | passage damage detection — the one check that slicing cannot provide |
-| `apply.mjs` | ordered insert, compensating-delete rollback, post-write verification |
-| `types.mjs` | the per-type rules — the prompt, the validator and this guide share it |
-| `state.mjs` | resumable job state + `INGEST_PROGRESS.<ref>.md` |
+The content those tools wrote is untouched — the reading explanations and listening
+transcripts in the database are live content. A local copy of the generated explanations is
+kept in `archive/reading-explanations/` as a read-only record.
 
-### How parsing stays honest
+### What was learned, for whatever replaces it
 
-Layout varies too much for a heuristic parser, and a language model will quietly drop a
-question or reword an option. So the model is used for **structure only**, and never
-trusted for words:
+Keep these constraints if any automated ingestion is built again. Each was paid for once:
 
-- **Passages are never re-emitted.** The model returns the opening and closing words, and
-  the passage is *sliced out of the source text*. `part.content` is byte-identical to the
-  material by construction, and long passages cost no output tokens.
+- **Never re-emit a passage.** Slice it out of the source text so `part.content` is
+  byte-identical to the material by construction. That rules out invented text, and long
+  passages cost nothing to move.
 
-  > Byte-identical to a **broken** source is still broken. Slicing rules out invented text; it
-  > says nothing about the quality of what was extracted, and it makes bad extraction invisible
-  > precisely because every downstream check compares against the same damaged string.
-  > `textIntegrity.mjs` is the only check in the pipeline that looks at the passage on its own
-  > terms rather than against the source — see [Passage text integrity](#passage-text-integrity).
-- **Everything the model does emit is checked back against the source.** Stems, options
-  and instructions must be recoverable from the extracted text, comparing with punctuation
-  style and whitespace normalised — the same technique the explanation pipeline uses for
-  quotes. Anything unrecoverable is an error, not a warning.
-- **A scanned PDF is refused.** If a PDF yields almost no text there is nothing to verify
-  against, so the run stops and asks for a text-based version rather than trusting a
-  model's reading of a picture.
-
-The model still makes mistakes — in testing it classified a "which paragraph contains"
-group as `matching_information`, and wrote `___ ___` for a two-word answer. Both were
-caught by validation before any write. That is the intended division of labour: the model
-proposes, the validator disposes.
+  > Byte-identical to a **broken** source is still broken. Slicing says nothing about the
+  > quality of what was extracted, and it makes bad extraction invisible precisely because
+  > every downstream check compares against the same damaged string. A text-integrity check
+  > that looks at the passage on its own terms is the only thing that catches it — see
+  > [Passage text integrity](#passage-text-integrity).
+- **Check every emitted string back against the source.** Stems, options and instructions
+  must be recoverable from the extracted text, comparing with punctuation style and
+  whitespace normalised. Anything unrecoverable is an error, not a warning.
+- **Refuse a scanned PDF.** If a PDF yields almost no text there is nothing to verify
+  against, so stop and ask for a text-based version rather than trusting a reading of a
+  picture.
+- **Structure is proposed, words are verified.** Automated classification made real
+  mistakes — a "which paragraph contains" group typed as `matching_information`, `___ ___`
+  written for a two-word answer — and validation caught both before any write. That
+  division of labour is the reason nothing bad reached the database.
