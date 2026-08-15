@@ -79,11 +79,15 @@
       
     }, [fetchSettings]);
 
+    // Keyed on the user id, not the user object: supabase hands out a fresh
+    // user object on every TOKEN_REFRESHED (roughly hourly, and again whenever
+    // the tab regains focus), which re-ran this effect and refetched the whole
+    // test list each time.
     useEffect(() => {
-      if (isInitialized && user) {
+      if (isInitialized && user?.id) {
         fetchTests();
       }
-    }, [fetchTests, isInitialized, user]);
+    }, [fetchTests, isInitialized, user?.id]);
 
     const checkUserIsMockTestClient = useMockTestClientStore((state) => state.checkUserIsMockTestClient);
     useEffect(() => {

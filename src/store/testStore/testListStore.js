@@ -4,11 +4,22 @@
 
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
+import { requestTimeoutSignal, isAbortLikeError } from "@/lib/requestTimeout";
 import { useQuestionTypeStore } from "./questionTypeStore";
 
-const DEFAULT_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 20000;
 const MIN_PART_NUMBER = 1;
 const MAX_PART_NUMBER = 5;
+
+/**
+ * The single in-flight fetch, shared by every caller.
+ *
+ * Reading and Listening both mount LibraryPage, and App fires its own fetch
+ * once the session initialises, so three callers routinely ask for this list at
+ * the same moment. Without this they each issued the same query and each
+ * re-rendered the list when it landed.
+ */
+let inflightFetch = null;
 
 /** Max parts that count as "full" per test type: reading = 3, listening = 4. */
 const FULL_PART_COUNT_BY_TYPE = {
@@ -62,181 +73,153 @@ export const useTestListStore = create((set, get) => ({
 
   fetchTests: async (forceRefresh = false) => {
     const currentState = get();
+    const snapshot = (state) => ({
+      test_reading: state.test_reading || [],
+      test_listening: state.test_listening || [],
+      test_speaking: state.test_speaking || [],
+      loaded: state.loaded,
+    });
 
     // Allow refetch if data is empty even if loaded is true
     const hasData = (currentState.test_reading?.length > 0 || currentState.test_listening?.length > 0 || currentState.test_speaking?.length > 0);
 
-    // Return early only if already loaded with data AND not currently loading AND not forcing refresh
-    if (currentState.loaded && hasData && !currentState.loading && !forceRefresh) {
-      return {
-        test_reading: currentState.test_reading || [],
-        test_listening: currentState.test_listening || [],
-        test_speaking: currentState.test_speaking || [],
-        loaded: currentState.loaded,
-      };
+    // Return early only if already loaded with data AND not forcing refresh
+    if (currentState.loaded && hasData && !forceRefresh) {
+      return snapshot(currentState);
     }
 
-    // If loading is stuck, return current data if available
-    if (currentState.loading && hasData && !forceRefresh) {
-      return {
-        test_reading: currentState.test_reading || [],
-        test_listening: currentState.test_listening || [],
-        test_speaking: currentState.test_speaking || [],
-        loaded: currentState.loaded,
-      };
+    // Join the request already on the wire rather than issuing a second one.
+    if (inflightFetch) {
+      return inflightFetch;
     }
 
-    set({ loading: true, error: null });
-
-    // Timeout mechanism: 15 seconds max
-    const timeoutMs = DEFAULT_TIMEOUT_MS;
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs);
-    });
-
-    try {
-      const testsQueryPromise = supabase
-        .from("test")
-        .select("id, title, type, difficulty, duration, is_active, is_mock, created_at, question_quantity, is_premium, part(part_number)")
-        .eq("is_active", true)
-        .or("is_mock.eq.false,is_mock.is.null")
-        .order("created_at", { ascending: false });
-      const { data, error } = await Promise.race([
-        testsQueryPromise,
-        timeoutPromise
-      ]);
-
-      // Explicit error check immediately after query
-      if (error) {
-        console.error('[fetchTests] Supabase Error (test table):', {
-          table: 'test',
-          filter: 'is_active = true',
-          error: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        });
-
-        // Check for RLS policy denial
-        if (error.code === 'PGRST116' || error.message?.includes('permission') || error.message?.includes('policy')) {
-          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'test' table. Error: ${error.message}`;
-          console.error('[fetchTests] RLS Policy Issue:', rlsError);
-          throw new Error(rlsError);
-        }
-
-        throw error;
-      }
-
-      // Ensure data is an array before filtering
-      const rawTests = Array.isArray(data) ? data : [];
-
-      // Handle case where query returns null/undefined (no data found)
-      if (!rawTests || rawTests.length === 0) {
-        console.warn('[fetchTests] No active tests found. This may be normal if no tests are marked as active, or check RLS policies.');
-      }
-
-      const tests = rawTests.map((test) => {
-        const partNumbers = getPartNumbersFromPartRelation(test.part);
-        const partLabel = getPartLabelFromPartRelation(test.part, test.type);
-        const { part: _part, ...rest } = test;
-        return { ...rest, partLabel, partNumbers };
-      });
-
-      const filtered_data_reading = tests.filter(
-        (test) => test.type === "reading"
-      );
-      const filtered_data_listening = tests.filter(
-        (test) => test.type === "listening"
-      );
-      const filtered_data_speaking = tests.filter(
-        (test) => test.type === "speaking"
-      );
-
-      // Fetch question types for all tests
-      const allTestIds = tests.map(test => test.id);
-      let questionTypesMap = {};
+    inflightFetch = (async () => {
+      set({ loading: true, error: null });
 
       try {
-        questionTypesMap = await useQuestionTypeStore.getState().fetchQuestionTypesForTests(allTestIds);
-      } catch (error) {
-        console.warn('[testListStore] Error fetching question types, continuing without them:', error);
-        // Continue without question types - tests will still work
-      }
+        const { data, error } = await supabase
+          .from("test")
+          .select("id, title, type, difficulty, duration, is_active, is_mock, created_at, question_quantity, is_premium, part(part_number)")
+          .eq("is_active", true)
+          .or("is_mock.eq.false,is_mock.is.null")
+          .order("created_at", { ascending: false })
+          .abortSignal(requestTimeoutSignal(REQUEST_TIMEOUT_MS));
 
-      // Enrich tests with question types
-      const enriched_reading = filtered_data_reading.map(test => ({
-        ...test,
-        question_types: questionTypesMap[test.id] || new Set(),
-      }));
+        // Explicit error check immediately after query
+        if (error) {
+          console.error('[fetchTests] Supabase Error (test table):', {
+            table: 'test',
+            filter: 'is_active = true',
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+          });
 
-      const enriched_listening = filtered_data_listening.map(test => ({
-        ...test,
-        question_types: questionTypesMap[test.id] || new Set(),
-      }));
+          // Check for RLS policy denial
+          if (error.code === 'PGRST116' || error.message?.includes('permission') || error.message?.includes('policy')) {
+            throw new Error(`RLS Policy Denial: Check Row Level Security policies for 'test' table. Error: ${error.message}`);
+          }
 
-      const enriched_speaking = filtered_data_speaking.map(test => ({
-        ...test,
-        question_types: questionTypesMap[test.id] || new Set(),
-      }));
+          throw error;
+        }
 
-      // IMPORTANT: Set loaded to true even if arrays are empty
-      // Empty arrays are a valid state (e.g., no listening tests exist)
-      // This prevents infinite loading states in the UI
-      set({
-        test_reading: enriched_reading,
-        test_listening: enriched_listening,
-        test_speaking: enriched_speaking,
-        loaded: true, // Always set to true after successful fetch, even with empty data
-        error: null,
-      });
+        // Ensure data is an array before filtering
+        const rawTests = Array.isArray(data) ? data : [];
 
-      return {
-        test_reading: enriched_reading,
-        test_listening: enriched_listening,
-        test_speaking: enriched_speaking,
-      };
-    } catch (error) {
-      // Handle AbortError (cancelled requests)
-      if (error.name === "AbortError") {
-        console.warn('[fetchTests] Request aborted');
-        set({ loading: false });
-        return {
-          test_reading: currentState.test_reading || [],
-          test_listening: currentState.test_listening || [],
-          test_speaking: currentState.test_speaking || [],
-          loaded: currentState.loaded,
+        // Handle case where query returns null/undefined (no data found)
+        if (rawTests.length === 0) {
+          console.warn('[fetchTests] No active tests found. This may be normal if no tests are marked as active, or check RLS policies.');
+        }
+
+        const tests = rawTests.map((test) => {
+          const partNumbers = getPartNumbersFromPartRelation(test.part);
+          const partLabel = getPartLabelFromPartRelation(test.part, test.type);
+          const { part: _part, ...rest } = test;
+          return { ...rest, partLabel, partNumbers, question_types: new Set() };
+        });
+
+        const byType = (type) => tests.filter((test) => test.type === type);
+
+        // Publish the list before the question types are in. They only feed the
+        // (initially empty) question-type filter, which short-circuits while
+        // nothing is selected, so nothing on screen depends on them - and this
+        // keeps a slow second query from holding the whole list back.
+        //
+        // Empty arrays are a valid state (e.g. no listening tests exist), so
+        // `loaded` is set either way to prevent an infinite loading state.
+        set({
+          test_reading: byType("reading"),
+          test_listening: byType("listening"),
+          test_speaking: byType("speaking"),
+          loaded: true,
+          loading: false,
+          error: null,
+        });
+
+        // Enrichment is best-effort: fetchQuestionTypesForTests resolves with
+        // whatever it has rather than rejecting, and a failure here must never
+        // take the list down with it.
+        const questionTypesMap = await useQuestionTypeStore
+          .getState()
+          .fetchQuestionTypesForTests(tests.map((test) => test.id));
+
+        const withTypes = (list) => list.map((test) => ({
+          ...test,
+          question_types: questionTypesMap[test.id] || test.question_types,
+        }));
+
+        const enriched = {
+          test_reading: withTypes(get().test_reading),
+          test_listening: withTypes(get().test_listening),
+          test_speaking: withTypes(get().test_speaking),
         };
-      }
+        set(enriched);
 
-      // Handle timeout errors
-      if (error.message?.includes('timeout')) {
-        console.error('[fetchTests] Network Timeout:', {
-          error: error.message,
-          suggestion: 'Check network connection or increase timeout duration'
+        return enriched;
+      } catch (error) {
+        const timedOut = isAbortLikeError(error);
+
+        if (timedOut) {
+          console.error('[fetchTests] Request timed out or was cancelled:', {
+            error: error.message,
+            timeoutMs: REQUEST_TIMEOUT_MS,
+            suggestion: 'The request was aborted client-side. Check the network, and check that nothing is awaiting a Supabase call inside supabase.auth.onAuthStateChange (that deadlocks the auth lock and stalls every query).'
+          });
+        } else {
+          console.error('[fetchTests] Error fetching tests:', {
+            errorName: error.name,
+            errorMessage: error.message,
+            errorCode: error.code,
+            suggestion: 'Check RLS policies for "test" table and ensure Supabase connection is active'
+          });
+        }
+
+        // Fail soft. Whatever list we already had stays on screen, `loaded`
+        // stays true so the UI does not fall back to a permanent spinner, and
+        // the error is exposed for anything that wants to surface it. Nothing
+        // is thrown: no caller catches, and an unhandled rejection here is what
+        // used to make a timeout look like a crash.
+        const latest = get();
+        const stillHasData = (latest.test_reading?.length > 0 || latest.test_listening?.length > 0 || latest.test_speaking?.length > 0);
+
+        set({
+          error: error.message || 'Failed to fetch tests. Please check your connection and try again.',
+          loading: false,
+          loaded: stillHasData ? latest.loaded : false,
         });
-      } else {
-        console.error('[fetchTests] Error fetching tests:', {
-          errorName: error.name,
-          errorMessage: error.message,
-          errorStack: error.stack,
-          errorCode: error.code,
-          suggestion: 'Check RLS policies for "test" table and ensure Supabase connection is active'
-        });
+
+        return snapshot(latest);
+      } finally {
+        // Belt and braces: no path may leave the UI spinning.
+        if (get().loading) set({ loading: false });
       }
+    })();
 
-      // Reset loaded flag on error to allow retry
-      set({
-        error: error.message || 'Failed to fetch tests. Please check your connection and try again.',
-        loaded: false,
-        loading: false, // Ensure loading is false on error
-      });
-
-      throw error;
+    try {
+      return await inflightFetch;
     } finally {
-      // CRUCIAL: Always set loading to false to prevent infinite loading states
-      // This ensures loading is false even if data is empty (which is a valid state)
-      // The loaded flag is already set appropriately in the try block
-      set({ loading: false });
+      inflightFetch = null;
     }
   },
 }));

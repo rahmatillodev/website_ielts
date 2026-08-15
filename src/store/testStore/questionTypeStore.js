@@ -6,9 +6,26 @@
 
 import { create } from "zustand";
 import supabase from "@/lib/supabase";
+import { requestTimeoutSignal, isAbortLikeError } from "@/lib/requestTimeout";
 import { mapQuestionTypeToGroup } from "./utils/questionTypeUtils";
 
-const DEFAULT_TIMEOUT_MS = 10000;
+const REQUEST_TIMEOUT_MS = 15000;
+
+/**
+ * Test ids per request. All 213 active tests in one `in.(...)` filter puts a
+ * ~8.4 KB URL on the wire, which is at the edge of what the Supabase gateway
+ * accepts; batches of 100 keep it comfortably under 4 KB.
+ */
+const ID_BATCH_SIZE = 100;
+
+const chunk = (items, size) => {
+  const batches = [];
+  for (let i = 0; i < items.length; i += size) batches.push(items.slice(i, i + size));
+  return batches;
+};
+
+/** One shared request per distinct id set, so parallel callers cannot duplicate it. */
+let inflightByKey = new Map();
 
 export const useQuestionTypeStore = create((set, get) => ({
   // Cache: test_id -> Set of grouped question types
@@ -42,55 +59,57 @@ export const useQuestionTypeStore = create((set, get) => ({
       return result;
     }
 
+    const inflightKey = uncachedIds.join(",");
+    const alreadyRunning = inflightByKey.get(inflightKey);
+    if (alreadyRunning) return alreadyRunning;
+
+    const request = (async () => {
     set({ loading: true, error: null });
 
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error(`Request timeout after ${DEFAULT_TIMEOUT_MS}ms`)), DEFAULT_TIMEOUT_MS);
-    });
-
     try {
-      // Fetch distinct question types for the tests
-      const queryPromise = supabase
-        .from("question")
-        .select("test_id, type")
-        .in("test_id", uncachedIds);
+      // Fetch distinct question types for the tests, in batches small enough
+      // to keep the request URL well inside the gateway's limit.
+      const batches = await Promise.all(
+        chunk(uncachedIds, ID_BATCH_SIZE).map(async (ids) => {
+          const { data, error } = await supabase
+            .from("question")
+            .select("test_id, type")
+            .in("test_id", ids)
+            .abortSignal(requestTimeoutSignal(REQUEST_TIMEOUT_MS));
 
-      const { data, error } = await Promise.race([
-        queryPromise,
-        timeoutPromise
-      ]);
+          if (error) {
+            console.error('[questionTypeStore] Error fetching question types:', {
+              error: error.message,
+              code: error.code,
+              batchSize: ids.length
+            });
 
-      if (error) {
-        console.error('[questionTypeStore] Error fetching question types:', {
-          error: error.message,
-          code: error.code,
-          testIds: uncachedIds
-        });
-        
-        if (error.code === 'PGRST116' || error.message?.includes('permission') || error.message?.includes('policy')) {
-          const rlsError = `RLS Policy Denial: Check Row Level Security policies for 'question' table. Error: ${error.message}`;
-          console.error('[questionTypeStore] RLS Policy Issue:', rlsError);
-          throw new Error(rlsError);
-        }
-        
-        throw error;
-      }
+            if (error.code === 'PGRST116' || error.message?.includes('permission') || error.message?.includes('policy')) {
+              throw new Error(`RLS Policy Denial: Check Row Level Security policies for 'question' table. Error: ${error.message}`);
+            }
+
+            throw error;
+          }
+
+          return Array.isArray(data) ? data : [];
+        })
+      );
+
+      const data = batches.flat();
 
       // Process the data: group by test_id and map to grouped types
       const questionTypesMap = {};
       const groupedTypesMap = {};
 
       // First, collect all question types per test
-      if (Array.isArray(data)) {
-        data.forEach((row) => {
-          if (!row.test_id || !row.type) return;
-          
-          if (!questionTypesMap[row.test_id]) {
-            questionTypesMap[row.test_id] = new Set();
-          }
-          questionTypesMap[row.test_id].add(row.type);
-        });
-      }
+      data.forEach((row) => {
+        if (!row.test_id || !row.type) return;
+
+        if (!questionTypesMap[row.test_id]) {
+          questionTypesMap[row.test_id] = new Set();
+        }
+        questionTypesMap[row.test_id].add(row.type);
+      });
 
       // Then, map to grouped types
       Object.keys(questionTypesMap).forEach((testId) => {
@@ -107,9 +126,9 @@ export const useQuestionTypeStore = create((set, get) => ({
         groupedTypesMap[testId] = groupedTypes;
       });
 
-      // Update cache
-      const updatedCache = { ...currentState.testQuestionTypes, ...groupedTypesMap };
-      
+      // Update cache (re-read: another batch may have landed while we waited)
+      const updatedCache = { ...get().testQuestionTypes, ...groupedTypesMap };
+
       set({
         testQuestionTypes: updatedCache,
         loading: false,
@@ -129,7 +148,8 @@ export const useQuestionTypeStore = create((set, get) => ({
       console.error('[questionTypeStore] Error in fetchQuestionTypesForTests:', {
         errorName: error.name,
         errorMessage: error.message,
-        testIds: uncachedIds
+        timedOut: isAbortLikeError(error),
+        testCount: uncachedIds.length
       });
 
       set({
@@ -137,17 +157,23 @@ export const useQuestionTypeStore = create((set, get) => ({
         loading: false,
       });
 
-      // Return cached data for test IDs we have, empty sets for others
+      // Never rejects: question types only feed an optional filter, so the
+      // caller gets whatever is cached and empty sets for the rest.
+      const cached = get().testQuestionTypes;
       const result = {};
       testIds.forEach(id => {
-        if (currentState.testQuestionTypes[id]) {
-          result[id] = currentState.testQuestionTypes[id];
-        } else {
-          result[id] = new Set();
-        }
+        result[id] = cached[id] || new Set();
       });
 
       return result;
+    }
+    })();
+
+    inflightByKey.set(inflightKey, request);
+    try {
+      return await request;
+    } finally {
+      inflightByKey.delete(inflightKey);
     }
   },
 

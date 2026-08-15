@@ -67,25 +67,40 @@ export const useAuthStore = create(
 
 
         if (!get()._authListener) {
-          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (session) {
-              set({ authUser: session.user });
-              // Muhim: Profilni faqat authUser o'zgarganda va u null bo'lmasa yuklaymiz
-              if (!get().userProfile) {
-                await get().fetchUserProfile(session.user.id, false);
-              }
-            } else {
-              set({ authUser: null, userProfile: null });
-            }
-            // Minimal holatni yangilash
-            if ((event === 'SIGNED_IN' || event === "TOKEN_REFRESHED") && session?.user) {
-              set({ authUser: session.user });
-              // DB so‘rovini tashqaridan trigger qilamiz
-            }
-
+          // This callback MUST stay synchronous.
+          //
+          // supabase-js invokes auth state callbacks from inside its auth lock
+          // and awaits them (GoTrueClient._notifyAllSubscribers is called from
+          // within _acquireLock). Any supabase query awaited in here needs that
+          // same lock to attach an access token, so it deadlocks against the
+          // notifier that is still holding it - and because _getAccessToken()
+          // sits in front of every PostgREST request, *all* other queries queue
+          // behind it too. That is what stalled the test-list fetch until its
+          // 15s timeout fired, most visibly on the TOKEN_REFRESHED that arrives
+          // during startup. Database work is therefore pushed to a later
+          // macrotask, which runs after the lock has been released.
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
               set({ authUser: null, userProfile: null });
               get().clearUserLocalData();
+              return;
+            }
+
+            if (session?.user) {
+              set({ authUser: session.user });
+              // Muhim: Profilni faqat authUser o'zgarganda va u null bo'lmasa yuklaymiz
+              if (!get().userProfile) {
+                setTimeout(() => {
+                  // Re-read: the user may have signed out, or another path may
+                  // have loaded the profile, while we waited for the lock.
+                  const userId = get().authUser?.id;
+                  if (userId && !get().userProfile) {
+                    get().fetchUserProfile(userId, false);
+                  }
+                }, 0);
+              }
+            } else {
+              set({ authUser: null, userProfile: null });
             }
           });
 
