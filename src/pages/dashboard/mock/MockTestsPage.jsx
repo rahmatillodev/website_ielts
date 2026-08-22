@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useMockTestClientStore, setVerifiedMockPassword } from "@/store/mockTestClientStore";
 import { useMockTests } from "@/hooks/useMockTests";
@@ -208,6 +210,22 @@ const MockTestsPage = () => {
   return (
     <div className="w-full bg-gray-50" style={{height: 'calc(100vh - 64px)'}}>
       <div className="max-w-7xl mx-auto py-6 h-full">
+
+      {/* Back - same treatment as /mock/select, /mock/online and /mock/center, so
+          the whole mock flow exits the same way. Goes to the dashboard rather
+          than history(-1): students land here from a redirect often enough
+          (MockTestFlow bounces back to /mock-tests) that going "back" would
+          otherwise return them to the page that just sent them away. */}
+      <motion.button
+        type="button"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        onClick={() => navigate("/dashboard")}
+        className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span>Back</span>
+      </motion.button>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
