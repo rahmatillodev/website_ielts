@@ -19,10 +19,18 @@ re-run the migration later just to pick up the schedule.
 ## Premium expiry in one paragraph
 
 A subscription is premium while `subscription_status` says so and `now()` has
-not passed `premium_until`. Expiring means all three columns move together:
+not passed `premium_until`. Expiring means all four columns move together:
 `subscription_status → 'free'`, `premium_started_at → NULL`,
-`premium_until → NULL`. A premium row with `premium_until IS NULL` is a manual
-or lifetime grant and never expires.
+`premium_until → NULL`, and `premium_expired_at → the instant the plan ran
+out`. A premium row with `premium_until IS NULL` is a manual or lifetime grant
+and never expires.
+
+`premium_expired_at` exists because the other three columns are wiped on
+expiry, leaving nothing to say the plan ever ran. `premium_expired_at IS NOT
+NULL` means "premium has ended and has not been renewed", which is what
+`PremiumExpiredModal` shows the student once. Starting or renewing a plan
+clears it — including when the admin panel writes the row directly, which the
+trigger covers.
 
 Four things enforce that, so no single one has to be reliable on its own:
 

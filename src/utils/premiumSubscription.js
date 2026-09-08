@@ -100,3 +100,34 @@ export function msUntilPremiumExpiry(profile, now = Date.now()) {
   const remaining = expiry.getTime() - now;
   return remaining > 0 ? remaining : null;
 }
+
+/**
+ * The identity of the "your premium has ended" notice owed to this profile, or
+ * null when there is nothing to announce.
+ *
+ * `premium_expired_at` is written by the database when a plan runs out and
+ * cleared when one is granted (see
+ * supabase/migrations/20260803090000_premium_subscription_expiry.sql). The
+ * client deliberately does not invent the value: the row is the only place
+ * that survives a new browser, and inventing one here would produce a
+ * different id than the row does moments later and announce the same lapse
+ * twice.
+ *
+ * The id pairs the user with the exact instant, so a student who lapses,
+ * renews and lapses again is told each time, while a reload is not a second
+ * time. Callers persist the last id they showed.
+ */
+export function premiumExpiryNoticeId(profile, now = Date.now()) {
+  if (!profile?.id) return null;
+
+  const raw = profile.premium_expired_at;
+  if (raw === null || raw === undefined || raw === "") return null;
+
+  const at = raw instanceof Date ? raw : new Date(raw);
+  if (Number.isNaN(at.getTime())) return null;
+
+  // A running plan means the row is stale, not that the student lost access.
+  if (isPremiumProfile(profile, now)) return null;
+
+  return `${profile.id}:${at.toISOString()}`;
+}

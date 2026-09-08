@@ -20,6 +20,7 @@ import {
   msUntilPremiumExpiry,
   normalizePremiumProfile,
   normalizeSubscriptionStatus,
+  premiumExpiryNoticeId,
 } from "./premiumSubscription.js";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -157,4 +158,58 @@ test("date objects are accepted as well as ISO strings", () => {
   };
   assert.equal(isPremiumProfile(withDates, NOW), true);
   assert.equal(isPremiumProfile(withDates, NOW + 2 * DAY), false);
+});
+/* ------------------------------------------------------------------ notice */
+/* The "your premium has ended" modal. What it announces is the row's
+   premium_expired_at, not a lapse this client worked out for itself — see
+   premiumExpiryNoticeId for why. */
+
+/** What expiry leaves behind: free, dates cleared, the end instant recorded. */
+const lapsedRow = (endedAt) => ({
+  id: "user-1",
+  subscription_status: FREE_STATUS,
+  premium_started_at: null,
+  premium_until: null,
+  premium_expired_at: new Date(endedAt).toISOString(),
+});
+
+test("a lapsed row owes the student one notice, identified by when it ended", () => {
+  const row = lapsedRow(NOW);
+  assert.equal(premiumExpiryNoticeId(row, NOW + DAY), `user-1:${new Date(NOW).toISOString()}`);
+});
+
+test("nothing to announce without an expiry on the row", () => {
+  assert.equal(premiumExpiryNoticeId(freeProfile, NOW), null, "never had a plan");
+  assert.equal(premiumExpiryNoticeId(purchase(NOW, 30), NOW), null, "plan still running");
+  assert.equal(premiumExpiryNoticeId(null, NOW), null);
+  assert.equal(premiumExpiryNoticeId({ premium_expired_at: new Date(NOW) }, NOW), null, "no id");
+  assert.equal(premiumExpiryNoticeId({ ...lapsedRow(NOW), premium_expired_at: "" }, NOW), null);
+  assert.equal(
+    premiumExpiryNoticeId({ ...lapsedRow(NOW), premium_expired_at: "not-a-date" }, NOW),
+    null
+  );
+});
+
+test("renewing silences the notice even if the row still carries the old expiry", () => {
+  // The trigger clears premium_expired_at on a grant, so this is belt and
+  // braces — but a stale marker must never tell a paying student they lapsed.
+  const renewed = { ...purchase(NOW, 30), premium_expired_at: new Date(NOW - DAY).toISOString() };
+  assert.equal(premiumExpiryNoticeId(renewed, NOW), null);
+});
+
+test("a second lapse is a second notice", () => {
+  const first = premiumExpiryNoticeId(lapsedRow(NOW), NOW);
+  const second = premiumExpiryNoticeId(lapsedRow(NOW + 60 * DAY), NOW + 60 * DAY);
+  assert.notEqual(first, second, "otherwise the marker from the first lapse hides the second");
+});
+
+test("a Date is accepted as well as an ISO string, and normalises to the same id", () => {
+  const asDate = { ...lapsedRow(NOW), premium_expired_at: new Date(NOW) };
+  assert.equal(premiumExpiryNoticeId(asDate, NOW), premiumExpiryNoticeId(lapsedRow(NOW), NOW));
+});
+
+test("normalizing a profile does not lose the expiry marker", () => {
+  const row = lapsedRow(NOW);
+  const { profile } = normalizePremiumProfile(row, NOW + DAY);
+  assert.equal(profile.premium_expired_at, row.premium_expired_at);
 });

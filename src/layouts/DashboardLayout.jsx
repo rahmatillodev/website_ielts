@@ -4,6 +4,8 @@ import DashboardNavbar from '@/components/navbar/DashboardNavbar';
 import DashboardSidebar from '@/components/sidebar/DashboardSidebar';
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import RotationModal, { DISMISS_KEY } from '@/components/modal/RotationModal'
+import PremiumExpiredModal from '@/components/modal/PremiumExpiredModal'
+import { usePremiumExpiryNotice } from '@/hooks/usePremiumExpiryNotice'
 import { useSmallScreen } from '@/hooks/useSmallScreen'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Outlet } from 'react-router-dom'
@@ -14,6 +16,11 @@ const DashboardLayout = () => {
   const isSmallScreen = useSmallScreen();
   const [showModal, setShowModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // "Your premium has ended", shown once per lapse. Mounted on the dashboard
+  // branch only: the branch below is the practice and results pages, and a
+  // subscription notice thrown over a running test is worse than a late one.
+  const premiumExpiry = usePremiumExpiryNotice()
 
   // The accessMode writer and the "redirect mock users away from the dashboard"
   // effect that used to live here are gone. Together with the mirrored pair in
@@ -114,6 +121,7 @@ const DashboardLayout = () => {
         </div>
       </div>
       <RotationModal isOpen={showModal} onDismiss={handleDismiss} />
+      <PremiumExpiredModal isOpen={premiumExpiry.isOpen} onDismiss={premiumExpiry.dismiss} />
     </ProtectedRoute>
   )
 }

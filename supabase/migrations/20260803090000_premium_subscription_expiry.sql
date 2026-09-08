@@ -14,10 +14,34 @@
 --      through immediately instead of waiting for the sweep.
 --
 -- Expiry means exactly: subscription_status → 'free', premium_started_at →
--- NULL, premium_until → NULL. `premium_until IS NULL` on a premium row still
--- means "no end date" and is left alone; only a date in the past expires.
+-- NULL, premium_until → NULL, and `premium_expired_at` ← the instant the plan
+-- ran out (section 0), which is what the student app's "your premium has
+-- ended" notice reads. `premium_until IS NULL` on a premium row still means
+-- "no end date" and is left alone; only a date in the past expires.
 --
 -- Idempotent: safe to re-run.
+
+-- ---------------------------------------------------------------------------
+-- 0. The column that remembers a plan ended
+-- ---------------------------------------------------------------------------
+--
+-- Expiry clears `premium_until`, which is what every gate wants but leaves no
+-- trace that the plan ever ran out. The student app has to tell the user their
+-- premium ended, and it cannot ask a row that has been wiped clean. Nor can it
+-- rely on noticing the lapse itself: the sweep below usually gets there first,
+-- and a fresh browser has nothing cached to compare against.
+--
+-- So expiry writes the moment the plan ended here, and starting or renewing a
+-- plan clears it again. `premium_expired_at IS NOT NULL` therefore means
+-- exactly "this user's premium has run out and has not been renewed" - the one
+-- question the notice needs answered.
+
+alter table public.users
+  add column if not exists premium_expired_at timestamptz;
+
+comment on column public.users.premium_expired_at is
+  'When this user''s premium plan last ran out, or NULL if they have never had one or have since renewed. Set by expiry, cleared by a new grant. Drives the "your premium has ended" notice in the student app.';
+
 
 -- Legacy label for the same plan, still present on old rows.
 create or replace function public.premium_status_is_paid(p_status text)
@@ -42,9 +66,17 @@ language plpgsql
 as $$
 begin
   if new.premium_until is not null and new.premium_until <= now() then
+    -- Record the end before wiping it: this is the only place the instant
+    -- still exists, and the student app's notice is built on it.
+    new.premium_expired_at := new.premium_until;
     new.subscription_status := 'free';
     new.premium_started_at := null;
     new.premium_until := null;
+  elsif public.premium_status_is_paid(new.subscription_status) then
+    -- A running plan cancels any earlier expiry, however it was started - the
+    -- RPC below, the admin panel writing the row directly, or a manual fix.
+    -- Without this a renewed user keeps being told their premium has ended.
+    new.premium_expired_at := null;
   end if;
 
   -- A paid status with no dates at all is a manual/lifetime grant and is left
@@ -81,6 +113,7 @@ begin
     update public.users
        set subscription_status = 'free',
            premium_started_at  = null,
+           premium_expired_at  = premium_until,
            premium_until       = null
      where premium_until is not null
        and premium_until <= now()
@@ -125,6 +158,7 @@ begin
   update public.users
      set subscription_status = 'free',
          premium_started_at  = null,
+         premium_expired_at  = premium_until,
          premium_until       = null
    where id = v_user_id
      and premium_until is not null
@@ -197,7 +231,10 @@ begin
   update public.users
      set subscription_status = 'premium',
          premium_started_at  = v_now,
-         premium_until       = v_base + make_interval(days => p_days)
+         premium_until       = v_base + make_interval(days => p_days),
+         -- A new period ends the old one's story; the notice must not fire
+         -- again for a user who has just paid.
+         premium_expired_at  = null
    where id = p_user_id
   returning * into v_row;
 
